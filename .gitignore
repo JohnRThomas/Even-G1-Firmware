@@ -1,0 +1,6 @@
+build*/
+.cache/
+.vscode/
+**/__pycache__/
+
+toolchain_libs/
