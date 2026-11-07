@@ -15,9 +15,8 @@ int aw93203_ready;
 uint8_t pt_comm_busy;
 
 /*
- * I2C spec of the bus (.data 0x20002418, 8 bytes: i2c2 device + 0x6b, i.e. the
- * lsm6dso node on the same bus; the driver addresses the AW93203 with its own
- * AW9320X_I2C_DEV_ADDR and only uses .bus).
+ * I2C spec of the bus, taken from the lsm6dso node on the same bus; the driver
+ * addresses the AW93203 with its own AW9320X_I2C_DEV_ADDR and only uses .bus.
  */
 struct i2c_dt_spec aw_i2c_dev = I2C_DT_SPEC_GET(DT_NODELABEL(lsm6dso));
 

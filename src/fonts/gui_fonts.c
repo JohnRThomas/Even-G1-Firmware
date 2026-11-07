@@ -1,6 +1,5 @@
 /*
  * Built-in bitmap fonts (4 bpp, glyph width in bytes = 2 pixels each).
- * Generated from the target image.
  */
 #include "../gui/gui.h"
 
@@ -3112,4 +3111,3 @@ const int font_c_glyph_count = 11;
 const int font_b_glyph_count = 97;
 
 const int font26_glyph_count = 445;
-

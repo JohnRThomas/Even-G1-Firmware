@@ -1,5 +1,5 @@
 /*
- * Even Realities G1 network core - main.c (reconstruction of v1.63).
+ * Even Realities G1 network core - main.c.
  *
  * Global context, "cpunet-hw-id" endpoint (configuration from the app core),
  * ESB event bookkeeping/statistics and the main supervision loop.
@@ -31,8 +31,7 @@ static uint32_t esb_rx_cnt;
 static size_t tx_len;
 static struct k_msgq esb_msgq;
 
-int64_t now_ticks;                      /* signed: matches k_uptime_ticks(); keeps the ticks
-                                         * low word in r0 for the umull (no extra mov) */
+int64_t now_ticks;                      /* signed: matches k_uptime_ticks() */
 static uint64_t now_ms;
 uint64_t esb_rx_ms;
 static uint64_t last_report_ms;
@@ -101,15 +100,12 @@ static int hwid_received(struct net_ctx *ctx, const uint8_t *data, size_t len)
   return 0;
 }
 
-/*
- * The shipped code has no return statement here (the caller in main() tests the
- * garbage r0 left by the last ipc send); reproduced as-is (-Wreturn-type).
- * int, not uint8_t: the caller truncates the result itself (uxtb after the call).
- */
+/* Sends the ESB statistics to the application core; returns 1 if the report was sent. */
 int send_esb_stats(void)
 {
   uint8_t buf[32] = {0};
   uint8_t retry = 10;
+  int sent = 0;
 
   buf[0] = 1;
   buf[1] = 7;
@@ -120,6 +116,7 @@ int send_esb_stats(void)
 
   do {
     if (net_ctx->ipc.send(buf, sizeof(buf)) > 0) {
+      sent = 1;
       break;
     }
     retry--;
@@ -128,6 +125,8 @@ int send_esb_stats(void)
     }
     k_msleep(10);
   } while (1);
+
+  return sent;
 }
 
 void ipc_send_esb_status(uint8_t val)
@@ -180,16 +179,24 @@ int net_role_get(void)
   return net_ctx->role;
 }
 
-void esb_thread_wake(void)
+static void esb_thread_wake(void)
 {
   if (k_sem_count_get(&net_ctx->sem1) == 0) {
     k_sem_give(&net_ctx->sem1);
   }
 }
 
-/* app_esb.c (align-2 0x1039dfc); defined outside this file, otherwise GCC
- * emits app_esb_event_handler after esb_rx_msgq_put instead of after esb_thread_wake. */
-int esb_rx_enqueue(const uint8_t *data, size_t len);
+static int esb_rx_msgq_put(const uint8_t *data);
+
+/* Queues a received ESB packet and wakes the ESB thread. */
+static void esb_rx_enqueue(const uint8_t *data, size_t len)
+{
+  uint8_t buf[252] = {0};
+
+  memcpy(buf, data, len);
+  esb_rx_msgq_put(buf);
+  esb_thread_wake();
+}
 
 static void app_esb_event_handler(struct app_esb_evt *evt)
 {
@@ -247,8 +254,7 @@ static void app_esb_event_handler(struct app_esb_evt *evt)
   esb_evt_active = 0;
 }
 
-/* non-static: shipped order puts it after app_esb_event_handler */
-int rtc_sync_check(void)
+static int rtc_sync_check(void)
 {
   int offset;
 
@@ -277,7 +283,7 @@ int esb_rx_msgq_init(void)
   return err;
 }
 
-int esb_rx_msgq_put(const uint8_t *data)
+static int esb_rx_msgq_put(const uint8_t *data)
 {
   uint8_t buf[252];
   int err;
@@ -297,15 +303,10 @@ int esb_rx_msgq_put(const uint8_t *data)
 
 int esb_rx_msgq_get(uint8_t *data)
 {
-  /* The shipped zero block sits in main.c's plain .rodata (align 1, placed after
-   * the align-4 .rodata of the later objects, before all .rodata.*); GCC puts an
-   * anonymous constant there (e.g. a 251-byte "\0..." literal), a named static
-   * goes to .rodata.empty.N.  An uninitialised const keeps the memcpy. */
-  static const uint8_t empty[0xfb] __attribute__((section(".rodata")));
   uint8_t buf[252];
   int err;
 
-  memcpy(buf, empty, 0xfb);
+  memset(buf, 0, 0xfb);
   if (esb_msgq.max_msgs == 0) {
     return 1;
   }
@@ -318,16 +319,7 @@ int esb_rx_msgq_get(uint8_t *data)
   return err;
 }
 
-/*
- * App-core handshake sends with retry.  Both loops are written as
- * `while (xxx_send() < 0) { sleep; if (--i == 0) break; }` on purpose: a
- * `for`/`do` body-first loop lays the send block out before the latch, and
- * then IRA (whose tie-break is the allocno number, i.e. reverse block order)
- * gives the retry counter the lower register.  With the send in the loop
- * condition the latch precedes it in block order and the send result is
- * coloured first (result r4, counter r7 / r7, r8), exactly as shipped.
- * The helpers are inlined (static, called once) and emit no code of their own.
- */
+/* App-core handshake messages; main() retries each send up to 20 times. */
 static int mac_send(void)
 {
   uint8_t buf[16] = {0};
@@ -386,8 +378,7 @@ int main(void)
 
   net_ctx = ctx;
 
-  /* Wait (up to 20 x 300 ms) for the app core to answer the role request;
-   * the role is kept in a local so the print after the loop reuses it. */
+  /* Wait (up to 20 x 300 ms) for the app core to answer the role request. */
   i = 20;
   while ((ret = net_ctx->role) == 0) {
     rtc_sync_check();
@@ -416,12 +407,11 @@ int main(void)
     NET_INF("S\n");
   }
 
-  i = 20;
-  while (mac_send() < 0) {
-    k_msleep(50);
-    if (--i == 0) {
+  for (i = 0; i < 20; i++) {
+    if (mac_send() >= 0) {
       break;
     }
+    k_msleep(50);
   }
 
   for (i = 20; i && rtc_sync_check(); i--) {
@@ -442,14 +432,7 @@ int main(void)
   NET_INF("addr 1 0x%02X-0x%02X-0x%02X-0x%02X\n", base_addr_1[0], base_addr_1[1],
     base_addr_1[2], base_addr_1[3]);
 
-  /* two tests with identical bodies (cross-jumped): `role == 1 || role == 2`
-   * folds into a range test and blocks the threading to the PRX init below */
-  if (net_ctx->role == 1) {
-    esb_ops_init(&net_ctx->esb);
-    hci_rpmsg_init();
-    k_msleep(1000);
-    net_ctx->esb.start();
-  } else if (net_ctx->role == 2) {
+  if (net_ctx->role == 1 || net_ctx->role == 2) {
     esb_ops_init(&net_ctx->esb);
     hci_rpmsg_init();
     k_msleep(1000);
@@ -466,25 +449,18 @@ int main(void)
     return 0;
   }
 
-  i = 20;
-  while (bt_send() < 0) {
-    k_msleep(100);
-    if (--i == 0) {
+  for (i = 0; i < 20; i++) {
+    if (bt_send() >= 0) {
       break;
     }
+    k_msleep(100);
   }
 
   rtc_sync_check();
 
   cnt = 0;
   while (1) {
-    /* early continue: the shipped layout has the sleep block right after the
-     * tests (tail-merged with the one at the end of the body) */
-    if (esb_link_state_get() == 3 || net_ctx->mode == 1) {
-      k_msleep(1000);
-      continue;
-    }
-    {
+    if (esb_link_state_get() != 3 && net_ctx->mode != 1) {
       now_ticks = k_uptime_ticks();
       now_ms = k_ticks_to_ms_ceil64(now_ticks);
 
@@ -503,9 +479,7 @@ int main(void)
         send_esb_stats();
       } else if (((esb_rssi <= 39 && last_rssi > 50) ||
             (esb_rssi > 50 && last_rssi <= 39)) && cnt > 2) {
-        uint8_t sent = send_esb_stats();
-
-        if (sent) {
+        if (send_esb_stats()) {
           last_report_ms = now_ms;
           last_rssi = esb_rssi;
           cnt = 0;

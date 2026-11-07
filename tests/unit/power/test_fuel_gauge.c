@@ -64,7 +64,7 @@ static int update_with_soc(float soc)
 {
   nrf_fuel_gauge_process_fake.return_val = soc;
   g1_clock_advance_ms(1000);
-  return fuel_gauge_update(CHARGER, 0);
+  return fuel_gauge_update(CHARGER);
 }
 
 ZTEST(fuel_gauge_init, test_init_starts_the_library_with_the_first_measurement_and_the_model)
@@ -105,7 +105,7 @@ ZTEST(fuel_gauge, test_update_after_a_failed_init_does_not_run_the_library)
   zassert_equal(fuel_gauge_init(CHARGER), -EINVAL);
   g1_clock_advance_ms(1000);
 
-  fuel_gauge_update(CHARGER, 0);
+  fuel_gauge_update(CHARGER);
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 0,
           "processed with t_delta %f s", (double)nrf_fuel_gauge_process_fake.arg3_val);
 }
@@ -116,7 +116,7 @@ ZTEST(fuel_gauge, test_update_passes_voltage_current_temperature_and_elapsed_sec
   nrf_fuel_gauge_process_fake.return_val = 57.0f;
   g1_clock_advance_ms(2500);
 
-  zassert_equal(fuel_gauge_update(CHARGER, 0), 0);
+  zassert_equal(fuel_gauge_update(CHARGER), 0);
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 1);
   zassert_equal(nrf_fuel_gauge_process_fake.arg0_val, 3.875f, "voltage V");
   zassert_equal(nrf_fuel_gauge_process_fake.arg1_val, 0.0625f, "current A");
@@ -130,11 +130,11 @@ ZTEST(fuel_gauge, test_update_measures_the_time_from_the_previous_update)
   nrf_fuel_gauge_process_fake.return_val = 57.0f;
 
   g1_clock_advance_ms(1500);
-  zassert_equal(fuel_gauge_update(CHARGER, 0), 0);
+  zassert_equal(fuel_gauge_update(CHARGER), 0);
   g1_clock_advance_ms(1000);
-  zassert_equal(fuel_gauge_update(CHARGER, 0), 0);
+  zassert_equal(fuel_gauge_update(CHARGER), 0);
   g1_clock_advance_ms(4000);
-  zassert_equal(fuel_gauge_update(CHARGER, 0), 0);
+  zassert_equal(fuel_gauge_update(CHARGER), 0);
 
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 3);
   zassert_equal(nrf_fuel_gauge_process_fake.arg3_history[0], 1.5f);
@@ -147,13 +147,13 @@ ZTEST(fuel_gauge, test_update_less_than_1s_after_the_previous_one_returns_minus_
   g1_state()->battery_left = 42;
   g1_clock_advance_ms(999);
 
-  zassert_equal(fuel_gauge_update(CHARGER, 0), -1);
+  zassert_equal(fuel_gauge_update(CHARGER), -1);
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 0);
   zassert_equal(g1_state()->battery_left, 42, "battery fields untouched");
 
   g1_clock_advance_ms(1);
   nrf_fuel_gauge_process_fake.return_val = 57.0f;
-  zassert_equal(fuel_gauge_update(CHARGER, 0), 0);
+  zassert_equal(fuel_gauge_update(CHARGER), 0);
   zassert_equal(nrf_fuel_gauge_process_fake.arg3_val, 1.0f);
 }
 
@@ -163,7 +163,7 @@ ZTEST(fuel_gauge, test_update_returns_the_charger_read_error)
   fake_charger_fail_fetch(-EIO, 1);
   g1_clock_advance_ms(1000);
 
-  zassert_equal(fuel_gauge_update(CHARGER, 0), -EIO);
+  zassert_equal(fuel_gauge_update(CHARGER), -EIO);
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 0);
   zassert_equal(g1_state()->battery_left, 42);
 }
@@ -173,7 +173,7 @@ ZTEST(fuel_gauge, test_update_while_the_factory_link_is_busy_measures_nothing)
   pt_comm_busy_get_fake.return_val = 1;
   g1_clock_advance_ms(1000);
 
-  zassert_equal(fuel_gauge_update(CHARGER, 0), 0);
+  zassert_equal(fuel_gauge_update(CHARGER), 0);
   zassert_equal(fake_charger_fetch_count(), 1, "only the init's fetch");
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 0);
 }
@@ -196,7 +196,7 @@ ZTEST(fuel_gauge, test_zero_current_is_measured_again_up_to_11_times)
   g1_clock_advance_ms(1000);
   start = g1_clock_uptime_ms();
 
-  zassert_equal(fuel_gauge_update(CHARGER, 0), 0);
+  zassert_equal(fuel_gauge_update(CHARGER), 0);
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 11);
   expect_elapsed_ms(start, 50, 60);
 }
@@ -354,11 +354,11 @@ ZTEST(fuel_gauge, test_soc_unchanged_below_100_for_120s_marks_the_gauge_stuck)
 
   for (int seconds = 10; seconds < 120; seconds += 10) {
     g1_clock_advance_ms(10000);
-    fuel_gauge_update(CHARGER, 0);
+    fuel_gauge_update(CHARGER);
     zassert_equal(fuel_gauge_stuck, 0, "after %d s", seconds);
   }
   g1_clock_advance_ms(10000);
-  fuel_gauge_update(CHARGER, 0);
+  fuel_gauge_update(CHARGER);
   zassert_equal(fuel_gauge_stuck, 1, "after 120 s");
 }
 
@@ -367,7 +367,7 @@ ZTEST(fuel_gauge, test_changing_soc_is_not_stuck)
   for (int seconds = 0; seconds < 200; seconds += 10) {
     nrf_fuel_gauge_process_fake.return_val = 50.0f + (float)(seconds / 10) * 0.25f;
     g1_clock_advance_ms(10000);
-    fuel_gauge_update(CHARGER, 0);
+    fuel_gauge_update(CHARGER);
   }
   zassert_equal(fuel_gauge_stuck, 0);
 }
@@ -377,7 +377,7 @@ ZTEST(fuel_gauge, test_full_battery_is_never_stuck)
   nrf_fuel_gauge_process_fake.return_val = 100.0f;
   for (int seconds = 0; seconds < 200; seconds += 10) {
     g1_clock_advance_ms(10000);
-    fuel_gauge_update(CHARGER, 0);
+    fuel_gauge_update(CHARGER);
   }
   zassert_equal(fuel_gauge_stuck, 0);
 }

@@ -1,6 +1,5 @@
 /*
  * Hardware watchdog helpers (derived from samples/drivers/watchdog).
- * Reconstructed from the G1 v1.63 app core.
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -58,8 +57,8 @@ int init_watchdog(void)
   return 0;
 }
 
-/* 1.66: re-arm the watchdog with a short timeout so the chip resets shortly
- * (used by system_reboot_delayed() instead of sys_reboot()) */
+/* re-arm the watchdog with a short timeout so the chip resets shortly
+ * (used by system_reboot_delayed()) */
 int config_watchdog_wait_reset(void)
 {
   int err;

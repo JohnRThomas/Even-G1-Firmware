@@ -15,7 +15,6 @@ DEFINE_FAKE_VALUE_FUNC(int, bt_conn_disconnect, struct bt_conn *, uint8_t);
 DEFINE_FAKE_VALUE_FUNC(struct bt_conn *, get_current_conn);
 FAKE_VALUE_FUNC(int, set_ancs_enable, int);
 DEFINE_FAKE_VOID_FUNC(ancs_delete_notification, uint32_t);
-__weak uint8_t multi_packet_buf[MULTI_PACKET_BUF_SIZE];
 
 static void fakes_bt_reset(bool keep_media)
 {
@@ -25,7 +24,6 @@ static void fakes_bt_reset(bool keep_media)
   RESET_FAKE(bt_conn_disconnect);
   RESET_FAKE(get_current_conn);
   RESET_FAKE(ancs_delete_notification);
-  memset(multi_packet_buf, 0, MULTI_PACKET_BUF_SIZE);
 }
 
 G1_UNIT_RESET_HOOK(fakes_bt_reset);

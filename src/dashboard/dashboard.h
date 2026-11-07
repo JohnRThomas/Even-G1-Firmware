@@ -1,7 +1,5 @@
 /*
  * Dashboard screen (DashBoard_Reflash) - module private declarations.
- * Partial views of shared vendor structures, reconstructed from the v1.63
- * app core.
  */
 #ifndef G1_DASHBOARD_H_
 #define G1_DASHBOARD_H_
@@ -29,8 +27,8 @@
 #define GUI_FB_ROW_BYTES 320
 
 /*
- * Dashboard page private state (_dashboard_prv_data, .bss 0x20004af8,
- * 0x28 bytes, 8-byte aligned), defined in dashboard.c.
+ * Dashboard page private state (_dashboard_prv_data), defined
+ * in dashboard.c.
  */
 struct dashboard_prv_data {
   uint8_t state;               /* 0 init, 1 running */
@@ -61,12 +59,7 @@ struct dashboard_prv_data {
 };
 extern struct dashboard_prv_data _dashboard_prv_data;
 
-/*
- * Screen origin helpers (align-2, owned by the gui file):
- * gui_screen_x_offset() = panel x offset (GS+0xec4) + GS->x_shift_108a (reset to 0x20
- * when out of range), gui_screen_y_offset() = GS->y_shift_108c (clamped to 4..0x40).
- * Every dashboard coordinate is written relative to them.
- */
+/* every dashboard coordinate is written relative to the screen origin */
 #define DB_X(n) (gui_screen_x_offset() + (n))
 #define DB_Y(n) (gui_screen_y_offset() + (n))
 
@@ -78,12 +71,11 @@ extern uint8_t calendar_index;
 int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int event);
 void dashboard_draw_add_note_hint(void);
 void dashboard_draw_add_note_hint_wide(void);
-void init_dashboard_info(struct dashboard_ts_context *ts);
+void init_dashboard_info(void);
 uint8_t getNotesIndex(void);
 int setNotesIndex(int idx);
 void cleanNotesIndex(void);
 uint8_t get_pane_mode(void);
-/* align-2 helpers (0x806e4..0x80802) */
 void update_dashboard_clock(struct GlassesState *gs, uint32_t *total_s);
 uint32_t get_dashboard_tx_ctx(void);
 int draw_template_dashboard_page(struct jbd_panel_context *panel, void *arg);

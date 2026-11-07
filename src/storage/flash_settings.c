@@ -16,8 +16,6 @@
 #include "../threads/threads.h"
 #include "../utils/common_utils.h"
 
-/* the logs print __LINE__: line numbers below follow the vendor file */
-#line 16
 #define SETT_ROOT "ar_glass_userdata_settings"
 /* the QSPI NOR driver takes write lengths above 4 only in multiples of 4 */
 #define FLASH_WRITE_ALIGN 4
@@ -285,7 +283,6 @@ int write_font(uint32_t addr, const void *data, size_t len)
   uint8_t buf[EXT_FLASH_SECTOR_SIZE] = {0};
   int retry = 0;
   int ret;
-  uint32_t err;
 
   if (len > sizeof(buf)) {
     printk("font data too long %d\n", (int)len);
@@ -295,48 +292,41 @@ int write_font(uint32_t addr, const void *data, size_t len)
     if (!device_is_ready(FLASH_DEV)) {
       printk(" [%s] device not ready.\n", FLASH_DEV->name);
       ret = -1;
-      retry++;
     } else {
       ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
       if (ret) {
         printk("Flash read font failed! %d\n", ret);
-        err = ret;
       } else if (memcmp(data, buf, len) == 0) {
         printk("write font data and read data is same, exit\n");
-        return ret;
+        return 0;
       } else {
-        err = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
-        if (err) {
-          printk("Flash erase font failed! %d\n", err);
+        ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
+        if (ret) {
+          printk("Flash erase font failed! %d\n", ret);
         } else {
           memset(buf, 0xff, sizeof(buf));
           memcpy(buf, data, len);
-          err = get_dashboard_state()->flash_write(
+          ret = get_dashboard_state()->flash_write(
             get_dashboard_state(), addr, buf,
             ROUND_UP(len, FLASH_WRITE_ALIGN));
-          if (err) {
-            printk("Flash write font failed! %d\n", err);
+          if (ret) {
+            printk("Flash write font failed! %d\n", ret);
           } else {
-            err = get_dashboard_state()->flash_read(
+            ret = get_dashboard_state()->flash_read(
               get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
-            if (err) {
-              printk("Flash read font failed! %d\n", err);
+            if (ret) {
+              printk("Flash read font failed! %d\n", ret);
             } else if (memcmp(data, buf, len) == 0) {
-              return ret;
+              return 0;
             } else {
               printk("flash verify font failed\n");
               ret = 1;
-              retry++;
-              goto next;
             }
           }
         }
       }
-      ret = err;
-      retry++;
-      goto next;  /* explicit (falls through anyway): the extra edge keeps the target's string-register choice (permuter) */
     }
-next:
+    retry++;
     if (retry == 10) {
       return ret;
     }

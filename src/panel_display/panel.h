@@ -1,7 +1,6 @@
 /*
  * JBD013VGA micro-LED panel layer (jbd_panel.c, panel_fb.c, jbd_panel_flush.c,
  * jbd013_api.c, hal_driver.c).
- * Partial views of the vendor structures, reconstructed from the v1.63 app core.
  */
 #ifndef G1_PANEL_H_
 #define G1_PANEL_H_
@@ -11,7 +10,7 @@
 #include <zephyr/sys/util.h>
 #include <glasses_state.h>
 
-/* JBD013VGA SPI commands (jbd013_api.h) */
+/* JBD013VGA SPI commands */
 #define SPI_WR_ENABLE            0x06
 #define SPI_WR_STATUS_REG1       0x01
 #define SPI_WR_STATUS_REG2       0x31
@@ -73,7 +72,7 @@ void wr_offset_reg(uint8_t row, uint8_t col);
 void wr_cur_reg(uint8_t param);
 void wr_lum_reg(uint16_t param);
 void clr_cache(uint8_t val);
-void jbd_clear_cache_sync(uint8_t val); /* clear panel cache + sync */
+void jbd_clear_cache_sync(uint8_t val);
 void display_image(uint32_t row, uint32_t col, uint8_t *buf, int len);
 void panel_rst(void);
 void panel_init(void);

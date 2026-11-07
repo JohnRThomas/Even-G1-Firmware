@@ -223,7 +223,7 @@ ZTEST(buttons_gpio, test_init_returns_the_p0_26_role_strap)
 ZTEST(buttons_gpio, test_power_helpers_toggle_exactly_their_line)
 {
   static const struct power_step {
-    int (*fn)(void);
+    void (*fn)(void);
     const char *name;
     gpio_pin_t pin;
     int level;
@@ -245,7 +245,7 @@ ZTEST(buttons_gpio, test_power_helpers_toggle_exactly_their_line)
     gpio_port_value_t want = (before & ~BIT(step->pin)) |
            (step->level ? BIT(step->pin) : 0);
 
-    zassert_equal(step->fn(), 0, "%s", step->name);
+    step->fn();
     zassert_equal(g1_gpio_outputs(GPIO0), want, "%s: outputs 0x%08x, want 0x%08x",
             step->name, g1_gpio_outputs(GPIO0), want);
     zassert_not_equal(before, want, "%s: step does not change its line", step->name);
@@ -266,7 +266,7 @@ ZTEST(buttons_gpio, test_reinit_restores_the_boot_state_without_doubling_callbac
   touch_power_off();
   reset_pmic_on();
 
-  zassert_equal(button_reinit(), role);
+  zassert_equal(button_init(), role);
 
   zassert_equal(g1_gpio_outputs(GPIO0), BIT(PIN_TOUCH_PWR), "gpio0 outputs 0x%08x",
           g1_gpio_outputs(GPIO0));

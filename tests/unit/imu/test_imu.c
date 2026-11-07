@@ -319,16 +319,15 @@ ZTEST(imu, test_head_up_on_an_app_screen_does_not_open_the_dashboard)
 
 ZTEST(imu, test_screen_13_puts_the_angles_into_the_esb_packet)
 {
-  struct imu_esb *esb = (struct imu_esb *)&g1_state()->esb_block;
   float angles[3] = { 123.5f, -12.25f, 4.0f };
 
   gesture_setup();
   g1_state()->sync.screen_id = 13;
   imu_head_gesture(imu, -1225, 12350, 400, angles);
 
-  zassert_equal(esb->tx_cmd, 12);
-  zassert_equal(esb->tx_arg, 0);
-  zassert_mem_equal(esb->tx_buf, angles, sizeof(angles));
+  zassert_equal(g1_state()->tx_cmd, 12);
+  zassert_equal(g1_state()->tx_arg, 0);
+  zassert_mem_equal(&g1_state()->ui.ypr, angles, sizeof(angles));
   zassert_equal((int32_t)imu_pitch_x100, -1225);
 }
 
