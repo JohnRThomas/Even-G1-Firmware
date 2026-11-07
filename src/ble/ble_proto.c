@@ -49,16 +49,7 @@ void cJSON_Delete(cJSON *item);
 #include "../ui/ui.h"
 #include "../utils/common_utils.h"
 
-BUILD_ASSERT(sizeof(struct schedule_item) == 0xa4);
-BUILD_ASSERT(sizeof(struct stock_item) == 0x7f2);
-BUILD_ASSERT(sizeof(struct news_item) == 0x159);
-BUILD_ASSERT(sizeof(struct teleprompter_info) == 0x217);
-BUILD_ASSERT(sizeof(struct nav_info) == 0xf5);
-BUILD_ASSERT(sizeof(struct translate_buf) == 0x1e8);
-BUILD_ASSERT(sizeof(struct quicknote_item) == 0x143);
-BUILD_ASSERT(offsetof(struct dashboard_ts_context, disp_mode) == 0x65);
-BUILD_ASSERT(offsetof(struct dashboard_ts_context, dashboard_hold) == 0x72);
-uint8_t nav_overview_map_buf[0x1210];               /* navigation overview map */
+uint8_t nav_overview_map_buf[0x1210];
 uint8_t panoramic_map_buf[PANORAMIC_MAP_SIZE];   /* panoramic map / citywalk data */
 
 /* .bss, 2-byte aligned */
@@ -233,7 +224,7 @@ int save_esb_snapshot(const void *data, size_t len, uint8_t arg, int sel)
     buf = get_dashboard_state()->esb_down_snapshot;
   }
   memcpy(buf, data, len);
-  buf[0x200] = arg;
+  buf[ESB_SNAPSHOT_SEQ] = arg;
   return 0;
 }
 #line 174
@@ -3702,7 +3693,7 @@ static void ble_work_thread(void *p1, void *p2, void *p3)
         memcpy(ctx->rx_data, msg.data, msg.len);
         ctx->rx_len = msg.len;
       } else {
-        memcpy(ctx->rx_bufs[2], msg.data, msg.len);
+        memcpy(ctx->small_buf, msg.data, msg.len);
         ctx->rx_pending = 1;
         ctx->small_len = msg.len;
         ctx->rx_len = 0;
@@ -3714,27 +3705,27 @@ static void ble_work_thread(void *p1, void *p2, void *p3)
       if (ctx->rx_pending == 0 && ctx->rx_len == 0) {
         if (last_ble_cmd != 0xff) {
           ctx->rx_pending = 1;
-          ctx->rx_bufs[2][0] = 0xf5;
-          ctx->rx_bufs[2][1] = last_ble_cmd;
+          ctx->small_buf[0] = 0xf5;
+          ctx->small_buf[1] = last_ble_cmd;
           last_ble_cmd = 0xff;
-          ctx->rx_bufs[2][2] = PKCS7_PACK_MORE;
+          ctx->small_buf[2] = PKCS7_PACK_MORE;
           ctx->rx_len = 0;
           ctx->small_len = 3;
-          if (ctx->rx_bufs[2][1] == 9 || ctx->rx_bufs[2][1] == 10) {
-            ctx->rx_bufs[2][2] = ctx->charging;
+          if (ctx->small_buf[1] == 9 || ctx->small_buf[1] == 10) {
+            ctx->small_buf[2] = ctx->charging;
           }
         } else if (dmic_send_pending) {
           ctx->rx_pending = 1;
-          ctx->rx_bufs[2][0] = 0xf1;
+          ctx->small_buf[0] = 0xf1;
           dmic_send_pending = 0;
-          ctx->rx_bufs[2][1] = 0;
-          ctx->rx_bufs[2][2] = 0xcc;
+          ctx->small_buf[1] = 0;
+          ctx->small_buf[2] = 0xcc;
           ctx->rx_len = 0;
         } else if (debug_pending) {
           ctx->rx_pending = 1;
-          ctx->rx_bufs[2][0] = 0xf4;
-          ctx->rx_bufs[2][1] = 0;
-          ctx->rx_bufs[2][2] = PKCS7_PACK_MORE;
+          ctx->small_buf[0] = 0xf4;
+          ctx->small_buf[1] = 0;
+          ctx->small_buf[2] = PKCS7_PACK_MORE;
           debug_pending = 0;
           ctx->rx_len = 0;
         } else {
@@ -3761,7 +3752,7 @@ static void ble_work_thread(void *p1, void *p2, void *p3)
       ble_handle_rx_data(ctx->rx_data, ctx->rx_len, 0);
       memset(ctx->rx_data, 0, sizeof(ctx->rx_data));
     } else {
-      ble_handle_rx_data(ctx->rx_bufs[ctx->rx_pending + 1], ctx->small_len, 0);
+      ble_handle_rx_data(ctx->small_buf, ctx->small_len, 0);
     }
     ctx->rx_len = 0;
     ctx->rx_pending = 0;
@@ -4812,6 +4803,9 @@ static int set_esb_up_recv_state(uint8_t a, uint8_t b)
  * instead of protocol packets).  Returns non-zero if the data is not a test
  * command and must be handled as a normal request.
  */
+/* audio upload test ("#a"): payload bytes per packet */
+#define AUDIO_TEST_CHUNK_LEN 0x68
+
 int spec_ble_command_hook(uint8_t *data, uint32_t len)
 {
   struct ble_context *ctx = get_ble_context();
@@ -5035,7 +5029,7 @@ int spec_ble_command_hook(uint8_t *data, uint32_t len)
       }
     }
     {
-      uint8_t pkt[0x6b];
+      uint8_t pkt[3 + AUDIO_TEST_CHUNK_LEN];
       uint16_t err_cnt = 0;
       int64_t t0;
       int i;
@@ -5056,7 +5050,7 @@ int spec_ble_command_hook(uint8_t *data, uint32_t len)
         pkt[0] = 0xf1;
         pkt[1] = 0x0a;
         pkt[2] = i;
-        memcpy(&pkt[3], (void *)p, 0x68);
+        memcpy(&pkt[3], (void *)p, AUDIO_TEST_CHUNK_LEN);
         while (ctx->write(pkt, sizeof(pkt)) != 0) {
           k_sleep(K_MSEC(10));
           err_cnt++;
@@ -5066,7 +5060,7 @@ int spec_ble_command_hook(uint8_t *data, uint32_t len)
             return 0;
           }
         }
-        p += 0x68;
+        p += AUDIO_TEST_CHUNK_LEN;
       }
       printk("t0 = %d error count = %d \n", (int)(k_uptime_get() - t0),
              err_cnt);

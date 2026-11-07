@@ -26,10 +26,9 @@ enum disp_msg_type {
 };
 
 struct disp_msg {
-  uint8_t type;      /* 0x00 enum disp_msg_type */
-  uint8_t pad_01;
-  uint16_t len;      /* 0x02 payload length */
-  uint8_t data[20];  /* 0x04 payload: [0] = 1 valid, [1] = screen id */
+  uint8_t type;      /* enum disp_msg_type */
+  uint16_t len;      /* payload length */
+  uint8_t data[20];  /* payload: [0] = 1 valid, [1] = screen id */
 };
 
 /* UI process (event) passed to the ui_*_task() handlers */

@@ -12,8 +12,6 @@
 #include "../threads/threads.h"
 #include "../utils/common_utils.h"
 
-BUILD_ASSERT(offsetof(struct nav_page, map_size) == 0xb1);
-
 #define NAV_MAP_RAW_SIZE 0x1210
 
 

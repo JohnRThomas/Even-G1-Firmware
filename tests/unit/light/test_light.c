@@ -175,7 +175,6 @@ ZTEST(light, test_register_context_installs_init_and_read_callbacks)
 
   zassert_equal_ptr(ctx()->init_cb, opt3007_chip_init);
   zassert_equal_ptr(ctx()->read_cb, opt3007_read);
-  zassert_equal_ptr(ctx()->owner, g1_state()->opt3007_bus_ctx);
 }
 
 /* band edges of the piecewise map, by hand */

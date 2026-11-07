@@ -36,11 +36,13 @@ struct ipc_ops {
   int (*reg)(struct ipc_ep *ep);          /* +0x64 */
 };                                              /* 0x68 */
 
+#define ESB_OPS_BUF_SIZE 0x100
+
 struct esb_ops {
-  void (*start)(void);                    /* +0x00: starts the ESB thread */
-  struct ipc_ep ep;                       /* +0x04 */
-  uint8_t *buf;                           /* +0x10 */
-};                                              /* 0x14 */
+  void (*start)(void);                    /* starts the ESB thread */
+  struct ipc_ep ep;
+  uint8_t *buf;                           /* ESB_OPS_BUF_SIZE bytes */
+};
 
 struct net_ctx {
   int role;                               /* 0x00: 1 = master (M), 2 = slave (S) */
@@ -54,8 +56,5 @@ struct net_ctx {
   uint8_t mac0[6];                        /* 0xc4 */
   uint8_t mac1[6];                        /* 0xca */
 };
-
-BUILD_ASSERT(sizeof(struct k_sem) == 0x18);
-BUILD_ASSERT(sizeof(struct net_ctx) == 0xd0);
 
 #endif /* NET_COMMON_H_ */

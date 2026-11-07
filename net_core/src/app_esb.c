@@ -146,8 +146,8 @@ void esb_ops_init(struct esb_ops *ops)
   struct net_ctx *ctx = CONTAINER_OF(ops, struct net_ctx, esb);
   uint8_t *buf;
 
-  ops->buf = k_malloc(0x100);
-  memset(ops->buf, 0, 0x100);
+  ops->buf = k_malloc(ESB_OPS_BUF_SIZE);
+  memset(ops->buf, 0, ESB_OPS_BUF_SIZE);
   buf = ops->buf;
   buf[0] = 0xfb;
   memcpy(&buf[0x11], ctx->mac1, 6);

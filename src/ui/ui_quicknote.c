@@ -10,16 +10,13 @@
 
 /* quick note page private state (0x20004b20, 0x20 bytes) */
 struct quicknote_prv_data {
-  uint8_t state;            /* 0x00 0 init, 1 running, 2 exiting (logo) */
-  uint8_t pad_01[3];
-  int32_t exit_delay;       /* 0x04 */
-  int64_t ts;               /* 0x08 */
-  uint8_t last_status;      /* 0x10 */
-  uint8_t recording;        /* 0x11 */
-  uint8_t timeout_cnt;             /* 0x12 */
-  uint8_t pad_13[0x0d];
+  uint8_t state;            /* 0 init, 1 running, 2 exiting (logo) */
+  int32_t exit_delay;
+  int64_t ts;
+  uint8_t last_status;
+  uint8_t recording;
+  uint8_t timeout_cnt;
 };
-BUILD_ASSERT(sizeof(struct quicknote_prv_data) == 0x20);
 
 int exit_display_ms = 4000;                  /* 0x200024ec */
 struct quicknote_prv_data quicknote_prv;

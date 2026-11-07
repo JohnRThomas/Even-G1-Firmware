@@ -554,7 +554,7 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp)
 #line 626
 void dump_whitelist(void)
 {
-  char *buf = malloc(0x1800);
+  char *buf = malloc(WHITELIST_JSON_BUF_LEN);
 
   if (buf == NULL) {
     BLE_PRINTK("[%s-%d] malloc failed !!\n", __func__, __LINE__);

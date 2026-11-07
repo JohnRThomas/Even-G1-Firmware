@@ -46,8 +46,7 @@ enum voice_block_state {
 
 struct audio_stream_msg {
   uint8_t cmd;
-  uint8_t reserved;
-  int16_t len;    /* signed: ldrsh in the target */
+  int16_t len;
   uint8_t data[AUDIO_STREAM_MSG_DATA];
 };
 
