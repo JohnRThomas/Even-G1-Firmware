@@ -52,16 +52,15 @@ int imu_fusion_init(struct imu_ctx *c);
 
 /* motion / still detection state (0x20008490) */
 struct imu_motion {
-  uint8_t warmed_up;    /* 0x00 */
-  uint8_t state;      /* 0x01: 0 idle, 1 moving, 2 settled */
-  uint8_t pad_02[2];
-  uint32_t samples;    /* 0x04 */
-  int move_cnt;      /* 0x08 */
-  int still_cnt;      /* 0x0c */
-  int sign[3];      /* 0x10 */
-  float prev[3];      /* 0x1c */
-  float start[3];      /* 0x28 */
-  float accum[3];      /* 0x34 */
+  uint8_t warmed_up;
+  uint8_t state;      /* 0 idle, 1 moving, 2 settled */
+  uint32_t samples;
+  int move_cnt;
+  int still_cnt;
+  int sign[3];
+  float prev[3];
+  float start[3];
+  float accum[3];
 };
 
 /* forward declarations (definition order follows GCC's emission order) */

@@ -450,7 +450,7 @@ void g1_send(const uint8_t *buf, size_t len)
   struct ble_context *ctx = g1_ble();
 
   zassert_not_null(ble_handle_rx_data, "g1_send() needs ble/ble_proto.c in FIRMWARE");
-  /* As ble_work_thread(): short packets reuse rx_bufs[2] without clearing it. */
+  /* As ble_work_thread(): short packets reuse small_buf without clearing it. */
   zassert_true(len <= sizeof(ctx->rx_data), "packet of %u bytes: NUS rx holds %u",
          (unsigned int)len, (unsigned int)sizeof(ctx->rx_data));
   if (len > 20) {
@@ -459,10 +459,10 @@ void g1_send(const uint8_t *buf, size_t len)
     ble_handle_rx_data(ctx->rx_data, len, 0);
     memset(ctx->rx_data, 0, sizeof(ctx->rx_data));
   } else {
-    memcpy(ctx->rx_bufs[2], buf, len);
+    memcpy(ctx->small_buf, buf, len);
     ctx->rx_pending = 1;
     ctx->small_len = len;
-    ble_handle_rx_data(ctx->rx_bufs[2], len, 0);
+    ble_handle_rx_data(ctx->small_buf, len, 0);
   }
   ctx->rx_len = 0;
   ctx->rx_pending = 0;

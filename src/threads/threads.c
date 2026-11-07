@@ -223,13 +223,13 @@ static void ble_msg_dispatch_thread(void *p1, void *p2, void *p3)
   void *msg_ctx = &state->imu;
 
   G1_LOG_WRN("enter\n");
-  memset(state->task_status, 0, sizeof(*state->task_status));
-  memset(state->teleprompter, 0, 0x217);
-  memset(state->nav, 0, 0xf5);
-  memset(state->translate_src, 0, 0x1e8);
-  memset(state->translate_dst, 0, 0x1e8);
-  memset(state->dash_buf, 0, 0x1e9);
-  memset(state->schedule_notif, 0, 0xaf);
+  memset(state->task_status, 0, sizeof(struct msg_status));
+  memset(state->teleprompter, 0, sizeof(struct teleprompter_info));
+  memset(state->nav, 0, sizeof(struct nav_info));
+  memset(state->translate_src, 0, sizeof(struct translate_buf));
+  memset(state->translate_dst, 0, sizeof(struct translate_buf));
+  memset(state->dash_buf, 0, sizeof(struct dash_data_buf));
+  memset(state->schedule_notif, 0, sizeof(struct schedule_notif));
   while (1) {
     if (!(state->module_mask & BIT(7))) {
       k_msleep(1000);
@@ -843,7 +843,7 @@ int sync_to_slave(struct GlassesState *state, int cmd, void *data, size_t len)
         memset(state->sync_data, 0, 4);
       }
       memcpy(&buf[1], &state->esb_hdr, 11);
-      memcpy(&buf[12], &state->sync, 21);
+      memcpy(&buf[12], &state->sync, sizeof(struct esb_sync_pkt));
       state->sync_ack = 1;
       if (state->esb_screen_id != 6 && state->esb_screen_id != 0 && cmd == 0) {
         ms = state->imu.mode;
@@ -1021,7 +1021,7 @@ void sync_push_message(void)
     switch (item->sync_state) {
     case 0:
       push_msg_syncing = 1;
-      sync_to_master(get_dashboard_state(), 12, item, 0xda);
+      sync_to_master(get_dashboard_state(), 12, item, NOTIF_MSG_HALF);
       note_retry = 0;
       break;
     case 2:
@@ -1030,7 +1030,7 @@ void sync_push_message(void)
         set_msg_sync_state(item->pos, 0);
         push_msg_syncing = 0;
       } else {
-        sync_to_master(get_dashboard_state(), 13, (uint8_t *)item + NOTIF_MSG_HALF, 0xda);
+        sync_to_master(get_dashboard_state(), 13, (uint8_t *)item + NOTIF_MSG_HALF, NOTIF_MSG_HALF);
       }
       break;
     }
@@ -1922,24 +1922,24 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3)
         last_msg_screen = get_dashboard_state()->unread_msg_num;
       } else if (!changed) {
         unlock_screen_payload_mutex();
-        len = 0x1b4;
+        len = sizeof(struct notif_msg);
         goto skip;
       }
-      len = 0x1b4;
+      len = sizeof(struct notif_msg);
       changed = 1;
       break;
     }
     case 2:
       countdown_tick(state, state->countdown_ts);
-      len = 7;
+      len = sizeof(struct countdown_ts_context);
       data = (uint8_t *)state->countdown_ts;
       break;
     case 9:
-      len = 0x217;
+      len = sizeof(struct teleprompter_info);
       data = (uint8_t *)state->teleprompter;
       break;
     case 12:
-      len = 0x152;
+      len = sizeof(struct quicknote_show_info);
       data = (uint8_t *)state->quicknote_show_info;
       break;
     case 10: {
@@ -1954,7 +1954,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3)
         changed = 1;
         state->nav->imu_action_status = 1;
       }
-      len = 0xf5;
+      len = sizeof(struct nav_info);
       data = (uint8_t *)state->nav;
       break;
     }
@@ -1969,11 +1969,11 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3)
           goto use_translate_dst;
         if (state->esb_up_id == state->esb_up_seq)
           goto use_translate_dst;
-        if (state->esb_up_snapshot[0x200] != state->esb_up_seq)
+        if (state->esb_up_snapshot[ESB_SNAPSHOT_SEQ] != state->esb_up_seq)
           goto use_translate_dst;
       } else if (b0 = state->translate_src, (uint8_t)(b0->screen_status - 5) < 2) {
         if (state->is_master != 2 || state->esb_down_id == state->esb_down_seq ||
-            state->esb_down_snapshot[0x200] != state->esb_down_seq) {
+            state->esb_down_snapshot[ESB_SNAPSHOT_SEQ] != state->esb_down_seq) {
           data = (uint8_t *)b0;
         } else {
           data = (uint8_t *)state->esb_down_snapshot;
@@ -1984,7 +1984,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3)
       } else if (att == 2) {
 t1038:
         if (state->is_master == 2 && state->esb_up_id != state->esb_up_seq &&
-            state->esb_up_snapshot[0x200] == state->esb_up_seq) {
+            state->esb_up_snapshot[ESB_SNAPSHOT_SEQ] == state->esb_up_seq) {
           data = (uint8_t *)state->esb_up_snapshot;
         } else {
           data = (uint8_t *)state->translate_dst;
@@ -1994,33 +1994,33 @@ t1038:
           b0->screen_status = 4;
         }
         if (state->is_master == 2 && state->esb_down_id != state->esb_down_seq &&
-            state->esb_down_snapshot[0x200] == state->esb_down_seq) {
+            state->esb_down_snapshot[ESB_SNAPSHOT_SEQ] == state->esb_down_seq) {
           data = (uint8_t *)state->esb_down_snapshot;
         } else {
           data = (uint8_t *)state->translate_src;
         }
       }
 c11_len:
-      len = 0x1e8;
+      len = sizeof(struct translate_buf);
       break;
     }
     case 8:
-      len = 0x16a;
+      len = sizeof(struct user_schedule_context);
       data = (uint8_t *)state->user_sched_info;
       break;
     case 7:
-      len = 0xb;
+      len = sizeof(struct bitmap_show_info);
       data = (uint8_t *)state->bitmap_info;
       break;
     case 14:
       get_dashboard_state()->panel.panel_brightness_level = 0x2a;
-      len = 0x21;
+      len = sizeof(struct onboarding_ctx);
       data = (uint8_t *)state->onboarding;
       break;
     case 5:
     case 6:
     case 15:
-      len = 0x75;
+      len = sizeof(struct dashboard_ts_context);
       data = (uint8_t *)state->dashboard_ts;
       break;
     case 16: {
@@ -2031,35 +2031,35 @@ c11_len:
         goto skip;
       }
       if (state->is_master == 2 && state->esb_up_id != state->esb_up_seq &&
-          state->esb_up_seq == state->esb_up_snapshot[0x200]) {
+          state->esb_up_seq == state->esb_up_snapshot[ESB_SNAPSHOT_SEQ]) {
         data = (uint8_t *)state->esb_up_snapshot;
-        blk->seq = state->esb_up_snapshot[0x200];
+        blk->seq = state->esb_up_snapshot[ESB_SNAPSHOT_SEQ];
       } else {
         state->dash_buf->seq = get_dashboard_state()->esb_up_id;
         data = (uint8_t *)blk;
       }
       if (state->dash_buf->type == 7) {
         state->dash_buf->screen_status = 3;
-        len = 0x1e9;
+        len = sizeof(struct dash_data_buf);
         break;
       }
-      len = 0x1e9;
+      len = sizeof(struct dash_data_buf);
       break;
     }
     case 20:
-      len = 0x210;
+      len = sizeof(struct evenai_buf);
       data = (uint8_t *)state->evenai_buf;
       break;
     case 17:
-      len = 2;
+      len = HORIZ_PITCH_CFG_SIZE;
       data = (uint8_t *)state->horiz_pitch_cfg;
       break;
     case 18:
-      len = 10;
+      len = sizeof(struct prompt_info);
       data = (uint8_t *)state->ts_info;
       break;
     case 19:
-      len = 0x208;
+      len = sizeof(struct transcribe_buf);
       data = (uint8_t *)state->transcribe_buf;
       break;
     case 3: {

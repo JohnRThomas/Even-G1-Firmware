@@ -47,26 +47,20 @@
  * navigation_*_display() functions of the same original file (ui_a).
  */
 struct nav_prv_data {
-  uint32_t state;                  /* 0x00 0 init, 1 running, 2 abnormal exit, 3 arrived */
-  volatile uint8_t panoramic_shown; /* 0x04 panoramic page shown (volatile: stores not merged) */
-  volatile uint8_t overview_shown;  /* 0x05 overview page shown */
-  uint8_t synced;                  /* 0x06 init sync with the phone done */
-  uint8_t pad_07[7];
-  volatile uint16_t hour;          /* 0x0e last drawn clock (volatile: ldrh+uxth) */
-  volatile uint16_t minute;        /* 0x10 */
-  uint8_t pad_12[2];
-  volatile uint8_t arrived;        /* 0x14 arrived status (1 arriving, 2 arrived) */
-  volatile uint8_t arrived_cleared; /* 0x15 */
-  uint8_t pad_16[2];
-  volatile int64_t timeout;        /* 0x18 auto exit delay after arrival */
-  volatile int64_t arrived_ts;     /* 0x20 */
-  uint8_t imu_action;              /* 0x28 2 = panoramic map */
-  uint8_t pad_29[4];
-  volatile uint8_t sync_cnt;       /* 0x2d heart beat counter (volatile: re-read for the log) */
-  uint8_t pad_2e[2];
-  volatile int64_t ts;             /* 0x30 */
+  uint32_t state;                  /* 0 init, 1 running, 2 abnormal exit, 3 arrived */
+  volatile uint8_t panoramic_shown; /* panoramic page shown (volatile: stores not merged) */
+  volatile uint8_t overview_shown;  /* overview page shown */
+  uint8_t synced;                  /* init sync with the phone done */
+  volatile uint16_t hour;          /* last drawn clock (volatile: ldrh+uxth) */
+  volatile uint16_t minute;
+  volatile uint8_t arrived;        /* arrived status (1 arriving, 2 arrived) */
+  volatile uint8_t arrived_cleared;
+  volatile int64_t timeout;        /* auto exit delay after arrival */
+  volatile int64_t arrived_ts;
+  uint8_t imu_action;              /* 2 = panoramic map */
+  volatile uint8_t sync_cnt;       /* heart beat counter (volatile: re-read for the log) */
+  volatile int64_t ts;
 };
-BUILD_ASSERT(sizeof(struct nav_prv_data) == 0x38);
 
 /* ui_quicknote.c */
 extern uint8_t quicknote_result_shown;

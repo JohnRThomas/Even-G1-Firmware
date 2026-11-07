@@ -65,10 +65,9 @@ cJSON *cJSON_AddStringToObject(cJSON *const object, const char *const name, cons
 
 /* GlassesState->schedule_notif (0xffc) */
 struct schedule_notif {
-  uint32_t ts;                                     /* 0x00 */
-  uint8_t pad_04[4];
-  char title[17];                                  /* 0x08 */
-  char desc[0x97];                                 /* 0x19 */
+  uint32_t ts;
+  char title[17];
+  char desc[0x97];
 } __packed;
 
 /* notification.c */

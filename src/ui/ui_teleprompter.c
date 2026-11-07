@@ -19,23 +19,19 @@
 
 /* _tpm_thread_prv_data (0x20004b40, 0x230 bytes) */
 struct tpm_thread_prv_data {
-  volatile uint8_t state;          /* 0x00 */
-  volatile int8_t sync_cnt;        /* 0x01 */
-  uint8_t pad_02[6];
-  volatile int64_t last_sync_ts;   /* 0x08 */
-  volatile int64_t start_ts;       /* 0x10 */
-  volatile uint32_t elapsed_ms;    /* 0x18 */
-  volatile uint8_t suspend_applied; /* 0x1c */
-  volatile uint8_t suspended;      /* 0x1d */
-  uint8_t pad_1e[2];
-  volatile uint32_t display_ms;    /* 0x20 */
-  volatile uint8_t work_mode;      /* 0x24 */
-  volatile int8_t countdown;       /* 0x25 */
-  uint8_t pad_26[2];
-  volatile int64_t countdown_end;  /* 0x28 */
-  char text[0x200];                /* 0x30 */
+  volatile uint8_t state;
+  volatile int8_t sync_cnt;
+  volatile int64_t last_sync_ts;
+  volatile int64_t start_ts;
+  volatile uint32_t elapsed_ms;
+  volatile uint8_t suspend_applied;
+  volatile uint8_t suspended;
+  volatile uint32_t display_ms;
+  volatile uint8_t work_mode;
+  volatile int8_t countdown;
+  volatile int64_t countdown_end;
+  char text[0x200];
 };
-BUILD_ASSERT(sizeof(struct tpm_thread_prv_data) == 0x230);
 
 /* elapsed time shown on the page (reverse definition order) */
 static int tp_hour;                          /* 0x2000a9d0 */
@@ -443,7 +439,7 @@ exit_text:
     G1_LOG_WRN("running TELEPROMPTER_DISPLAY_ABNORMAL_EXIT STATUS.\n");
     if (abs_diff_u64(k_uptime_get(), tp->last_sync_ts) > 8000) {
       G1_LOG_WRN("The teleprompter automatically shuts down due to disconnection.\n");
-      memset(get_dashboard_state()->teleprompter, 0, 0x217);
+      memset(get_dashboard_state()->teleprompter, 0, sizeof(struct teleprompter_info));
       gui_screen_fade_out();
       get_dashboard_state()->teleprompter->ready = 0;
       memset(tp, 0, sizeof(*tp));

@@ -18,10 +18,8 @@ struct opt3007_context;
 static int JBD_LUM_REG_VAL;
 static int JBD_CUR_REG_VAL;
 
-/* the SPI interface sits 0x5c bytes in front of the panel context in GlassesState */
-/* spi lives 0x5c bytes before the panel context; the vendor code uses the relative form */
-#define PANEL_SPI(c) ((struct spi_master_ctx *)((uint8_t *)(c) - 0x5c))
-BUILD_ASSERT(offsetof(struct GlassesState, panel) - offsetof(struct GlassesState, spi) == 0x5c);
+/* the SPI interface of the GlassesState holding the panel context */
+#define PANEL_SPI(c) (&CONTAINER_OF(c, struct GlassesState, panel)->spi)
 
 int panel_set_brightness_level(struct jbd_panel_context *c, uint8_t level)
 {

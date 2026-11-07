@@ -15,16 +15,14 @@ const char *trans_lang_name[TRANS_LANG_NUM] = {
 };
 
 static struct {
-  uint8_t state;                   /* 0x00 */
-  uint8_t entered;                 /* 0x01 */
-  uint8_t suspend_en;              /* 0x02 */
-  uint8_t pad_03[7];
-  uint16_t hour;                   /* 0x0a last drawn clock */
-  uint16_t minute;                 /* 0x0c */
-  uint8_t pad_0e[2];
-  uint8_t translation_type;        /* 0x10 last drawn language pair */
-  uint8_t original_type;           /* 0x11 */
-} trans_ui;                              /* 0x200100da */
+  uint8_t state;
+  uint8_t entered;
+  uint8_t suspend_en;
+  uint16_t hour;                   /* last drawn clock */
+  uint16_t minute;
+  uint8_t translation_type;        /* last drawn language pair */
+  uint8_t original_type;
+} trans_ui;
 
 static char trans_text[0x1e0];           /* 0x2001d960 */
 static uint8_t trans_mode;               /* 0x2001d95f */
@@ -126,7 +124,11 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
       gui_utf_adv_draw_reset();
       gui_screen_clear();
       gui_text_state_reset();
-      memset(&trans_ui.suspend_en, 0, 0x10);
+      trans_ui.suspend_en = 0;
+      trans_ui.hour = 0;
+      trans_ui.minute = 0;
+      trans_ui.translation_type = 0;
+      trans_ui.original_type = 0;
       text_anim.buf_size = 0x80;
       text_anim.f_08 = 0;
       text_anim.f_0c = 0;

@@ -215,12 +215,10 @@ static void state_free(struct GlassesState *state)
 
 static void ble_context_setup(struct ble_context *ctx)
 {
-  ctx->large_buf_0 = (uint8_t *)ctx + 0x394;
   ctx->write = g1_frame_capture;
   k_sem_init(&ctx->rx_sem, 0, 1);
   k_sem_init(&ctx->tx_sem, 0, 2);
-  ctx->large_buf_1 = (uint8_t *)ctx + 0x8d4;
-  ctx->small_buf = block_alloc(21);
+  ctx->small_buf = block_alloc(BLE_SMALL_BUF_SIZE);
   ctx->tx_buf = block_alloc(BLE_TX_BUF_SIZE);
 }
 
