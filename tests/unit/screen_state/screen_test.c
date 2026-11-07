@@ -125,11 +125,33 @@ ZTEST_SUITE(screen_state, NULL, NULL, NULL, screen_after, NULL);
 
 typedef int (*screen_fn)(struct GlassesState *state, struct imu_ctx *ctx, const char **reason);
 
-static int run_not_disturb(struct GlassesState *state, struct imu_ctx *ctx, const char **reason)
-{
-  ARG_UNUSED(ctx);
-  return process_for_not_disturb(state, reason);
-}
+/* the handlers that take no IMU context */
+#define RUN_WITHOUT_CTX(name)                                                                      \
+  static int run_##name(struct GlassesState *state, struct imu_ctx *ctx,                           \
+                        const char **reason)                                                       \
+  {                                                                                                \
+    ARG_UNUSED(ctx);                                                                               \
+    return process_for_##name(state, reason);                                                      \
+  }
+
+/* the handlers that give no exit reason */
+#define RUN_WITHOUT_REASON(name)                                                                   \
+  static int run_##name(struct GlassesState *state, struct imu_ctx *ctx,                           \
+                        const char **reason)                                                       \
+  {                                                                                                \
+    ARG_UNUSED(reason);                                                                            \
+    return process_for_##name(state, ctx);                                                         \
+  }
+
+RUN_WITHOUT_REASON(IDLE)
+RUN_WITHOUT_REASON(wait_blow_head)
+RUN_WITHOUT_CTX(not_disturb)
+RUN_WITHOUT_CTX(onboarding)
+RUN_WITHOUT_CTX(raster_height)
+RUN_WITHOUT_CTX(set_imu_pitch)
+RUN_WITHOUT_CTX(prompt)
+RUN_WITHOUT_CTX(transcribe)
+RUN_WITHOUT_CTX(even_ai_v2_show)
 
 static int run_dispatch(struct GlassesState *state, struct imu_ctx *ctx, const char **reason)
 {
@@ -139,8 +161,8 @@ static int run_dispatch(struct GlassesState *state, struct imu_ctx *ctx, const c
 
 /* each screen's handler, as screen_task_dispatch() picks it */
 static const screen_fn handlers[] = {
-  [0] = process_for_IDLE,
-  [1] = process_for_wait_blow_head,
+  [0] = run_IDLE,
+  [1] = run_wait_blow_head,
   [2] = process_for_countdown,
   [4] = process_for_message_show,
   [5] = process_for_new_message_come_on,
@@ -151,13 +173,13 @@ static const screen_fn handlers[] = {
   [10] = process_for_navigation,
   [11] = process_for_translate,
   [12] = process_for_quicknote,
-  [14] = process_for_onboarding,
-  [15] = process_for_raster_height,
+  [14] = run_onboarding,
+  [15] = run_raster_height,
   [16] = process_for_evenai,
-  [17] = process_for_set_imu_pitch,
-  [18] = process_for_prompt,
-  [19] = process_for_transcribe,
-  [20] = process_for_even_ai_v2_show,
+  [17] = run_set_imu_pitch,
+  [18] = run_prompt,
+  [19] = run_transcribe,
+  [20] = run_even_ai_v2_show,
 };
 
 static K_THREAD_STACK_DEFINE(screen_stack, 8192);

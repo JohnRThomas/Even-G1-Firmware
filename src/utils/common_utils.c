@@ -1,7 +1,7 @@
 /*
- * Small vendor helpers: UTC -> date conversion, weekday name, float
- * formatting, ANCS / hex dumps, uptime based timekeeping, generic CRC16 and a
- * run-length decoder.  Reconstructed from the v1.63 app core.
+ * Small helpers: UTC -> date conversion, weekday name, float formatting,
+ * ANCS / hex dumps, uptime based timekeeping, generic CRC16 and a
+ * run-length decoder.
  */
 #include <math.h>
 #include <stdint.h>
@@ -23,10 +23,10 @@ static const uint16_t days_of_month[12] = {
   31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
 };
 
-static uint32_t boot_uptime_s;          /* 0x2000aa90 */
-static uint32_t duration_ref_ms[4];     /* 0x2000aa80 */
-static int64_t time_base_uptime;        /* 0x20004fd8 */
-static int64_t time_base;               /* 0x20004fd0 */
+static uint32_t boot_uptime_s;
+static uint32_t duration_ref_ms[4];
+static int64_t time_base_uptime;
+static int64_t time_base;
 
 int timestamp_to_date(uint32_t timestamp, struct g1_date *date)
 {
@@ -100,15 +100,11 @@ int format_float_2dp(float val, char *buf)
 
   /* at least one digit, for 0 */
   do {
-    uintptr_t dst;
-
     if (n == 2 && mode == 0) {
       tmp[2] = '.';
       n = 3;
     }
-    dst = (uintptr_t)tmp;
-    dst += n++;
-    *(char *)dst = a % 10 + '0';
+    tmp[n++] = a % 10 + '0';
     a /= 10;
   } while (a);
 
@@ -132,24 +128,6 @@ int format_float_2dp(float val, char *buf)
   }
   p[n + 1] = '\0';
   return n + 1;
-}
-
-/*
- * Full ANCS notification dump.  Nothing calls it (--gc-sections drops the code), but GCC emits
- * its strings first, so dump_ancs' strings share its .rodata string section: that is where the
- * target's unused "dump begin" / subtitle / date / display_name strings come from.
- */
-void dump_ancs_detail(const char *tag, struct notif_msg *n)
-{
-
-  printk("##############(dump begin:%s)###############\n", tag);
-  printk("app_identifier:(%s)\n", n->app_identifier);
-  printk("subtitle:(%s)\n", n->subtitle);
-  printk("message:(%s)\n", n->message);
-  printk("message_size:(%s)\n", n->title);   /* argument unknown (code is never linked) */
-  printk("date:(%s)\n", n->date);
-  printk("display_name:(%s)\n", n->display_name);
-  printk("uid :(%d)\n", n->uid);
 }
 
 void dump_ancs(const char *tag, struct notif_msg *n)

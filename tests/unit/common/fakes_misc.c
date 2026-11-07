@@ -62,7 +62,7 @@ __weak uint32_t JDB_PANEL_ID;
 /* 0: get_string() falls back to English */
 FAKE_VALUE_FUNC(uint8_t, get_current_language);
 /* harness reset zeroes it */
-__weak volatile struct app_setting CURRENT_LANGUAGE;
+__weak struct app_setting CURRENT_LANGUAGE;
 
 DEFINE_FAKE_VALUE_FUNC(int, g1_fake_panel_set_brightness, struct jbd_panel_context *, uint8_t);
 

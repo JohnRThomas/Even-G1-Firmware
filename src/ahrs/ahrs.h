@@ -5,10 +5,9 @@
 #include <stdint.h>
 
 /*
- * attitude filter state (0x44 bytes): the members of the Arduino Mahony class
- * (referenced_examples/mahony_ahrs/src/MahonyAHRS.h) in vendor order, with
- * Madgwick's beta added in front, invSampleFreq replaced by a measured period
- * and anglesComputed moved before the angles.
+ * attitude filter state: the members of the Arduino Mahony class,
+ * with Madgwick's beta added in front, invSampleFreq replaced by a measured
+ * period and anglesComputed moved before the angles.
  */
 struct ahrs {
   float beta;   /* 0.1 (unused by the Mahony update) */

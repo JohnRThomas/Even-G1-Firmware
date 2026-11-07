@@ -1,15 +1,12 @@
-# SPDX-License-Identifier: Apache-2.0
-#
-# Even Realities G1 network core firmware (reconstruction of v1.66).  Built as the
-# network core child image of the application (../cmake/modules/mcuboot/CMakeLists.txt);
-# NCS signs it for b0n and MCUboot into net_core_app_update.bin.
+# Even Realities G1 network core firmware.  Built as the network core child image of
+# the application (../cmake/modules/mcuboot/CMakeLists.txt); NCS signs it for b0n and
+# MCUboot into net_core_app_update.bin.
 
 cmake_minimum_required(VERSION 3.20.0)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(net_core)
 
-# Link order = target address order of the vendor code.
 target_sources(app PRIVATE
   src/main.c
   src/ipc.c

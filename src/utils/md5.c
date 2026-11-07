@@ -1,19 +1,14 @@
 /*
  * MD5 message digest (RFC 1321 reference implementation, "md5c.c"),
- * exported under mbedtls-style names.  Reconstructed from the v1.63 app core.
+ * exported under mbedtls-style names.
  *
- * Upstream: referenced_examples/rfc1321_md5/md5c.c ("derived from the RSA
- * Data Security, Inc. MD5 Message-Digest Algorithm"):
+ * Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm:
  *   MD5Init      -> mbedtls_md5_starts
  *   MD5Transform -> mbedtls_internal_md5_process
  *   MD5Update    -> mbedtls_md5_update
  *   MD5Final     -> mbedtls_md5_finish
  *   Encode / Decode -> Encode / md5_decode
- * mbedtls_md5 (one-shot starts/update/finish) is a vendor addition.
- *
- * The shipped code is the RSA reference code (Encode/Decode helpers, a
- * writable PADDING table in .data, x[64] work area, no final memset),
- * not mbedtls library/md5.c.
+ * mbedtls_md5 (one-shot starts/update/finish) is an addition.
  */
 #include <stdint.h>
 #include <stddef.h>

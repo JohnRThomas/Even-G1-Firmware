@@ -427,26 +427,26 @@ ZTEST(screen_state, test_screen_on_repeated_is_ignored_without_counting)
 
 ZTEST(screen_state, test_imu_on_in_normal_mode_wakes_imu_thread)
 {
-  zassert_equal(set_imu_on_state(NULL, gs, 1), 0);
+  zassert_equal(set_imu_on_state(gs, 1), 0);
   zassert_equal(gs->imu.on, 1);
   zassert_equal(gs->imu_event, 1);
   zassert_equal(k_sem_count_get(&gs->imu_sem), 1);
 
-  zassert_equal(set_imu_on_state(NULL, gs, 1), -1);
+  zassert_equal(set_imu_on_state(gs, 1), -1);
 }
 
 ZTEST(screen_state, test_imu_on_while_imu_busy_or_other_mode_does_not_wake)
 {
   gs->imu_busy = 1;
-  set_imu_on_state(NULL, gs, 1);
+  set_imu_on_state(gs, 1);
   zassert_equal(gs->imu.on, 1);
   zassert_equal(gs->imu_event, 0);
   zassert_equal(k_sem_count_get(&gs->imu_sem), 0);
 
-  set_imu_on_state(NULL, gs, 0);
+  set_imu_on_state(gs, 0);
   gs->imu_busy = 0;
   gs->display_mode = 12;
-  set_imu_on_state(NULL, gs, 1);
+  set_imu_on_state(gs, 1);
   zassert_equal(gs->imu_event, 0);
 }
 

@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-#
 # net_core/ as the network core child image, added the way nrf/samples/CMakeLists.txt
 # adds hci_rpmsg to Bluetooth applications.
 #

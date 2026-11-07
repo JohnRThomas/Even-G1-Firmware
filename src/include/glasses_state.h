@@ -1,21 +1,10 @@
 /*
- * Merged definition of the vendor global state (GLOBAL_STATE /
- * get_dashboard_state()).
+ * Global state (GLOBAL_STATE / get_dashboard_state()) and the
+ * sub-structs reached through pointers into it (get_ble_context(),
+ * get_jdb_panel_context(), ...).
  *
- * Built from every partial view of it: the 9 "struct GlassesState" copies,
- * the alias structs (gui_glasses_state, ui_gs, panel_gs, font_gs, proxy_gs,
- * disp_gs, imu_gs), the sub-struct copies reached through pointers
- * into it (get_ble_context(), get_jdb_panel_context(), CONTAINER_OF, ctx
- * parameters, casts of &gs->buf_0ef: trans_info, nav_info, ...), and the
- * raw-offset users (button.c, nfc_wlc.c, ipc_host.c, ui.h NAV_* / UI_PANEL_*);
- * see ai_helpers/gs_views.py --check for the old-name -> new-path table.
- *
- * The nested types are the merged versions of the module views of the same
- * name (ble_context, jbd_panel_context, imu_ctx, ...), so this header cannot be
- * included next to the module headers that still carry their own partial copy.
- *
- * Anonymous unions are only used where the vendor code really reads one
- * location two ways (whole packet vs. single bytes, array vs. named slots).
+ * Anonymous unions are used where the code reads one location two ways
+ * (whole packet vs. single bytes, array vs. named slots).
  */
 #ifndef G1_GLASSES_STATE_H_
 #define G1_GLASSES_STATE_H_
@@ -53,32 +42,27 @@ struct fw_ver {
   uint8_t patch;
 };
 
-/* sync package sent by the master (21 bytes) */
+/* sync package sent by the master */
 struct esb_sync_pkt {
   struct esb_hdr hdr;
-  volatile uint8_t screen_id;              /* dashboard_mode */
+  uint8_t screen_id;                       /* dashboard_mode */
   uint16_t canvas_x;
   uint16_t canvas_y;
   uint8_t package_id;
   uint8_t stay_time_left_s;
   uint8_t unknown_task_count;
-  uint8_t unread_msg_num;                            /* unread message count */
+  uint8_t unread_msg_num;
   uint8_t battery_min;
   struct msg_status status;
   uint8_t flags;
   uint8_t arg[4];
 } __packed;
 
-/* peer status package (22 bytes) */
+/* peer status package */
 struct esb_pkt {
   uint8_t cmd;                             /* cmd | 0x80 */
-  union {
-    struct {
-      struct fw_ver ver;
-      uint8_t battery;
-    } __packed;
-    volatile uint8_t ver_battery_raw[4];        /* main.c copies them byte by byte */
-  };
+  struct fw_ver ver;
+  uint8_t battery;
   uint8_t f_05[7];
   uint8_t mac[6];
   uint8_t flags;
@@ -118,7 +102,7 @@ struct db_info {
   uint8_t dashboard_on;
 } __packed;
 
-/* screen payload buffer GlassesState->ui (0x5dc bytes), read per page */
+/* screen payload buffer GlassesState->ui, read per page */
 union screen_payload {
   uint8_t buf[0x5dc];
   struct db_info db;                       /* dashboard */
@@ -143,9 +127,9 @@ union screen_payload {
     uint8_t page_flags;              /* bit0: animated icon */
     uint8_t dark_cnt;
     uint8_t pad_06[2];
-    char text[1];                    /* page text (length unknown) */
+    char text[1];
     uint8_t pad_09[7];
-    char ai_text[1];                 /* even_ai_v2 text (length unknown) */
+    char ai_text[1];                 /* even_ai_v2 text */
   } __packed gui;                          /* gui pages */
   struct {
     uint8_t longpress_req;
@@ -239,7 +223,7 @@ struct evenai_buf {
   uint8_t data[0x200];
 } __packed;
 
-/* GlassesState->transcribe_buf (cmd 0x52 / 0x53, 0x208 bytes) */
+/* GlassesState->transcribe_buf (cmd 0x52 / 0x53) */
 struct transcribe_buf {
   bool running;
   uint8_t f_1;
@@ -251,7 +235,7 @@ struct transcribe_buf {
   uint8_t data[0x200];
 };
 
-/* GlassesState->quicknote_show_info (0x152 bytes) */
+/* GlassesState->quicknote_show_info */
 struct quicknote_show_info {
   uint8_t longpress_req;
   uint8_t enable;
@@ -285,7 +269,7 @@ struct ipc_service_context {
 /* ------------------------------------------------------------------ BLE */
 
 /*
- * One notification (0x1b4 bytes): the ANCS record being received
+ * One notification: the ANCS record being received
  * (ble_context.notif) and the entries of g_arrMsgContent (notification.c).
  */
 struct notif_msg {
@@ -326,9 +310,9 @@ struct ble_context {
   uint32_t rx_len;
   uint32_t rx_pending;
   uint32_t small_len;
-  volatile uint8_t restart_adv;
-  volatile uint8_t connected;
-  volatile uint8_t send_enabled;
+  uint8_t restart_adv;
+  uint8_t connected;
+  uint8_t send_enabled;
   uint8_t security_pending;
   uint32_t last_rx_time;
   uint32_t connected_time;
@@ -355,7 +339,7 @@ struct spi_master_ctx {
   };
   uint8_t ss;
   uint8_t speed_mhz;
-  volatile uint8_t xfer_done;
+  uint8_t xfer_done;
 };
 
 struct flash_ops {
@@ -463,7 +447,7 @@ struct triple {
 
 /* ------------------------------------------------------------------ feature blocks */
 
-/* GlassesState->dashboard_ts (0x75 bytes, persisted as the "dashboard_ts" setting) */
+/* GlassesState->dashboard_ts (persisted as the "dashboard_ts" setting) */
 struct dashboard_ts_context {
   uint32_t ts;
   uint8_t weather_icon;
@@ -479,10 +463,10 @@ struct dashboard_ts_context {
   uint8_t retained_b;
   uint8_t pad_63;
   uint8_t retained_c;
-  uint8_t disp_mode;                       /* dashboard display mode */
+  uint8_t disp_mode;
   uint8_t area;                            /* custom display area */
-  uint8_t sched_mode;                      /* schedule display mode */
-  uint8_t sched_num;                       /* schedule record count */
+  uint8_t sched_mode;
+  uint8_t sched_num;
   uint8_t stocks_mode;
   uint8_t news_mode;
   uint8_t citywalk_mode;
@@ -495,7 +479,7 @@ struct dashboard_ts_context {
   uint8_t exit_pending;
 } __packed;
 
-/* GlassesState->countdown_ts (7 bytes, persisted as "countdown_ts") */
+/* GlassesState->countdown_ts (persisted as "countdown_ts") */
 struct countdown_ts_context {
   uint32_t seconds;
   uint8_t state;
@@ -503,7 +487,7 @@ struct countdown_ts_context {
   uint8_t reset;
 } __packed;
 
-/* GlassesState->user_sched_info (0x16a bytes copied from BLE request 8) */
+/* GlassesState->user_sched_info (copied from BLE request 8) */
 struct user_schedule_context {
   uint8_t data[0x164];
   uint32_t ts;                             /* time stamp from the phone (0 = none) */
@@ -511,7 +495,7 @@ struct user_schedule_context {
   uint8_t f_169;
 } __packed;
 
-/* GlassesState->teleprompter (0x217 bytes) */
+/* GlassesState->teleprompter */
 struct teleprompter_info {
   uint8_t mode;
   uint8_t ready;
@@ -540,7 +524,7 @@ struct translate_buf {
   uint16_t len;
 } __packed;
 
-/* GlassesState->nav (0xf5 bytes) */
+/* GlassesState->nav */
 struct nav_info {
   uint8_t running;
   uint8_t direction;
@@ -563,7 +547,7 @@ struct nav_info {
   char prompt[0x40];
 } __packed;
 
-/* GlassesState->bitmap_info (0xb bytes) */
+/* GlassesState->bitmap_info */
 struct bitmap_show_info {
   uint8_t enable;
   uint8_t sync_pending;
@@ -571,11 +555,11 @@ struct bitmap_show_info {
   int64_t deadline;
 } __packed;
 
-/* GlassesState->onboarding (0x21 bytes, cleared by init_onboarding_info) */
+/* GlassesState->onboarding (cleared by init_onboarding_info) */
 struct onboarding_ctx {
   uint8_t active;
   uint8_t in_progress;
-  uint8_t action;                          /* action_cmd */
+  uint8_t action;
   uint8_t sub_step;
   uint64_t ts;                             /* k_uptime_get() of the last step change */
   uint8_t sync_arg;
@@ -589,7 +573,7 @@ struct onboarding_ctx {
   uint8_t saved_brightness;
 } __packed;
 
-/* GlassesState->ts_info (10 bytes): page enter time stamp */
+/* GlassesState->ts_info: page enter time stamp */
 struct prompt_info {
   union {
     struct {
@@ -605,7 +589,7 @@ struct prompt_info {
   };
 } __packed;
 
-/* GlassesState->quicknote (0x50f bytes) */
+/* GlassesState->quicknote */
 struct quicknote_item {
   uint8_t valid;
   char title[0x29];
@@ -654,7 +638,7 @@ struct GlassesState {
     struct esb_sync_pkt sync;        /* last sync package */
     struct {
       struct esb_hdr sync_hdr;
-      volatile uint8_t dashboard_mode; /* = sync.screen_id */
+      uint8_t dashboard_mode; /* = sync.screen_id */
       uint16_t sync_canvas_x;
       uint16_t sync_canvas_y;
       uint8_t sync_seq;
