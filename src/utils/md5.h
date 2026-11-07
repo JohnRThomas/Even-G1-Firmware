@@ -6,9 +6,9 @@
 #include <stddef.h>
 
 typedef struct {
-	uint32_t count[2];        /* 0x00 number of bits, modulo 2^64 (lsb first) */
-	uint32_t state[4];        /* 0x08 state (ABCD) */
-	unsigned char buffer[64]; /* 0x18 input buffer */
+	uint32_t count[2];        /* number of bits, modulo 2^64 (lsb first) */
+	uint32_t state[4];        /* state (ABCD) */
+	unsigned char buffer[64]; /* input buffer */
 } mbedtls_md5_context;
 
 void mbedtls_md5_starts(mbedtls_md5_context *context);

@@ -1,11 +1,6 @@
 /*
  * UI screen tasks (quick note, Even AI, bitmap, teleprompter, navigation,
  * translate, onboarding, raster height) - module private declarations.
- * Partial views of vendor structures, reconstructed from the v1.63 app core.
- *
- * gui_screen_x_offset() returns int in some pages and uint16_t in others
- * (call sites differ): pages that want the int prototype define
- * GUI_C_INTERNAL before including this header.
  */
 #ifndef G1_UI_H_
 #define G1_UI_H_
@@ -42,29 +37,26 @@
 #define X0 gui_screen_x_offset()
 #define Y0 gui_screen_y_offset()
 
-/*
- * Navigation private data (0x20004d70, 0x38 bytes).  Shared with the
- * navigation_*_display() functions of the same original file (ui_a).
- */
+/* navigation private data, shared by the navigation task and the navigation_*_display() functions */
 struct nav_prv_data {
-	uint32_t state;                  /* 0x00 0 init, 1 running, 2 abnormal exit, 3 arrived */
-	volatile uint8_t panoramic_shown; /* 0x04 panoramic page shown (volatile: stores not merged) */
-	volatile uint8_t overview_shown;  /* 0x05 overview page shown */
-	uint8_t synced;                  /* 0x06 init sync with the phone done */
+	uint32_t state;                  /* 0 init, 1 running, 2 abnormal exit, 3 arrived */
+	uint8_t panoramic_shown;
+	uint8_t overview_shown;
+	uint8_t synced;                  /* init sync with the phone done */
 	uint8_t pad_07[7];
-	volatile uint16_t hour;          /* 0x0e last drawn clock (volatile: ldrh+uxth) */
-	volatile uint16_t minute;        /* 0x10 */
+	uint16_t hour;          /* last drawn clock */
+	uint16_t minute;
 	uint8_t pad_12[2];
-	volatile uint8_t arrived;        /* 0x14 arrived status (1 arriving, 2 arrived) */
-	volatile uint8_t arrived_cleared; /* 0x15 */
+	uint8_t arrived;        /* 1 arriving, 2 arrived */
+	uint8_t arrived_cleared;
 	uint8_t pad_16[2];
-	volatile int64_t timeout;        /* 0x18 auto exit delay after arrival */
-	volatile int64_t arrived_ts;     /* 0x20 */
-	uint8_t imu_action;              /* 0x28 2 = panoramic map */
+	int64_t timeout;        /* auto exit delay after arrival */
+	int64_t arrived_ts;
+	uint8_t imu_action;              /* 2 = panoramic map */
 	uint8_t pad_29[4];
-	volatile uint8_t sync_cnt;       /* 0x2d heart beat counter (volatile: re-read for the log) */
+	uint8_t sync_cnt;       /* heart beat counter */
 	uint8_t pad_2e[2];
-	volatile int64_t ts;             /* 0x30 */
+	int64_t ts;
 };
 BUILD_ASSERT(sizeof(struct nav_prv_data) == 0x38);
 
@@ -93,9 +85,9 @@ void teleprompter_state_reset(void);
 int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event);
 int draw_template_teleprompter_page(struct jbd_panel_context *panel, void *arg);
 
-/* ui_navigation_map.c (navigation task part, merged from ui_navigation_task.c) */
+/* ui_navigation_map.c */
 extern struct nav_prv_data nav_prv;
-extern volatile uint8_t nav_panoramic_drawn;    /* volatile (ui_a: ldrb + and #0xff re-reads) */
+extern uint8_t nav_panoramic_drawn;
 extern uint8_t nav_overview_decoded;
 extern uint8_t nav_map_bitmaps[2][0x908];   /* navigation bitmaps (overview / arrow) */
 int nav_prv_reset(void);

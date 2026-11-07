@@ -1,6 +1,5 @@
 /*
  * Even Realities G1 - application core main.
- * Reconstructed from the v1.63 firmware image.
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -37,17 +36,17 @@
 #include "storage/storage.h"
 #include "threads/threads.h"
 #include "ui/ui.h"
-#include "utils/burial_point.h"
+#include "utils/common_utils.h"
 
 /* ------------------------------------------------------------------ */
 /* globals                                                             */
 /* ------------------------------------------------------------------ */
-uint8_t runtime_mode;           /* 0x2001095c, settings key "runtime_mode" */
+uint8_t runtime_mode;           /* settings key "runtime_mode" */
 char net_build_time[32];            /* name reported by the net core */
 uint8_t slave_msg_key_pending;
-static uint8_t timer_count;     /* 0x2001093a */
-static uint8_t work_mode_busy;  /* 0x20010939 */
-static uint8_t esbm_last_seq;     /* 0x20010938 */
+static uint8_t timer_count;
+static uint8_t work_mode_busy;
+static uint8_t esbm_last_seq;
 struct GlassesState *GLOBAL_STATE;
 int DEVICE_ROLE;
 int esb_tx_count;
@@ -55,19 +54,16 @@ int esb_tx_fail_count;
 int esb_rx_count;
 
 int esb_signal;                 /* cpunet ESB package counters */
-static bool first_sync = true;    /* 0x20003002 */
+static bool first_sync = true;
 int LOG_LEVEL = 2;
-int rtc_sync_timer_running = 1; /* 0x20002308 */
+int rtc_sync_timer_running = 1;
 
 void timeout_handler(struct k_timer *timer);
 void periodic_timer_expiry(struct k_timer *timer);
 
-/* 60 s housekeeping timer.  K_TIMER_DEFINE objects are sorted by name
- * (._k_timer.static.*): the target order os_mgmt_reset_timer, this timer,
- * rtc_sync_timer needs a name between "os_mgmt_reset_timer" and
- * "rtc_sync_timer" (the vendor name is unknown). */
-K_TIMER_DEFINE(periodic_timer, periodic_timer_expiry, NULL);    /* 0x20003868 */
-K_TIMER_DEFINE(rtc_sync_timer, timeout_handler, NULL); /* 0x200038a0 */
+/* 60 s housekeeping timer */
+K_TIMER_DEFINE(periodic_timer, periodic_timer_expiry, NULL);
+K_TIMER_DEFINE(rtc_sync_timer, timeout_handler, NULL);
 
 /* retained block shared with bootloader / net core, linked at 0x2007fc00 */
 struct ncs_mem ncs_mem __attribute__((section(".ncs_mem")));
@@ -85,7 +81,6 @@ enum work_module {
 	WORK_MODULE_SHIPMODE = 0x800,
 };
 
-void set_band_for_ESB(uint8_t band);
 static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len);
 static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len);
 static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len);
@@ -108,18 +103,14 @@ void periodic_timer_expiry(struct k_timer *timer)
 	timer_count++;
 	if (timer_count > 9) {
 		timer_count = 0;
+		/* every 10 minutes: wake the storage thread, which has no handler for this
+		 * command and just writes the settings that changed */
 		GLOBAL_STATE->dashboard_cmd = 0x3e;
 		k_sem_give(&GLOBAL_STATE->dashboard_position_sem);
 	}
 }
 
-/* 1.66: gs is unused.  GCC then emits the function as a .constprop clone, a late
- * call-graph node whose expansion walk places it after periodic_timer_expiry and
- * pulls local_esbs_ipc_service_recv behind it, as in the image (in 1.63 the
- * k_msleep(500) before sys_reboot, now inside system_reboot_delayed(), did that
- * through k_msleep.isra.0).  As a plain static function it would come out before
- * periodic_timer_expiry; as a public one its __func__ would be the oldest. */
-static void switch_to_dfu_mode(struct GlassesState *gs, struct k_sem *sem)
+static void switch_to_dfu_mode(struct k_sem *sem)
 {
 	int ret;
 
@@ -142,8 +133,6 @@ static void switch_to_dfu_mode(struct GlassesState *gs, struct k_sem *sem)
 #define ESB_DIR_UP    0x80
 #define ESB_DIR_DOWN  0x40
 
-/* the vendor main.c is longer: from here on, line numbers follow it (the logs print __LINE__) */
-#line 707
 static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len)
 {
 	uint8_t buf[22] = {0};
@@ -332,12 +321,8 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 		break;
 	}
 
-	if (gs->esb_hdr.cmd == 3) {
-		if (gs->esb_hdr.dir == 2) {
-			if (gs->esb_arg1 == 1) {
-				switch_to_dfu_mode(gs, &gs->main_sem);
-			}
-		}
+	if (gs->esb_hdr.cmd == 3 && gs->esb_hdr.dir == 2 && gs->esb_arg1 == 1) {
+		switch_to_dfu_mode(&gs->main_sem);
 	}
 	return 0;
 }
@@ -770,7 +755,6 @@ void imu_module_set_mode(int enable)
 	update_imu_mode(&GLOBAL_STATE->imu, mode);
 }
 
-/* Ghidra calls this update_imu_mode (clashes with the real one at 0x281dc) */
 void update_work_module(int enable, int module)
 {
 	struct GlassesState *gs = GLOBAL_STATE;
@@ -974,17 +958,15 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 	struct notif_msg *slot;
 	uint8_t cmd = data[0] & 0x3f;
 
-	if (cmd != 0 && (uint8_t)(cmd - 12) > 1) {
+	if (cmd != 0 && cmd != 12 && cmd != 13) {
 		if (esbm_last_seq == data[0x15]) {
 			return 0;
 		}
 		esbm_last_seq = data[0x15];
-		gs->fw_ver.major = gs->esb_pkt.ver_battery_raw[0];
-		gs->fw_ver.minor = gs->esb_pkt.ver_battery_raw[1];
-		gs->fw_ver.patch = gs->esb_pkt.ver_battery_raw[2];
-		gs->battery_right = gs->esb_pkt.ver_battery_raw[3];
+		gs->fw_ver = gs->esb_pkt.ver;
+		gs->battery_right = gs->esb_pkt.battery;
 		memcpy(gs->slave_mac, gs->esb_pkt.mac, sizeof(gs->slave_mac));
-		memcpy((void *)&gs->esb_pkt, data, sizeof(gs->esb_pkt));
+		memcpy(&gs->esb_pkt, data, sizeof(gs->esb_pkt));
 		if (data[0x12] & BIT(2)) {
 			clear_all_messages();
 			gs->esb_pkt.flags &= ~BIT(2);
@@ -1138,7 +1120,7 @@ static void role_init(struct GlassesState *s)
 
 static struct GlassesState *init_context(void)
 {
-	struct GlassesState *s, *gs;
+	struct GlassesState *s;
 
 	G1_LOG(1, "[cpuapp] global context init\n\n");
 
@@ -1159,9 +1141,8 @@ static struct GlassesState *init_context(void)
 	k_sem_init(&s->sem_7, 0, 1);
 	k_sem_init(&s->touch_sem, 0, 1);
 
-	gs = GLOBAL_STATE;
-	gs->work_mode = 0xff;
-	gs->module_mask = 0;
+	s->work_mode = 0xff;
+	s->module_mask = 0;
 	change_work_mode(0);
 
 	s->dashboard_ts = malloc(0x75);
@@ -1204,7 +1185,7 @@ static struct GlassesState *init_context(void)
 	if (s->esb_down_snapshot) {
 		memset(s->esb_down_snapshot, 0, 0x201);
 	}
-	s->user_sched_info = malloc(0x16a);
+	s->user_sched_info = malloc(sizeof(*s->user_sched_info));
 	if (s->user_sched_info) {
 		s->user_sched_info->f_168 = 0;
 		s->user_sched_info->ts = 0;
@@ -1222,7 +1203,7 @@ static struct GlassesState *init_context(void)
 	}
 	s->horiz_pitch_cfg = malloc(2);
 	if (s->horiz_pitch_cfg) {
-		*(uint16_t *)s->horiz_pitch_cfg = 0; /* vendor clears both bytes at once */
+		*(uint16_t *)s->horiz_pitch_cfg = 0; /* clears both bytes at once */
 	}
 	s->ts_info = malloc(10);
 	if (s->ts_info) {
@@ -1288,7 +1269,7 @@ static struct GlassesState *init_context(void)
 	}
 	register_jdb_panel_context(&s->panel);
 	nfc_init();
-	init_dashboard_info(GLOBAL_STATE->dashboard_ts);
+	init_dashboard_info();
 	getDashboardStartUpModeInfofromFlash();
 	getAppLanguageInfofromFlash();
 	clearSettingStorageQueue();
@@ -1387,7 +1368,7 @@ int main(void)
 	for (;;) {
 		k_sem_take(&s->main_sem, K_FOREVER);
 		if (runtime_mode == 1) {
-			switch_to_dfu_mode(s, &s->main_sem);
+			switch_to_dfu_mode(&s->main_sem);
 		}
 		while (s->pending) {
 			if (s->pending & BIT(0)) {

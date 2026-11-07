@@ -1,7 +1,6 @@
 /*
  * UI page: onboarding (first-use tutorial, driven by the phone app).
  */
-#define GUI_C_INTERNAL /* gui_screen_x_offset() returns int here */
 #include "ui.h"
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
@@ -10,23 +9,22 @@
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 
-static uint8_t page_redraw;             /* page needs a redraw */
-static uint8_t anim_drawn;             /* animated part already drawn */
-static uint8_t step_finished;             /* step finished */
+static uint8_t page_redraw;
+static uint8_t anim_drawn;
+static uint8_t step_finished;
 static uint8_t headup_hint_count;             /* repeat counter of the head-up hint */
-uint8_t DAT_2001db41;
-uint8_t onboarding_shown_sub_step;                    /* sub step on screen */
+uint8_t onboarding_shown_sub_step;
 
-static int8_t last_action = -1;          /* 0x20003697 */
-uint8_t onboarding_languages[5] = { 2, 6, 5, 7, 14 }; /* onboarding languages */
+static int8_t last_action = -1;
+uint8_t onboarding_languages[5] = { 2, 6, 5, 7, 14 };
 
 static struct {
-	volatile uint8_t timeout_cnt;    /* 0x00 */
-	volatile int64_t ts;             /* 0x08 */
-	uint8_t imu_mode;                /* 0x10 */
-} onboarding_prv;                        /* 0x20004da8 */
+	uint8_t timeout_cnt;
+	int64_t ts;
+	uint8_t imu_mode;
+} onboarding_prv;
 
-static int fade_step;                    /* 0x2000a9d4 */
+static int fade_step;
 
 int init_onboarding_info(void)
 {
@@ -50,7 +48,7 @@ void onboarding_request_redraw(void)
 /* fade the whole frame buffer in (one step per call, see fade_step) */
 #define ONB_FADE_FRAME(gs)                                                                 \
 	do {                                                                               \
-		for (unsigned int row = 0; row < 199; row++) {                             \
+		for (int row = 0; row < 199; row++) {                                      \
 			for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {                 \
 				const uint8_t steps[8] = { 1, 3, 5, 7, 7, 7, 7, 7 };       \
 				uint8_t *line = gs->panel.panel_buffer[row];           \
@@ -89,7 +87,7 @@ void onboarding_draw_static_page(int event)
 	switch (get_dashboard_state()->onboarding->action) {
 	case 0:
 		clear_showing_notification_on_gui();
-		for (fade_step = 0; fade_step < 8;) {
+		for (fade_step = 0; fade_step < 8; fade_step++) {
 			gui_bmp_bitmap_draw(0x16, X0, Y0 + 0x38, 0, 0, 0);
 			gui_utf_draw_middle(0,
 					    get_string_in_language(
@@ -97,7 +95,6 @@ void onboarding_draw_static_page(int event)
 					    0, X0 + 0x24, Y0 + 0x37, X0 + 0x21c, Y0 + 0x88, 4, 0, 0,
 					    NULL, 0);
 			ONB_FADE_FRAME(gs);
-			fade_step++;
 			ONB_REFLASH_FULL();
 		}
 		set_showing_notification_on_gui();
@@ -145,7 +142,7 @@ void onboarding_draw_static_page(int event)
 			if (get_dashboard_state()->onboarding->action != 0x15 || onboarding_prv.imu_mode == 1) {
 				clear_showing_notification_on_gui();
 			}
-			for (fade_step = 0; fade_step < 8;) {
+			for (fade_step = 0; fade_step < 8; fade_step++) {
 				gui_utf_draw(0, get_string(0x14), 3, X0, Y0, X0 + 0x76, Y0 + 0x1b, 1,
 					     0, 0, NULL, 0);
 				gui_utf_draw(0, "12:47", 1, X0, Y0 + 0x1b, X0 + 0x68, Y0 + 0x42, 1,
@@ -187,7 +184,6 @@ void onboarding_draw_static_page(int event)
 					break;
 				}
 				ONB_FADE_FRAME(gs);
-				fade_step++;
 				ONB_REFLASH_FULL();
 			}
 			set_showing_notification_on_gui();
@@ -218,7 +214,7 @@ void onboarding_draw_static_page(int event)
 				break;
 			}
 			clear_showing_notification_on_gui();
-			for (fade_step = 0; fade_step < 8;) {
+			for (fade_step = 0; fade_step < 8; fade_step++) {
 				gui_bmp_bitmap_draw(0x3c, X0 + 0x212, Y0 + 4, 0, 0, 0);
 				gui_utf_draw(0, get_dashboard_state()->onboarding->action == 6 ? "1" : "0", 3, X0 + 0x22e, Y0 + 3,
 					     X0 + 0x23e, Y0 + 0x1e, 1, 0, 0, NULL, 0);
@@ -228,7 +224,6 @@ void onboarding_draw_static_page(int event)
 				gui_utf_draw(0, get_string(get_dashboard_state()->onboarding->action == 6 ? 0x1c : 0xc), 0, X0,
 					     Y0 + 0x37, X0 + 0x240, Y0 + 0x6d, 2, 0, 0, NULL, 0);
 				ONB_FADE_FRAME(gs);
-				fade_step++;
 				ONB_REFLASH_FULL();
 			}
 			set_showing_notification_on_gui();
@@ -297,11 +292,9 @@ void onboarding_draw_static_page(int event)
 	onboarding_prv.imu_mode = get_dashboard_state()->imu.mode;
 }
 
-
 void onboarding_draw_animated_page(int event)
 {
 	uint8_t buf[0x400] = { 0 };
-	uint8_t shown;
 
 	switch (get_dashboard_state()->onboarding->action) {
 	case 0:
@@ -322,8 +315,6 @@ void onboarding_draw_animated_page(int event)
 			report_event_to_phone(0x10);
 			get_dashboard_state()->onboarding->ts = k_uptime_get();
 		}
-		break;
-	default:
 		break;
 	case 4:
 		gui_bmp_dynamic_bitmap_draw(0xc, X0 + 0x8a, Y0 + 0x70, 0, 0, 0, 0);
@@ -452,14 +443,13 @@ void onboarding_draw_animated_page(int event)
 	case 6:
 	case 0x13:
 		get_dashboard_state()->onboarding->sub_step = get_dashboard_state()->imu.mode;
-		shown = onboarding_shown_sub_step;
-		if (shown == 1) {
+		if (onboarding_shown_sub_step == 1) {
 			if (get_dashboard_state()->onboarding->action == 6) {
 				if (k_uptime_get() - get_dashboard_state()->onboarding->ts <= 2000) {
 					break;
 				}
 				if (!anim_drawn) {
-					anim_drawn = shown;
+					anim_drawn = 1;
 					gui_dynamic_bitmap_reset();
 					gui_bmp_bitmap_draw_ex(0x38, X0, Y0 + 0x37, buf, 0x55);
 					if (get_current_language() == 6) {
@@ -486,7 +476,7 @@ void onboarding_draw_animated_page(int event)
 			}
 			break;
 		}
-		if (shown != 2) {
+		if (onboarding_shown_sub_step != 2) {
 			break;
 		}
 		if (k_uptime_get() - get_dashboard_state()->onboarding->ts > 2000 || step_finished) {
@@ -582,9 +572,10 @@ void onboarding_draw_animated_page(int event)
 	case 0x11:
 		get_dashboard_state()->onboarding->sub_step = get_dashboard_state()->imu.mode;
 		break;
+	default:
+		break;
 	}
 }
-
 
 void onboarding_check_step_finished(void)
 {
@@ -688,7 +679,6 @@ int onboarding_ble_process(struct GlassesState *gs, const struct ble_req_hdr *hd
 			break;
 		case 3:
 			memcpy(gs->onboarding->step_str, "4/6", 4);
-			DAT_2001db41 = 0;
 			onboarding_shown_sub_step = 0;
 			gs->onboarding->sub_step = 0;
 			gs->onboarding->calib_state_a = 0;
@@ -745,10 +735,8 @@ int onboarding_ble_process(struct GlassesState *gs, const struct ble_req_hdr *hd
 		rsp[3] = req[2];
 		if (gs->onboarding->active) {
 			gs->esb_down_id = rsp[3];
-			rsp_len = 4;
-		} else {
-			rsp_len = 4;
 		}
+		rsp_len = 4;
 	} else {
 		rsp_len = 0;
 	}

@@ -1,7 +1,6 @@
 /*
  * Panel frame buffer helpers: brightness curve, draw / clear callbacks and
  * frame buffer copies, on top of the panel context (get_jdb_panel_context()).
- * Reconstructed from the v1.63 firmware image.
  */
 #include <stdbool.h>
 #include <string.h>

@@ -5,25 +5,24 @@
 #include <stdint.h>
 
 /*
- * attitude filter state (0x44 bytes): the members of the Arduino Mahony class
- * (referenced_examples/mahony_ahrs/src/MahonyAHRS.h) in vendor order, with
- * Madgwick's beta added in front, invSampleFreq replaced by a measured period
- * and anglesComputed moved before the angles.
+ * attitude filter state: the members of the Arduino Mahony class,
+ * with Madgwick's beta added in front, invSampleFreq replaced by a measured
+ * period and anglesComputed moved before the angles.
  */
 struct ahrs {
-	float beta;		/* 0x00: 0.1 (unused by the Mahony update) */
-	float twoKp;		/* 0x04: 2 * proportional gain (Kp) */
-	float twoKi;		/* 0x08: 2 * integral gain (Ki) */
-	float q0, q1, q2, q3;	/* 0x0c: quaternion of sensor frame relative to auxiliary frame */
-	float integralFBx, integralFBy, integralFBz;	/* 0x1c: integral error terms scaled by Ki */
-	char anglesComputed;	/* 0x28 */
+	float beta;		/* 0.1 (unused by the Mahony update) */
+	float twoKp;		/* 2 * proportional gain (Kp) */
+	float twoKi;		/* 2 * integral gain (Ki) */
+	float q0, q1, q2, q3;	/* quaternion of sensor frame relative to auxiliary frame */
+	float integralFBx, integralFBy, integralFBz;	/* integral error terms scaled by Ki */
+	char anglesComputed;
 	uint8_t pad_29[3];
-	float roll;		/* 0x2c (rad) */
-	float pitch;		/* 0x30 */
-	float yaw;		/* 0x34 */
-	uint32_t Now;		/* 0x38: ms */
-	uint32_t lastUpdate;	/* 0x3c: ms */
-	float deltat;		/* 0x40: s */
+	float roll;		/* rad */
+	float pitch;
+	float yaw;
+	uint32_t Now;		/* ms */
+	uint32_t lastUpdate;	/* ms */
+	float deltat;		/* s */
 };
 
 void Mahony_init(struct ahrs *a);

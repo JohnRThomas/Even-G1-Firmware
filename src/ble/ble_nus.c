@@ -10,9 +10,7 @@
 #include "../production_test/production_test.h"
 #include "../threads/threads.h"
 
-/* the logs print __LINE__: line numbers below follow the vendor file */
-#line 10
-K_MSGQ_DEFINE(nus_data_msgq, sizeof(struct bt_data_msg), BT_DATA_MSGQ_MAX, 4); /* name sorts between display_msgq and proxy_msgq (__LINE__ is used below) */
+K_MSGQ_DEFINE(nus_data_msgq, sizeof(struct bt_data_msg), BT_DATA_MSGQ_MAX, 4);
 static struct ble_context *ble_ctx;
 static struct k_mutex nus_mutex;
 
@@ -26,7 +24,7 @@ static void bt_send_enabled(enum bt_nus_send_status status)
 	}
 }
 
-int ble_write_thread(const uint8_t *data, uint16_t len)
+static int ble_write_thread(const uint8_t *data, uint16_t len)
 {
 	bool connected = get_current_conn();
 	int err;
@@ -70,24 +68,23 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
 {
 	char addr[BT_ADDR_LE_STR_LEN] = {0};
 	struct bt_data_msg msg;
-	struct ble_context *ctx;
+	struct ble_context *ctx = ble_ctx;
 
 	memset(&msg, 0, sizeof(msg));
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, ARRAY_SIZE(addr));
 	G1_LOG_ERR("**Received data from: %s, len=%d,cmd 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x,"
 		   "receiver_thd_is_running is %d\n",
 		   addr, len, data[0], data[1], data[2], data[3], data[4], data[5],
-		   ble_ctx->receiver_thd_is_running);
+		   ctx->receiver_thd_is_running);
 
-	ctx = ble_ctx;
 	ctx->last_rx_time = k_uptime_get();
 
-	if (ble_ctx->receiver_thd_is_running || k_sem_count_get(&ble_ctx->rx_sem) != 0) {
+	if (ctx->receiver_thd_is_running || k_sem_count_get(&ctx->rx_sem) != 0) {
 		uint8_t resp[20] = {0};
 
 		if (data[0] == 0x18) {
 			resp[1] = 0xc9;
-			ble_ctx->write(resp, sizeof(resp));
+			ctx->write(resp, sizeof(resp));
 			if (get_dashboard_state()->is_master == 2 &&
 			    get_dashboard_state()->dashboard_mode == 6) {
 				k_msleep(50);
@@ -109,7 +106,6 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
 
 	/* receiver idle: hand the packet over directly
 	 * (short packets go to small_buf) */
-	ctx = ble_ctx;
 	if (len > 20) {
 		/* long packet */
 		if (len > sizeof(ctx->rx_data)) {
@@ -159,8 +155,7 @@ struct ble_context *get_ble_context(void)
 
 void ble_context_init(struct ble_context *ctx)
 {
-	/* vendor layout: the two large rx buffers lie past the end of ble_context
-	 * (gs + 0xb10 and gs + 0x1050) */
+	/* the two large rx buffers lie past the end of ble_context */
 	ctx->large_buf_0 = (uint8_t *)ctx + 0x394;
 	ctx->init_cb = start_ble_work_thread;
 	k_mutex_init(&nus_mutex);

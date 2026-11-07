@@ -3,9 +3,7 @@
  * open / close / input / power messages to display_msgq; the display thread
  * keeps track of the running UI application (screen id) and calls the
  * matching ui_*_task() handler.
- * Reconstructed from the v1.63 firmware image.
  */
-#include <errno.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 
@@ -165,7 +163,7 @@ static void display_timer_expiry(struct k_timer *timer)
 	display_reflash(NULL, 0);
 }
 
-static ALWAYS_INLINE void display_thread_close(void)
+static void display_thread_close(void)
 {
 	jbd_clear_cache_sync(0);
 	display_timer_stop();
@@ -176,12 +174,10 @@ static ALWAYS_INLINE void display_thread_close(void)
 void display_thread_handler(struct GlassesState *gs)
 {
 	struct disp_msg msg;
-	volatile uint8_t received;
+	bool received;
 	void *ctx = &gs->sync;
-	int ret;
 
 	memset(&msg, 0, sizeof(msg));
-	received = 0;
 	k_timer_init(&display_timer, display_timer_expiry, NULL);
 	set_frame_buffer(gs->panel.panel_buffer);
 	memset(&disp_state, 0, sizeof(disp_state));
@@ -192,20 +188,13 @@ void display_thread_handler(struct GlassesState *gs)
 			continue;
 		}
 		memset(&msg, 0, sizeof(msg));
-		received = 0;
-		ret = k_msgq_get(&display_msgq, &msg, K_MSEC(display_wait_ms));
-		if (ret == 0) {
-			received = 1;
-		} else if (ret == -ENOMSG || ret == -EAGAIN) {
-			received = 0;
-		}
+		received = k_msgq_get(&display_msgq, &msg, K_MSEC(display_wait_ms)) == 0;
 
 		switch (disp_state.state) {
 		case 0:
-			if (received != 1) {
+			if (!received) {
 				break;
 			}
-			received = 0;
 			if (msg.type == DISP_MSG_OPEN) {
 				if (gs->sync.screen_id == 16 && get_dashboard_state()->dash_buf->type < 12) {
 					jbd_clear_cache_sync(0);
@@ -243,9 +232,9 @@ void display_thread_handler(struct GlassesState *gs)
 			}
 			break;
 		case 1:
-			if (received == 1) {
-				received = 0;
-				if (msg.type == DISP_MSG_OPEN) {
+			if (received) {
+				switch (msg.type) {
+				case DISP_MSG_OPEN:
 					if (msg.len == 0) {
 						display_reflash_handler(gs, gs->sync.screen_id, ctx,
 									DISP_UI_ENTER);
@@ -258,8 +247,6 @@ void display_thread_handler(struct GlassesState *gs)
 						}
 					}
 					break;
-				}
-				switch (msg.type) {
 				case DISP_MSG_CLOSE:
 					disp_state.state = 2;
 					if (msg.len == 0) {

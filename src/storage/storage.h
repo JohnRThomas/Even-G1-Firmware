@@ -12,61 +12,60 @@
 #include <zephyr/device.h>
 #include <glasses_state.h>
 
-
 /* System (factory) settings, flash 0x130000 */
 struct sys_settings {
-	uint32_t valid;              /* 0x00 == 1 */
-	uint32_t aging_discharge_time_s;                /* 0x04 gs 0x10b8 */
-	uint8_t esb_channel;         /* 0x08 */
-	uint32_t imu_base;           /* 0x0c gs 0xf68 */
-	uint32_t lux_base_max;       /* 0x10 gs 0xf98 */
-	uint8_t panel_voltage;       /* 0x14 gs 0xed4 */
-	char sn[32];                 /* 0x15 */
-	char name[32];               /* 0x35 */
-	uint8_t esb_master_addr;     /* 0x55 */
-	uint8_t esb_slave_addr;      /* 0x56 */
-	uint8_t aging_test_count;                 /* 0x57 gs 0x10a8 */
-	uint8_t aging_start_soc;                 /* 0x58 gs 0x10a9 */
-	uint32_t aging_charge_time_s;                /* 0x5c gs 0x10b4 */
-	uint16_t canvas_x;                /* 0x60 gs 0x108a */
-	uint16_t canvas_y;                /* 0x62 gs 0x108c */
-	uint32_t lux_base[3];        /* 0x64 gs 0xfa8, 0xfa4, 0xfac */
-	uint32_t lux_base_spare;                /* 0x70 gs 0xfb0 */
-	uint16_t lum_base[3];        /* 0x74 gs 0xeda, 0xedc, 0xede */
-	uint32_t luminance_curve;                /* 0x7c gs 0xfb4 */
-	uint32_t luminance_curve_a1;                /* 0x80 gs 0xfb8 */
-	struct triple aging_discharge_step_s;           /* 0x84 gs 0x10bc */
-	uint32_t aging_elapsed_s;                /* 0x90 gs 0x10b0 */
-	uint8_t aging_touch_count;                 /* 0x94 gs 0x10c8 */
-	uint8_t aging_charge_check_result;                 /* 0x95 gs 0x10d0 */
+	uint32_t valid;              /* == 1 */
+	uint32_t aging_discharge_time_s;
+	uint8_t esb_channel;
+	uint32_t imu_base;
+	uint32_t lux_base_max;
+	uint8_t panel_voltage;
+	char sn[32];
+	char name[32];
+	uint8_t esb_master_addr;
+	uint8_t esb_slave_addr;
+	uint8_t aging_test_count;
+	uint8_t aging_start_soc;
+	uint32_t aging_charge_time_s;
+	uint16_t canvas_x;
+	uint16_t canvas_y;
+	uint32_t lux_base[3];
+	uint32_t lux_base_spare;
+	uint16_t lum_base[3];
+	uint32_t luminance_curve;
+	uint32_t luminance_curve_a1;
+	struct triple aging_discharge_step_s;
+	uint32_t aging_elapsed_s;
+	uint8_t aging_touch_count;
+	uint8_t aging_charge_check_result;
 };
 BUILD_ASSERT(sizeof(struct sys_settings) == 0x98);
 BUILD_ASSERT(offsetof(struct sys_settings, lux_base) == 0x64);
 
 /* User settings, flash 0x134000 */
 struct usr_settings {
-	uint8_t display_mode;        /* 0x00 */
-	uint8_t brightness_level;    /* 0x01 */
-	uint8_t wakeup_angle;        /* 0x02 */
-	uint8_t dof3_enable;         /* 0x03 */
-	uint32_t imu_div;                /* 0x04 gs 0xf70 */
-	uint8_t auto_brightness;                 /* 0x08 gs 0xf9c */
-	uint8_t bonded;                 /* 0x09 gs 0x1088 */
-	uint8_t check_mode;                 /* 0x0a gs 0x10d4 */
-	uint8_t raster_height_gear;                 /* 0x0b gs 0xec0 */
-	struct pk7 bonded_addr;              /* 0x0c gs 0x1081 */
-	uint8_t imu_wear;                 /* 0x13 gs 0xef9 */
-	uint8_t message_mode;                 /* 0x14 gs 0x10d6 */
-	uint8_t charge_limit_upper;  /* 0x15 gs 0x10d8 */
-	uint8_t charge_limit_lower;  /* 0x16 gs 0x10d9 */
-	uint8_t test_mode;           /* 0x17 */
-	uint8_t canvas_distance_gear;                 /* 0x18 gs 0xec1 */
-	uint8_t message_stay_time;                 /* 0x19 gs 0x10d7 */
-	uint8_t double_tap_customize;                 /* 0x1a gs 0x1244 */
-	uint32_t user_horiz_pitch;                /* 0x1c gs 0xf6c */
-	uint8_t date_format;                 /* 0x20 dashboard_ts 0x5f */
-	uint16_t brightness_percent;                /* 0x22 gs 0xee0 */
-	struct u8pair longpress_head_up_mic;           /* 0x24 gs 0x1246 */
+	uint8_t display_mode;
+	uint8_t brightness_level;
+	uint8_t wakeup_angle;
+	uint8_t dof3_enable;
+	uint32_t imu_div;
+	uint8_t auto_brightness;
+	uint8_t bonded;
+	uint8_t check_mode;
+	uint8_t raster_height_gear;
+	struct pk7 bonded_addr;
+	uint8_t imu_wear;
+	uint8_t message_mode;
+	uint8_t charge_limit_upper;
+	uint8_t charge_limit_lower;
+	uint8_t test_mode;
+	uint8_t canvas_distance_gear;
+	uint8_t message_stay_time;
+	uint8_t double_tap_customize;
+	uint32_t user_horiz_pitch;
+	uint8_t date_format;
+	uint16_t brightness_percent;
+	struct u8pair longpress_head_up_mic;
 	uint8_t reserved[6];
 };
 BUILD_ASSERT(sizeof(struct usr_settings) == 0x2c);
@@ -76,7 +75,7 @@ BUILD_ASSERT(sizeof(struct usr_settings) == 0x2c);
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
-/* QuickNote context behind GLOBAL_STATE->quicknote (partial) */
+/* QuickNote context behind GLOBAL_STATE->quicknote */
 #define QUICKNOTE_TITLE_LEN 0x29
 #define QUICKNOTE_TEXT_LEN  0x119
 
@@ -124,7 +123,7 @@ void storage_commit_request(int cmd, uint8_t sys_dirty);
 void start_flash_storage_threads(struct GlassesState *gs);
 
 /* setting_store.c */
-extern volatile struct app_setting CURRENT_LANGUAGE;
+extern struct app_setting CURRENT_LANGUAGE;
 int clearSettingStorageQueue(void);
 int upgradeAppLanguageInfoToFlash(uint8_t language);
 int cleanAppLanguageInfo(void);
@@ -146,6 +145,6 @@ int deleteQuickNoteData(int index);
 int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *text,
 			      int text_len);
 int getQuickNoteQueueNum(void);
-unsigned int QuickNoteStoreHandler(void);
+int QuickNoteStoreHandler(void);
 
 #endif /* STORAGE_H_ */

@@ -1,6 +1,5 @@
 /*
  * External QSPI NOR flash (mx25r6435f) access wrappers.
- * Reconstructed from the v1.63 firmware image.
  */
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -13,7 +12,7 @@
 
 #define EXT_FLASH_MODULE_ON BIT(4)
 
-/* power hooks of the flash module (main.c, empty in this build) */
+/* power hooks of the flash module (main.c) */
 #define EXT_FLASH_POWER_ON(gs)                                 \
 	do {                                                   \
 		if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) { \
@@ -27,10 +26,9 @@
 		}                                              \
 	} while (0)
 
-static const struct device *ext_flash_dev;   /* 0x20008548 */
-static struct k_mutex ext_flash_mutex;       /* 0x20008534 */
+static const struct device *ext_flash_dev;
+static struct k_mutex ext_flash_mutex;
 
-/* ext_flash_api_init is defined first: target __func__ order */
 int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size);
 int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len);
 int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len);
@@ -52,6 +50,7 @@ int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_fla
 	G1_LOG_ERR("FAILURE!\n");
 	return -1;
 }
+
 int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size)
 {
 	int ret = 0;

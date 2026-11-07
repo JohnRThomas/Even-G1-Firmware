@@ -15,7 +15,7 @@ static struct {
 	uint8_t last_step;
 } imu_pitch_ui;
 
-int set_imu_pitch_reflash(void)
+static int set_imu_pitch_reflash(void)
 {
 	struct GlassesState *gs = get_dashboard_state();
 

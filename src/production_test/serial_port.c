@@ -1,9 +1,6 @@
 /*
  * Production-test lpuart transport (UART async API), derived from the NCS
  * lpuart sample (nrf/samples/peripheral/lpuart).
- *
- * Original path: src/production_test/serial_port.c (from the __ASSERT
- * __FILE__ string; the asserts in uart_callback() sit at lines 81 and 84).
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -89,7 +86,6 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
 	{
 		printk("*************alloc new rx buf*************\n");
 		err = k_mem_slab_alloc(&uart_slab, (void **)&buf, K_NO_WAIT);
-#line 81 "../src/production_test/serial_port.c"
 		__ASSERT(err == 0, "Failed to allocate slab");
 
 		err = uart_rx_buf_rsp(uart, buf, BUF_SIZE);
@@ -108,11 +104,6 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
 	}
 }
 
-static inline int serial_args_invalid(const struct device *dev, uint8_t **data)
-{
-	return dev == NULL || data == NULL;
-}
-
 int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len)
 {
 	uint8_t *p;
@@ -120,10 +111,9 @@ int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len)
 	uint8_t n;
 	int j;
 	uint16_t i;
-	int idx;
 	uint8_t sum;
 
-	if (serial_args_invalid(dev, data) || len == NULL) {
+	if (dev == NULL || data == NULL || len == NULL) {
 		return -1;
 	}
 	if (serial_rx_len == 0) {
@@ -131,10 +121,9 @@ int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len)
 	}
 
 	for (i = 0; i <= BUF_SIZE - serial_rx_len; i++) {
-		idx = i;
-		if (serial_rx_buf[idx] == 0x5a && serial_rx_buf[idx + 1] == 0xa5 && serial_rx_buf[idx + 2] == 0x7f &&
-		    serial_rx_buf[idx + 3] + 4 < BUF_SIZE - i) {
-			n = serial_rx_buf[idx + 3];
+		if (serial_rx_buf[i] == 0x5a && serial_rx_buf[i + 1] == 0xa5 &&
+		    serial_rx_buf[i + 2] == 0x7f && serial_rx_buf[i + 3] + 4 < BUF_SIZE - i) {
+			n = serial_rx_buf[i + 3];
 			sum = 0;
 			for (j = 0; j <= n + 3; j++) {
 				sum += serial_rx_buf[i + j];

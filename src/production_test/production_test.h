@@ -1,8 +1,6 @@
 /*
  * Module-private declarations for the production-test files
  * (production_test.c, serial_thread.c, serial_port.c).
- * Partial views of shared vendor structures, reconstructed from the v1.63
- * app core.
  */
 #ifndef G1_PRODUCTION_TEST_H_
 #define G1_PRODUCTION_TEST_H_
@@ -25,16 +23,10 @@ enum pt_comm_type {
 typedef int (*pt_cmd_handler_t)(const uint8_t *req, uint32_t req_len, uint8_t **resp,
 				uint8_t *resp_len, void *arg);
 
-typedef int pt_cmd_handler_fn(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-			      uint8_t *resp_len, void *arg);
-
 struct pt_cmd {
 	uint8_t cmd;
 	pt_cmd_handler_t handler;
 };
-
-/* production_test.c: command handlers of pt_cmd_table */
-pt_cmd_handler_fn chnange_test_image, enter_into_testmode, exit_mic_mode, get_assign_channel_info, get_battery_info, get_brightness_info, get_brightness_lum_info, get_canvas_pos_info, get_charge_test_info, get_esb_info, get_firmware_mode, get_flash_burn_info, get_flash_info, get_flash_info_2, get_glasses_sn_info, get_imu_info, get_keyboard_info, get_keyboard_info_2, get_lux_info, get_mac_info, get_mac_info_2, get_mac_info_3, get_mic_info, get_query_sn_info, get_role_info_left, get_role_info_right, get_sn_info, get_version, into_long_trip_mode, power_off_opt3007, power_on_opt3007, resume_panel, set_aging_test_info, set_battery_info, set_brightness, set_brightness_lum_base, set_canvas_pos_info, set_charge_limit, set_comflag, set_glasses_sn_info, set_imu_base, set_lux_base, set_mic_info, set_mic_nocompress, set_panel_voltage, set_restart_mode, set_restart_mode_2, suspend_panel;
 
 /* pt_comm.c */
 int comm_write(int type, void *ctx, uint8_t *data, size_t len);
@@ -42,8 +34,6 @@ int comm_read(int type, void *ctx, uint8_t **data, uint32_t *len);
 
 /* production_test.c */
 extern const struct pt_cmd pt_cmd_table[48];
-extern struct k_thread mic_transm_thread_data;
-K_THREAD_STACK_DECLARE(mic_transm_thread_stack, 1024);
 extern struct k_sem mic_transm_sem;             /* mic_transm_thread trigger */
 int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp,
 			uint8_t *resp_len, void *arg);

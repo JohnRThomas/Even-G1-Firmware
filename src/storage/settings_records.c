@@ -1,6 +1,6 @@
 /*
  * Settings records on the external mx25r64 QSPI flash: sys settings,
- * user settings, burial point, serial number.  The raw read / write-and-verify
+ * user settings, serial number.  The raw read / write-and-verify
  * helpers are in flash_settings.c.
  */
 #include <stdio.h>
@@ -51,11 +51,7 @@ int save_sys_settings(struct GlassesState *gs, int force)
 	s.lum_base[0] = gs->panel.lum_base_0;
 	s.lum_base[1] = gs->panel.lum_base_1;
 	s.lum_base[2] = gs->panel.lum_gear;
-	/* byte loop (not memcpy): the shipped code schedules this 12-byte copy as a
-	 * char-typed block move */
-	for (size_t k = 0; k < sizeof(s.aging_discharge_step_s); k++) {
-		((uint8_t *)&s.aging_discharge_step_s)[k] = ((uint8_t *)&gs->aging_discharge_step_raw)[k];
-	}
+	s.aging_discharge_step_s = gs->aging_discharge_step_raw;
 	s.aging_elapsed_s = gs->aging_elapsed_s;
 	s.aging_touch_count = gs->aging_touch_count;
 	s.aging_charge_check_result = gs->aging_charge_check_result;
@@ -101,14 +97,7 @@ int load_sys_setting(struct GlassesState *gs)
 	gs->panel.lum_base_0 = s.lum_base[0];
 	gs->panel.lum_base_1 = s.lum_base[1];
 	gs->panel.lum_gear = s.lum_base[2];
-	/* byte loop (not memcpy): the shipped code schedules this 12-byte copy as a
-	 * char-typed block move.  The
-	 * destination is indexed from the start of *gs (not &gs->aging_discharge_step_raw), which keeps
-	 * the first-boot memset below from sharing its address computation
-	 * (see ai_helpers/agent_notes/load_sys_setting.md) */
-	for (size_t k = 0; k < sizeof(s.aging_discharge_step_s); k++) {
-		((uint8_t *)gs)[offsetof(struct GlassesState, aging_discharge_step_raw) + k] = ((uint8_t *)&s.aging_discharge_step_s)[k];
-	}
+	gs->aging_discharge_step_raw = s.aging_discharge_step_s;
 	gs->aging_elapsed_s = s.aging_elapsed_s;
 	gs->aging_touch_count = s.aging_touch_count;
 	gs->aging_charge_check_result = s.aging_charge_check_result;
@@ -143,7 +132,7 @@ int load_sys_setting(struct GlassesState *gs)
 	if (gs->panel.voltage != 1) {
 		gs->panel.voltage = 0;
 	}
-	if ((uint32_t)gs->luminance_curve + 1 <= 1) {
+	if (gs->luminance_curve == 0 || gs->luminance_curve == -1) {
 		gs->luminance_curve = 128000;
 	}
 	if (gs->canvas_x < 22 || gs->canvas_x > 42) {
@@ -425,11 +414,7 @@ int read_sys_settting_from_flash(struct sys_settings *out)
 	out->lum_base[0] = s.lum_base[0];
 	out->lum_base[1] = s.lum_base[1];
 	out->lum_base[2] = s.lum_base[2];
-	/* byte loop (not memcpy): the shipped code schedules this 12-byte copy as a
-	 * char-typed block move */
-	for (size_t k = 0; k < sizeof(s.aging_discharge_step_s); k++) {
-		((uint8_t *)&out->aging_discharge_step_s)[k] = ((uint8_t *)&s.aging_discharge_step_s)[k];
-	}
+	out->aging_discharge_step_s = s.aging_discharge_step_s;
 	out->aging_elapsed_s = s.aging_elapsed_s;
 	out->aging_touch_count = s.aging_touch_count;
 	out->aging_charge_check_result = s.aging_charge_check_result;

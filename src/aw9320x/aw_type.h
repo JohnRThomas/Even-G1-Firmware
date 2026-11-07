@@ -49,7 +49,6 @@ extern "C" {
 #define GET_BITS_31_25				(0xFF000000)
 #endif
 
-
 #ifndef AW_BOOL
 typedef unsigned char AW_BOOL;
 #endif
@@ -91,4 +90,3 @@ typedef unsigned long long AW_U64;
 #endif
 
 #endif  /* __AW_TYPE_H__ */
-

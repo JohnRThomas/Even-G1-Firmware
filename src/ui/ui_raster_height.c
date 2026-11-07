@@ -1,7 +1,6 @@
 /*
  * UI page: raster height / canvas distance adjustment.
  */
-#define GUI_C_INTERNAL /* gui_screen_x_offset() returns int here */
 #include "ui.h"
 #include "../dashboard/dashboard.h"
 
@@ -20,9 +19,6 @@ void cal_panel_canvas_coord(int *horizontal_offset, int *vertical_offset)
 		case 2:
 			*horizontal_offset = 8;
 			break;
-		default:
-			*horizontal_offset = 0;
-			break;
 		case 4:
 			*horizontal_offset = -4;
 			break;
@@ -40,6 +36,9 @@ void cal_panel_canvas_coord(int *horizontal_offset, int *vertical_offset)
 			break;
 		case 9:
 			*horizontal_offset = -16;
+			break;
+		default:
+			*horizontal_offset = 0;
 			break;
 		}
 		if (get_dashboard_state()->is_master == 1) {

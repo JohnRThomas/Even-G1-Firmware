@@ -1,7 +1,7 @@
 /*
  * ST25DV dynamic NFC tag (I2C EEPROM + mailbox) on the G1.
  *
- * The vendor wrapped the tag in a hand-built Zephyr "eeprom" device
+ * The tag is wrapped in a hand-built Zephyr "eeprom" device
  * (struct device in RAM, eeprom_driver_api {read, write, size}); the
  * register helpers below follow ST's st25dv.c, rewritten on that device.
  */
@@ -68,8 +68,8 @@ int eeprom_st25dv_write_sys(const struct device *dev, off_t offset, const void *
 int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **buf, uint32_t *len);
 int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void *buf, size_t len);
 const struct device *eeprom_st25dv_init(void);
-uint8_t eeprom_st25dv_lock(const struct device *dev);	/* no return value (vendor) */
-uint8_t eeprom_st25dv_unlock(const struct device *dev);	/* no return value (vendor) */
+uint8_t eeprom_st25dv_lock(const struct device *dev);
+uint8_t eeprom_st25dv_unlock(const struct device *dev);
 
 /* st25dv.c */
 int st25dv_configure_gpo(const struct device *dev, uint8_t it_conf);

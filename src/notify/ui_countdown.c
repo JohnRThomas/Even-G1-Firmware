@@ -14,10 +14,9 @@
 #include "../panel_display/panel.h"
 #include "../ui/ui.h"
 
-
 static uint32_t countdown_last_ms;
 
-void countdown_tick(void *unused, struct countdown_ts_context *cd)
+void countdown_tick(struct countdown_ts_context *cd)
 {
 	uint32_t now;
 
@@ -31,9 +30,7 @@ void countdown_tick(void *unused, struct countdown_ts_context *cd)
 		return;
 	}
 	if (now - countdown_last_ms >= 1000) {
-		uint32_t *sec = &cd->seconds;
-
-		*sec = *sec - (now - countdown_last_ms) / 1000;
+		cd->seconds -= (now - countdown_last_ms) / 1000;
 		countdown_last_ms = now;
 	}
 }
@@ -46,15 +43,12 @@ int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg)
 	uint32_t hours = timer->seconds / 3600 % 24;
 	uint32_t remain = timer->seconds % 3600;
 	uint32_t secs = remain % 60;
-	bool done = false;
+	bool done = remain < 60 && hours == 0 && secs == 0;
 	uint16_t count = 0;
 	uint16_t *codes;
 	uint32_t mins;
 	int x;
 
-	if (remain < 60) {
-		done = (hours | secs) == 0;
-	}
 	copy_to_frame_buffer_raw(fb, get_small_glyph_bitmap(done ? 4 : 9, 288), 12, 24, 12, 12);
 	if (done) {
 		codes = utf8_to_unicode_buf("时间到!", &count);

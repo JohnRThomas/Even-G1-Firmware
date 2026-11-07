@@ -8,20 +8,20 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 
-/* quick note page private state (0x20004b20, 0x20 bytes) */
+/* quick note page private state */
 struct quicknote_prv_data {
-	uint8_t state;            /* 0x00 0 init, 1 running, 2 exiting (logo) */
+	uint8_t state;            /* 0 init, 1 running, 2 exiting (logo) */
 	uint8_t pad_01[3];
-	int32_t exit_delay;       /* 0x04 */
-	int64_t ts;               /* 0x08 */
-	uint8_t last_status;      /* 0x10 */
-	uint8_t recording;        /* 0x11 */
-	uint8_t timeout_cnt;             /* 0x12 */
+	int32_t exit_delay;
+	int64_t ts;
+	uint8_t last_status;
+	uint8_t recording;
+	uint8_t timeout_cnt;
 	uint8_t pad_13[0x0d];
 };
 BUILD_ASSERT(sizeof(struct quicknote_prv_data) == 0x20);
 
-int exit_display_ms = 4000;                  /* 0x200024ec */
+int exit_display_ms = 4000;
 struct quicknote_prv_data quicknote_prv;
 uint8_t quicknote_result_shown;                        /* "result" page drawn */
 
@@ -80,39 +80,28 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 					quicknote_result_shown = 1;
 					qn->ts = k_uptime_get();
 					if (gs->ui.qn.mode == 2) {
-						uint32_t x;
+						int x;
 
-						/*
-						 * compiler_barrier() emits no code.  It makes the block of the first
-						 * compare (lang == GERMAN) "not side-effect free", so GCC 12's
-						 * if-to-switch pass leaves that compare out.  The remaining 3 cases
-						 * are below the table threshold, so the chain stays a compare chain
-						 * as in the target.  Without it, GCC builds a CSWTCH table (-28 B).
-						 * Vendor-like alternatives that do not work:
-						 * - int/uint8/uint32 lang, a switch, ternaries, x = 0xcc first,
-						 *   nested else, or a helper: all give the table.
-						 * - The chain placed before the mode test, after the qn->ts store:
-						 *   the store also blocks the pass, but GCC then does not sink the
-						 *   chain below the mode test as the target has it (2376 B).
-						 * The vendor's real construct is unknown.
-						 */
-						compiler_barrier();
-						if (lang == LANGUAGE_GERMAN) {
+						switch (lang) {
+						case LANGUAGE_GERMAN:
 							x = 0xc6;
-						} else if (lang == LANGUAGE_FRENCH) {
-							x = 0xcc;
-						} else if (lang == LANGUAGE_SPANISH) {
+							break;
+						case LANGUAGE_SPANISH:
 							x = 0xd6;
-						} else if (lang == LANGUAGE_ITALIAN) {
+							break;
+						case LANGUAGE_ITALIAN:
 							x = 0xd0;
-						} else {
+							break;
+						case LANGUAGE_FRENCH:
+						default:
 							x = 0xcc;
+							break;
 						}
 
 						gui_bmp_bitmap_draw(0x4a, gui_screen_x_offset() + x,
 								    gui_screen_y_offset() + 0x3a, 0, 0, 0);
 						gui_utf_draw(0, get_string(0x52), 0,
-							     gui_screen_x_offset() + (int)x + 0x2c,
+							     gui_screen_x_offset() + x + 0x2c,
 							     gui_screen_y_offset() + 0x36,
 							     gui_screen_x_offset() + 0x240,
 							     gui_screen_y_offset() + 0x88, 1, 0, 0, NULL, 0);
@@ -214,25 +203,28 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 								    gui_screen_y_offset() + 0x88, 3, 0, 0, NULL, 0);
 						break;
 					case 2: {
-						uint32_t x;
+						int x;
 
-						compiler_barrier(); /* see the first language chain */
-						if (lang == LANGUAGE_GERMAN) {
+						switch (lang) {
+						case LANGUAGE_GERMAN:
 							x = 0xc6;
-						} else if (lang == LANGUAGE_FRENCH) {
-							x = 0xcc;
-						} else if (lang == LANGUAGE_SPANISH) {
+							break;
+						case LANGUAGE_SPANISH:
 							x = 0xd6;
-						} else if (lang == LANGUAGE_ITALIAN) {
+							break;
+						case LANGUAGE_ITALIAN:
 							x = 0xd0;
-						} else {
+							break;
+						case LANGUAGE_FRENCH:
+						default:
 							x = 0xcc;
+							break;
 						}
 
 						gui_bmp_bitmap_draw(0x4a, gui_screen_x_offset() + x,
 								    gui_screen_y_offset() + 0x3a, 0, 0, 0);
 						gui_utf_draw(0, get_string(0x52), 0,
-							     gui_screen_x_offset() + (int)x + 0x2c,
+							     gui_screen_x_offset() + x + 0x2c,
 							     gui_screen_y_offset() + 0x36,
 							     gui_screen_x_offset() + 0x240,
 							     gui_screen_y_offset() + 0x88, 1, 0, 0, NULL, 0);

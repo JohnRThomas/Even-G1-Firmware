@@ -15,7 +15,6 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
 
-
 static char ios_mail_list[10][32] = {
 	"com.apple.mail",
 	"com.google.Gmail",
@@ -51,7 +50,6 @@ static char android_calendar_list[5][32] = {
 };
 
 struct notif_msg g_arrMsgContent[MSG_TOTAL_NUM];
-uint8_t cur_message_show_state(void);
 static char *ncs_buf;
 static struct notif_msg push_msg_copy;
 
@@ -106,7 +104,6 @@ int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id,
 	return 0;
 }
 
-#line 291
 void send_whilelist_app_info_wrapper(struct notif_msg *msg)
 {
 	if (msg == NULL) {
@@ -136,8 +133,7 @@ void send_whilelist_app_info_wrapper(struct notif_msg *msg)
 				       msg->app_identifier, msg->display_name);
 }
 
-#line 321
-int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, volatile uint8_t *src,
+int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, uint8_t *src,
 				   uint8_t *hdr, uint8_t *arg, uint8_t *out, uint32_t len)
 {
 	struct notif_msg *msg;
@@ -186,7 +182,6 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, vo
 	return 5;
 }
 
-#line 386
 void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data)
 {
 	uint8_t resp[128];
@@ -251,7 +246,7 @@ int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *ou
 
 void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, uint8_t *rsp)
 {
-	spim_transfer_len(ctx, buf, 1, 0x1e);
+	spim_transfer(ctx, buf, 1);
 	rsp[1] = 0xc9;
 	rsp[2] = *buf;
 	G1_LOG_INF("BLE_REQ_GET_ESB_CHANNEL: %d\n", rsp[2]);
@@ -355,11 +350,10 @@ uint8_t find_last_read_message(void)
 	int i;
 
 	for (i = MSG_NORMAL_NUM - 1; i >= 0; i--) {
-		if (!g_arrMsgContent[i].read) {
-			continue;
+		if (g_arrMsgContent[i].read) {
+			g_curShowMsgIdx = i;
+			return i;
 		}
-		g_curShowMsgIdx = i;
-		return i;
 	}
 	g_curShowMsgIdx = 0;
 	return 0xff;
@@ -380,197 +374,83 @@ uint8_t count_messages(void)
 uint8_t count_unread_messages(void)
 {
 	uint8_t unread = 0;
-	bool found = false;
-	int i;
 	uint8_t last = 0;
 	uint8_t count;
 
-	for (i = 0; i < MSG_NORMAL_NUM; i++) {
-		count = i;
-		if (g_arrMsgContent[i].app_identifier[0] == 0) {
-			if (found) {
-				g_curShowMsgIdx = last;
-			}
-			if (unread == 0) {
-				goto none;
-			}
-			return count - unread;
+	for (count = 0; count < MSG_NORMAL_NUM; count++) {
+		if (g_arrMsgContent[count].app_identifier[0] == 0) {
+			break;
 		}
-		if (g_arrMsgContent[i].read) {
+		if (g_arrMsgContent[count].read) {
 			unread++;
-			found = g_arrMsgContent[i].read;
-		}
-		if (g_arrMsgContent[i].read) {
 			last = count;
 		}
 	}
-	count = i;
-	if (found) {
+	if (unread != 0) {
 		g_curShowMsgIdx = last;
-	}
-	if (unread == 0) {
-none:
-		if (count != 0) {
-			g_curShowMsgIdx = 0;
-		} else {
-			g_curShowMsgIdx = 0xff;
-		}
+	} else if (count != 0) {
+		g_curShowMsgIdx = 0;
+	} else {
+		g_curShowMsgIdx = 0xff;
 	}
 	return count - unread;
 }
 
+/*
+ * Drop the shown messages whose display time is over (every read one when
+ * force is set) and move the following messages down into the freed slots.
+ */
 void clear_timeout_message(int force)
 {
-	int off2 = 0;
 	int i = 0;
 	int offset = 0;
-	int j;
-	int has_msg = 0;
-	int found = 0;
+	bool has_msg = false;
 
 	msg_array_busy = 1;
-	do {
-top:;
+	while (i != MSG_NORMAL_NUM) {
 		struct notif_msg *m = &g_arrMsgContent[i];
 		uint32_t recv = m->recv_time;
 		uint32_t show = m->start_show_time;
+		int j;
 
-		/*
-		 * Every `break` in the inner switch lands in the shared tail after the
-		 * `if (0)` block, which recomputes j = offset + i and stops the loop
-		 * when j > MSG_NORMAL_NUM - 1 (the early j checks therefore end the
-		 * loop exactly as before).  `move` leaves the outer switch with the
-		 * destination slot's first app_identifier byte in `found`.
-		 */
-		switch (0) {
-		default:
-			switch (0) {
-			default:
-				if (recv != 0) {
-					has_msg = 1;
-				}
-				if (recv == 0) {
-					if (has_msg) {
-						if (offset == 0) {
-							offset = 1;
-						} else if (!m->read) {
-							j = i + offset;
-							if (j <= MSG_NORMAL_NUM - 1) {
-								goto move;
-							}
-							goto chk;
-chk:
-							if (offset > j) {
-								i = j;
-								has_msg = j;
-								goto move;
-							}
-							off2 = offset;
-							goto tailx;
-						} else {
-							goto read_arm;
-						}
-					}
-				}
-				if (show == 0) {
-					if (offset < 1) {
-next:
-						i++;
-						continue;
-					}
-					off2 = offset;
-					goto tailx;
-				}
-				/* offset never goes negative; clamp kept as in the vendor build */
-				offset = offset < 0 ? 0 : offset;
-				if (m->read) {
-					goto read_arm;
-				}
-				switch (recv != 0) {
-				case 0:
-					if (i >= 0) {
-						off2 = offset;
-						goto tailx;
-					}
-read_arm:
-					if (force) {
-						if (show == 0) {
-							goto shift;
-						}
-						memset(&g_arrMsgContent[i], 0, sizeof(struct notif_msg));
-						j = i + (offset + 1);
-						offset++;
-					} else if (show == 0) {
-						break;
-					} else if (get_date() > g_arrMsgContent[i].start_show_time + get_dashboard_state()->message_stay_time) {
-						memset(&g_arrMsgContent[i], 0, sizeof(struct notif_msg));
-						j = i + (offset + 1);
-						offset++;
-					}
-					break;
-				case 1:
-					if (get_date() > g_arrMsgContent[i].start_show_time + 5) {
-						memset(&g_arrMsgContent[i], 0, sizeof(struct notif_msg));
-						j = i + (offset + 1);
-						offset++;
-					}
-					break;
-				}
-				break;
+		if (recv != 0) {
+			has_msg = true;
+		} else if (has_msg && offset == 0) {
+			offset = 1;
+		}
+		if (show != 0) {
+			bool expired;
+
+			if (m->read) {
+				expired = force || get_date() > m->start_show_time +
+								      get_dashboard_state()->message_stay_time;
+			} else {
+				expired = recv != 0 && get_date() > m->start_show_time + 5;
 			}
-			off2 = offset;
-			if (0) {
-shift:
-				if (offset == 0) {
-					i++;
-					continue;
-				}
-				j = i + offset;
-				if (j > MSG_NORMAL_NUM - 1) {
-					/* never true (i >= 0): keeps this exit arm from being
-					 * duplicated by the early jump threader */
-					if (offset > j) {
-						offset = j;
-					}
-					off2 = offset;
-					goto tailx;
-				}
-				if (recv != 0) {
-					i++;
-					continue;
-				}
-				goto move;
+			if (expired) {
+				memset(m, 0, sizeof(*m));
+				offset++;
 			}
-tailx:
-			j = off2 + i;
-			if (j > MSG_NORMAL_NUM - 1) {
-				i = MSG_NORMAL_NUM;
-				continue;
-			}
-			if (g_arrMsgContent[i].recv_time == 0 && offset > 0) {
-				goto move;
-			}
-			goto next;
-move:
-			found = g_arrMsgContent[j].app_identifier[0];
+		}
+		j = i + offset;
+		if (j > MSG_NORMAL_NUM - 1) {
 			break;
 		}
-		if (found) {
-			memcpy(&g_arrMsgContent[i], &g_arrMsgContent[j], sizeof(struct notif_msg));
+		if (m->recv_time != 0 || offset == 0) {
+			i++;
+		} else if (g_arrMsgContent[j].app_identifier[0]) {
+			memcpy(m, &g_arrMsgContent[j], sizeof(struct notif_msg));
 			memset(&g_arrMsgContent[j], 0, sizeof(struct notif_msg));
 			G1_LOG_ERR("######clear_timeout_message copy data from %d to  i %d\n", j, i);
 			i++;
-			if (i == MSG_NORMAL_NUM) {
-				break;
-			}
-			continue;
+		} else {
+			offset++;
 		}
-		offset++;
-		goto top;
-	} while (i != MSG_NORMAL_NUM);
+	}
 	get_dashboard_state()->unread_msg_num = count_unread_messages();
 	msg_array_busy = 0;
 }
+
 int message_uid_exists(uint32_t num, uint32_t uid)
 {
 	for (uint8_t i = 0; i < num; i++) {
@@ -581,7 +461,6 @@ int message_uid_exists(uint32_t num, uint32_t uid)
 	return 0;
 }
 
-#line 1059
 void confirm_message(uint32_t uid)
 {
 	struct notif_msg *pending = &g_arrMsgContent[MSG_NORMAL_NUM];
@@ -601,9 +480,6 @@ void confirm_message(uint32_t uid)
 	msg_array_busy = 1;
 	if (get_dashboard_state()->dashboard_mode != 4) {
 		clear_timeout_message(0);
-	}
-	if (get_dashboard_state()->message_mode && get_dashboard_state()->imu.mode != 1) {
-		(void)*(volatile uint8_t *)&get_dashboard_state()->dashboard_mode;
 	}
 	count = count_messages();
 	if (pending->action == 0) {
@@ -688,12 +564,8 @@ void confirm_message(uint32_t uid)
 		push_g_arrMsgContent();
 	}
 	msg_array_busy = 0;
-	if (get_dashboard_state()->message_mode && get_dashboard_state()->imu.mode != 1) {
-		(void)*(volatile uint8_t *)&get_dashboard_state()->dashboard_mode;
-	}
 }
 
-#line 855
 uint8_t push_message(struct notif_msg *msg)
 {
 	uint8_t pos;
@@ -743,7 +615,6 @@ uint8_t push_message(struct notif_msg *msg)
 	return g_msg_num_push;
 }
 
-#line 370
 uint8_t g_arrMsgContent_count(void)
 {
 	uint8_t num = get_dashboard_state()->unread_msg_num;
@@ -765,7 +636,6 @@ uint8_t g_arrMsgContent_count(void)
 	return get_dashboard_state()->unread_msg_num;
 }
 
-#line 967
 uint8_t pull_message(struct notif_msg **msg)
 {
 	if (msg == NULL) {
@@ -858,7 +728,6 @@ uint8_t cur_message_show_state(void)
 	return ret;
 }
 
-#line 1170
 uint8_t latest_message_show_state(void)
 {
 	uint8_t ret = 0;

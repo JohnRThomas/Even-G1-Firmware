@@ -2,7 +2,6 @@
  * Persist / temporary task status.  The screen on/off and suspend/resume
  * part is in system_state.c, the screen / message state machine in
  * message_task.c.
- * Reconstructed from the G1 v1.63 app core.
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -13,9 +12,8 @@
 #define TASK_RUNNING 2
 #define TASK_PAUSE   3
 
-/* .bss */
-static uint8_t saved_auto_brightness;                     /* 0x20019a6b */
-uint8_t task_status_lock;                     /* 0x20019a6a */
+static uint8_t saved_auto_brightness;
+uint8_t task_status_lock;
 
 uint8_t is_persist_task_active(struct GlassesState *state, int mode)
 {
@@ -58,12 +56,9 @@ int update_persist_task_status(struct GlassesState *state, int task, int status)
 					task_status_lock = 0;
 					return status;
 				}
-				display_close_screen(state->dashboard_mode);
-				state->dashboard_mode = task;
-			} else {
-				display_close_screen(state->dashboard_mode);
-				state->dashboard_mode = task;
 			}
+			display_close_screen(state->dashboard_mode);
+			state->dashboard_mode = task;
 		}
 	} else {
 		state->dashboard_mode = task;
@@ -103,19 +98,11 @@ int update_temp_task_status(struct GlassesState *state, int task, int status)
 		return status;
 	}
 	if (state->dashboard_mode != 0 && state->dashboard_mode != 1) {
-		if (status == TASK_RUNNING) {
-			if (task != 4) {
-				if (task != 6) {
-					task_status_lock = 0;
-					return status;
-				}
-				display_close_screen(state->dashboard_mode);
-			} else {
-				display_close_screen(state->dashboard_mode);
-			}
-		} else {
-			display_close_screen(state->dashboard_mode);
+		if (status == TASK_RUNNING && task != 4 && task != 6) {
+			task_status_lock = 0;
+			return status;
 		}
+		display_close_screen(state->dashboard_mode);
 	}
 	if (status == TASK_RUNNING) {
 		G1_LOG_ERR("persist task [running]: %d\n", task);

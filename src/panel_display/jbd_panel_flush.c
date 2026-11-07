@@ -1,6 +1,6 @@
 /*
  * JBD panel frame buffer flush (_reflash_fb_data_to_lcd / _ex), deep power
- * down / resume and the LCD mutex.  Reconstructed from the v1.63 image.
+ * down / resume and the LCD mutex.
  */
 #include <stdbool.h>
 #include <string.h>
@@ -9,14 +9,8 @@
 #include "g1_log.h"
 #include "panel.h"
 
-/*
- * Deep power down / resume and the LCD mutex: align-4 0x4aea8..0x4af6b.
- * panel_suspend()/panel_resume() (jbd_panel.c) are emitted
- * *before* these callees, which GCC never does for callees in the same file,
- * so they live here (lcd_mutex 0x2000aa40 follows jbd_panel.c's .bss too).
- */
-uint32_t JDB_PANEL_ID;            /* 0x2000aa54 (defined first: highest address) */
-struct k_mutex lcd_mutex;         /* 0x2000aa40 */
+uint32_t JDB_PANEL_ID;
+struct k_mutex lcd_mutex;
 
 int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start,
 			    int x_end, int y_end)
@@ -36,14 +30,13 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
 		x_end = PANEL_WIDTH;
 	}
 	for (; y_start <= y_end; y_start++) {
-		volatile uint8_t *p = c->current_buffer + y_start * PANEL_FB_STRIDE + x_start / 2 - 5;
+		uint8_t *p = c->current_buffer + y_start * PANEL_FB_STRIDE + x_start / 2 - 5;
 		int len = x_end / 2 - x_start / 2 + 5;
+		uint32_t addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
 		uint8_t backup[5];
-		volatile uint32_t addr;
 		uint8_t tail;
 
-		memcpy(backup, (uint8_t *)p, sizeof(backup));
-		addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
+		memcpy(backup, p, sizeof(backup));
 		p[0] = SPI_WR_BUFFER;
 		p[1] = (addr >> 16) & 0xff;
 		p[2] = (addr >> 8) & 0xff;
@@ -52,13 +45,13 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
 		tail = p[len];
 		p[len] = 0;
 		k_mutex_lock(&lcd_mutex, K_FOREVER);
-		ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len, rx, 1);
+		ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, p, len, rx, 1);
 		k_mutex_unlock(&lcd_mutex);
 		if (ret) {
 			G1_LOG_ERR("spi transfer error....\n");
 		}
 		p[len] = tail;
-		memcpy((uint8_t *)p, backup, sizeof(backup));
+		memcpy(p, backup, sizeof(backup));
 	}
 	spi_send_cmd(SPI_SYNC);
 	delay_ms(1);
@@ -83,15 +76,14 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
 		x_end = PANEL_WIDTH;
 	}
 	for (; y_start <= y_end; y_start++) {
-		volatile uint8_t *p = c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE +
-				      x_start / 2 - 5;
+		uint8_t *p = c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE +
+			     x_start / 2 - 5;
 		int len = x_end / 2 - x_start / 2 + 5;
+		uint32_t addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
 		uint8_t backup[5];
-		volatile uint32_t addr;
 		uint8_t tail;
 
-		memcpy(backup, (uint8_t *)p, sizeof(backup));
-		addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
+		memcpy(backup, p, sizeof(backup));
 		p[0] = SPI_WR_BUFFER;
 		p[1] = (addr >> 16) & 0xff;
 		p[2] = (addr >> 8) & 0xff;
@@ -100,27 +92,24 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
 		tail = p[len];
 		p[len] = 0;
 		k_mutex_lock(&lcd_mutex, K_FOREVER);
-		ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len, rx, 1);
+		ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, p, len, rx, 1);
 		k_mutex_unlock(&lcd_mutex);
 		if (ret) {
 			G1_LOG_ERR("spi transfer error....\n");
 		}
 		p[len] = tail;
-		memcpy((uint8_t *)p, backup, sizeof(backup));
+		memcpy(p, backup, sizeof(backup));
 	}
 	spi_send_cmd(SPI_SYNC);
 	delay_ms(1);
 	return 0;
 }
 
-/* 0x2000aa40 */
-
 int jbd_panel_suspend(void)
 {
-	uint8_t param;
+	uint8_t param = 0xff;
 
 	G1_LOG_INF("SPI_DEEP_POWER_DOWN\n");
-	param = 0xff;
 	spi_tx_frame(SPI_DEEP_POWER_DOWN, &param, 1);
 	return 0;
 }

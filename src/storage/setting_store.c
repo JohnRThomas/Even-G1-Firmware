@@ -29,19 +29,16 @@ struct setting_msg {
 
 K_MSGQ_DEFINE(setting_msgq, sizeof(struct setting_msg), SETTING_QUEUE_DEPTH, 4);
 
-volatile struct app_setting CURRENT_LANGUAGE;
+struct app_setting CURRENT_LANGUAGE;
 
-/*
- * Flush the setting queue.  The shipped code takes the message count from
- * the local message buffer instead of the queue (vendor bug, reproduced).
- */
+/* flush the setting queue */
 int clearSettingStorageQueue(void)
 {
 	struct setting_msg msg;
 	int ret = 0;
 	int n;
 
-	for (n = k_msgq_num_used_get((struct k_msgq *)&msg); n > 0; n--) {
+	for (n = k_msgq_num_used_get(&setting_msgq); n > 0; n--) {
 		ret = k_msgq_get(&setting_msgq, &msg, K_NO_WAIT);
 	}
 	return ret;
@@ -183,24 +180,12 @@ uint8_t getDashboardStartUpModeInfofromFlash(void)
 		G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
 		return 0;
 	}
-	/*
-	 * Each branch logs on its own (as the vendor source evidently did): GIMPLE
-	 * hoisting then lifts the LOG_LEVEL load to the head of the success path,
-	 * jump2 head-merges it with the error path's load above the branch on the
-	 * flash_read result, and crossjumping folds the log copies back together.
-	 */
-	if (rec.magic == SETTING_MAGIC) {
-		if (rec.startup_mode == 0xff) {
-			CURRENT_LANGUAGE.startup_mode = 0;
-			G1_LOG_ERR("dashboard startup mode = %d\n", CURRENT_LANGUAGE.startup_mode);
-		} else {
-			CURRENT_LANGUAGE.startup_mode = rec.startup_mode;
-			G1_LOG_ERR("dashboard startup mode = %d\n", CURRENT_LANGUAGE.startup_mode);
-		}
+	if (rec.magic == SETTING_MAGIC && rec.startup_mode != 0xff) {
+		CURRENT_LANGUAGE.startup_mode = rec.startup_mode;
 	} else {
 		CURRENT_LANGUAGE.startup_mode = 0;
-		G1_LOG_ERR("dashboard startup mode = %d\n", CURRENT_LANGUAGE.startup_mode);
 	}
+	G1_LOG_ERR("dashboard startup mode = %d\n", CURRENT_LANGUAGE.startup_mode);
 	return CURRENT_LANGUAGE.startup_mode;
 }
 
@@ -230,15 +215,11 @@ static int getSettingStorageQueueCacheData(struct setting_msg *msg)
 	return ret;
 }
 
-/*
- * Flash ops thread handler for one queued setting command.  Single exit through
- * `ret`; each case has its own `rec` (vendor layout): the end-of-scope clobbers
- * keep every case's success path on its own edge into the return PHI, so uncprop
- * returns the final flash_read result (r4) instead of a shared constant 0.
- */
+/* flash ops thread handler for one queued setting command */
 int SettingStoreHandler(void)
 {
 	struct setting_msg msg;
+	struct app_setting rec;
 	uint8_t value;
 	int ret;
 
@@ -249,9 +230,7 @@ int SettingStoreHandler(void)
 	}
 	G1_LOG_INF("received setting command .\n");
 	switch (msg.cmd) {
-	case SETTING_CMD_LANGUAGE: {
-		struct app_setting rec;
-
+	case SETTING_CMD_LANGUAGE:
 		value = msg.value;
 		G1_LOG_INF("start setting  parameter check. language type = %d\n", value);
 		if (value < 1 || value > 25) {
@@ -301,10 +280,7 @@ int SettingStoreHandler(void)
 		CURRENT_LANGUAGE.language = rec.language;
 		G1_LOG_INF("language infomation  %d store sucess\n", CURRENT_LANGUAGE.language);
 		break;
-	}
-	case SETTING_CMD_LANGUAGE_CLEAN: {
-		struct app_setting rec;
-
+	case SETTING_CMD_LANGUAGE_CLEAN:
 		if (!device_is_ready(FLASH_DEV)) {
 			G1_LOG_ERR(" [%s] device not ready.\n\n", FLASH_DEV->name);
 			ret = -1;
@@ -342,10 +318,7 @@ int SettingStoreHandler(void)
 		G1_LOG_INF("App language clean success.\n");
 		CURRENT_LANGUAGE.language = 2;
 		break;
-	}
-	case SETTING_CMD_STARTUP_MODE: {
-		struct app_setting rec;
-
+	case SETTING_CMD_STARTUP_MODE:
 		value = msg.value;
 		G1_LOG_INF("start setting  parameter check. startup_mode type = %d\n", value);
 		if (CURRENT_LANGUAGE.startup_mode == value) {
@@ -394,15 +367,12 @@ int SettingStoreHandler(void)
 		}
 		CURRENT_LANGUAGE.startup_mode = rec.startup_mode;
 		G1_LOG_INF("startup mode  infomation  %d store sucess\n", CURRENT_LANGUAGE.startup_mode);
-		value = CURRENT_LANGUAGE.startup_mode;
-		if (value == 0 && get_dashboard_state()->double_tap_customize == 4) {
-			upgradeDoubleTapCustomizeToFlash(value);
+		if (CURRENT_LANGUAGE.startup_mode == 0 &&
+		    get_dashboard_state()->double_tap_customize == 4) {
+			upgradeDoubleTapCustomizeToFlash(0);
 		}
 		break;
-	}
-	case SETTING_CMD_STARTUP_MODE_CLEAN: {
-		struct app_setting rec;
-
+	case SETTING_CMD_STARTUP_MODE_CLEAN:
 		if (!device_is_ready(FLASH_DEV)) {
 			G1_LOG_ERR(" [%s] device not ready.\n\n", FLASH_DEV->name);
 			ret = -1;
@@ -440,7 +410,6 @@ int SettingStoreHandler(void)
 		G1_LOG_INF("App language clean success.\n");
 		CURRENT_LANGUAGE.startup_mode = 0;
 		break;
-	}
 	default:
 		break;
 	}

@@ -22,61 +22,39 @@
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 
-/*
- * Partial view of the GlassesState (src/main.h) as used here; main.h cannot be
- * included because it has its own partial struct imu_ctx.
- */
-
-/* ESB block at GlassesState + 0xc8, the three tx fields used here */
-struct imu_esb {
-	uint8_t pad_00[0x25];
-	uint8_t tx_cmd;				/* 0x25 (gs 0x0ed) */
-	uint8_t tx_arg;				/* 0x26 (gs 0x0ee) */
-	uint8_t tx_buf[12];			/* 0x27 (gs 0x0ef) yaw/pitch/roll (float) */
-};
-BUILD_ASSERT(offsetof(struct GlassesState, esb_block) + offsetof(struct imu_esb, tx_cmd) == offsetof(struct GlassesState, tx_cmd));
-
-
-
-
-
-
 #define IMU_FUSION_STACK_SIZE	0x700
 #define IMU_FUSION_PRIORITY	(-11)
 
-K_THREAD_STACK_DEFINE(imu_fusion_stack, IMU_FUSION_STACK_SIZE);	/* 0x200242e0 */
-static struct k_thread imu_fusion_thread_data;			/* 0x20004188 */
+K_THREAD_STACK_DEFINE(imu_fusion_stack, IMU_FUSION_STACK_SIZE);
+static struct k_thread imu_fusion_thread_data;
 
-void imu_fusion_thread(void *p1, void *p2, void *p3);
-int imu_fusion_init(struct imu_ctx *c);
+static void imu_fusion_thread(void *p1, void *p2, void *p3);
+static int imu_fusion_init(struct imu_ctx *c);
 
-/* motion / still detection state (0x20008490) */
+/* motion / still detection state */
 struct imu_motion {
-	uint8_t warmed_up;		/* 0x00 */
-	uint8_t state;			/* 0x01: 0 idle, 1 moving, 2 settled */
+	uint8_t warmed_up;
+	uint8_t state;			/* 0 idle, 1 moving, 2 settled */
 	uint8_t pad_02[2];
-	uint32_t samples;		/* 0x04 */
-	int move_cnt;			/* 0x08 */
-	int still_cnt;			/* 0x0c */
-	int sign[3];			/* 0x10 */
-	float prev[3];			/* 0x1c */
-	float start[3];			/* 0x28 */
-	float accum[3];			/* 0x34 */
+	uint32_t samples;
+	int move_cnt;
+	int still_cnt;
+	int sign[3];
+	float prev[3];
+	float start[3];
+	float accum[3];
 };
 
-/* forward declarations (definition order follows GCC's emission order) */
-static int imu_fusion_deinit(struct imu_ctx *c);
-
-static const float imu_motion_thr[3] = { 0.2f, 0.15f, 0.15f };	/* 0x8c1f4 */
+static const float imu_motion_thr[3] = { 0.2f, 0.15f, 0.15f };
 
 static int imu_last_div = 300;
 static int imu_angle_threshold = 150;
 static uint8_t imu_last_wear = 3;
 
 static struct imu_motion imu_motion;
-uint32_t imu_pitch_x100;			/* pitch * 100 */
-uint32_t imu_yaw_x100;			/* yaw * 100 */
-uint32_t imu_roll_x100;			/* roll * 100 */
+uint32_t imu_pitch_x100;
+uint32_t imu_yaw_x100;
+uint32_t imu_roll_x100;
 atomic_t dashboard_head_up_opened;
 static int imu_last_ref;
 static int imu_last_base;
@@ -86,34 +64,23 @@ static int imu_trigger_count;
 static int imu_level_pitch;
 static uint8_t imu_last_level;
 
-/*
- * 6-byte "look up" notification for the app (cmd 0x0650).  The vendor fills
- * the first word with the lock state before writing cmd (word store + halfword
- * store in the target), hence the union.
- */
-union imu_lookup_msg {
-	uint32_t word;
-	struct {
-		uint16_t cmd;
-		uint16_t f2;
-		uint8_t action;
-		uint8_t status;
-	} s;
+/* 6-byte "look up" notification for the app (cmd 0x0650) */
+struct imu_lookup_msg {
+	uint16_t cmd;
+	uint16_t f2;
+	uint8_t action;
+	uint8_t status;
 };
 
 void send_dashboard_lock_info(void)
 {
-	union imu_lookup_msg msg;
-	bool locked;
+	if (atomic_test_bit(&dashboard_lock_requested, 1) &&
+	    !atomic_test_bit(&dashboard_head_up_opened, 1)) {
+		if (!atomic_test_bit(&dashboard_lock_reported, 1) &&
+		    atomic_test_bit(&dashboard_lock_requested, 1)) {
+			struct imu_lookup_msg msg = { .cmd = 0x0650, .action = 1, .status = 1 };
 
-	if (atomic_test_bit(&dashboard_lock_requested, 1) && !atomic_test_bit(&dashboard_head_up_opened, 1)) {
-		locked = atomic_test_bit(&dashboard_lock_reported, 1);
-		if (!locked && atomic_test_bit(&dashboard_lock_requested, 1)) {
-			msg.word = locked;
-			msg.s.cmd = 0x0650;
-			msg.s.action = 1;
-			msg.s.status = 1;
-			send_response_data_to_msgqueue(&msg, 6);
+			send_response_data_to_msgqueue(&msg, sizeof(msg));
 			send_response_data_to_ble();
 			atomic_set_bit(&dashboard_lock_reported, 1);
 		}
@@ -125,7 +92,6 @@ int update_head_up_thresholds(struct imu_ctx *c)
 	int offset;
 	int scaled;
 	int t;
-	int base_hi;
 
 	if (c->ref != imu_last_ref || c->level != imu_last_level || c->wear != imu_last_wear ||
 	    c->div != imu_last_div || c->base != imu_last_base) {
@@ -150,11 +116,10 @@ int update_head_up_thresholds(struct imu_ctx *c)
 		imu_angle_threshold = scaled / c->div;
 		is_master();
 
-		base_hi = c->base - 4500;
 		t = 50 * c->level + offset;
 		if (c->base) {
 			c->thr_low = c->base - t;
-			c->thr_high = base_hi - t;
+			c->thr_high = c->base - 4500 - t;
 		} else if (c->ref) {
 			c->thr_low = c->ref - t;
 			c->thr_high = c->ref - 4500 - t;
@@ -167,18 +132,12 @@ int update_head_up_thresholds(struct imu_ctx *c)
 	return imu_angle_threshold;
 }
 
-/*
- * Head-up ("look up") / bow-head gesture detection.  Inlined into the thread; it
- * has to be a separate function (with its own `sync` pointer) for the target's
- * compare operand order and c-relative screen_id addressing.
- */
 static void imu_fusion_set(struct imu_ctx *c, uint32_t val)
 {
 	if (c->sample_period_ms != val) {
 		c->sample_period_ms = val;
 	}
 }
-
 
 int update_imu_mode(struct imu_ctx *c, uint8_t mode)
 {
@@ -251,7 +210,6 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode)
 	return 0;
 }
 
-
 static int imu_fusion_deinit(struct imu_ctx *c)
 {
 	return 0;
@@ -261,7 +219,6 @@ static int imu_fusion_get(struct imu_ctx *c)
 {
 	return 0;
 }
-
 
 int register_imu_funsion_context(struct imu_ctx *c)
 {
@@ -274,7 +231,7 @@ int register_imu_funsion_context(struct imu_ctx *c)
 	return 0;
 }
 
-int imu_fusion_init(struct imu_ctx *c)
+static int imu_fusion_init(struct imu_ctx *c)
 {
 	int ret;
 
@@ -320,44 +277,25 @@ int imu_fusion_init(struct imu_ctx *c)
 	return 0;
 }
 
-
+/* Head-up ("look up") / bow-head gesture detection. */
 static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, float *angles)
 {
 	struct GlassesState *gs = CONTAINER_OF(c, struct GlassesState, imu);
 	struct esb_sync_pkt *sync = &gs->sync;
 	int retry;
 
-	if (sync->screen_id == 0) {
-		/*
-		 * |pitch - last| < 50, written per sign with the lock block in both
-		 * arms (as the vendor did: the copies are cross-jumped after reload
-		 * and the abs becomes cmp/ite/sub/sub).
-		 */
-		if (pitch >= imu_last_pitch) {
-			if (pitch - imu_last_pitch < 50) {
-				imu_last_pitch = pitch;
-				imu_trigger_count = 0;
-				send_dashboard_lock_info();
-				goto level_check;
-			}
-		} else {
-			if (imu_last_pitch - pitch < 50) {
-				imu_last_pitch = pitch;
-				imu_trigger_count = 0;
-				send_dashboard_lock_info();
-				goto level_check;
-			}
-		}
+	if (sync->screen_id == 0 && abs(pitch - imu_last_pitch) < 50) {
+		imu_last_pitch = pitch;
+		imu_trigger_count = 0;
+		send_dashboard_lock_info();
+		goto level_check;
 	}
 
 	imu_last_pitch = pitch;
 	if (sync->screen_id == 13) {
-		/* the vendor addresses the ESB block (gs + 0xc8) through one pointer */
-		struct imu_esb *esb = (struct imu_esb *)&gs->esb_block;
-
-		esb->tx_cmd = 12;
-		esb->tx_arg = 0;
-		memcpy(esb->tx_buf, angles, 3 * sizeof(float));
+		gs->tx_cmd = 12;
+		gs->tx_arg = 0;
+		memcpy(&gs->ui.ypr, angles, sizeof(gs->ui.ypr));
 	}
 
 	imu_pitch_x100 = pitch;
@@ -378,20 +316,15 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
 				printk("trigger_count %d", imu_trigger_count);
 			}
 			if (imu_trigger_count > 1) {
-				int level_pitch;
-				uint8_t level;
-
 				imu_trigger_count = -3;
-				level_pitch = imu_level_pitch;
-				level = c->level;
-				if (sync->screen_id != 0 || pitch < level_pitch) {
+				if (sync->screen_id != 0 || pitch < imu_level_pitch) {
 					screen_switch_busy = 1;
 					if (BLE_DEBUG) {
 						ble_printk("look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
-							   sync->screen_id, pitch, c->thr_low, level);
+							   sync->screen_id, pitch, c->thr_low, c->level);
 					} else {
 						printk("look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
-						       sync->screen_id, pitch, c->thr_low, level);
+						       sync->screen_id, pitch, c->thr_low, c->level);
 					}
 					retry = 101;
 					while (!get_dashboard_state()->message_mode && push_msg_syncing && --retry) {
@@ -412,17 +345,15 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
 					if (!get_dashboard_startup_mode()) {
 						if (atomic_test_bit(&dashboard_lock_requested, 1)) {
 							if (!atomic_test_bit(&dashboard_head_up_opened, 1)) {
-								union imu_lookup_msg msg;
-								bool locked;
-
-								locked = atomic_test_bit(&dashboard_lock_reported, 1);
-								if (!locked &&
+								if (!atomic_test_bit(&dashboard_lock_reported, 1) &&
 								    atomic_test_bit(&dashboard_lock_requested, 1)) {
-									msg.word = locked;
-									msg.s.cmd = 0x0650;
-									msg.s.action = 1;
-									msg.s.status = 1;
-									send_response_data_to_msgqueue(&msg, 6);
+									struct imu_lookup_msg msg = {
+										.cmd = 0x0650,
+										.action = 1,
+										.status = 1,
+									};
+
+									send_response_data_to_msgqueue(&msg, sizeof(msg));
 									send_response_data_to_ble();
 									atomic_set_bit(&dashboard_lock_reported, 1);
 								}
@@ -491,11 +422,9 @@ level_check:
 	}
 }
 
-/* Motion / still detection on the yaw/pitch/roll angles (inlined into the thread). */
-static void imu_motion_detect(struct imu_ctx *c, float *angles)
+/* Motion / still detection on the yaw/pitch/roll angles. */
+static void imu_motion_detect(float *angles)
 {
-	struct GlassesState *gs = CONTAINER_OF(c, struct GlassesState, imu);
-	struct esb_sync_pkt *sync = &gs->sync;
 	float diff[3];
 	float out[3];
 	int moved;
@@ -542,7 +471,6 @@ static void imu_motion_detect(struct imu_ctx *c, float *angles)
 			}
 			out[i] = imu_motion.accum[i] + delta[i];
 		}
-		(void)sync->screen_id;	/* unused volatile read in the vendor code */
 		if (fabsf(diff[0]) > 0.1f || fabsf(diff[1]) > 0.1f || fabsf(diff[2]) > 0.1f) {
 			imu_motion.still_cnt = 0;
 		} else if (++imu_motion.still_cnt > 4) {
@@ -562,7 +490,7 @@ static void imu_motion_detect(struct imu_ctx *c, float *angles)
 	memcpy(imu_motion.prev, angles, 3 * sizeof(float));
 }
 
-void imu_fusion_thread(void *p1, void *p2, void *p3)
+static void imu_fusion_thread(void *p1, void *p2, void *p3)
 {
 	struct imu_ctx *c = p1;
 	struct GlassesState *gs;
@@ -675,7 +603,7 @@ void imu_fusion_thread(void *p1, void *p2, void *p3)
 		update_head_up_thresholds(c);
 		imu_head_gesture(c, pitch, yaw, roll, angles);
 
-		imu_motion_detect(c, angles);
+		imu_motion_detect(angles);
 
 		if (c->mode == 2) {
 			k_sleep(K_MSEC(38));

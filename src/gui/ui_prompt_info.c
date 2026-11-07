@@ -14,7 +14,7 @@ static struct {
 	uint8_t entered;
 } prompt_ui;
 
-int prompt_info_reflash(void)
+static int prompt_info_reflash(void)
 {
 	uint8_t action = get_dashboard_state()->ui.gui.ui_action;
 

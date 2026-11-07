@@ -1,11 +1,10 @@
 /*
  * Attitude filter: Mahony AHRS, a C port of the Arduino MahonyAHRS library
- * (referenced_examples/mahony_ahrs/src/MahonyAHRS.cpp, Madgwick's
- * implementation of Mahony's algorithm): Mahony() -> Mahony_init,
+ * (Madgwick's implementation of Mahony's algorithm): Mahony() -> Mahony_init,
  * invSqrt, updateIMU, computeAngles, getRoll/getPitch/getYaw.  The class
  * members live in struct ahrs (ahrs.h).
  *
- * Vendor changes against the reference:
+ * Changes against the reference implementation:
  *   - gains: twoKp = 4.0 (reference 2 * 0.5), plus a Madgwick-style
  *     beta = 0.1 member that the update never reads;
  *   - updateIMU takes the sample period dt instead of invSampleFreq and does
@@ -124,7 +123,7 @@ void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az
 	a->anglesComputed = 0;
 }
 
-/* vendor: measure the sample period (no counterpart in the reference) */
+/* measure the sample period (no counterpart in the reference implementation) */
 float Mahony_deltatUpdate(struct ahrs *a)
 {
 	a->Now = k_uptime_get();

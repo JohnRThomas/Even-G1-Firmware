@@ -84,120 +84,59 @@ const uint8_t *font26_lookup(uint16_t code, int *w, int *h)
 	return NULL;
 }
 
-/*
- * Look a code point up in one external-flash index table (entries are two
- * big-endian halfwords, the second one is the glyph number) and read the glyph.
- * Uses the caller's idx / ret variables; returns from the caller when found or
- * on a flash error, falls through when the table has no glyph.  check_null = 0
- * for call sites that already test flash_read in their own condition.
- * EXT_GLYPH_LOOKUP leaves on an empty entry with break, EXT_GLYPH_LOOKUP_NEST
- * nests the glyph read instead (same behaviour).
- */
-#define EXT_GLYPH_LOOKUP(check_null, idx_addr, glyph_base, glyph_size, width)              \
-	do {                                                                                \
-		uint16_t font_index[4];                                                     \
-                                                                                            \
-		if ((check_null) && get_dashboard_state()->flash_read == NULL) {                      \
-			break;                                                              \
-		}                                                                           \
-		if (get_dashboard_state()->flash_read(get_dashboard_state(), (idx_addr), &font_index[2], 4) != 0) { \
-			G1_LOG_ERR("read flash fail\n\n");                                  \
-			return -1;                                                          \
-		}                                                                           \
-		if (font_index[3] == 0xffff) {                                           \
-			break;                                                              \
-		}                                                                           \
-		EXT_GLYPH_READ(font_index[3], glyph_base, glyph_size, width);            \
-	} while (0)
-
-#define EXT_GLYPH_LOOKUP_NEST(check_null, idx_addr, glyph_base, glyph_size, width)         \
-	do {                                                                                \
-		uint16_t font_index[4];                                                     \
-                                                                                            \
-		if ((check_null) && get_dashboard_state()->flash_read == NULL) {                      \
-			break;                                                              \
-		}                                                                           \
-		if (get_dashboard_state()->flash_read(get_dashboard_state(), (idx_addr), &font_index[2], 4) != 0) { \
-			G1_LOG_ERR("read flash fail\n\n");                                  \
-			return -1;                                                          \
-		}                                                                           \
-		if (font_index[3] != 0xffff) {                                           \
-			EXT_GLYPH_READ(font_index[3], glyph_base, glyph_size, width);    \
-		}                                                                           \
-	} while (0)
-
-/* read glyph number raw (big-endian) and return it from the caller */
-#define EXT_GLYPH_READ(raw, glyph_base, glyph_size, width)                                 \
-	do {                                                                                \
-		idx = ((raw) << 8) | ((raw) >> 8);                                          \
-		memset(ext_glyph_buf, 0, sizeof(ext_glyph_buf));                            \
-		ret = get_dashboard_state()->flash_read(get_dashboard_state(),                        \
-					      (glyph_base) + idx * (glyph_size), ext_glyph_buf, \
-					      (glyph_size));                                \
-		if (ret != 0) {                                                             \
-			G1_LOG_ERR("read flash fail: %d\n\n", ret);                         \
-			return -1;                                                          \
-		}                                                                           \
-		*w = (width);                                                               \
-		*h = 26;                                                                    \
-		*data = ext_glyph_buf;                                                      \
-		return ret;                                                                 \
-	} while (0)
-
-#define EXT24(addr)   EXT_GLYPH_LOOKUP(1, (addr), EXT_GLYPH24, 0x138, 24)
-#define EXT16(addr)   EXT_GLYPH_LOOKUP(1, (addr), EXT_GLYPH16, 0xd0, 16)
-#define EXT24N(addr)  EXT_GLYPH_LOOKUP(0, (addr), EXT_GLYPH24, 0x138, 24)
-#define EXT16N(addr)  EXT_GLYPH_LOOKUP(0, (addr), EXT_GLYPH16, 0xd0, 16)
-#define EXT24X(addr)  EXT_GLYPH_LOOKUP_NEST(1, (addr), EXT_GLYPH24, 0x138, 24)
-#define EXT16X(addr)  EXT_GLYPH_LOOKUP_NEST(1, (addr), EXT_GLYPH16, 0xd0, 16)
-#define EXT24NX(addr) EXT_GLYPH_LOOKUP_NEST(0, (addr), EXT_GLYPH24, 0x138, 24)
-#define EXT16NX(addr) EXT_GLYPH_LOOKUP_NEST(0, (addr), EXT_GLYPH16, 0xd0, 16)
-
-/* flash_read tested before the index buffer's scope is entered */
-#define EXT24O(addr)                                                                       \
-	do {                                                                                \
-		if (get_dashboard_state()->flash_read == NULL) {                                      \
-			break;                                                              \
-		}                                                                           \
-		EXT24N(addr);                                                               \
-	} while (0)
-#define EXT24OX(addr)                                                                      \
-	do {                                                                                \
-		if (get_dashboard_state()->flash_read == NULL) {                                      \
-			break;                                                              \
-		}                                                                           \
-		EXT24NX(addr);                                                              \
-	} while (0)
-
-/* 16 px variant of EXT24O */
-#define EXT16O(addr)                                                                       \
-	do {                                                                                \
-		if (get_dashboard_state()->flash_read == NULL) {                                      \
-			break;                                                              \
-		}                                                                           \
-		EXT16N(addr);                                                               \
-	} while (0)
-
-/*
- * index table entry address (kept out of the constant folder: base + index * 4).
- * The 16 px index is one contiguous table: 0x500000 (U+2010..), 0x5000bc (U+3001..),
- * 0x5004b4 (U+3231..), ...; 0x5154fc is the U+FF01.. part.
- */
-static inline uint32_t ext_idx_addr(uint32_t base, int index)
+/* true when the external flash read function is installed */
+static inline bool ext_flash_present(void)
 {
-	return base + index * 4;
+	return get_dashboard_state()->flash_read != NULL;
 }
+
+/*
+ * Look a code point up in one external-flash index table and read its glyph.
+ * An index entry is two big-endian halfwords; the second one is the glyph
+ * number, 0xffff when the table has no glyph for the code point.
+ * Uses the caller's idx / ret variables; returns from the caller when the glyph
+ * was read or on a flash error, falls through when the table has no glyph.
+ */
+#define EXT_GLYPH_LOOKUP(idx_addr, glyph_base, glyph_size, width)                               \
+	do {                                                                                    \
+		uint16_t entry[2];                                                              \
+	                                                                                        \
+		if (get_dashboard_state()->flash_read(get_dashboard_state(), (idx_addr), entry, \
+						      sizeof(entry)) != 0) {                    \
+			G1_LOG_ERR("read flash fail\n\n");                                      \
+			return -1;                                                              \
+		}                                                                               \
+		if (entry[1] != 0xffff) {                                                       \
+			idx = (entry[1] << 8) | (entry[1] >> 8);                                \
+			memset(ext_glyph_buf, 0, sizeof(ext_glyph_buf));                        \
+			ret = get_dashboard_state()->flash_read(                                \
+				get_dashboard_state(), (glyph_base) + idx * (glyph_size),       \
+				ext_glyph_buf, (glyph_size));                                   \
+			if (ret != 0) {                                                         \
+				G1_LOG_ERR("read flash fail: %d\n\n", ret);                     \
+				return -1;                                                      \
+			}                                                                       \
+			*w = (width);                                                           \
+			*h = 26;                                                                \
+			*data = ext_glyph_buf;                                                  \
+			return ret;                                                             \
+		}                                                                               \
+	} while (0)
+
+#define EXT24(idx_addr) EXT_GLYPH_LOOKUP((idx_addr), EXT_GLYPH24, 0x138, 24)
+#define EXT16(idx_addr) EXT_GLYPH_LOOKUP((idx_addr), EXT_GLYPH16, 0xd0, 16)
 
 int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, uint8_t *frames)
 {
+	int gw, gh;
+
 	switch (type) {
 	case 0:
 		if (id < 0x2714) {
-			uint32_t res[2];
-			*data = font26_lookup(id, (int *)&res[0], (int *)&res[1]);
+			*data = font26_lookup(id, &gw, &gh);
 			if (*data != NULL) {
-				*w = res[0];
-				*h = res[1];
+				*w = gw;
+				*h = gh;
 				return 0;
 			}
 		}
@@ -207,22 +146,27 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
 			uint16_t idx;
 			int ret;
 			/* entry offset in the index tables that start at U+00A4 */
-			uint32_t offset = ((uint32_t)code - 0xa4) * 4;
+			uint32_t offset = (code - 0xa4) * 4;
 
-			/* main table: 18 px glyphs */
+			/*
+			 * main table: 18 px glyphs, glyph number in host byte order;
+			 * flash_read is not checked here
+			 */
 			if (code >= 0xa4 && code <= 0xffe5) {
-				uint16_t font_index[4];
+				uint16_t entry[2];
+
 				if (get_dashboard_state()->flash_read(get_dashboard_state(),
-							    EXT_IDX_MAIN + offset, &font_index[2], 4) != 0) {
+								      EXT_IDX_MAIN + offset, entry,
+								      sizeof(entry)) != 0) {
 					G1_LOG_ERR("read flash fail\n\n");
 					return -1;
 				}
-				idx = font_index[3];
+				idx = entry[1];
 				if (idx != 0xffff) {
 					memset(ext_glyph_buf, 0, sizeof(ext_glyph_buf));
 					ret = get_dashboard_state()->flash_read(get_dashboard_state(),
-								      EXT_GLYPH18 + idx * 0xea, ext_glyph_buf,
-								      0xea);
+										EXT_GLYPH18 + idx * 0xea,
+										ext_glyph_buf, 0xea);
 					if (ret != 0) {
 						G1_LOG_ERR("read flash fail: %d\n\n", ret);
 						return -1;
@@ -234,115 +178,80 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
 				}
 			}
 
-			/* 24 px tables (Hangul Jamo, CJK punctuation, Hangul compatibility, ...) */
+			/*
+			 * 24 px tables (Hangul Jamo, CJK punctuation, Hangul compatibility, ...).
+			 * The Hangul Jamo lookup does not check flash_read either.
+			 */
 			if (code >= 0x1100 && code <= 0x11f9) {
-				uint16_t font_index[4] = {0};
-
-				if (get_dashboard_state()->flash_read(get_dashboard_state(), 0xa1be90 + offset,
-							    &font_index[2], 4) != 0) {
-					G1_LOG_ERR("read flash fail\n\n");
-					return -1;
-				}
-				font_index[0] = (font_index[2] << 8) | (font_index[2] >> 8);
-				idx = (font_index[3] << 8) | (font_index[3] >> 8);
-				font_index[1] = idx;
-				if (idx != 0xffff) {
-					memset(ext_glyph_buf, 0, sizeof(ext_glyph_buf));
-					ret = get_dashboard_state()->flash_read(get_dashboard_state(),
-								      EXT_GLYPH24 + idx * 0x138,
-								      ext_glyph_buf, 0x138);
-					if (ret != 0) {
-						G1_LOG_ERR("read flash fail: %d\n\n", ret);
-						return -1;
-					}
-					*w = 24;
-					*h = 26;
-					*data = ext_glyph_buf;
-					return ret;
-				}
+				EXT24(0xa1be90 + offset);
 			}
-			if (code >= 0x302e && code <= 0x302f) {
-				EXT24X(0xa145c0 + offset);
+			if (code >= 0x302e && code <= 0x302f && ext_flash_present()) {
+				EXT24(0xa145c0 + offset);
 			}
-			/* ret = -1: "not found in this table" */
-			if (code >= 0x3131 && code <= 0x318e) {
-				EXT24X(0xa141bc + offset);
-				ret = -1;
-			} else if (code >= 0x3200 && code <= 0x327f) {
-				EXT24OX(0xa13ff8 + offset);
-			} else {
-				ret = -1;
+			if (code >= 0x3131 && code <= 0x318e && ext_flash_present()) {
+				EXT24(0xa141bc + offset);
 			}
-			if (code >= 0xac00 && code <= 0xd7ab) {
-				EXT24X(0x9f59f8 + offset);
-			} else {
-				ret = -1;
+			if (code >= 0x3200 && code <= 0x327f && ext_flash_present()) {
+				EXT24(0xa13ff8 + offset);
+			}
+			if (code >= 0xac00 && code <= 0xd7ab && ext_flash_present()) {
+				EXT24(0x9f59f8 + offset);
+			}
+			if (code >= 0xff01 && code <= 0xff5e && ext_flash_present()) {
+				EXT24(0xa20000 + (code - 0xff01 + 11654) * 4);
 			}
 
 			/*
-			 * Remaining tables.  sub is shared by the two full-width form
-			 * tests (U+FF01..FF5E 24 px, U+FF01..FF9F 16 px).
+			 * 16 px tables.  The index is one contiguous table: 0x500000 (U+2010..),
+			 * 0x5000bc (U+3001..), 0x5004b4 (U+3231..), ...; 0x5154fc is the U+FF01.. part.
 			 */
-			uint32_t sub = (uint32_t)id - 0xff01;
-
-			if (sub <= 0x5d) {
-				EXT24OX(ext_idx_addr(0xa20000, code - 0xff01 + 11654));
-				ret = -1;
-			} else if (code >= 0x2010 && code <= 0x203e) {
-				EXT16X(ext_idx_addr(0x500000, code - 0x2010));
-			} else {
-				ret = -1;
+			if (code >= 0x2010 && code <= 0x203e && ext_flash_present()) {
+				EXT16(0x500000 + (code - 0x2010) * 4);
 			}
-			if (code >= 0x3001 && code <= 0x30fe) {
-				EXT16O(ext_idx_addr(0x500000, code - 0x3001 + 47));
-			} else {
-				ret = -1;
+			if (code >= 0x3001 && code <= 0x30fe && ext_flash_present()) {
+				EXT16(0x500000 + (code - 0x3001 + 47) * 4);
 			}
-			if (code >= 0x3231 && code <= 0x33cd && get_dashboard_state()->flash_read != NULL) {
-				EXT16NX(ext_idx_addr(0x500000, code - 0x3231 + 301));
-			} else if (code >= 0x4e00 && code <= 0x9f77 && get_dashboard_state()->flash_read != NULL) {
-				EXT16N(ext_idx_addr(0x500000, code - 0x4e00 + 714));
-			} else if (code >= 0xe001 && code <= 0xe0fd && get_dashboard_state()->flash_read != NULL) {
-				EXT16N(ext_idx_addr(0x500000, code - 0xe001 + 21570));
-			} else {
-				ret = -1;
+			if (code >= 0x3231 && code <= 0x33cd && ext_flash_present()) {
+				EXT16(0x500000 + (code - 0x3231 + 301) * 4);
 			}
-			if (sub <= 0x9e) {
-				EXT16X(ext_idx_addr(0x500000, code - 0xff01 + 21823));
+			if (code >= 0x4e00 && code <= 0x9f77 && ext_flash_present()) {
+				EXT16(0x500000 + (code - 0x4e00 + 714) * 4);
+			}
+			if (code >= 0xe001 && code <= 0xe0fd && ext_flash_present()) {
+				EXT16(0x500000 + (code - 0xe001 + 21570) * 4);
+			}
+			if (code >= 0xff01 && code <= 0xff9f && ext_flash_present()) {
+				EXT16(0x500000 + (code - 0xff01 + 21823) * 4);
 			}
 
 			G1_LOG_INF("*************** can't find resEncode = 0x%02x*****************\n", code);
 			return -1;
 		}
-	case 1: {
-		uint32_t res[2];
-		*data = font_c_lookup(id, (int *)&res[0], (int *)&res[1]);
+	case 1:
+		*data = font_c_lookup(id, &gw, &gh);
 		if (*data != NULL) {
-			*w = res[0];
-			*h = res[1];
+			*w = gw;
+			*h = gh;
 			return 0;
 		}
 		break;
-	}
-	case 2: {
-		uint32_t res[2];
-		*data = font39_lookup(id, (int *)&res[0], (int *)&res[1]);
+	case 2:
+		*data = font39_lookup(id, &gw, &gh);
 		if (*data != NULL) {
-			*w = res[0];
-			*h = res[1];
+			*w = gw;
+			*h = gh;
 			return 0;
 		}
 		break;
-	}
-	case 3: {
-		uint32_t res[2];
-		*data = font_b_lookup(id, (int *)&res[0], (int *)&res[1]);
-		*w = res[0];
-		*h = res[1];
+	case 3:
+		gw = 0;
+		gh = 0;
+		*data = font_b_lookup(id, &gw, &gh);
+		*w = gw;
+		*h = gh;
 		return 0;
-	}
 	case 4:
-		if ((uint32_t)(id - 0x16) > 0x71) {
+		if (id < 0x16 || id > 0x87) {
 			G1_LOG_WRN("can't find resource ,exit .....\n");
 			break;
 		}

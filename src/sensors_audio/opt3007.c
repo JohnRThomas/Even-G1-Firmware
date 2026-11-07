@@ -1,7 +1,6 @@
 /*
  * TI OPT3007 ambient light sensor (OPT3001 compatible), derived from
  * zephyr/drivers/sensor/opt3001/opt3001.c, plus the panel LDSW1 power switch.
- * Reconstructed from the v1.63 firmware image.
  */
 #include <errno.h>
 #include <zephyr/kernel.h>
@@ -44,15 +43,15 @@ struct regulator_npm1300_config {
 #define PMIC_LDO1    DEVICE_DT_GET(DT_NODELABEL(pmic_ldo1))
 #define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
 
-/* .data 0x200023fc: bus + address; only .bus is used, the address is a constant */
+/* bus + address; only .bus is used, the transfers pass OPT3001_I2C_ADDR directly */
 struct i2c_dt_spec opt3001_i2c_device = {
 	.bus = DEVICE_DT_GET(DT_NODELABEL(i2c1)),
 	.addr = OPT3001_I2C_ADDR,
 };
 
-static struct opt3007_context *opt3007_ctx;  /* 0x2000854c */
-static bool opt3007_ready;                   /* 0x20019a6f */
-static uint8_t als_level;                    /* 0x20019a6e */
+static struct opt3007_context *opt3007_ctx;
+static bool opt3007_ready;
+static uint8_t als_level;
 
 static int opt3001_reg_read(uint8_t reg, uint16_t *val)
 {
@@ -71,7 +70,6 @@ static int opt3001_reg_read(uint8_t reg, uint16_t *val)
 	*val = ((uint16_t)value[0] << 8) + value[1];
 	return 0;
 }
-
 
 static int opt3001_reg_write(uint8_t reg, uint16_t val)
 {
@@ -105,7 +103,6 @@ static int opt3001_reg_update(uint8_t reg, uint16_t mask, uint16_t val)
 	return opt3001_reg_write(reg, new_val);
 }
 
-
 int opt3007_read(int arg)
 {
 	uint16_t value;
@@ -118,7 +115,6 @@ int opt3007_read(int arg)
 	}
 	return (value & OPT3001_MANTISSA_MASK) << (value >> OPT3001_SAMPLE_EXPONENT_SHIFT);
 }
-
 
 static uint8_t als_lux_to_level(int lux)
 {
@@ -149,7 +145,7 @@ static uint8_t als_lux_to_level(int lux)
  * (a0 unset or <= 60000) the raw lux is mapped piecewise; with one, the
  * calibrated lux moves the level between 0/3/6/12/19/26/42 with hysteresis.
  */
-uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* callers pass &gs->opt3007 (0xf84); unused */
+uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* ctx is unused */
 {
 	int lux;
 	uint8_t level;
@@ -223,7 +219,6 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* callers pas
 	return level;
 }
 
-
 int opt3007_get_max_lux(void)
 {
 	int lux;
@@ -241,7 +236,6 @@ int opt3007_get_max_lux(void)
 		   get_dashboard_state()->luminance_curve);
 	return (int)max_lux;
 }
-
 
 int opt3007_chip_init(struct opt3007_context *ctx)
 {
@@ -288,7 +282,6 @@ int opt3007_chip_init(struct opt3007_context *ctx)
 	return 0;
 }
 
-
 void opt3007_chip_deinit(void)
 {
 	if (opt3007_ctx != NULL) {
@@ -298,14 +291,12 @@ void opt3007_chip_deinit(void)
 	opt3007_ready = false;
 }
 
-
 void register_opt3007_context(struct opt3007_context *ctx)
 {
 	ctx->owner = CONTAINER_OF(ctx, struct GlassesState, opt3007_context)->opt3007_bus_ctx;
 	ctx->init_cb = opt3007_chip_init;
 	ctx->read_cb = opt3007_read;
 }
-
 
 int enable_power_for_panel(void)
 {

@@ -2,7 +2,6 @@
  * Even AI screen task (voice assistant: listening / answer text pages)
  * and its status icon helper.
  */
-#define GUI_C_INTERNAL /* gui_screen_x_offset() returns int here */
 #include "ui.h"
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
@@ -21,8 +20,7 @@ uint8_t even_ai_scrolling;                        /* text animation running (tou
 int even_ai_answer_shown;                            /* page needs a clear */
 int even_ai_text_drawn;                            /* text page drawn once */
 
-/* localized messages: the pointed-to strings are initialized RAM, emitted in
- * reverse definition order; the table itself is folded away */
+/* localized messages */
 enum {
 	EVEN_AI_LISTENING_EN,
 	EVEN_AI_OFFLINE_EN,
@@ -38,21 +36,21 @@ enum {
 };
 
 static const char *const even_ai_strings[] = {
-	[EVEN_AI_LISTENING_EN] = (char[]){"Even AI listening...\r\rRelease to Finish Recording"},
-	[EVEN_AI_OFFLINE_EN] = (char[]){"Even AI is unable to connect to the network"},
-	[EVEN_AI_LISTENING_FR] = (char[]){"Even IA écoute...\r\rRelâchez pour terminer l'enregistrement"},
-	[EVEN_AI_OFFLINE_FR] = (char[]){"Even IA ne parvient pas à se connecter au réseau."},
-	[EVEN_AI_LISTENING_DE] = (char[]){"Even KI-Abhören...\r\rLoslassen zum Abschluss"},
-	[EVEN_AI_OFFLINE_DE] = (char[]){"Even KI kann keine Verbindung\rzum Netzwerk herstellen."},
-	[EVEN_AI_LISTENING_ES] = (char[]){"IA Even está escuchando...\r\rSuelte para completar la grabación"},
-	[EVEN_AI_OFFLINE_ES] = (char[]){"No se puede conectar a la red.\rLa función Even AI está fuera de línea."},
-	[EVEN_AI_LISTENING_IT] = (char[]){"Even IA sta ascoltando...\r\rRilascia per terminare la registrazione"},
-	[EVEN_AI_OFFLINE_IT] = (char[]){"Impossibile connettersi alla rete.\rFunzione Even IA offline."},
-	[EVEN_AI_OFFLINE_KO] = (char[]){"네트워크에 연결할 수 없습니다.\rEven AI 기능이 오프라인 상태입니다."},
+	[EVEN_AI_LISTENING_EN] = "Even AI listening...\r\rRelease to Finish Recording",
+	[EVEN_AI_OFFLINE_EN] = "Even AI is unable to connect to the network",
+	[EVEN_AI_LISTENING_FR] = "Even IA écoute...\r\rRelâchez pour terminer l'enregistrement",
+	[EVEN_AI_OFFLINE_FR] = "Even IA ne parvient pas à se connecter au réseau.",
+	[EVEN_AI_LISTENING_DE] = "Even KI-Abhören...\r\rLoslassen zum Abschluss",
+	[EVEN_AI_OFFLINE_DE] = "Even KI kann keine Verbindung\rzum Netzwerk herstellen.",
+	[EVEN_AI_LISTENING_ES] = "IA Even está escuchando...\r\rSuelte para completar la grabación",
+	[EVEN_AI_OFFLINE_ES] = "No se puede conectar a la red.\rLa función Even AI está fuera de línea.",
+	[EVEN_AI_LISTENING_IT] = "Even IA sta ascoltando...\r\rRilascia per terminare la registrazione",
+	[EVEN_AI_OFFLINE_IT] = "Impossibile connettersi alla rete.\rFunzione Even IA offline.",
+	[EVEN_AI_OFFLINE_KO] = "네트워크에 연결할 수 없습니다.\rEven AI 기능이 오프라인 상태입니다.",
 };
 
-static int even_ai_icon = 0xff;              /* 0x200024f4 */
-static int even_ai_page = -1;                /* 0x200024f0 */
+static int even_ai_icon = 0xff;
+static int even_ai_page = -1;
 
 #define EVEN_AI_ICON_SWITCH(id)                                                          \
 	do {                                                                             \
@@ -94,7 +92,7 @@ int even_ai_draw_status_icon(const uint8_t *status)
 	return 0;
 }
 
-static ALWAYS_INLINE void even_ai_reset(void)
+static void even_ai_reset(void)
 {
 	gui_utf_adv_draw_reset();
 	text_anim.f_08 = 0;
@@ -184,7 +182,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 							    gui_screen_y_offset() + 0x87, 3, 0, 0, NULL, 0);
 				} else if (status >= 12 && status <= 14) {
 					if (status != 14) {
-						return;
+						return 0;
 					}
 					_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
 								get_dashboard_state()->panel.current_column, 0, 0,
@@ -192,7 +190,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 					break;
 				} else if (status == 15 || status == 16) {
 					if (status != 16) {
-						return;
+						return 0;
 					}
 					memcpy(even_ai_text, gs->ui.ai.text, gs->ui.ai.text_len);
 					gui_utf_draw(0, even_ai_text, 0, gui_screen_x_offset(), gui_screen_y_offset(),
@@ -259,7 +257,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 
 							if (pix != 0) {
 								fb[row][col] =
-									pix & gui_fade_mask_at(row % 26, steps[i], col);
+									pix & gui_fade_mask_at(row % 26,
+											steps[i], col);
 							}
 						}
 					}
@@ -286,7 +285,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 
 							if (pix != 0) {
 								gfb[row][col] =
-									pix & gui_fade_mask_at(row % 26, k, col);
+									pix & gui_fade_mask_at(row % 26,
+											k, col);
 							}
 						}
 					}
@@ -310,14 +310,14 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 							    gui_screen_y_offset() + 0x87, 3, 0, 0, NULL, 0);
 				} else if (status >= 12 && status <= 14) {
 					if (status != 14) {
-						return;
+						return 0;
 					}
 					_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
 								get_dashboard_state()->panel.current_column, 0, 0,
 								GUI_SCREEN_WIDTH - 1, 199);
 				} else if (status == 15 || status == 16) {
 					if (status != 16) {
-						return;
+						return 0;
 					}
 					memcpy(even_ai_text, gs->ui.ai.text, gs->ui.ai.text_len);
 					gui_utf_draw(0, even_ai_text, 0, gui_screen_x_offset(), gui_screen_y_offset(),
@@ -352,7 +352,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 
 							if (pix != 0) {
 								line[xh + col] =
-									pix & gui_fade_mask_at(row % 26, steps[i], col);
+									pix & gui_fade_mask_at(row % 26,
+											steps[i], col);
 							}
 						}
 					}
@@ -387,7 +388,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 			}
 			if (status >= 12 && status <= 14) {
 				if (status != 14) {
-					return;
+					return 0;
 				}
 				_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
 							get_dashboard_state()->panel.current_column, 0, 0,
@@ -396,7 +397,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 			}
 			if (status == 15 || status == 16) {
 				if (status != 16) {
-					return;
+					return 0;
 				}
 				memcpy(even_ai_text, gs->ui.ai.text, gs->ui.ai.text_len);
 				gui_utf_draw(0, even_ai_text, 0, gui_screen_x_offset(), gui_screen_y_offset(),

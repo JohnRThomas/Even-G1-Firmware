@@ -17,33 +17,33 @@
 #define TELEPROMPTER_TEXT_DISPLAY          2
 #define TELEPROMPTER_DISPLAY_ABNORMAL_EXIT 3
 
-/* _tpm_thread_prv_data (0x20004b40, 0x230 bytes) */
+/* teleprompter page private state */
 struct tpm_thread_prv_data {
-	volatile uint8_t state;          /* 0x00 */
-	volatile int8_t sync_cnt;        /* 0x01 */
+	uint8_t state;
+	int8_t sync_cnt;
 	uint8_t pad_02[6];
-	volatile int64_t last_sync_ts;   /* 0x08 */
-	volatile int64_t start_ts;       /* 0x10 */
-	volatile uint32_t elapsed_ms;    /* 0x18 */
-	volatile uint8_t suspend_applied; /* 0x1c */
-	volatile uint8_t suspended;      /* 0x1d */
+	int64_t last_sync_ts;
+	int64_t start_ts;
+	uint32_t elapsed_ms;
+	uint8_t suspend_applied;
+	uint8_t suspended;
 	uint8_t pad_1e[2];
-	volatile uint32_t display_ms;    /* 0x20 */
-	volatile uint8_t work_mode;      /* 0x24 */
-	volatile int8_t countdown;       /* 0x25 */
+	uint32_t display_ms;
+	uint8_t work_mode;
+	int8_t countdown;
 	uint8_t pad_26[2];
-	volatile int64_t countdown_end;  /* 0x28 */
-	char text[0x200];                /* 0x30 */
+	int64_t countdown_end;
+	char text[0x200];
 };
 BUILD_ASSERT(sizeof(struct tpm_thread_prv_data) == 0x230);
 
-/* elapsed time shown on the page (reverse definition order) */
-static int tp_hour;                          /* 0x2000a9d0 */
-static int tp_min;                           /* 0x2000a9cc */
-static int tp_sec;                           /* 0x2000a9c8 */
-static int tp_last_hour;                     /* 0x2000a9c4 */
-static int tp_last_min;                      /* 0x2000a9c0 */
-static int tp_last_sec;                      /* 0x2000a9bc */
+/* elapsed time shown on the page */
+static int tp_hour;
+static int tp_min;
+static int tp_sec;
+static int tp_last_hour;
+static int tp_last_min;
+static int tp_last_sec;
 
 struct tpm_thread_prv_data _tpm_thread_prv_data;
 
@@ -122,7 +122,8 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event)
 						uint8_t pix = fb[row][col];
 
 						if (pix != 0) {
-							fb[row][col] = pix & gui_fade_mask_at(row % 26, steps[i], col);
+							fb[row][col] = pix & gui_fade_mask_at(row % 26,
+									steps[i], col);
 						}
 					}
 				}
@@ -192,11 +193,12 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event)
 								    gui_screen_y_offset() + 0x36, 0, 0, 0);
 					}
 				} else {
-					char cnt[3];
+					/* the count down field shows at most two characters */
+					char cnt[5];
 
 					memset(cnt, 0, sizeof(cnt));
-
 					snprintf(cnt, sizeof(cnt), "%d", (int)remain);
+					cnt[2] = '\0';
 					G1_LOG_INF("upgrade counterdown timer = %s\n", cnt);
 					gui_utf_draw(0, cnt, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36,
 						     gui_screen_x_offset() + 0x1e, gui_screen_y_offset() + 0x50, 1, 0, 0,
@@ -226,12 +228,10 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event)
 
 	case TELEPROMPTER_TEXT_DISPLAY: {
 		bool is_24h;
-		uint8_t suspended;
 
 		G1_LOG_INF("running TELEPROMPTER_TEXT_DISPLAY STATUS.\n");
 		if (event == UI_EVT_EXIT) {
 			G1_LOG_INF("received exit command,clear screen...\n");
-exit_text:
 			gui_screen_fade_out();
 			memset(tp, 0, sizeof(*tp));
 			if (get_dashboard_state()->is_master == 1 && tp->work_mode == 2) {
@@ -239,18 +239,17 @@ exit_text:
 			}
 			break;
 		}
-		suspended = tp->suspended;
-		if (suspended == 1) {
+		if (tp->suspended == 1) {
 			if (!tp->suspend_applied) {
 				uint32_t now = k_uptime_get();
 
 				tp->elapsed_ms += now - (uint32_t)tp->start_ts;
-				tp->suspend_applied = suspended;
+				tp->suspend_applied = 1;
 			}
 			tp->display_ms = tp->elapsed_ms;
 		} else if (!tp->suspend_applied) {
-			tp->display_ms = (uint32_t)k_uptime_get() - (uint32_t)tp->start_ts;
-			tp->display_ms += tp->elapsed_ms;
+			tp->display_ms = (uint32_t)k_uptime_get() - (uint32_t)tp->start_ts +
+					 tp->elapsed_ms;
 		} else {
 			tp->start_ts = (uint32_t)k_uptime_get();
 			tp->display_ms = tp->elapsed_ms;
@@ -278,8 +277,7 @@ exit_text:
 			percent = gs->ui.tp.percent;
 			suspend = gs->ui.tp.suspend;
 			dark_lines = gs->ui.tp.dark_lines;
-			/* memcpy, not a plain load: the extra copy decides an IRA spill tie (keeps suspend_time in r8) */
-			memcpy(&suspend_time, &gs->ui.tp.suspend_time, sizeof(suspend_time));
+			suspend_time = gs->ui.tp.suspend_time;
 			k_mutex_unlock(&screen_payload_mutex);
 			if (tp_scroll_pending == 1) {
 				tp_scroll_pending = 0;
@@ -337,7 +335,7 @@ exit_text:
 		if (tp->work_mode == 2 && tp->suspended == 0) {
 			gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0, 0);
 		}
-		tp->display_ms = tp->display_ms / 1000;
+		tp->display_ms /= 1000;
 		if (tp->display_ms < 60) {
 			tp_sec = tp->display_ms % 60;
 		} else if (tp->display_ms < 3600) {
@@ -450,7 +448,11 @@ exit_text:
 		}
 		if (event == UI_EVT_EXIT) {
 			G1_LOG_INF("received exit command,clear screen...\n");
-			goto exit_text;
+			gui_screen_fade_out();
+			memset(tp, 0, sizeof(*tp));
+			if (get_dashboard_state()->is_master == 1 && tp->work_mode == 2) {
+				dmic_stream_stop();
+			}
 		}
 		break;
 
@@ -460,7 +462,7 @@ exit_text:
 	return 0;
 }
 
-/* ui_task_table no-op draw (task) callback of the teleprompter screen (id 9, 0x200024b8) */
+/* ui_task_table no-op draw (task) callback of the teleprompter screen (id 9) */
 int draw_template_teleprompter_page(struct jbd_panel_context *panel, void *arg)
 {
 	return 0;

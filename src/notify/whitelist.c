@@ -15,8 +15,6 @@
 #include "../ble/ble_proto.h"
 #include "../storage/storage.h"
 
-/* the logs print __LINE__: line numbers below follow the vendor file */
-#line 16
 static char *whitelist_buf;
 struct app_whitelist g_appWhiteListInfo;
 
@@ -133,7 +131,6 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name)
 	return 1;
 }
 
-#line 452
 void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uint8_t *data,
 				uint16_t len, uint8_t *rsp)
 {
@@ -168,7 +165,6 @@ void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uin
 	ctx->write(rsp, 2);
 }
 
-#line 132
 int parse_app_white_list_json(const char *json)
 {
 	cJSON *root;
@@ -307,117 +303,101 @@ int is_the_same_whitelist_app(const char *json)
 		BLE_PRINTK("error root JSON NODE !\n");
 		return 0;
 	}
-	do {
-		item = cJSON_GetObjectItem(root, "call_enable");
-		if (item == NULL) {
-			BLE_PRINTK("callEnable is NULL !\n");
-			goto out;
-			/*
-			 * shared exits live in this first error block: their position
-			 * (right after the first check) gives the shipped block layout,
-			 * see ai_helpers/agent_notes/is_the_same_whitelist_app.md
-			 */
-fail:
-			ret = 0;
-out:
-			cJSON_Delete(root);
+	item = cJSON_GetObjectItem(root, "call_enable");
+	if (item == NULL) {
+		BLE_PRINTK("callEnable is NULL !\n");
+		goto out;
+	}
+	if (g_appWhiteListInfo.call_enable != (item->type == cJSON_True)) {
+		BLE_PRINTK("callEnable is not the same !\n");
+		goto out;
+	}
+	item = cJSON_GetObjectItem(root, "msg_enable");
+	if (item == NULL) {
+		BLE_PRINTK("msgEnable is NULL !\n");
+		goto out;
+	}
+	if (g_appWhiteListInfo.msg_enable != (item->type == cJSON_True)) {
+		BLE_PRINTK("msgEnable is not the same !\n");
+		goto out;
+	}
+	item = cJSON_GetObjectItem(root, "calendar_enable");
+	if (item == NULL) {
+		BLE_PRINTK("jsonCalendarEnable is NULL !\n");
+		goto out;
+	}
+	if (g_appWhiteListInfo.calendar_enable != (item->type == cJSON_True)) {
+		BLE_PRINTK("calendarEnable is not the same !\n");
+		goto out;
+	}
+	item = cJSON_GetObjectItem(root, "ios_mail_enable");
+	if (item == NULL) {
+		BLE_PRINTK("iosMailEnableJson is NULL !\n");
+		goto out;
+	}
+	if (g_appWhiteListInfo.ios_mail_enable != (item->type == cJSON_True)) {
+		BLE_PRINTK("iosMailEnable is not the same !\n");
+		goto out;
+	}
+	app = cJSON_GetObjectItem(root, "app");
+	if (app == NULL) {
+		BLE_PRINTK("appJson is NULL !\n");
+		goto out;
+	}
+	item = cJSON_GetObjectItem(app, "enable");
+	if (item == NULL) {
+		BLE_PRINTK("appEnableJson is NULL !\n");
+		goto out;
+	}
+	if (g_appWhiteListInfo.app_enable != (item->type == cJSON_True)) {
+		BLE_PRINTK("appEnable is not the same !\n");
+		goto out;
+	}
+	list = cJSON_GetObjectItem(app, "list");
+	if (list == NULL) {
+		BLE_PRINTK("appListJson is NULL !\n");
+		goto out;
+	}
+	if (!cJSON_IsArray(list)) {
+		goto out;
+	}
+	count = cJSON_GetArraySize(list);
+	if (g_appWhiteListInfo.app_count != count) {
+		BLE_PRINTK("appCounts is not the same !\n");
+		goto out;
+	}
+	same = 0;
+	for (i = 0; i < count; i++) {
+		single = cJSON_GetArrayItem(list, i);
+		if (single == NULL) {
+			BLE_PRINTK("singleAppJson is NULL !\n");
+			continue;
+		}
+		id = cJSON_GetObjectItem(single, "id");
+		if (id == NULL) {
+			BLE_PRINTK("appIdJson is NULL !\n");
+			continue;
+		}
+		name = cJSON_GetObjectItem(single, "name");
+		if (name == NULL) {
+			BLE_PRINTK("appNameJson is NULL !\n");
+			continue;
+		}
+		app_id[39] = 0;
+		app_name[15] = 0;
+		strncpy(app_id, id->valuestring, 39);
+		strncpy(app_name, name->valuestring, 15);
+		if (!is_app_name_same(app_id, app_name)) {
 			break;
 		}
-		if (g_appWhiteListInfo.call_enable != (item->type == cJSON_True)) {
-			BLE_PRINTK("callEnable is not the same !\n");
-			goto out;
-		}
-		item = cJSON_GetObjectItem(root, "msg_enable");
-		if (item == NULL) {
-			BLE_PRINTK("msgEnable is NULL !\n");
-			goto out;
-		}
-		if (g_appWhiteListInfo.msg_enable != (item->type == cJSON_True)) {
-			BLE_PRINTK("msgEnable is not the same !\n");
-			goto out;
-		}
-		item = cJSON_GetObjectItem(root, "calendar_enable");
-		if (item == NULL) {
-			BLE_PRINTK("jsonCalendarEnable is NULL !\n");
-			goto out;
-		}
-		if (g_appWhiteListInfo.calendar_enable != (item->type == cJSON_True)) {
-			BLE_PRINTK("calendarEnable is not the same !\n");
-			goto out;
-		}
-		item = cJSON_GetObjectItem(root, "ios_mail_enable");
-		if (item == NULL) {
-			BLE_PRINTK("iosMailEnableJson is NULL !\n");
-			goto out;
-		}
-		if (g_appWhiteListInfo.ios_mail_enable != (item->type == cJSON_True)) {
-			BLE_PRINTK("iosMailEnable is not the same !\n");
-			goto out;
-		}
-		app = cJSON_GetObjectItem(root, "app");
-		if (app == NULL) {
-			BLE_PRINTK("appJson is NULL !\n");
-			goto out;
-		}
-		item = cJSON_GetObjectItem(app, "enable");
-		if (item == NULL) {
-			BLE_PRINTK("appEnableJson is NULL !\n");
-			goto out;
-		}
-		if (g_appWhiteListInfo.app_enable != (item->type == cJSON_True)) {
-			BLE_PRINTK("appEnable is not the same !\n");
-			goto out;
-		}
-		list = cJSON_GetObjectItem(app, "list");
-		if (list == NULL) {
-			BLE_PRINTK("appListJson is NULL !\n");
-			goto out;
-		}
-		if (!cJSON_IsArray(list)) {
-			goto fail;
-		}
-		count = cJSON_GetArraySize(list);
-		if (g_appWhiteListInfo.app_count != count) {
-			BLE_PRINTK("appCounts is not the same !\n");
-			goto out;
-		}
-		same = 0;
-		/*
-		 * i is the low byte of the int index, extracted with shifts (which IV
-		 * analysis does not follow, so the exit test keeps comparing the named
-		 * i; see ai_helpers/agent_notes/is_the_same_whitelist_app.md)
-		 */
-		for (int idx = 0; (i = ((idx & 0xff) << 8) >> 8) < count; idx++) {
-			single = cJSON_GetArrayItem(list, idx);
-			if (single == NULL) {
-				BLE_PRINTK("singleAppJson is NULL !\n");
-				continue;
-			}
-			id = cJSON_GetObjectItem(single, "id");
-			if (id == NULL) {
-				BLE_PRINTK("appIdJson is NULL !\n");
-				continue;
-			}
-			name = cJSON_GetObjectItem(single, "name");
-			if (name == NULL) {
-				BLE_PRINTK("appNameJson is NULL !\n");
-				continue;
-			}
-			app_id[39] = 0;
-			app_name[15] = 0;
-			strncpy(app_id, id->valuestring, 39);
-			strncpy(app_name, name->valuestring, 15);
-			if (!is_app_name_same(app_id, app_name)) {
-				break;
-			}
-			same++;
-		}
-		if (same == count) {
-			BLE_PRINTK("the same whitelist ! \n");
-			ret = 1;
-		}
-		goto out;
-	} while (0);
+		same++;
+	}
+	if (same == count) {
+		BLE_PRINTK("the same whitelist ! \n");
+		ret = 1;
+	}
+out:
+	cJSON_Delete(root);
 	BLE_PRINTK("is_the_same_whitelist_app ret is %d\n", ret);
 	return ret;
 }
@@ -432,16 +412,11 @@ uint16_t convert_app_whitelist_to_json(char *buf)
 	size_t len;
 
 	if (buf == NULL) {
-#line 497
 		BLE_PRINTK("[%s-%d]buf is null \n", __func__, __LINE__);
 		return 0;
 	}
 	root = cJSON_CreateObject();
 	if (root == NULL) {
-
-
-
-
 		BLE_PRINTK("[%s-%d]jsonRoot is null \n", __func__, __LINE__);
 		return 0;
 	}
@@ -451,9 +426,6 @@ uint16_t convert_app_whitelist_to_json(char *buf)
 	cJSON_AddBoolToObject(root, "calendar_enable", g_appWhiteListInfo.calendar_enable);
 	app = cJSON_CreateObject();
 	if (app == NULL) {
-
-
-
 		BLE_PRINTK("[%s-%d]appJson is null \n", __func__, __LINE__);
 		cJSON_Delete(root);
 		return 0;
@@ -461,7 +433,6 @@ uint16_t convert_app_whitelist_to_json(char *buf)
 	cJSON_AddBoolToObject(app, "enable", g_appWhiteListInfo.app_enable);
 	list = cJSON_CreateArray();
 	if (list == NULL) {
-
 		BLE_PRINTK("[%s-%d]appListInfoJson is null \n", __func__, __LINE__);
 		cJSON_Delete(root);
 		return 0;
@@ -469,10 +440,6 @@ uint16_t convert_app_whitelist_to_json(char *buf)
 	for (uint8_t i = 0; i < g_appWhiteListInfo.app_count; i++) {
 		item = cJSON_CreateObject();
 		if (item == NULL) {
-
-
-
-
 			BLE_PRINTK("[%s-%d]appItem is null \n", __func__, __LINE__);
 			cJSON_Delete(root);
 			return 0;
@@ -492,7 +459,6 @@ uint16_t convert_app_whitelist_to_json(char *buf)
 	return len;
 }
 
-#line 556
 void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp)
 {
 	char *buf;
@@ -539,7 +505,6 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp)
 	free(buf);
 }
 
-#line 626
 void dump_whitelist(void)
 {
 	char *buf = malloc(0x1800);

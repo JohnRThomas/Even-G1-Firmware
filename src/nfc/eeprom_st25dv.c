@@ -137,13 +137,13 @@ int eeprom_st25dv_read(const struct device *dev, off_t offset, void *buf, size_t
 	return ret;
 }
 
-int st25dv_write_sys(const struct eeprom_st25dv_config *config, off_t offset,
+static int st25dv_write_sys(const struct eeprom_st25dv_config *config, off_t offset,
 			    const void *buf, size_t len)
 {
 	return st25dv_write(config, config->addr | ST25DV_ADDR_SYST_I2C_BIT, offset, buf, len);
 }
 
-int st25dv_read_sys(const struct eeprom_st25dv_config *config, off_t offset, void *buf,
+static int st25dv_read_sys(const struct eeprom_st25dv_config *config, off_t offset, void *buf,
 			   size_t len)
 {
 	return st25dv_read(config->bus, config->addr | ST25DV_ADDR_SYST_I2C_BIT, offset, buf, len);
@@ -243,12 +243,6 @@ int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **bu
 	return 0;
 }
 
-static inline int st25dv_mb_ctrl_fail(void)
-{
-	printk("eeprom_st25dv_read ST25DV_REG_MB_CTRL_DYN is failed\n");
-	return -2;
-}
-
 int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void *buf, size_t len)
 {
 	uint8_t mb_ctrl;
@@ -259,7 +253,8 @@ int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void 
 
 	mb_ctrl = 0;
 	if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1)) {
-		return st25dv_mb_ctrl_fail();
+		printk("eeprom_st25dv_read ST25DV_REG_MB_CTRL_DYN is failed\n");
+		return -2;
 	}
 
 	/* HOST_PUT_MSG or RF_PUT_MSG still pending */
@@ -274,7 +269,8 @@ int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void 
 	}
 
 	if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1)) {
-		return st25dv_mb_ctrl_fail();
+		printk("eeprom_st25dv_read ST25DV_REG_MB_CTRL_DYN is failed\n");
+		return -2;
 	}
 
 	return 0;
@@ -320,34 +316,13 @@ const struct device *eeprom_st25dv_init(void)
 	return &global_st25dv_context;
 }
 
-/*
- * Not present in the image (no callers, removed by --gc-sections).  They are
- * kept because the shipped code needs a third i2c_transfer() caller (or GCC
- * inlines z_impl_i2c_transfer) and a non-constant k_mutex_lock() timeout (or
- * GCC const-propagates K_FOREVER into the out-of-line k_mutex_lock copy).
- */
-int st25dv_transfer(const struct device *dev, struct i2c_msg *msgs, uint8_t num_msgs)
-{
-	const struct eeprom_st25dv_config *config = dev->config;
-
-	return i2c_transfer(config->bus, msgs, num_msgs, config->addr);
-}
-
-int eeprom_st25dv_lock_timeout(const struct device *dev, k_timeout_t timeout)
-{
-	return k_mutex_lock(dev->data, timeout);
-}
-
-/*
- * Lock / unlock with dev->data.  The vendor declared a return value but never
- * returns one (falling off the end); that is what keeps the call from being a
- * sibcall (bl + pop in the target).
- */
+/* Lock / unlock with dev->data; both always return 0. */
 uint8_t eeprom_st25dv_lock(const struct device *dev)
 {
 	if (dev) {
 		k_mutex_lock(dev->data, K_FOREVER);
 	}
+	return 0;
 }
 
 uint8_t eeprom_st25dv_unlock(const struct device *dev)
@@ -355,4 +330,5 @@ uint8_t eeprom_st25dv_unlock(const struct device *dev)
 	if (dev) {
 		k_mutex_unlock(dev->data);
 	}
+	return 0;
 }

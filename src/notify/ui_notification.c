@@ -18,7 +18,7 @@
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "../ui/ui.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define LANGUAGE_FRENCH  5
 #define LANGUAGE_GERMAN  6
@@ -39,10 +39,9 @@ struct ui_task {
 	ui_pre_fn pre;
 };
 
-
 static int last_uid = -1;
 struct ui_task ui_task_table[] = {
-	{13, 0, draw_template_gyro_page, (ui_pre_fn)dump_template_gyro_info},
+	{13, 0, draw_template_gyro_page, dump_template_gyro_info},
 	{2, 0, draw_template_countdown_page, NULL},
 	{3, 0, draw_template_dashboard_page, NULL},
 	{4, 0, draw_template_notification_page, NULL},
@@ -58,7 +57,6 @@ struct ui_task ui_task_table[] = {
 static uint8_t last_idx = 0xff;
 static uint8_t last_num = 0xff;
 
-
 static uint8_t hide_icon_on_exit;
 static uint8_t particle_pending;
 
@@ -72,10 +70,10 @@ int panel_related(struct jbd_panel_context *panel, int idx, void *arg)
 	panel->current_row = 0;
 	panel->current_column = 176;
 	if (idx != 7) {
-		/* vendor call site passes no argument (clear_cb takes the panel) */
+		/* called without an argument (clear_cb takes the panel) */
 		((void (*)(void))panel->clear_cb)();
 	}
-	if (idx == 7 || (unsigned int)(idx - 1) < 20) {
+	if (idx >= 1 && idx <= 20) {
 		t = ui_task_table + idx - 1;
 		if (t->has_pre && t->pre) {
 			t->pre(arg);
@@ -282,7 +280,6 @@ void draw_time(char *buf, uint32_t recv_time)
 	BLE_PRINTK("gui_getScreenoffset_x=%d,timeDiffBuf is %s \n", gui_screen_x_offset(), buf);
 }
 
-#line 394
 void draw_message(uint8_t unread, struct notif_msg *msg)
 {
 	char title[72] = {0};
@@ -300,7 +297,7 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
 	switch (type) {
 	case 2:
 		memset(title, 0, sizeof(title));
-		snprintf(title, sizeof(title), "%s", msg->message);
+		snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
 		gui_utf_draw_middle(0, title, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
 				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 81, 1, 0, 0, NULL, 0);
 		gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
@@ -315,7 +312,7 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
 	case 1:
 		gui_bmp_bitmap_draw(0x37, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
 		memset(title, 0, sizeof(title));
-		snprintf(title, sizeof(title), "%s", msg->message);
+		snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
 		break;
 	case 3:
 		gui_bmp_bitmap_draw(0x3a, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
@@ -380,7 +377,6 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
 	}
 }
 
-#line 519
 void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg)
 {
 	if (msg == NULL) {
@@ -446,7 +442,7 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
 	}
 	idx = get_cur_show_msg_idx();
 	num = count_unread_messages();
-	/* note: msg is still NULL here (vendor bug) */
+	/* note: msg is still NULL here */
 	if (last_idx == idx && last_num == num && msg->uid == last_uid) {
 		return 0;
 	}

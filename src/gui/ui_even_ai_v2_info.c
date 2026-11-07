@@ -25,7 +25,7 @@ void even_ai_v2_info_timeout_reset(void)
 	even_ai_v2_ui.timeout_cnt = 0;
 }
 
-/* even_ai_v2 actions (GlassesState + 0xf0) */
+/* even_ai_v2 actions (ui.gui.ui_action) */
 enum {
 	EVEN_AI_V2_WAKEUP = 1,
 	EVEN_AI_V2_LISTEN = 2,
@@ -35,21 +35,18 @@ enum {
 };
 
 /*
- * Redraw the Even AI v2 page for GlassesState+0xf0 (action) / +0xf2 (status).
+ * Redraw the Even AI v2 page for ui.gui.ui_action / ui.gui.ui_status.
  * force == 1: also redraw the static text.  Screen positions are relative to
  * gui_screen_x_offset() (x) / gui_screen_y_offset() (y); icon x offsets depend on the UI
- * language (5, 6, 7, 14 have their own layout; switch/if-chains -> CSWTCH tables
- * 0xdb2ec..0xdb382 / 0x9c49c..0x9c4d8 in the target).
+ * language (5, 6, 7, 14 have their own layout).
  */
-int even_ai_v2_info_reflash(uint8_t **fb, int force)
+static int even_ai_v2_info_reflash(int force)
 {
 	struct GlassesState *gs = get_dashboard_state();
 	uint8_t lang = get_current_language();
 	int x_off = 0;
 	int text_w = 576;
 	int x, y;
-
-	ARG_UNUSED(fb);
 
 	if (get_dashboard_state()->head_up_mic_disabled == 1 &&
 	    (gs->ui.gui.ui_action == 2 ? gs->ui.gui.ui_status == 1 :
@@ -536,7 +533,7 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 
 			/* fade in */
 			for (int i = 0; i < 8; i++) {
-				even_ai_v2_info_reflash(ctx->panel_buffer, 1);
+				even_ai_v2_info_reflash(1);
 				for (int row = 0; row < 199; row++) {
 					for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
 						const uint8_t steps[8] = { 1, 2, 3, 4, 5, 6, 7, 7 };
@@ -564,10 +561,8 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 		}
 		break;
 	case 1:
-		if (event == 1) {
-			even_ai_v2_info_reflash(ctx->panel_buffer, event);
-		} else if (event == 0) {
-			even_ai_v2_info_reflash(ctx->panel_buffer, event);
+		if (event == 0 || event == 1) {
+			even_ai_v2_info_reflash(event);
 		} else if (event == 2) {
 			G1_LOG_INF("set_imu_pitch process received exit packet ...\n");
 			gui_screen_fade_out();

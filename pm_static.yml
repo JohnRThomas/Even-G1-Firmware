@@ -1,8 +1,6 @@
-# Partition layout of the shipped v1.63 image (r2_kcfg).  Internal partitions = the NCS defaults;
-# the external-flash partitions are recovered from the shipped flash map (default_flash_map,
-# 0x8e940: ids 11..22, then external_flash id 23 with size 0).  Names are not in the image
-# (the application addresses the external flash by raw offsets); the IDs follow from the
-# address order.
+# Static partition layout.  Internal partitions = the NCS defaults.  The application
+# addresses the external flash by raw offsets; the partition IDs follow from the address
+# order.
 EMPTY_0:
   address: 0xfe000
   end_address: 0x100000

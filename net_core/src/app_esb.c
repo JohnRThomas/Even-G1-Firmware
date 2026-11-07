@@ -1,6 +1,6 @@
 /*
  * Even Realities G1 network core - ESB link between the two glasses
- * (reconstruction of v1.63; derived from nrf/samples/esb/esb_ptx|esb_prx).
+ * (derived from nrf/samples/esb/esb_ptx|esb_prx).
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -15,7 +15,7 @@
 
 LOG_MODULE_REGISTER(app_esb);
 
-/* Event passed to the user callback (0x21004618). */
+/* Event passed to the user callback. */
 struct app_esb_evt {
 	uint8_t type;
 	uint8_t *data;
@@ -26,15 +26,15 @@ struct app_esb_evt {
 typedef void (*app_esb_cb_t)(struct app_esb_evt *evt);
 
 /* main.c */
-extern int net_mode_get(void);                  /* mode */
-extern int esb_tx_buf_len_get(void);                  /* pending tx length */
-extern int esb_tx_buf_set(const uint8_t *data, size_t len); /* store pending tx */
-extern void esb_tx_buf_clear(void);                 /* clear pending tx */
+extern int net_mode_get(void);
+extern int esb_tx_buf_len_get(void);
+extern int esb_tx_buf_set(const uint8_t *data, size_t len);
+extern void esb_tx_buf_clear(void);
 extern void ipc_send_esb_status(uint8_t state);        /* report state to the app core */
-extern int esb_rx_msgq_init(void);                  /* rx msgq init */
-extern int esb_rx_msgq_get(uint8_t *buf);          /* rx msgq get */
-extern uint8_t esb_tx_buf[];                  /* pending tx data */
-extern uint8_t esb_channel;                    /* esb channel */
+extern int esb_rx_msgq_init(void);
+extern int esb_rx_msgq_get(uint8_t *buf);
+extern uint8_t esb_tx_buf[];
+extern uint8_t esb_channel;
 extern uint8_t esb_tx_kind;
 extern uint8_t esb_tx_state;
 extern uint8_t esb_tx_done;
@@ -43,15 +43,13 @@ extern uint8_t esb_evt_active;
 int on_timeslot_start_stop(int op);
 
 /* timeslot.c */
-extern void timeslot_handler_init(int (*cb)(int op));    /* timeslot start */
-extern uint8_t timeslot_radio_is_on(void);              /* timeslot radio enabled */
+extern void timeslot_handler_init(int (*cb)(int op));
+extern uint8_t timeslot_radio_is_on(void);
 
-/* .data, 1-byte aligned group */
 uint8_t base_addr_0[4] = {0xC9, 0xC9, 0xC9, 0xC9};
 uint8_t base_addr_1[4] = {0xA3, 0xA3, 0xA3, 0xA3};
 uint8_t addr_prefix[2] = {0xE9, 0xD3};
 
-/* .data */
 int esb_link_state = 1;
 
 static app_esb_cb_t app_evt_cb;
@@ -229,8 +227,7 @@ int esb_initialize(uint8_t prx)
 	return err;
 }
 
-/* non-static: keeps the shipped function order (esb_initialize, esb_send) */
-void esb_send(uint8_t load)
+static void esb_send(uint8_t load)
 {
 	uint8_t tmp[CONFIG_ESB_MAX_PAYLOAD_LENGTH] = {0};
 	int len;
@@ -414,27 +411,17 @@ int app_esb_suspend(void)
 	return 0;
 }
 
-/* Shape of the demo's app_esb_resume() of the same name (if PTX {...} else {...}); the two
- * branches became identical and GCC cross-jumps them, which is what keeps
- * &radio_active/&tx_busy in r8/r7 in the shipped code. */
 int app_esb_resume(void)
 {
+	int err;
+
 	NRF_P0->OUTSET = BIT(29);
-	if (esb_prx == 0) {
-		int err = esb_initialize(esb_prx);
-		radio_active = 1;
-		tx_busy = 1;
-		esb_send(1);
-		NRF_P0->OUTCLR = BIT(29);
-		return err;
-	} else {
-		int err = esb_initialize(esb_prx);
-		radio_active = 1;
-		tx_busy = 1;
-		esb_send(1);
-		NRF_P0->OUTCLR = BIT(29);
-		return err;
-	}
+	err = esb_initialize(esb_prx);
+	radio_active = 1;
+	tx_busy = 1;
+	esb_send(1);
+	NRF_P0->OUTCLR = BIT(29);
+	return err;
 }
 
 int on_timeslot_start_stop(int op)
@@ -479,20 +466,4 @@ int esb_link_state_get(void)
 int esb_tx_busy_get(void)
 {
 	return tx_busy;
-}
-
-/* ESB rx data -> rx msgq + notify (0x1039dfc, align-2 region; no literal pool).
- * Lives outside main.c (see note there); placed here. */
-extern int esb_rx_msgq_put(const uint8_t *data);
-extern void esb_thread_wake(void);
-
-int esb_rx_enqueue(const uint8_t *data, size_t len)
-{
-	uint8_t buf[252] = {0};
-
-	memcpy(buf, data, len);
-	esb_rx_msgq_put(buf);
-	esb_thread_wake();
-
-	return 0;
 }

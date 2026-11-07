@@ -16,8 +16,6 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
 
-
-
 /* current production-test transport */
 static struct {
 	void *nfc;                       /* st25dv context */
@@ -29,9 +27,9 @@ static struct {
 
 #define PT_COMM_DEV()                                                               \
 	(pt_comm.type == PT_COMM_NFC ? pt_comm.nfc : (void *)pt_comm.uart)
-static uint8_t pt_resp_buf[50];         /* response buffer */
 
-static uint8_t pt_req_buf[256];        /* request buffer */
+static uint8_t pt_resp_buf[50];
+static uint8_t pt_req_buf[256];
 
 int setUARTDevice(const struct device *dev)
 {
@@ -98,9 +96,7 @@ int process_pt_data(void *arg)
 	uint8_t *resp = pt_resp_buf;
 
 	pt_comm_busy_set();
-	if (comm_read(pt_comm.type,
-		      PT_COMM_DEV(),
-		      &req, &req_len)) {
+	if (comm_read(pt_comm.type, PT_COMM_DEV(), &req, &req_len)) {
 		pt_comm_busy_clear();
 		return -2;
 	}
@@ -112,9 +108,7 @@ int process_pt_data(void *arg)
 		return -3;
 	}
 
-	ret = comm_write(pt_comm.type,
-			 PT_COMM_DEV(),
-			 resp, (uint8_t)resp_len);
+	ret = comm_write(pt_comm.type, PT_COMM_DEV(), resp, (uint8_t)resp_len);
 	if (ret) {
 		printk("comm_write is failed\n");
 		pt_comm_busy_clear();

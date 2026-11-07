@@ -134,7 +134,7 @@ static int getQuickNoteBKPQueueCacheData(struct quicknote_msg *msg)
 	return ret;
 }
 
-unsigned int QuickNoteStoreHandler(void)
+int QuickNoteStoreHandler(void)
 {
 	struct quicknote_msg msg;
 	struct quicknote_flash *note;
@@ -149,14 +149,7 @@ unsigned int QuickNoteStoreHandler(void)
 		return -1;
 	}
 	switch (msg.cmd) {
-	case QUICKNOTE_CMD_STORE: {
-		/*
-		 * unsigned like the return type: with no int->unsigned conversion the
-		 * erase/write results coalesce with the return value instead of getting
-		 * pseudos of their own, which gives the shipped register order.
-		 */
-		unsigned int ret;
-
+	case QUICKNOTE_CMD_STORE:
 		index = msg.index;
 		if (index >= QUICKNOTE_NUM) {
 			G1_LOG_ERR("quicknote upgrade index out of range\n");
@@ -202,7 +195,8 @@ unsigned int QuickNoteStoreHandler(void)
 				changed = 1;
 			}
 			if (changed != 1) {
-				goto same;
+				G1_LOG_INF("The current quicknote text is stored the same as in flash and does not need to be updated\n");
+				return 0;
 			}
 		}
 		cleanNotesIndex();
@@ -221,10 +215,6 @@ unsigned int QuickNoteStoreHandler(void)
 		}
 		G1_LOG_INF("quicknote %d store sucess\n", index);
 		return 0;
-same:
-		G1_LOG_INF("The current quicknote text is stored the same as in flash and does not need to be updated\n");
-		return 0;
-	}
 	case QUICKNOTE_CMD_DELETE:
 		index = msg.index;
 		if (index >= QUICKNOTE_NUM) {

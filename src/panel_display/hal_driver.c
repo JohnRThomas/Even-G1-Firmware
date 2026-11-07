@@ -1,8 +1,6 @@
 /*
- * JBD013VGA SPI transport, derived from the JBD reference code
- * (referenced_examples/jdb013vga/hal_driver.c), on top of the vendor
- * spi_interface_t of the panel context.  Reconstructed from the v1.63
- * firmware image.
+ * JBD013VGA SPI transport, derived from the JBD reference code, on top of
+ * the spi_interface_t of the panel context.
  */
 #include <string.h>
 #include <zephyr/sys/byteorder.h>
@@ -43,8 +41,6 @@ uint16_t spi_read_id(void)
 	G1_LOG_INF("jbd panel devicve id: %02x, %02x, %02x, %02x\n", rx[0], rx[1], rx[2], rx[3]);
 	return sys_get_be16(&rx[2]);
 }
-
-/* ---- align-2 part ---- */
 
 void delay_ms(uint32_t ms)
 {

@@ -1,7 +1,6 @@
 /*
  * Proxy thread: queues BLE responses, streams QuickNote audio files to the
  * app and forwards settings / events to the slave arm.
- * Reconstructed from the v1.63 app core.
  */
 #include <stdint.h>
 #include <string.h>
@@ -9,6 +8,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/util.h>
 
 #include "g1_log.h"
@@ -17,7 +17,7 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
@@ -38,21 +38,21 @@ K_MSGQ_DEFINE(proxy_msgq, sizeof(struct proxy_msg), 16, 4);
 static K_THREAD_STACK_DEFINE(proxy_stack, PROXY_STACK_SIZE);
 static struct k_thread proxy_thread;
 
-k_tid_t proxy_tid;                         /* 0x2000aa70 */
-static volatile int audio_file_start;          /* 0x2000aa6c */
-static volatile int audio_file_end;            /* 0x2000aa68 */
-static volatile int audio_pkt_total;           /* 0x2000aa64 */
-static volatile int audio_file_size;           /* 0x2000aa60 */
-static volatile int audio_pkt_index;           /* 0x2000aa5c */
-static volatile int audio_file_sent;           /* 0x2000aa58 */
-static uint8_t response_buf[PROXY_MSG_DATA_MAX];    /* 0x2001e1a6 */
-static volatile uint8_t response_pending;                    /* 0x2001e1a5 */
-static uint8_t audio_file_buf[0xe6];                /* 0x2001e0bf */
-static volatile uint8_t audio_block_idx;                     /* 0x2001e0be */
-static volatile uint8_t audio_response_packet_buf[0xe6];     /* 0x2001dfd8 */
-static volatile uint8_t audio_pkt_seq;                       /* 0x2001dfd7 */
-static volatile uint8_t audio_sending;                       /* 0x2001dfd6 */
-static volatile uint16_t response_len;                       /* 0x200108f2 */
+k_tid_t proxy_tid;
+static int audio_file_start;
+static int audio_file_end;
+static int audio_pkt_total;
+static int audio_file_size;
+static int audio_pkt_index;
+static int audio_file_sent;
+static uint8_t response_buf[PROXY_MSG_DATA_MAX];
+static uint8_t response_pending;
+static uint8_t audio_file_buf[0xe6];
+static uint8_t audio_block_idx;
+static uint8_t audio_response_packet_buf[0xe6];
+static uint8_t audio_pkt_seq;
+static uint8_t audio_sending;
+static uint16_t response_len;
 
 #define VOICE_MGR ((struct proxy_voice_manager *)audio_file_buf)
 
@@ -71,7 +71,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 	int ret;
 	int retry;
 	int n;
-	uint8_t buf[8];
+	uint8_t buf[2];
 
 	memset(&msg, 0, sizeof(msg));
 	while (1) {
@@ -81,7 +81,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 		}
 		if (!(gs->module_mask & BIT(7))) {
 			k_sleep(K_MSEC(1000));
-		} else {
+			continue;
+		}
 		memset(&msg, 0, sizeof(msg));
 		ret = k_msgq_get(&proxy_msgq, &msg, K_FOREVER);
 		if (ret != 0) {
@@ -99,13 +100,14 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 
 		case PROXY_MSG_RESPONSE_SEND:
 			if (response_pending) {
+				int64_t now_ms = 0;
+
 				ret = gs->ble_context.write(response_buf, response_len);
 				if (ret < 0) {
 					G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n",
 						   ret);
 				}
-				*(int64_t *)buf = 0;
-				get_wall_clock_ms((int64_t *)buf);
+				get_wall_clock_ms(&now_ms);
 				response_pending = 0;
 				response_len = 0;
 			}
@@ -127,11 +129,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				}
 				if (VOICE_MGR->magic == VOICE_MANAGER_MAGIC &&
 				    VOICE_MGR->blocks[audio_block_idx].state == 2) {
-					/* the block is read through a volatile pointer: its address stays
-					 * in a register and start_addr is loaded from it (+4) */
-					volatile struct proxy_voice_block *blk = &VOICE_MGR->blocks[audio_block_idx];
-
-					audio_file_start = blk->start_addr;
+					audio_file_start = VOICE_MGR->blocks[audio_block_idx].start_addr;
 					audio_file_end = VOICE_MGR->blocks[audio_block_idx].end_addr;
 				}
 				memset(audio_file_buf, 0, sizeof(audio_file_buf));
@@ -149,7 +147,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				audio_pkt_seq = 0;
 				audio_pkt_index = 0;
 				audio_file_sent = 0;
-				memset((void *)audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
+				memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
 				audio_response_packet_buf[0] = 0x1e;
 				audio_response_packet_buf[2] = 0;
 				audio_response_packet_buf[3] = audio_pkt_seq;
@@ -162,12 +160,12 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				audio_response_packet_buf[8] = audio_pkt_index >> 8;
 				audio_response_packet_buf[9] = audio_block_idx + 1;
 				n = MIN(audio_file_size - audio_file_sent, AUDIO_CHUNK_SIZE);
-				memcpy((void *)&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE], audio_file_buf, n);
+				memcpy(&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE], audio_file_buf, n);
 				audio_response_packet_buf[1] = n + AUDIO_PKT_HDR_SIZE;
 				retry = AUDIO_RETRY_COUNT;
 				for (;;) {
-					ret = gs->ble_context.write((const uint8_t *)audio_response_packet_buf,
-							   audio_response_packet_buf[1]);
+					ret = gs->ble_context.write(audio_response_packet_buf,
+								    audio_response_packet_buf[1]);
 					if (ret < 0) {
 						G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n",
 							   ret);
@@ -203,15 +201,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 					G1_LOG_ERR("app request over size data ,break,last packet timestamp = %d\n",
 						   get_dashboard_state()->dashboard_ts->ts);
 				} else {
-					memset((void *)audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
-					/* the sizes are volatile: each test re-reads them; if neither test holds,
-					 * ret keeps the k_msgq_get() result (it stays in r4, n is int like ret) */
-					if (audio_file_size - audio_file_sent > AUDIO_CHUNK_SIZE - 1) {
-						ret = AUDIO_CHUNK_SIZE;
-					} else if (audio_file_size - audio_file_sent <= AUDIO_CHUNK_SIZE - 1) {
-						ret = audio_file_size - audio_file_sent;
-					}
-					n = ret;
+					memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
+					n = MIN(audio_file_size - audio_file_sent, AUDIO_CHUNK_SIZE);
 					audio_response_packet_buf[0] = 0x1e;
 					audio_response_packet_buf[1] = n + AUDIO_PKT_HDR_SIZE;
 					audio_response_packet_buf[2] = 0;
@@ -234,12 +225,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 						clearAudioBlockInUse();
 						break;
 					}
-					memcpy((void *)&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE],
-					       audio_file_buf, n);
+					memcpy(&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE], audio_file_buf, n);
 					retry = AUDIO_RETRY_COUNT;
 					for (;;) {
-						ret = gs->ble_context.write((const uint8_t *)audio_response_packet_buf,
-								   audio_response_packet_buf[1]);
+						ret = gs->ble_context.write(audio_response_packet_buf,
+									    audio_response_packet_buf[1]);
 						if (ret < 0) {
 							G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n",
 								   ret);
@@ -257,7 +247,6 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 							break;
 						}
 					}
-					break;
 				}
 			}
 			break;
@@ -276,7 +265,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
 				break;
 			}
-			memset((void *)audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
+			memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
 			if (msg.data[0] == 0) {
 				audio_response_packet_buf[0] = 0x1e;
 			} else {
@@ -286,23 +275,13 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			audio_response_packet_buf[3] = audio_pkt_seq;
 			audio_pkt_seq++;
 			audio_response_packet_buf[4] = 1;
-			p = (uint8_t *)&audio_response_packet_buf[6];
+			p = &audio_response_packet_buf[6];
 			for (int i = 0; i < VOICE_BLOCK_NUM; i++) {
 				if (VOICE_MGR->blocks[i].state == 2) {
-					int32_t v;
-
 					p[0] = i + 1;
 					cnt++;
-					v = VOICE_MGR->blocks[i].timestamp;
-					p[1] = v;
-					p[2] = v >> 8;
-					p[3] = v >> 16;
-					p[4] = v >> 24;
-					v = VOICE_MGR->blocks[i].crc32;
-					p[5] = v;
-					p[6] = v >> 8;
-					p[7] = v >> 16;
-					p[8] = v >> 24;
+					sys_put_le32(VOICE_MGR->blocks[i].timestamp, &p[1]);
+					sys_put_le32(VOICE_MGR->blocks[i].crc32, &p[5]);
 					p += 9;
 				}
 			}
@@ -312,7 +291,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				G1_LOG_DBG("audio_response_packet_buf[%d] = %d\n\n", i,
 					   audio_response_packet_buf[i]);
 			}
-			ret = gs->ble_context.write((const uint8_t *)audio_response_packet_buf, audio_response_packet_buf[1]);
+			ret = gs->ble_context.write(audio_response_packet_buf,
+						    audio_response_packet_buf[1]);
 			if (ret < 0) {
 				G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n", ret);
 			}
@@ -321,6 +301,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 
 		case PROXY_MSG_POWER: {
 			uint8_t on = msg.data[0];
+
 			buf[0] = 7;
 			buf[1] = on;
 
@@ -339,6 +320,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 
 		case PROXY_MSG_LANGUAGE: {
 			uint8_t lang = msg.data[0];
+
 			buf[0] = 8;
 			buf[1] = lang;
 
@@ -356,6 +338,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 
 		case PROXY_MSG_STARTUP_MODE: {
 			uint8_t mode = msg.data[0];
+
 			buf[0] = 9;
 			buf[1] = mode;
 
@@ -375,7 +358,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			if (get_dashboard_state()->double_tap_customize == 4 && get_dashboard_state()->dashboard_mode == 0 &&
 			    get_dashboard_state()->is_master == 1) {
 				buf[0] = 0x0a;
-			buf[1] = 1;
+				buf[1] = 1;
 
 				for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
 					if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
@@ -392,7 +375,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			    (get_dashboard_state()->double_tap_dashboard_on || get_dashboard_state()->dashboard_ts->dashboard_hold) &&
 			    get_dashboard_state()->is_master == 1) {
 				buf[0] = 0x0a;
-			buf[1] = 2;
+				buf[1] = 2;
 
 				for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
 					if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
@@ -410,6 +393,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 
 		case PROXY_MSG_DOUBLE_TAP: {
 			uint8_t mode = msg.data[0];
+
 			buf[0] = 0x0c;
 			buf[1] = mode;
 
@@ -427,6 +411,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 
 		case PROXY_MSG_LONGPRESS_TAP: {
 			uint8_t mode = msg.data[0];
+
 			buf[0] = 0x0d;
 			buf[1] = mode;
 
@@ -446,8 +431,6 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			G1_LOG_ERR("received unkonwn command,drop it\n");
 			break;
 		}
-		}
-next:;
 	}
 }
 

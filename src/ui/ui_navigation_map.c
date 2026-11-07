@@ -3,26 +3,23 @@
  * panoramic map page) and the navigation task, which share the private data
  * and the map bitmaps.
  */
-#define GUI_C_INTERNAL /* gui_screen_x_offset() returns int here */
 #include "ui.h"
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 BUILD_ASSERT(offsetof(struct nav_page, map_size) == 0xb1);
 
 #define NAV_MAP_RAW_SIZE 0x1210
 
-
 uint8_t nav_map_bitmaps[2][0x908];          /* overview map bitmap / mask */
-uint8_t nav_overview_decoded;                    /* overview map decoded */
-volatile uint8_t nav_panoramic_drawn;                    /* panoramic map drawn */
+uint8_t nav_overview_decoded;
+uint8_t nav_panoramic_drawn;
 char nav_summary_line[0x80];                 /* "total time total distance" line */
 struct nav_prv_data nav_prv;
-
 
 #define NAV_DRAW_CLOCK()                                                                  \
 	do {                                                                              \
@@ -265,29 +262,14 @@ void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav)
 	}
 	if (nav_overview_map_updated == 1) {
 		nav_overview_map_updated = 0;
-		if (info->map_size == NAV_MAP_RAW_SIZE) {
-			G1_LOG_INF("Data is in raw format.\n");
-			memset(nav_map_bitmaps, 0, NAV_MAP_RAW_SIZE);
-			k_mutex_lock(&nav_map_mutex, K_FOREVER);
-			memcpy(nav_map_bitmaps, nav_overview_map_buf, NAV_MAP_RAW_SIZE);
-			nav_overview_decoded = 1;
-			k_mutex_unlock(&nav_map_mutex);
-		} else {
-			G1_LOG_INF("Data is in rle compress raw format.\n");
-			memset(nav_map_bitmaps, 0, NAV_MAP_RAW_SIZE);
-			k_mutex_lock(&nav_map_mutex, K_FOREVER);
-			rle_decode(nav_overview_map_buf, info->map_size, nav_map_bitmaps[0]);
-			nav_overview_decoded = 1;
-			k_mutex_unlock(&nav_map_mutex);
-		}
+		nav_load_overview_map(info);
 	}
 	nav_prv.panoramic_shown = 1;
 	nav_prv.overview_shown = 0;
 	nav_prv.arrived_cleared = 0;
 }
 
-
-/* ---- navigation task (was ui_navigation_task.c, ui_b module) ---- */
+/* ---- navigation task ---- */
 
 int draw_template_navigation_page(struct jbd_panel_context *panel, void *arg)
 {
@@ -320,7 +302,6 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event)
 		if (event == UI_EVT_EXIT) {
 			G1_LOG_INF("running exit command..\n");
 			gui_screen_clear();
-clear:
 			memset(&nav_prv, 0, sizeof(nav_prv));
 			memset(nav_map_bitmaps, 0, sizeof(nav_map_bitmaps));
 			nav_overview_decoded = 0;
@@ -343,19 +324,16 @@ clear:
 				gui_dynamic_bitmap_reset();
 				nav_draw_route_generating();
 			}
-			if (nav_prv.synced == 1 && nav_overview_map_ready == 1) {
-				uint8_t running = nav_panoramic_map_ready;
-
-				if (running == 1) {
-					nav_prv.state = running;
-					nav_panoramic_drawn = 0;
-					G1_LOG_INF("switch NAVIGATION_RUNNING_STATUS .....\n");
-					gui_screen_clear();
-					nav_overview_decoded = 0;
-					nav_prv.sync_cnt = 10;
-					nav_prv.ts = k_uptime_get();
-					navigation_overview_map_display(gs, nav);
-				}
+			if (nav_prv.synced == 1 && nav_overview_map_ready == 1 &&
+			    nav_panoramic_map_ready == 1) {
+				nav_prv.state = 1;
+				nav_panoramic_drawn = 0;
+				G1_LOG_INF("switch NAVIGATION_RUNNING_STATUS .....\n");
+				gui_screen_clear();
+				nav_overview_decoded = 0;
+				nav_prv.sync_cnt = 10;
+				nav_prv.ts = k_uptime_get();
+				navigation_overview_map_display(gs, nav);
 			}
 		}
 		if (get_dashboard_state()->is_master == 1 && nav_prv.synced == 1) {
@@ -397,8 +375,7 @@ clear:
 
 	case 1:
 		if (event == UI_EVT_EXIT) {
-			gui_screen_fade_out();
-			goto clear;
+			break;
 		}
 		if (event == UI_EVT_ENTER) {
 			if (get_dashboard_state()->is_master == 1) {
@@ -426,11 +403,7 @@ clear:
 
 				gui_utf_draw(0, gs->ui.nav_arrived.text, 0, X0 + x, Y0 + 0x3c, X0 + 0x23f,
 					     Y0 + 0x57, 2, 0, 0, NULL, 0);
-
-				bool is_24h = get_dashboard_state()->dashboard_ts->time_disp_mode != 1;
-
-				gui_clock_draw(get_date(), X0, Y0 + 2, X0 + 0x4c, Y0 + 0x1d, 3,
-					       is_24h);
+				NAV_DRAW_CLOCK();
 				nav_prv.arrived_ts = k_uptime_get();
 				nav_prv.timeout = 5000;
 			} else if (nav_prv.arrived == 1) {
@@ -454,11 +427,7 @@ clear:
 						     X0 + 0x1e4, Y0 + 0x57, 2, 0, 0, NULL, 0);
 					nav_prv.panoramic_shown = 0;
 					nav_prv.overview_shown = 1;
-
-					bool is_24h = get_dashboard_state()->dashboard_ts->time_disp_mode != 1;
-
-					gui_clock_draw(get_date(), X0, Y0 + 2, X0 + 0x4c, Y0 + 0x1d, 3,
-						       is_24h);
+					NAV_DRAW_CLOCK();
 				}
 			} else if (nav_prv.imu_action == 2) {
 				G1_LOG_INF("navigation_panoramic_map_display reflash\n");
@@ -471,13 +440,10 @@ clear:
 			struct bp_date date = { 0 };
 
 			init_burial_point_date(get_date(), &date);
-			if (nav_prv.minute != date.minute || date.hour != nav_prv.hour) {
+			if (nav_prv.minute != date.minute || nav_prv.hour != date.hour) {
 				nav_prv.minute = date.minute;
 				nav_prv.hour = date.hour;
-				bool is_24h = get_dashboard_state()->dashboard_ts->time_disp_mode != 1;
-
-				gui_clock_draw(get_date(), X0, Y0 + 2, X0 + 0x4c, Y0 + 0x1d, 3,
-					       is_24h);
+				NAV_DRAW_CLOCK();
 			}
 		}
 		if (get_dashboard_state()->is_master == 1) {
@@ -552,7 +518,10 @@ clear:
 		return 0;
 	}
 	gui_screen_fade_out();
-	goto clear;
+	memset(&nav_prv, 0, sizeof(nav_prv));
+	memset(nav_map_bitmaps, 0, sizeof(nav_map_bitmaps));
+	nav_overview_decoded = 0;
+	return 0;
 
 abnormal:
 	nav_prv.state = 2;
@@ -561,5 +530,4 @@ abnormal:
 	gui_bmp_bitmap_draw(0x3f, X0, Y0 + 0x3a, 0, 0, 0);
 	nav_draw_service_lost();
 	return 0;
-
 }

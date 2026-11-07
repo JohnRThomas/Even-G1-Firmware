@@ -1,7 +1,6 @@
 /*
  * UI page: real-time translation (language pair, clock, translated text).
  */
-#define GUI_C_INTERNAL /* gui_screen_x_offset() returns int here */
 #include "ui.h"
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
@@ -15,19 +14,19 @@ const char *trans_lang_name[TRANS_LANG_NUM] = {
 };
 
 static struct {
-	uint8_t state;                   /* 0x00 */
-	uint8_t entered;                 /* 0x01 */
-	uint8_t suspend_en;              /* 0x02 */
+	uint8_t state;
+	uint8_t entered;
+	uint8_t suspend_en;
 	uint8_t pad_03[7];
-	uint16_t hour;                   /* 0x0a last drawn clock */
-	uint16_t minute;                 /* 0x0c */
+	uint16_t hour;                   /* last drawn clock */
+	uint16_t minute;
 	uint8_t pad_0e[2];
-	uint8_t translation_type;        /* 0x10 last drawn language pair */
-	uint8_t original_type;           /* 0x11 */
-} trans_ui;                              /* 0x200100da */
+	uint8_t translation_type;        /* last drawn language pair */
+	uint8_t original_type;
+} trans_ui;
 
-static char trans_text[0x1e0];           /* 0x2001d960 */
-static uint8_t trans_mode;               /* 0x2001d95f */
+static char trans_text[0x1e0];
+static uint8_t trans_mode;
 
 int draw_template_translate_screen(struct jbd_panel_context *panel, void *arg)
 {
@@ -62,7 +61,7 @@ int draw_template_translate_screen(struct jbd_panel_context *panel, void *arg)
 void translate_draw_hint_page(int which)
 {
 	uint8_t lang = get_current_language();
-	uint32_t x;
+	int x;
 
 	gui_screen_clear();
 	if (which == 0) {
@@ -82,7 +81,7 @@ void translate_draw_hint_page(int which)
 			break;
 		}
 		gui_bmp_bitmap_draw(0x40, X0 + x, Y0 + 0x3a, 0, 0, 0);
-		gui_utf_draw(0, get_string(0x54), 0, X0 + (int)x + 0x2c, Y0 + 0x36, X0 + 0x240,
+		gui_utf_draw(0, get_string(0x54), 0, X0 + x + 0x2c, Y0 + 0x36, X0 + 0x240,
 			     Y0 + 0x88, 3, 0, 0, NULL, 0);
 	} else if (which == 1) {
 		switch (lang) {
@@ -103,7 +102,7 @@ void translate_draw_hint_page(int which)
 			break;
 		}
 		gui_bmp_bitmap_draw(0x40, X0 + x, Y0 + 0x3a, 0, 0, 0);
-		gui_utf_draw(0, get_string(0x55), 0, X0 + (int)x + 0x2c, Y0 + 0x36, X0 + 0x240,
+		gui_utf_draw(0, get_string(0x55), 0, X0 + x + 0x2c, Y0 + 0x36, X0 + 0x240,
 			     Y0 + 0x88, 3, 0, 0, NULL, 0);
 	}
 }
@@ -142,8 +141,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 
 			/* fade in */
 			for (int i = 0; i < 4; i++) {
-				if (ti->original_type >= 26 || ti->translation_type == 0 || ti->translation_type >= 26 ||
-	    ti->original_type == 0) {
+				if (ti->original_type >= 26 || ti->translation_type == 0 ||
+				    ti->translation_type >= 26 || ti->original_type == 0) {
 					G1_LOG_ERR("translate language type error! "
 						   "trans_info->original_type %d "
 						   "trans_info->translation_type %d\n",
@@ -164,7 +163,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 
 				gui_clock_draw(get_date(), X0, Y0 + 2, X0 + 0x50, Y0 + 0x1d, 3,
 					       is_24h);
-				for (unsigned int row = 0; row < 199; row++) {
+				for (int row = 0; row < 199; row++) {
 					for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
 						const uint8_t steps[8] = { 1, 3, 5, 7, 7, 7, 7, 7 };
 
@@ -194,7 +193,6 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 		return 0;
 	}
 	if (!done) {
-
 		uint8_t mode = ti->mode;
 
 		if (mode == 5) {
@@ -215,7 +213,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 				translate_draw_hint_page(1);
 				return 0;
 			}
-		} else if ((unsigned int)event <= UI_EVT_ENTER) {
+		} else if (event == UI_EVT_REFRESH || event == UI_EVT_ENTER) {
 			if (trans_mode == 5 || trans_mode == 6) {
 				trans_mode = mode;
 				gui_screen_clear();
@@ -233,8 +231,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 					gui_bmp_bitmap_draw(0x1b, X0, Y0 + 0x36, 0, 0, 0);
 				}
 
-				if (ti->original_type >= 26 || ti->translation_type == 0 || ti->translation_type >= 26 ||
-		    ti->original_type == 0) {
+				if (ti->original_type >= 26 || ti->translation_type == 0 ||
+				    ti->translation_type >= 26 || ti->original_type == 0) {
 					G1_LOG_ERR("translate language type error! "
 						   "trans_info->original_type %d "
 						   "trans_info->translation_type %d\n",
@@ -256,8 +254,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 				}
 
 				if (trans_mode == 3 || trans_mode == 4) {
-					gs = get_dashboard_state();
-					uint8_t **fb = gs->panel.panel_buffer;
+					uint8_t **fb = get_dashboard_state()->panel.panel_buffer;
 
 					/* fade the old text out */
 					for (int step = 5; step >= 4; step--) {
@@ -266,7 +263,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 							     col++) {
 								if (fb[row][col] != 0) {
 									fb[row][col] &=
-										gui_fade_mask_at(row % 26, step, col);
+										gui_fade_mask_at(row % 26,
+												step, col);
 								}
 							}
 						}
@@ -300,7 +298,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 
 								if (line[c] != 0) {
 									line[c] &=
-										gui_fade_mask_at(r % 26, steps[i], c);
+										gui_fade_mask_at(r % 26,
+												steps[i], c);
 								}
 							}
 						}

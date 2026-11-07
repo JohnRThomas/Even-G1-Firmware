@@ -1,6 +1,5 @@
 /*
- * Declarations of src/main.c (and partial views of shared
- * vendor structures, reconstructed from the v1.63 app core).
+ * Declarations of src/main.c.
  */
 #ifndef G1_MAIN_H_
 #define G1_MAIN_H_
@@ -29,52 +28,42 @@ extern struct GlassesState *GLOBAL_STATE;
  * bootloader and the network core.
  */
 struct ncs_mem {
-	uint32_t ts;              /* 0x00 */
-	uint8_t weather_icon;             /* 0x04 */
-	uint8_t temperature;             /* 0x05 */
+	uint32_t ts;
+	uint8_t weather_icon;
+	uint8_t temperature;
 	uint8_t pad_06[2];
-	uint64_t ms_ts;            /* 0x08 */
-	uint8_t retained_buf_a[0x25];       /* 0x10 */
-	uint8_t retained_buf_b[0x2a];       /* 0x35 */
-	uint8_t temp_unit;             /* 0x5f */
-	uint8_t time_disp_mode;             /* 0x60 */
-	uint8_t retained_a;             /* 0x61 */
-	uint8_t retained_b;             /* 0x62 */
-	bool erase_dfu;           /* 0x63 */
-	uint32_t magic;           /* 0x64 */
-	uint8_t retained_c;             /* 0x68 */
-	uint8_t notes_index;      /* 0x69 */
+	uint64_t ms_ts;
+	uint8_t retained_buf_a[0x25];
+	uint8_t retained_buf_b[0x2a];
+	uint8_t temp_unit;
+	uint8_t time_disp_mode;
+	uint8_t retained_a;
+	uint8_t retained_b;
+	bool erase_dfu;
+	uint32_t magic;
+	uint8_t retained_c;
+	uint8_t notes_index;
 	uint8_t pad_6a[6];
-	uint8_t pt_level;             /* 0x70 */
+	uint8_t pt_level;
 };
 
-/*
- * The block is a linked object (the code addresses it through a literal
- * that GCC cannot fold, e.g. 0x12345678 is not derived from its address),
- * placed at 0x2007fc00 by the linker.
- */
+/* placed at 0x2007fc00 by the linker */
 extern struct ncs_mem ncs_mem;
 #define NCS_MEM (&ncs_mem)
 #define NCS_MEM_MAGIC 0x12345678
 
 /* main.c */
 extern uint8_t slave_msg_key_pending;  /* new message flag */
-extern char net_build_time[32]; /* net core build time */
-extern int esb_signal;      /* esb signal */
-extern int esb_rx_count;      /* esb rx count */
-extern int esb_tx_fail_count;      /* esb tx fail count */
-extern int esb_tx_count;      /* esb tx count */
+extern char net_build_time[32];
+extern int esb_signal;
+extern int esb_rx_count;
+extern int esb_tx_fail_count;
+extern int esb_tx_count;
 int power_for_panel(void);
 int power_down_panel(void);
 int runtime_info_sync(struct GlassesState *gs);
 int getDeviceRole(void);
-/* returns uint8_t; ble_ancs.c was built against an int prototype (bt_start's code
- * depends on it) and defines IS_MASTER_INT_PROTOTYPE before including this header */
-#ifdef IS_MASTER_INT_PROTOTYPE
-int is_master(void);
-#else
 uint8_t is_master(void);
-#endif
 void set_ncs_mem_ts(uint32_t ts);
 bool getEraseDFU(void);
 void setEraseDFU(bool set);
@@ -90,7 +79,7 @@ int set_shipmode(int enable);
 void set_band_for_ESB(uint8_t band);
 int get_work_mode(void);
 int change_work_mode(int mode);
-/* power hooks of the flash module (empty in this build) */
+/* power hooks of the flash module */
 void ext_flash_power_up(void);
 void ext_flash_power_down(void);
 

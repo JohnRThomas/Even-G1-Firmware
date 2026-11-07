@@ -1,4 +1,4 @@
-/* Private declarations of proxy_thread.c (panel_display module) */
+/* Private declarations of proxy_thread.c */
 #ifndef PD_PROXY_THREAD_H_
 #define PD_PROXY_THREAD_H_
 
@@ -8,7 +8,7 @@
 
 struct GlassesState;
 
-/* message of the proxy queue (0x18 bytes) */
+/* message of the proxy queue */
 enum proxy_msg_type {
 	PROXY_MSG_RESPONSE_LOAD = 0,      /* send_response_data_to_msgqueue */
 	PROXY_MSG_RESPONSE_SEND = 1,      /* send_response_data_to_ble */

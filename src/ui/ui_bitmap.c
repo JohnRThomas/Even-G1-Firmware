@@ -6,11 +6,9 @@
 #include "../threads/threads.h"
 
 uint8_t dnd_bitmap_mode;                        /* do-not-disturb page mode */
-/* 0x2001c6cb; non-static: as a static GCC reorders the exit stores of ui_bitmap_task */
-uint8_t bitmap_state;
+static uint8_t bitmap_state;
 
-/* not inlined into show_not_disturb_bitmap in the shipped image */
-__noinline void bitmap_state_reset(void)
+static void bitmap_state_reset(void)
 {
 	bitmap_state = 0;
 }

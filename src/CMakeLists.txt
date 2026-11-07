@@ -1,6 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
-#
-# Directory and file order is the link order of the image; see LAYOUT.md.
+# Directory and file order is the link order.
 
 target_sources(app PRIVATE main.c)
 

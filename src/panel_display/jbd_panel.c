@@ -1,7 +1,6 @@
 /*
  * JBD013VGA micro-LED panel layer: panel context callbacks and brightness
  * (the frame buffer clear is in panel_fb.c, the flush in jbd_panel_flush.c).
- * Reconstructed from the v1.63 firmware image.
  */
 #include <stdlib.h>
 #include <string.h>
@@ -13,15 +12,15 @@
 #include "../notify/notify.h"
 #include "../sensors_audio/sensors_audio.h"
 
-struct opt3007_context;
-
 static int JBD_LUM_REG_VAL;
 static int JBD_CUR_REG_VAL;
 
 /* the SPI interface sits 0x5c bytes in front of the panel context in GlassesState */
-/* spi lives 0x5c bytes before the panel context; the vendor code uses the relative form */
 #define PANEL_SPI(c) ((struct spi_master_ctx *)((uint8_t *)(c) - 0x5c))
 BUILD_ASSERT(offsetof(struct GlassesState, panel) - offsetof(struct GlassesState, spi) == 0x5c);
+
+int panel_off(struct jbd_panel_context *c);
+int panel_on(struct jbd_panel_context *c);
 
 int panel_set_brightness_level(struct jbd_panel_context *c, uint8_t level)
 {
@@ -34,17 +33,15 @@ int panel_set_brightness_level(struct jbd_panel_context *c, uint8_t level)
 
 void set_brightness_to_panel_reg(uint8_t level)
 {
-	G1_LOG_INF("set brightness level = %d\n", level);
-	{
-		uint16_t lum;
-		uint8_t cur;
+	uint16_t lum;
+	uint8_t cur;
 
-		update_brightness_level_for_jdb_panel(level, &lum, &cur);
-		send_cmd(SPI_WR_ENABLE);
-		send_cmd(SPI_DISPLAY_DISABLE);
-		wr_lum_reg(lum);
-		wr_cur_reg(cur);
-	}
+	G1_LOG_INF("set brightness level = %d\n", level);
+	update_brightness_level_for_jdb_panel(level, &lum, &cur);
+	send_cmd(SPI_WR_ENABLE);
+	send_cmd(SPI_DISPLAY_DISABLE);
+	wr_lum_reg(lum);
+	wr_cur_reg(cur);
 	wr_status_reg(SPI_WR_STATUS_REG2, 0x04);
 	send_cmd(SPI_DISPLAY_ENABLE);
 	send_cmd(SPI_SYNC);
@@ -65,19 +62,17 @@ void wr_lum_and_cur_reg(uint16_t lum_value, uint8_t cur_value)
 
 void set_brightness_to_panel_reg_in_running(uint8_t level)
 {
+	uint16_t lum;
+	uint8_t cur;
+
 	G1_LOG_INF("set brightness level = %d\n", level);
 	if (!get_dashboard_state()->panel.init_done) {
 		return;
 	}
-	{
-		uint16_t lum;
-		uint8_t cur;
-
-		update_brightness_level_for_jdb_panel(level, &lum, &cur);
-		send_cmd(SPI_WR_ENABLE);
-		send_cmd(SPI_DISPLAY_DISABLE);
-		wr_lum_and_cur_reg(lum, cur);
-	}
+	update_brightness_level_for_jdb_panel(level, &lum, &cur);
+	send_cmd(SPI_WR_ENABLE);
+	send_cmd(SPI_DISPLAY_DISABLE);
+	wr_lum_and_cur_reg(lum, cur);
 	wr_status_reg(SPI_WR_STATUS_REG2, 0x04);
 	send_cmd(SPI_DISPLAY_ENABLE);
 	send_cmd(SPI_SYNC);
@@ -111,34 +106,27 @@ int panel_off(struct jbd_panel_context *c)
 
 int panel_resume(struct jbd_panel_context *c)
 {
-	uint32_t ret;
-
 	c->spi_callbacks = PANEL_SPI(c);
 	if (!(CONTAINER_OF(c, struct GlassesState, panel)->module_mask & LP_JBD_BIT)) {
 		G1_LOG_ERR("panel_resume exit due to LP_JBD_BIT\n");
-		ret = -1;
-	} else {
-		G1_LOG_INF("panel_resume enter!\n");
-		ret = c->init_done;
-		if (ret) {
-			G1_LOG_ERR("panel_resume exit due to init_done\n");
-			ret = -1;
-		} else if (c->spi_callbacks->is_initialized) {
-			jbd_panel_resume(c);
-			if (spi_read_id() != JBD_PANEL_DEVICE_ID) {
-				G1_LOG_ERR("JBD PANEL init failure!\n");
-			}
-			c->init_done = 1;
-		} else {
-			panel_on(c);
-			set_brightness_to_panel_reg(c->panel_brightness_level);
+		return -1;
+	}
+	G1_LOG_INF("panel_resume enter!\n");
+	if (c->init_done) {
+		G1_LOG_ERR("panel_resume exit due to init_done\n");
+		return -1;
+	}
+	if (c->spi_callbacks->is_initialized) {
+		jbd_panel_resume(c);
+		if (spi_read_id() != JBD_PANEL_DEVICE_ID) {
+			G1_LOG_ERR("JBD PANEL init failure!\n");
 		}
+		c->init_done = 1;
+	} else {
+		panel_on(c);
+		set_brightness_to_panel_reg(c->panel_brightness_level);
 	}
-	/* constant-true block (permuter find): the extra CFG node keeps one shared exit block
-	 * (`mov r0, r5; pop`) instead of a copy in the error path, as in the target */
-	if (1) {
-		return ret;
-	}
+	return 0;
 }
 
 int panel_on(struct jbd_panel_context *c)

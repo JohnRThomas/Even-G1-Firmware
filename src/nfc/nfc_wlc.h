@@ -1,8 +1,8 @@
 /*
  * NFC wireless charging (NFC Forum WLC) listener on the ST25DV:
- * the ST RFAL NDEF library subset (records, messages, WLCCAP/WLCSTAI types;
- * see referenced_examples/st25_rfal_ndef), the type 5 tag wrapper (from ST's
- * lib_NDEF tagtype5_wrapper.c) and the vendor WLCFOD record / listener.
+ * the ST RFAL NDEF library subset (records, messages, WLCCAP/WLCSTAI types),
+ * the type 5 tag wrapper (from ST's lib_NDEF tagtype5_wrapper.c) and the
+ * WLCFOD record / listener.
  */
 #ifndef G1_NFC_WLC_H_
 #define G1_NFC_WLC_H_
@@ -84,7 +84,7 @@ typedef struct {
 typedef struct ndefTypeStruct ndefType;
 typedef struct ndefMessageStruct ndefMessage;
 
-/* one NDEF record (0x1c bytes) */
+/* one NDEF record */
 typedef struct ndefRecordStruct {
 	uint8_t header;			/* MB:1 ME:1 CF:1 SR:1 IL:1 TNF:3 */
 	uint8_t typeLength;
@@ -282,30 +282,30 @@ int NfcType5_TT5Init(void);
 int NfcType5_WriteNDEF(uint16_t Length, const uint8_t *pData);
 int nfc_write_ndef(const uint8_t *pData, uint32_t Length);
 
-/* ---- WLC listener state (0x20002380, 0x3c bytes) ---- */
+/* ---- WLC listener state ---- */
 
 struct wlc_listener {
-	uint8_t active;		/* 0x00 */
-	uint8_t fod_req;	/* 0x01 */
-	uint8_t charging;	/* 0x02 */
-	uint8_t field_lost;		/* 0x03 */
-	uint8_t f04;		/* 0x04 */
-	uint8_t state;		/* 0x05: state machine, 1 = (re)initialise */
+	uint8_t active;
+	uint8_t fod_req;
+	uint8_t charging;
+	uint8_t field_lost;
+	uint8_t f04;
+	uint8_t state;		/* state machine, 1 = (re)initialise */
 	uint8_t f06;
-	uint8_t cap_info[10];	/* 0x07: [0] != 0 while charging, [4] / [5] at 0x0b / 0x0c */
-	uint8_t stai_info[11];	/* 0x11: [0] present, [2] battery (0x13), [4] (0x15) */
-	uint8_t fod_info[3];	/* 0x1c */
-	uint8_t f1f[6];		/* 0x1f */
+	uint8_t cap_info[10];	/* [0] != 0 while charging */
+	uint8_t stai_info[11];	/* [0] present, [2] battery */
+	uint8_t fod_info[3];
+	uint8_t f1f[6];
 	uint8_t f25;
 	uint8_t f26;
 	uint8_t f27;
-	uint32_t f28;		/* 0x28 */
+	uint32_t f28;
 	uint8_t f2c;
 	uint8_t f2d;
-	uint8_t f2e[2];		/* 0x2e */
-	uint8_t f30[2];		/* 0x30 */
+	uint8_t f2e[2];
+	uint8_t f30[2];
 	uint8_t f32[2];
-	uint8_t battery;	/* 0x34 */
+	uint8_t battery;
 	uint8_t f35[3];
 	uint8_t f38;
 	uint8_t f39;
@@ -313,7 +313,7 @@ struct wlc_listener {
 	uint8_t f3b;
 };
 
-/* NFC field / charge supervision (0x2000840c) */
+/* NFC field / charge supervision */
 struct nfc_charge {
 	uint8_t f00;
 	uint8_t f01;
@@ -334,7 +334,7 @@ int nfc_init(void);
 int nfc_charge_status(void);
 void nfc_field_voltage_update(void);
 uint32_t chargerGetVdcRect(void);
-_Bool nfc_field_detected(void);
+bool nfc_field_detected(void);
 int nfc_field_check(void);
 void wlc_update_field_state(struct wlc_listener *wlc, uint8_t *present);
 void nfc_charge_refresh(struct nfc_charge *chg, struct wlc_listener *wlc);

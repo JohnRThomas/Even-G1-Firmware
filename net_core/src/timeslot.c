@@ -1,6 +1,6 @@
 /*
  * Even Realities G1 network core - MPSL timeslot handling for the ESB link
- * (reconstruction of v1.63; derived from nrf/samples/mpsl/timeslot).
+ * (derived from nrf/samples/mpsl/timeslot).
  */
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
@@ -14,7 +14,6 @@
 
 LOG_MODULE_REGISTER(timeslot);
 
-
 /* MPSL API calls that can be requested for the non-preemptible thread */
 enum mpsl_timeslot_call {
 	REQ_OPEN_SESSION,
@@ -24,11 +23,11 @@ enum mpsl_timeslot_call {
 };
 
 /* main.c */
-extern int net_mode_get(void);                  /* mode */
-extern int net_role_get(void);                  /* role */
+extern int net_mode_get(void);
+extern int net_role_get(void);
 /* app_esb.c */
-extern int esb_tx_busy_get(void);                  /* ESB tx busy */
-extern int on_timeslot_start_stop(int op);               /* radio on/off */
+extern int esb_tx_busy_get(void);
+extern int on_timeslot_start_stop(int op);
 /* esb.c (CONFIG_ESB_DYNAMIC_INTERRUPTS) */
 extern void RADIO_IRQHandler(void);
 
@@ -58,11 +57,11 @@ static mpsl_timeslot_request_t timeslot_request_normal = {
 };
 
 static int (*radio_ctrl_cb)(int op);
-static volatile int blocked_count;
+static int blocked_count;
 static mpsl_timeslot_signal_return_param_t signal_callback_return_param;
 static int timer0_extend_count;
 
-static volatile uint8_t timeslot_radio_on;
+static uint8_t timeslot_radio_on;
 static uint8_t timeslot_stopped;
 static uint8_t timeslot_extension_failed;
 
@@ -77,12 +76,12 @@ static void set_timeslot_active_status(bool on)
 
 	if (on) {
 		if (!timeslot_radio_on) {
-			radio_ctrl_cb(0);	/* == timeslot_radio_on (0) */
+			radio_ctrl_cb(0);
 			timeslot_radio_on = 1;
 		}
 	} else if (timeslot_radio_on) {
 		radio_ctrl_cb(1);
-		timeslot_radio_on = on;
+		timeslot_radio_on = 0;
 	}
 }
 
@@ -91,10 +90,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(
 	uint32_t signal_type);
 
 /* To ensure thread safe operation, call all MPSL APIs from a non-preemptible
- * thread.  Static like set_timeslot_active_status (as in the demo's
- * timeslot_handler.c): GCC then emits set_timeslot_active_status first, the
- * shipped order.  K_THREAD_DEFINE at the end of the file: the thread name
- * string sits between this file's log strings and "timeslot" in the image.
+ * thread.
  */
 static void mpsl_nonpreemptible_thread(void)
 {
@@ -126,11 +122,10 @@ static void mpsl_nonpreemptible_thread(void)
 				break;
 			case REQ_MAKE_REQUEST_NORMAL:
 				if (blocked_count) {
-					timeslot_request_normal.params.normal.distance_us = 50000 + 5000 * blocked_count;
-					err = mpsl_timeslot_request(session_id, &timeslot_request_normal);
-				} else {
-					err = mpsl_timeslot_request(session_id, &timeslot_request_normal);
+					timeslot_request_normal.params.normal.distance_us =
+						50000 + 5000 * blocked_count;
 				}
+				err = mpsl_timeslot_request(session_id, &timeslot_request_normal);
 				if (err) {
 					NET_ERR("Timeslot request error %d\n", err);
 					k_oops();

@@ -1,9 +1,6 @@
 /*
- * BLE / SPI request handling of the master (master_process_put_req and the
- * static helpers inlined into it: read_fw_pack_from_nor_flash_by_qspi,
- * process_recv_ble_req).  Separate object between watchdog.c and
- * task_status.c: its out-of-line k_sem_give copy (0x80276) is only used here.
- * Reconstructed from the G1 v1.63 app core.
+ * BLE / SPI request handling of the master (master_process_put_req and its
+ * static helpers read_fw_pack_from_nor_flash_by_qspi, process_recv_ble_req).
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -15,21 +12,21 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../ui/ui.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 #include "../utils/md5.h"
 
 /* BLE request header as handed over by the SPI/BLE protocol layer */
 struct ble_req {
-	uint8_t req_type;                        /* 0x00 */
-	uint8_t sub;                             /* 0x01 */
+	uint8_t req_type;
+	uint8_t sub;
 	uint8_t pad_02[2];
 	union {
-		uint8_t data[0x2b4];             /* 0x04 */
-		uint32_t word;                   /* 0x04 */
+		uint8_t data[0x2b4];
+		uint32_t word;
 		struct {
-			uint32_t w0;             /* 0x04 */
-			uint32_t addr;           /* 0x08 */
-			uint32_t len;            /* 0x0c */
+			uint32_t w0;
+			uint32_t addr;
+			uint32_t len;
 		} fw;
 	};
 };
@@ -38,7 +35,7 @@ struct ble_req {
 #define BLE_RESP_OK       0xc9
 #define BLE_RESP_INVALID  0xca
 
-static inline __attribute__((always_inline)) int read_fw_pack_from_nor_flash_by_qspi(uint32_t addr, uint8_t *buf, uint32_t len)
+static int read_fw_pack_from_nor_flash_by_qspi(uint32_t addr, uint8_t *buf, uint32_t len)
 {
 	int ret;
 
@@ -53,20 +50,20 @@ static inline __attribute__((always_inline)) int read_fw_pack_from_nor_flash_by_
 	return len;
 }
 
-static inline __attribute__((always_inline)) int process_recv_ble_req(struct ble_req *head, uint8_t *out)
+static int process_recv_ble_req(struct ble_req *head, uint8_t *out)
 {
 	G1_LOG_ERR("tx error req_type head->req_type %d.\n\n", head->req_type);
 	memcpy(out, "error", 6);
 	return 6;
 }
 
-static inline void notify_dashboard(struct GlassesState *state, struct ble_req *head)
+static void notify_dashboard(struct GlassesState *state, struct ble_req *head)
 {
 	state->dashboard_cmd = head->req_type;
 	k_sem_give(&state->dashboard_position_sem);
 }
 
-static inline int battery_left(struct GlassesState *state)
+static int battery_left(struct GlassesState *state)
 {
 	int l;
 
@@ -86,7 +83,7 @@ static inline int battery_left(struct GlassesState *state)
 	return l;
 }
 
-static inline bool process_fw_read(uint32_t addr, uint32_t total, uint8_t *out)
+static bool process_fw_read(uint32_t addr, uint32_t total, uint8_t *out)
 {
 	uint32_t n = total - 0x12;
 
@@ -102,20 +99,6 @@ static inline bool process_fw_read(uint32_t addr, uint32_t total, uint8_t *out)
 	mbedtls_md5(out + 0x12, n, md5);
 	dump_hex("flash_md5", md5, 16);
 	return true;
-}
-
-int master_process_put_req(struct GlassesState *state, struct ble_req *head, uint8_t *out, uint32_t len);
-
-/*
- * Not in the image (gc'd).  Reconstructed from the layout: the shipped __func__ order
- * (master_process_put_req, read_fw_pack..., process_recv_ble_req) needs both helpers analysed before
- * master_process_put_req, and their strings stay in master's section, so the caller is expanded after it.
- */
-int ble_req_selftest(struct GlassesState *state, struct ble_req *head, uint8_t *out, uint32_t len)
-{
-	process_recv_ble_req(head, out);
-	read_fw_pack_from_nor_flash_by_qspi(0, out, len);
-	return master_process_put_req(state, head, out, len);
 }
 
 int master_process_put_req(struct GlassesState *state, struct ble_req *head, uint8_t *out, uint32_t len)
@@ -139,8 +122,6 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 	if (req >= 0x01 && req <= 0x27) {
 		uint8_t arg;
 		uint32_t ts;
-		int ret;
-		bool done = false;
 
 		switch (req) {
 		case BLE_CMD_BRIGHTNESS_SET:
@@ -152,9 +133,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			out[0] = data[0];
 			out[1] = data[1];
 			out[2] = BLE_RESP_OK;
-			ret = 3;
-			done = true;
-			break;
+			return 3;
 		case BLE_CMD_ANTI_SHAKE_SET:
 			if (state->imu.dof3_enable != data[0]) {
 				state->imu.dof3_enable = data[0];
@@ -188,16 +167,12 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 				if (!state->imu_busy && v == 11) {
 					state->imu_event = 3;
 					k_sem_give(&state->imu_sem);
-					ret = 0;
-					done = true;
-					break;
+					return 0;
 				}
 				break;
 			}
 			out[0] = BLE_RESP_INVALID;
-			ret = 1;
-			done = true;
-			break;
+			return 1;
 		case BLE_CMD_DEBUG_CONTROL:
 			v = data[0];
 			arg = data[1];
@@ -210,9 +185,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 				state->dashboard_mode = arg;
 			}
 			memcpy(out, "Good", 5);
-			ret = 5;
-			done = true;
-			break;
+			return 5;
 		case BLE_CMD_COUNTDOWN_TIMER:
 			ts = head->word;
 			state->countdown_ts->enabled = data[4];
@@ -223,9 +196,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			if (state->countdown_ts->enabled) {
 				update_persist_task_status(state, 2, 2);
 			}
-			ret = 1;
-			done = true;
-			break;
+			return 1;
 		case BLE_CMD_TELEPROMPTER_INFO:
 			memcpy(state->teleprompter, data, 0x217);
 			if (!data[1]) {
@@ -234,14 +205,10 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			if (data[1]) {
 				update_persist_task_status(state, 9, 2);
 			}
-			ret = 0;
-			done = true;
-			break;
+			return 0;
 		case BLE_CMD_TRANSLATE_SRC_TEXT:
 			if (dmic_get_stop_state()) {
-				ret = 0;
-				done = true;
-				break;
+				return 0;
 			}
 			state->translate_src->data[0x1e5 - 6] = 0;
 			if (!state->translate_src->data[0]) {
@@ -251,14 +218,10 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			if (state->task_status->task != 11) {
 				update_persist_task_status(state, 11, 2);
 			}
-			ret = 1;
-			done = true;
-			break;
+			return 1;
 		case BLE_CMD_TRANSLATE_DST_TEXT:
 			if (dmic_get_stop_state()) {
-				ret = 0;
-				done = true;
-				break;
+				return 0;
 			}
 			state->translate_dst->data[0x1e5 - 6] = 0;
 			if (!state->translate_dst->data[0]) {
@@ -268,9 +231,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			if (state->task_status->task != 11) {
 				update_persist_task_status(state, 11, 2);
 			}
-			ret = 1;
-			done = true;
-			break;
+			return 1;
 		case BLE_CMD_HEAD_UP_ACTION_SET:
 			memcpy(state->user_sched_info, data, 0x16a);
 			*(uint32_t *)state->dashboard_ts = state->user_sched_info->ts;
@@ -294,42 +255,28 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 		case 0x11:
 			state->dashboard_cmd = 7;
 			k_sem_give(&state->dashboard_position_sem);
-			ret = 0;
-			done = true;
-			break;
+			return 0;
 		case BLE_CMD_HARDWARE_SET:
 			if (data[4] != 2) {
-				ret = 0;
-				done = true;
-				break;
+				return 0;
 			}
 			G1_LOG_WRN("ble recv raster_config_info:enable is %d, raster_height_gear is %d, canvas_distance_gear is %d\n",
 				   data[5], data[6], data[7]);
-			if (data[5] == 1) {
-				state->dashboard_ts->dashboard_on = 1;
-				state->raster_height_cfg[0] = 1;
-				state->panel.raster_height_offset = data[6];
-				state->panel.canvas_distance_gear = data[7];
-			} else {
+			if (data[5] != 1) {
 				state->raster_height_cfg[0] = 0;
-				ret = 0;
-				done = true;
-				break;
+				return 0;
 			}
+			state->dashboard_ts->dashboard_on = 1;
+			state->raster_height_cfg[0] = 1;
+			state->panel.raster_height_offset = data[6];
+			state->panel.canvas_distance_gear = data[7];
 			update_persist_task_status(state, 15, 2);
-			ret = 0;
-			done = true;
-			break;
+			return 0;
 		default:
-			ret = 0;
-			done = true;
-			break;
+			return 0;
 		}
-		if (!done) {
-			out[0] = BLE_RESP_OK;
-			ret = 1;
-		}
-		return ret;
+		out[0] = BLE_RESP_OK;
+		return 1;
 	} else if (req >= 0x29 && req <= 0x45) {
 		switch (req) {
 		case BLE_CMD_SILENT_MODE_GET:
@@ -394,12 +341,13 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 	} else if (req >= 0x47 && req <= 0x56) {
 		switch (req) {
 		case BLE_CMD_NOTIFICATION_SEND:
-			return post_notification_cmd_response(state, (uint8_t *)head, (volatile uint8_t *)&state->sync,
+			return post_notification_cmd_response(state, (uint8_t *)head, (uint8_t *)&state->sync,
 							      (uint8_t *)head, data, out, len);
 		case BLE_CMD_SYNC_DISPLAY:
 			v = data[0];
 			if (v & 2) {
-				*(uint8_t *)&state->esb_hdr = 0x83; /* cmd 3, dir 2: byte write like the vendor */
+				state->esb_hdr.cmd = 3;
+				state->esb_hdr.dir = 2;
 				state->esb_arg1 = 1;
 				uint8_t pkt[0xfc] = {0};
 
@@ -431,8 +379,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 		case BLE_CMD_NOTIF_AUTO_DISPLAY_SET:
 			get_dashboard_state()->message_mode = data[0];
 			get_dashboard_state()->message_stay_time = data[1];
-			req = head->req_type;
-			get_dashboard_state()->dashboard_cmd = req;
+			get_dashboard_state()->dashboard_cmd = head->req_type;
 			k_sem_give(&get_dashboard_state()->dashboard_position_sem);
 			out[0] = BLE_RESP_OK;
 			out[1] = data[0];
@@ -445,4 +392,3 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 	}
 	return process_recv_ble_req(head, out);
 }
-

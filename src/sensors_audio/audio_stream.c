@@ -2,7 +2,6 @@
  * Audio stream recording (QuickNote): LC3 frames from the microphone are
  * queued here and written into one of four 128 KiB voice blocks on the
  * external flash.  A 4 KiB manager sector at 0x400000 describes the blocks.
- * Reconstructed from the v1.63 firmware image.
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -47,7 +46,7 @@ enum voice_block_state {
 struct audio_stream_msg {
 	uint8_t cmd;
 	uint8_t reserved;
-	int16_t len;		/* signed: ldrsh in the target */
+	int16_t len;
 	uint8_t data[AUDIO_STREAM_MSG_DATA];
 };
 
@@ -65,20 +64,20 @@ struct voice_manager {
 	struct voice_block blocks[VOICE_BLOCK_NUM];
 } __packed;
 
-static const struct voice_manager voice_manager_default __aligned(4) = { /* 4-aligned .rodata in the target */
+static const struct voice_manager voice_manager_default = {
 	.magic = VOICE_MANAGER_MAGIC,
 };
 
 K_MSGQ_DEFINE(audio_stream_msgq, sizeof(struct audio_stream_msg), AUDIO_STREAM_MSGQ_LEN, 4);
 
-static uint32_t audio_stream_crc;            /* 0x2000859c */
-static int audio_cache_offset;               /* 0x20008598 */
-static int audio_sector_count;               /* 0x20008594 */
-static atomic_t audio_block_in_use;          /* 0x20008590, 1-based, 0 = none */
+static uint32_t audio_stream_crc;
+static int audio_cache_offset;
+static int audio_sector_count;
+static atomic_t audio_block_in_use;          /* 1-based, 0 = none */
 
-static uint8_t audio_record_state;           /* 0x2001aa79 */
-static uint8_t audio_block_num;              /* 0x2001aa78 */
-static uint8_t audio_cache[VOICE_SECTOR_SIZE]; /* 0x20019a78 */
+static uint8_t audio_record_state;
+static uint8_t audio_block_num;
+static uint8_t audio_cache[VOICE_SECTOR_SIZE];
 
 #define VOICE_MGR ((struct voice_manager *)audio_cache)
 
@@ -96,12 +95,8 @@ static void delVoiceBlock(uint8_t num)
 	int ret;
 
 	G1_LOG_INF("received audio delete command\n");
-	/* valid: 1..VOICE_BLOCK_NUM, or 0xff = all (two separate checks in the vendor code) */
-	if (num > VOICE_BLOCK_NUM && num != 0xff) {
-		G1_LOG_ERR("input parameter error...\n");
-		return;
-	}
-	if (num == 0) {
+	/* valid: 1..VOICE_BLOCK_NUM, or 0xff = all */
+	if (num == 0 || (num > VOICE_BLOCK_NUM && num != VOICE_BLOCK_ALL)) {
 		G1_LOG_ERR("input parameter error...\n");
 		return;
 	}
@@ -157,7 +152,6 @@ int clearAudioMessageQueue(void)
 int sendAudioStram2Cache(void *data)
 {
 	struct audio_stream_msg msg;
-
 	uint32_t used;
 
 	memset(&msg, 0, sizeof(msg));
@@ -311,16 +305,10 @@ int audioStreamFileManagerHandler(void)
 				}
 				G1_LOG_INF("voice_block_store_timestamp = %d, voice_stream_block_ts = %d\n",
 					   VOICE_MGR->blocks[i].timestamp, oldest);
-				if (VOICE_MGR->blocks[i].timestamp < oldest) {
-					if (getAudioBlockInUse() != 0) {
-						if (getAudioBlockInUse() - 1 != i) {
-							oldest = VOICE_MGR->blocks[i].timestamp;
-							sel = i;
-						}
-					} else {
-						oldest = VOICE_MGR->blocks[i].timestamp;
-						sel = i;
-					}
+				if (VOICE_MGR->blocks[i].timestamp < oldest &&
+				    (getAudioBlockInUse() == 0 || getAudioBlockInUse() - 1 != i)) {
+					oldest = VOICE_MGR->blocks[i].timestamp;
+					sel = i;
 				}
 			}
 			if (i == VOICE_BLOCK_NUM) {
@@ -456,8 +444,10 @@ int audioStreamFileManagerHandler(void)
 			VOICE_MGR->magic = VOICE_MANAGER_MAGIC;
 			VOICE_MGR->reserved = 0;
 			VOICE_MGR->blocks[audio_block_num].state = VOICE_BLOCK_USED;
-			VOICE_MGR->blocks[audio_block_num].start_addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE;
-			VOICE_MGR->blocks[audio_block_num].end_addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE +
+			VOICE_MGR->blocks[audio_block_num].start_addr =
+				audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE;
+			VOICE_MGR->blocks[audio_block_num].end_addr =
+				audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE +
 				audio_sector_count * VOICE_SECTOR_SIZE + audio_cache_offset;
 			VOICE_MGR->blocks[audio_block_num].timestamp = get_date();
 			VOICE_MGR->blocks[audio_block_num].crc32 = audio_stream_crc;
@@ -507,10 +497,8 @@ int audioStreamFileManagerHandler(void)
 
 /*
  * Asks the main() loop to (re)start the DMIC stream: sets bit 2 of
- * GlassesState.pending (0x106d) and gives main_sem (0x068); main() answers that
- * bit with dmic_stream_start().
- * Declared int by the vendor but returns nothing: that is why the target has
- * bl k_sem_give + pop instead of a sibcall.  Callers use it as void.
+ * GlassesState.pending and gives main_sem; main() answers that bit with
+ * dmic_stream_start().  Always returns 0.
  */
 int request_dmic_stream_start(void)
 {
@@ -518,4 +506,5 @@ int request_dmic_stream_start(void)
 		get_dashboard_state()->pending |= BIT(2);
 		k_sem_give(&get_dashboard_state()->main_sem);
 	}
+	return 0;
 }

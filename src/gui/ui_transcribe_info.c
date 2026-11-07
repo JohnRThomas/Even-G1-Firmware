@@ -21,7 +21,7 @@ void transcribe_info_timeout_reset(void)
 	transcribe_ui.timeout_cnt = 0;
 }
 
-int transcribe_info_reflash(uint8_t **fb, int force)
+static int transcribe_info_reflash(uint8_t **fb, int force)
 {
 	struct GlassesState *gs = get_dashboard_state();
 
@@ -97,9 +97,7 @@ int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 		}
 		break;
 	case 1:
-		if (event == 1) {
-			transcribe_info_reflash(ctx->panel_buffer, event);
-		} else if (event == 0) {
+		if (event == 0 || event == 1) {
 			transcribe_info_reflash(ctx->panel_buffer, event);
 		} else if (event == 2) {
 			G1_LOG_INF("set_imu_pitch process received exit packet ...\n");

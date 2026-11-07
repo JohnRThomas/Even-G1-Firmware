@@ -1,7 +1,5 @@
 /*
- * JBD013VGA panel command API, derived from the JBD reference code
- * (referenced_examples/jdb013vga/jbd013_api.c).  Reconstructed from the
- * v1.63 firmware image.
+ * JBD013VGA panel command API, derived from the JBD reference code.
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -72,19 +70,14 @@ void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len)
 	uint16_t y = row;
 	uint16_t x = col;
 
-	for (;;) {
-		uint16_t next = y + 192;
-
-		if (len <= 0xf000) {
-			spi_wr_buffer(x, y, buf, len);
-			send_cmd(SPI_SYNC);
-			delay_ms(1);
-			return;
-		}
+	while (len > 0xf000) {
 		spi_wr_buffer(x, y, buf, 0xf000);
 		len -= 0xf000;
-		y = next;
+		y += 192;
 	}
+	spi_wr_buffer(x, y, buf, len);
+	send_cmd(SPI_SYNC);
+	delay_ms(1);
 }
 
 /* reset the panel */

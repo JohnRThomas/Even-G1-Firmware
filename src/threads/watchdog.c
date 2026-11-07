@@ -1,6 +1,5 @@
 /*
  * Hardware watchdog helpers (derived from samples/drivers/watchdog).
- * Reconstructed from the G1 v1.63 app core.
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -12,7 +11,7 @@
 #define WDT_RETRY_COUNT 5
 
 static const struct device *const wdt = DEVICE_DT_GET(DT_NODELABEL(pmic_wdt)); /* nPM1300 watchdog */
-int wdt_0_channel_id;
+static int wdt_0_channel_id;
 
 int init_watchdog(void)
 {
@@ -58,8 +57,8 @@ int init_watchdog(void)
 	return 0;
 }
 
-/* 1.66: re-arm the watchdog with a short timeout so the chip resets shortly
- * (used by system_reboot_delayed() instead of sys_reboot()) */
+/* re-arm the watchdog with a short timeout so the chip resets shortly
+ * (used by system_reboot_delayed()) */
 int config_watchdog_wait_reset(void)
 {
 	int err;

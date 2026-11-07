@@ -13,10 +13,6 @@
 #include <glasses_state.h>
 #include "ipc_host.h"
 
-
-
-
-int global_ipc_service_send(const void *data, size_t len);
 int register_ipc_service_recv_callback(struct ipc_ep_cfg *ep);
 
 static struct ipc_service_context *GLOBAL_IPC_SERVICE_CONTEXT;
@@ -26,9 +22,7 @@ static int ipc_send_fail_cnt;
 
 static K_SEM_DEFINE(ipc0_bound_sem, 0, 1);
 
-/* definition order = the target's __func__ / string order (defperm) */
 void ipc0_ept_recv(const void *data, size_t len, void *priv);
-static void ipc0_ept_bound(void *priv);
 
 int global_ipc_service_send(const void *data, size_t len)
 {
@@ -55,7 +49,6 @@ int global_ipc_service_send(const void *data, size_t len)
 	return ret;
 }
 
-/* 1.66: defined after global_ipc_service_send (emission order) */
 static void ipc0_ept_bound(void *priv)
 {
 	k_sem_give(&ipc0_bound_sem);
@@ -130,6 +123,7 @@ int register_ipc_service_context(struct ipc_service_context *ctx)
 
 	return 0;
 }
+
 int register_ipc_service_recv_callback(struct ipc_ep_cfg *ep)
 {
 	struct ipc_service_context *ctx = GLOBAL_IPC_SERVICE_CONTEXT;

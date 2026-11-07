@@ -1,6 +1,5 @@
 /*
  * ASCII glyph helpers of the font code; the CJK glyphs are in font_bitmap.c.
- * Reconstructed from the v1.63 app core.
  */
 #include <stdint.h>
 #include <stddef.h>
@@ -14,13 +13,12 @@ const uint8_t *font_ascii_lookup(uint8_t c, int size)
 }
 
 /*
- * ASCII glyph of a w x h font: there is no ASCII table in this build, so the
- * result is the glyph offset from a NULL base (callers pass arg = 0, unused).
+ * ASCII glyph of a w x h font: there is no ASCII table, so the result is the
+ * glyph offset from a NULL base (arg is unused).
  */
 const uint8_t *font_ascii_get_glyph(uint16_t digit, int w, int h, int arg)
 {
-	(void)arg;
-	if ((uint16_t)(digit - 0x20) < 0x60) {
+	if (digit >= 0x20 && digit < 0x80) {
 		return (const uint8_t *)((digit - 0x20) * (w * h));
 	}
 	return NULL;

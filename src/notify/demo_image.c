@@ -100,9 +100,6 @@ void get_demo_image_source_from_flash(void)
 			if (ih.bit_count != 1) {
 				printf("Unsupported bit depth - %d\r\n", ih.bit_count);
 			} else {
-
-
-
 				/*
 				 * Convert the picture row by row.  BMP stores the rows bottom-up and
 				 * pads each one to a multiple of 4 bytes (stride); only the first
@@ -112,7 +109,6 @@ void get_demo_image_source_from_flash(void)
 				 * 4 bpp panel byte.  line_buf collects one panel row and is copied
 				 * to the frame buffer when the row is complete.
 				 */
-
 				bytes = (width + 7) / 8;
 				stride = (width + 31) / 32 * 4;
 				line_x = 0;
@@ -140,7 +136,6 @@ void get_demo_image_source_from_flash(void)
 	free(buf);
 }
 
-#line 162
 void pixelto4bithex(uint8_t pix, int width, uint16_t row)
 {
 	if (line_buf == NULL) {
@@ -174,7 +169,6 @@ void pixelto4bithex(uint8_t pix, int width, uint16_t row)
 	}
 }
 
-#line 201
 void get_demo_image_source(uint32_t idx)
 {
 	struct bmp_file_header fh;
@@ -210,9 +204,6 @@ void get_demo_image_source(uint32_t idx)
 			if (ih.bit_count != 1) {
 				printf("Unsupported bit depth - %d\r\n", ih.bit_count);
 			} else {
-
-
-
 				/*
 				 * Same conversion as get_demo_image_source_from_flash(), for picture
 				 * idx of the DEMO_IMAGE_NUM demo pictures.  They are stored back to
@@ -222,7 +213,6 @@ void get_demo_image_source(uint32_t idx)
 				 * first picture above, so the caller always gets a picture on the
 				 * panel.
 				 */
-
 				bytes = (width + 7) / 8;
 				stride = (width + 31) / 32 * 4;
 				line_x = 0;

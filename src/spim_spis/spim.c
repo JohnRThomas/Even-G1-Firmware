@@ -1,8 +1,5 @@
 /*
  * SPI master (nrfx SPIM3 / SPIM4) used by the display panel.
- *
- * Original path: src/spim_spis/spim.c (from the __FILE__ string of the
- * NRFX_SUCCESS assertion).
  */
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -14,7 +11,6 @@
 #include "spim.h"
 
 static uint8_t spim4_irq_connected;
-
 static uint8_t spim3_irq_connected;
 
 static void spim_event_handler(nrfx_spim_evt_t const *p_event, void *p_context)
@@ -68,15 +64,15 @@ static int spi_master_deinit(struct spi_master_ctx *ctx)
 	speed = ctx->speed_mhz;
 
 	switch (bus) {
-	default:
-		G1_LOG_ERR(" SPIM BUS ERR!\n");
-		return 0;
-	case 4:
-		memcpy(&ctx->spim, &spim4, sizeof(nrfx_spim_t));
-		break;
 	case 3:
 		memcpy(&ctx->spim, &spim3, sizeof(nrfx_spim_t));
 		break;
+	case 4:
+		memcpy(&ctx->spim, &spim4, sizeof(nrfx_spim_t));
+		break;
+	default:
+		G1_LOG_ERR(" SPIM BUS ERR!\n");
+		return 0;
 	}
 
 	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus,
@@ -113,15 +109,15 @@ static int spi_master_init(struct spi_master_ctx *ctx)
 	config.ss_pin = ctx->ss;
 
 	switch (bus) {
-	default:
-		G1_LOG_ERR(" SPIM BUS ERR!\n");
-		return 0;
-	case 4:
-		memcpy(&ctx->spim, &spim4, sizeof(nrfx_spim_t));
-		break;
 	case 3:
 		memcpy(&ctx->spim, &spim3, sizeof(nrfx_spim_t));
 		break;
+	case 4:
+		memcpy(&ctx->spim, &spim4, sizeof(nrfx_spim_t));
+		break;
+	default:
+		G1_LOG_ERR(" SPIM BUS ERR!\n");
+		return 0;
 	}
 
 	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus,
@@ -132,8 +128,6 @@ static int spi_master_init(struct spi_master_ctx *ctx)
 	} else {
 		status = nrfx_spim_init(&ctx->spim, &config, NULL, NULL);
 	}
-	/* vendor line of this assertion (our struct definitions above make the file longer) */
-#line 104 "../src/spim_spis/spim.c"
 	__ASSERT_NO_MSG(status == NRFX_SUCCESS);
 
 	if (ctx->bus != 3) {
@@ -159,27 +153,4 @@ void spi_master_register_context(struct spi_master_ctx *ctx)
 	ctx->init_cb = spi_master_init;
 	ctx->xfer_cb = spi_master_trans_data_tx_rx;
 	ctx->deinit_cb = spi_master_deinit;
-}
-
-/*
- * Reorders a BCD/ASCII time stamp "MMDDhhmm.." in place into "MM-DD hh:mm".
- * Called from recv_ble_data; it sits between spim.c and the attitude filter
- * in align-2 code and has no align-4 sibling, so its file is unknown.
- */
-int format_ancs_date(uint8_t *s)
-{
-	s[0] = s[4];
-	s[1] = s[5];
-	s[2] = '-';
-	s[3] = s[6];
-	s[4] = s[7];
-	s[5] = ' ';
-	s[6] = s[9];
-	s[7] = s[10];
-	s[8] = ':';
-	s[9] = s[11];
-	s[10] = s[12];
-	s[11] = 0;
-
-	return 12;
 }

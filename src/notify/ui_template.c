@@ -12,15 +12,14 @@
 #include "notify.h"
 #include "../fonts/font_bitmap.h"
 #include "../panel_display/panel.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 void dump_template_gyro_info(void *arg)
 {
 	struct GlassesState *state = get_dashboard_state();
-	float *ypr = (float *)&state->ui.ypr;
-	double yaw = ypr[0];
-	double pitch = ypr[1];
-	double roll = ypr[2];
+	double yaw = state->ui.ypr.yaw;
+	double pitch = state->ui.ypr.pitch;
+	double roll = state->ui.ypr.roll;
 
 	G1_LOG_INF("screen_id: %d, ypr: %.2f, %.2f, %.2f\n", ((uint8_t *)arg)[1], yaw, pitch,
 		   roll);
@@ -35,7 +34,6 @@ int draw_template_gyro_page(struct jbd_panel_context *panel, void *arg)
 	struct GlassesState *state;
 	float ypr[3];
 	int n;
-	int y;
 
 	codes = utf8_to_unicode_buf("陀螺仪姿态解算:YPR", &count);
 	for (int i = 0; i < count; i++) {
@@ -44,16 +42,12 @@ int draw_template_gyro_page(struct jbd_panel_context *panel, void *arg)
 	}
 	state = get_dashboard_state();
 	memcpy(ypr, &state->ui.ypr, sizeof(ypr));
-	float *p = ypr;
-
-	y = 0;
-	do {
-		n = format_float_2dp(*p++, buf);
-		y += 30;
+	for (int k = 0; k < 3; k++) {
+		n = format_float_2dp(ypr[k], buf);
 		for (int i = 0; i < n; i++) {
 			copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(buf[i], 12, 36), 12, 36,
-				     i * 12 + 6, y);
+				     i * 12 + 6, (k + 1) * 30);
 		}
-	} while (y != 90);
+	}
 	return 0;
 }

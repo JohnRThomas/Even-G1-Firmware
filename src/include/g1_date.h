@@ -1,10 +1,9 @@
 /*
  * Date helpers shared by several modules.
  *
- * init_burial_point_date() (panel_display/common_utils.c) splits a UTC time
- * stamp into six uint16_t fields; get_date() / set_date()
- * (dashboard/dashboard.c) read / write the current time stamp
- * (GlassesState + 0xd0).
+ * init_burial_point_date() splits a UTC time stamp into six uint16_t fields;
+ * get_date() / set_date() (dashboard/dashboard.c) read / write the current
+ * time stamp.
  */
 #ifndef G1_DATE_H_
 #define G1_DATE_H_
@@ -12,12 +11,12 @@
 #include <stdint.h>
 
 struct bp_date {
-	uint16_t year;   /* 0x0 */
-	uint16_t month;  /* 0x2 1..12 */
-	uint16_t day;    /* 0x4 1..31 */
-	uint16_t hour;   /* 0x6 */
-	uint16_t minute; /* 0x8 */
-	uint16_t second; /* 0xa */
+	uint16_t year;
+	uint16_t month;  /* 1..12 */
+	uint16_t day;    /* 1..31 */
+	uint16_t hour;
+	uint16_t minute;
+	uint16_t second;
 };
 
 int init_burial_point_date(uint32_t timestamp, struct bp_date *date);

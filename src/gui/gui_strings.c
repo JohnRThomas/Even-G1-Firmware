@@ -34,7 +34,6 @@ const char *get_string_in_language(int language, uint32_t string_id)
 	}
 }
 
-
 const char *get_string(uint8_t string_id)
 {
 	uint8_t language = get_current_language();

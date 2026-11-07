@@ -1,6 +1,5 @@
 /*
  * Display thread (UI framework dispatcher): private declarations.
- * Partial views of vendor structures, reconstructed from the v1.63 app core.
  */
 #ifndef G1_DISPLAY_THREAD_H_
 #define G1_DISPLAY_THREAD_H_
@@ -14,7 +13,7 @@
 struct GlassesState;
 struct jbd_panel_context;
 
-/* message posted to display_msgq (24 bytes) */
+/* message posted to display_msgq */
 enum disp_msg_type {
 	DISP_MSG_OPEN = 2,         /* display_reflash() */
 	DISP_MSG_CLOSE = 3,        /* display_close() */
@@ -26,10 +25,10 @@ enum disp_msg_type {
 };
 
 struct disp_msg {
-	uint8_t type;      /* 0x00 enum disp_msg_type */
+	uint8_t type;      /* enum disp_msg_type */
 	uint8_t pad_01;
-	uint16_t len;      /* 0x02 payload length */
-	uint8_t data[20];  /* 0x04 payload: [0] = 1 valid, [1] = screen id */
+	uint16_t len;      /* payload length */
+	uint8_t data[20];  /* payload: [0] = 1 valid, [1] = screen id */
 };
 
 /* UI process (event) passed to the ui_*_task() handlers */

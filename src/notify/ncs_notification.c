@@ -10,7 +10,7 @@
 
 #include "g1_log.h"
 #include "notify.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 void parse_ncs_notification(char *json, struct notif_msg *msg)
 {
@@ -62,7 +62,7 @@ void parse_ncs_notification(char *json, struct notif_msg *msg)
 		strncpy(msg->subtitle, subtitle->valuestring, 31);
 	}
 	if (date) {
-		strncpy(msg->date, date->valuestring, 32);
+		strncpy(msg->date, date->valuestring, sizeof(msg->date) - 1);
 	}
 	if (display_name) {
 		strncpy(msg->display_name, display_name->valuestring, 31);

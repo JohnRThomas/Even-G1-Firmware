@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-#
 # Zephyr module glue of the application (MODULE_EXT_ROOT, set in ../../CMakeLists.txt).
 # Only the application image reads it; the child images keep the NCS glue.
 

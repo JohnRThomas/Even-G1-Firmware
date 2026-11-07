@@ -1,7 +1,6 @@
 /*
  * Font bitmap helpers: UTF-8 string -> unicode buffer, 1 bpp -> 4 bpp glyph
  * expansion, CJK glyph lookup in the external flash font area.
- * Reconstructed from the v1.63 app core.
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -23,12 +22,12 @@ struct cjk_glyph_index {
 #include "font_bitmap_data.inc"
 #include "font_1bpp_to_4bpp.inc"
 
-/* 0x8e7b0: picture table of get_demo_picture */
+/* picture table of get_demo_picture */
 static const uint8_t *const font_picture_table[2] = {demo_mark_right, NULL};
 
-static uint8_t small_glyph_buf[0x120];        /* 0x2001deb6 */
-static uint8_t cjk_glyph_buf[0x1b0];          /* 0x2001dd06 */
-static uint16_t unicode_buf[0x400];           /* 0x200100f2 */
+static uint8_t small_glyph_buf[0x120];
+static uint8_t cjk_glyph_buf[0x1b0];
+static uint16_t unicode_buf[0x400];
 
 /* decode one 2 or 3 byte UTF-8 sequence into a unicode code point */
 uint16_t utf8_decode_char(const uint8_t *s, int len)
@@ -67,17 +66,13 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max)
 	int i = 0;
 
 	while (i < len) {
-		uint16_t *o = &out[k];
 		uint8_t c = utf8[i];
 		uint16_t u;
 
 		if (c == 0) {
 			break;
 		}
-		if (c == '\r' || c == '\n') {
-			u = c;
-			i++;
-		} else if (c >= 0x20 && c < 0x80) {
+		if (c == '\r' || c == '\n' || (c >= 0x20 && c < 0x80)) {
 			u = c;
 			i++;
 		} else if ((c & 0xf0) == 0xe0) {
@@ -90,7 +85,7 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max)
 			i++;
 			continue;
 		}
-		*o = u;
+		out[k] = u;
 		if (k == max - 1) {
 			printf("maybe array overflow!(k=%d)\n", k);
 			break;
@@ -125,7 +120,7 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
 	uint32_t addr;
 	int err;
 
-	if ((unsigned int)(code - 0x20) < 0x60) {
+	if (code >= 0x20 && code < 0x80) {
 		ret = font_ascii_lookup(code, size);
 	} else {
 		if (get_dashboard_state()->flash_read == NULL) {

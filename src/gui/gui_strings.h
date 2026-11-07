@@ -1,10 +1,8 @@
-/* Per-language UI string tables (GUI_STRING_COUNT entries each).
- * Generated from the target image; the comments give the string id.
- * Definition order is the reverse of the address order (GCC emits
- * them reversed). */
+/* Per-language UI string tables (GUI_STRING_COUNT entries each);
+ * the comments give the string id. */
 #define GUI_STRING_COUNT 97
 
-static const char *const strings_english[GUI_STRING_COUNT] = {  /* 0x8e62c */
+static const char *const strings_english[GUI_STRING_COUNT] = {
 	/*  0 */ "English",
 	/*  1 */ "Ready to connect? Place Even G1 in the case and\nopen the Even Realities App.",
 	/*  2 */ "Look Ahead Naturally",
@@ -104,13 +102,13 @@ static const char *const strings_english[GUI_STRING_COUNT] = {  /* 0x8e62c */
 	/* 96 */ "I'm having trouble understanding your request.\nPlease try asking again.",
 };
 
-static const char *const strings_chinese[GUI_STRING_COUNT] = {  /* 0x8e4a8 */
+static const char *const strings_chinese[GUI_STRING_COUNT] = {
 	/*  0 */ "中文",
 	/*  1 */ "请把Even G1放回眼镜盒里进行配对",
 	/* 2..96: NULL (not translated) */
 };
 
-static const char *const strings_german[GUI_STRING_COUNT] = {  /* 0x8e324 */
+static const char *const strings_german[GUI_STRING_COUNT] = {
 	/*  0 */ "Deutsch",
 	/*  1 */ "Bereit zum Verbinden? Lege Even G1 in das Etui\nund öffne die Even Realities App.",
 	/*  2 */ "Schau geradeaus",
@@ -210,7 +208,7 @@ static const char *const strings_german[GUI_STRING_COUNT] = {  /* 0x8e324 */
 	/* 96 */ "Ich verstehe deine Anfrage gerade nicht.\nKannst du es bitte noch einmal versuchen?",
 };
 
-static const char *const strings_spanish[GUI_STRING_COUNT] = {  /* 0x8e1a0 */
+static const char *const strings_spanish[GUI_STRING_COUNT] = {
 	/*  0 */ "Español",
 	/*  1 */ "¿Listo para conectarte? Coloca Even G1 en el estuche\ny abre la aplicación Even Realities.",
 	/*  2 */ "Mira al frente",
@@ -310,7 +308,7 @@ static const char *const strings_spanish[GUI_STRING_COUNT] = {  /* 0x8e1a0 */
 	/* 96 */ "No entiendo bien tu solicitud.\n¿Podrías intentarlo de nuevo, por favor?",
 };
 
-static const char *const strings_french[GUI_STRING_COUNT] = {  /* 0x8e01c */
+static const char *const strings_french[GUI_STRING_COUNT] = {
 	/*  0 */ "Français",
 	/*  1 */ "Prêt à connecter ? Placez le Even G1 dans le boîtier\nde lunettes et ouvrez l'application Even Realities.",
 	/*  2 */ "Regardez naturellement vers l'avant",
@@ -410,7 +408,7 @@ static const char *const strings_french[GUI_STRING_COUNT] = {  /* 0x8e01c */
 	/* 96 */ "Je n'arrive pas à comprendre votre demande.\nouvez-vous réessayer, s'il vous plaît ?",
 };
 
-static const char *const strings_italian[GUI_STRING_COUNT] = {  /* 0x8de98 */
+static const char *const strings_italian[GUI_STRING_COUNT] = {
 	/*  0 */ "Italiano",
 	/*  1 */ "Pronto a connetterti? Posiziona Even G1 nella custodia\ne apri l’app Even Realities.",
 	/*  2 */ "Guarda avanti naturalmente",
@@ -510,15 +508,14 @@ static const char *const strings_italian[GUI_STRING_COUNT] = {  /* 0x8de98 */
 	/* 96 */ "Non riesco a capire la tua richiesta.\nPuoi provare a chiedere di nuovo, per favore?",
 };
 
-static const char *const strings_japanese[GUI_STRING_COUNT] = {  /* 0x8dd14 */
+static const char *const strings_japanese[GUI_STRING_COUNT] = {
 	/*  0 */ "日本語",
 	/*  1 */ "Even G1をケースに戻してペアリングしてください",
 	/* 2..96: NULL (not translated) */
 };
 
-static const char *const strings_korean[GUI_STRING_COUNT] = {  /* 0x8db90 */
+static const char *const strings_korean[GUI_STRING_COUNT] = {
 	/*  0 */ "한국어",
 	/*  1 */ "Even G1을안경케이스에넣어서페어링하세요",
 	/* 2..96: NULL (not translated) */
 };
-

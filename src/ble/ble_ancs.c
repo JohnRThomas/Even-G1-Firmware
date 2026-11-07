@@ -2,7 +2,6 @@
  * BLE connection handling and ANCS client.
  * Derived from nrf/samples/bluetooth/peripheral_ancs_client.
  */
-#define IS_MASTER_INT_PROTOTYPE /* is_master() returns int here (main.h) */
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -27,10 +26,9 @@
 #include "../notify/notify.h"
 #include "../notify/whitelist.h"
 #include "../production_test/production_test.h"
-#include "../spim_spis/spim.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define DEVICE_NAME "Even G1"
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
@@ -53,21 +51,16 @@ enum {
 	SERVICE_CHANGED_INDICATED
 };
 
-/* forward declarations (definition order follows GCC's emission order) */
-static void discover_ancs(struct bt_conn *conn, bool retry);
-static void discover_gattp(struct bt_conn *conn);
-static void discover_ancs_first(struct bt_conn *conn);
-static void discover_ancs_again(struct bt_conn *conn);
+/* forward declarations */
 static void discover_ancs_error_found_cb(struct bt_conn *conn, int err, void *ctx);
 static void discover_ancs_completed_cb(struct bt_gatt_dm *dm, void *ctx);
 static void discover_ancs_not_found_cb(struct bt_conn *conn, void *ctx);
-static void indicate_sc_cb(struct bt_gattp *gattp, const struct bt_gattp_handle_range *handle_range, int err);
-void start_ancs_work_thread(struct ble_context *ctx);
+static void indicate_sc_cb(struct bt_gattp *gattp, const struct bt_gattp_handle_range *handle_range,
+			   int err);
+static void start_ancs_work_thread(struct ble_context *ctx);
 
-/* current connection (.bss 0x20007ef4, highest 4-aligned variable of this file) */
-struct bt_conn *current_conn;
-/* Multi-packet reassembly buffer shared with ble_proto.c */
-uint8_t multi_packet_buf[MULTI_PACKET_BUF_SIZE];
+/* current connection */
+static struct bt_conn *current_conn;
 static char device_name[32];
 static uint8_t manuf_data[20];
 static uint8_t bt_start_busy;
@@ -103,23 +96,10 @@ static const char *lit_eventid[BT_ANCS_EVT_ID_COUNT] = { "Added",
 							 "Modified",
 							 "Removed" };
 
-/* not referenced (its user is gc'd); the strings stay in the shared .rodata.str1.1 */
-const char *lit_attrid[BT_ANCS_NOTIF_ATTR_COUNT] = {
-	"App Identifier",
-	"Title",
-	"Subtitle",
-	"Message",
-	"Message Size",
-	"Date",
-	"Positive Action Label",
-	"Negative Action Label"
-};
-
 static void bt_ancs_notification_source_handler(struct bt_ancs_client *ancs_c,
 		int err, const struct bt_ancs_evt_notif *notif);
 static void bt_ancs_data_source_handler(struct bt_ancs_client *ancs_c,
 		const struct bt_ancs_attr_response *response);
-void discover_ancs(struct bt_conn *conn, bool retry);
 
 static const struct bt_gatt_dm_cb discover_ancs_cb = {
 	.completed = discover_ancs_completed_cb,
@@ -324,10 +304,6 @@ static struct bt_gatt_cb gatt_callbacks = {
 
 static uint32_t last_notif_uid = 0xffffffff;
 
-static void discover_ancs_completed_cb(struct bt_gatt_dm *dm, void *ctx);
-static void discover_ancs_not_found_cb(struct bt_conn *conn, void *ctx);
-static void discover_ancs_error_found_cb(struct bt_conn *conn, int err, void *ctx);
-
 static void discover_ancs(struct bt_conn *conn, bool retry)
 {
 	int err;
@@ -486,7 +462,7 @@ static void discover_gattp_not_found_cb(struct bt_conn *conn, void *ctx)
 	discover_ancs_first(conn);
 }
 
-void clear_ancs_discovery_flags(void)
+static void clear_ancs_discovery_flags(void)
 {
 	atomic_clear_bit(&ancs_discovery_flags, DISCOVERY_ANCS_ONGOING);
 	atomic_clear_bit(&ancs_discovery_flags, DISCOVERY_ANCS_SUCCEEDED);
@@ -531,7 +507,7 @@ static void indicate_sc_cb(struct bt_gattp *gattp,
 	}
 }
 
-int init_msgq_ancs(void)
+static int init_msgq_ancs(void)
 {
 	int err;
 
@@ -542,7 +518,7 @@ int init_msgq_ancs(void)
 	return err;
 }
 
-int enqueue_ancs(struct notif_msg *data)
+static int enqueue_ancs(struct notif_msg *data)
 {
 	struct notif_msg msg;
 	int err;
@@ -618,7 +594,7 @@ static void bt_ancs_data_source_handler(struct bt_ancs_client *ancs_c,
 	}
 }
 
-int dequeue_ancs(struct notif_msg *data)
+static int dequeue_ancs(struct notif_msg *data)
 {
 	struct notif_msg msg;
 	int err;
@@ -636,7 +612,7 @@ int dequeue_ancs(struct notif_msg *data)
 	return err;
 }
 
-int init_msgq_uid(void)
+static int init_msgq_uid(void)
 {
 	int err;
 
@@ -647,7 +623,7 @@ int init_msgq_uid(void)
 	return err;
 }
 
-int enqueue_uid(const struct bt_ancs_evt_notif *notif)
+static int enqueue_uid(const struct bt_ancs_evt_notif *notif)
 {
 	struct bt_ancs_evt_notif local_data;
 	int err;
@@ -698,7 +674,7 @@ static void bt_ancs_notification_source_handler(struct bt_ancs_client *ancs_c,
 	k_sem_give(&ctx->ancs_get_attr_req_sem);
 }
 
-int dequeue_uid(struct bt_ancs_evt_notif *notif)
+static int dequeue_uid(struct bt_ancs_evt_notif *notif)
 {
 	struct bt_ancs_evt_notif local_data;
 	int err;
@@ -716,12 +692,7 @@ int dequeue_uid(struct bt_ancs_evt_notif *notif)
 	return err;
 }
 
-/*
- * The error logs below print __LINE__; the original file had ancs_c_init()
- * at line 952 in 1.66 (logs at 958..1006; 948 in 1.63), so re-sync the line counter here.
- */
-#line 952
-int ancs_c_init(struct notif_msg *data)
+static int ancs_c_init(struct notif_msg *data)
 {
 	int err;
 
@@ -782,38 +753,46 @@ int ancs_c_init(struct notif_msg *data)
 	return 0;
 }
 
-int gattp_init(void)
+static int gattp_init(void)
 {
 	return bt_gattp_init(&gattp);
 }
 
-int request_ancs_attr_ext(void)
+static int request_ancs_attr_ext(void)
 {
 	struct ble_context *ctx = get_ble_context();
 	uint16_t retry_time = 0;
+	bool app_id_ready = false;
 	int err;
 
 	err = bt_ancs_request_attrs(&ancs_c, &notification_latest,
 				    bt_ancs_write_response_handler);
 
+	/* wait up to about one second for the app identifier attribute */
 	do {
 		if (notif_attr_app_id_latest.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER &&
 		    notif_attr_app_id_latest.attr_len != 0 &&
 		    notif_attr_app_id_latest.attr_data[0] != '\0' &&
 		    ctx->notif.app_identifier[0] != '\0') {
-			goto request;
+			app_id_ready = true;
+			break;
 		}
 		k_sleep(K_MSEC(1));
 		retry_time++;
 	} while (retry_time != 1001);
 
-	G1_LOG_ERR("notif_attr_app_id_latest.attr_id %d notif_attr_app_id_latest.attr_len %d "
-		   "strlen(notif_attr_app_id_latest.attr_data) %d c->notifi_data.app_identifier %d\n",
-		   notif_attr_app_id_latest.attr_id, notif_attr_app_id_latest.attr_len,
-		   strlen(notif_attr_app_id_latest.attr_data), ctx->notif.app_identifier[0]);
+	if (!app_id_ready) {
+		G1_LOG_ERR("notif_attr_app_id_latest.attr_id %d "
+			   "notif_attr_app_id_latest.attr_len %d "
+			   "strlen(notif_attr_app_id_latest.attr_data) %d "
+			   "c->notifi_data.app_identifier %d\n",
+			   notif_attr_app_id_latest.attr_id, notif_attr_app_id_latest.attr_len,
+			   strlen(notif_attr_app_id_latest.attr_data),
+			   ctx->notif.app_identifier[0]);
+	}
 
-	if (notif_attr_app_id_latest.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) {
-request:
+	if (app_id_ready ||
+	    notif_attr_app_id_latest.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) {
 		if (notif_attr_app_id_latest.attr_len != 0 &&
 		    notif_attr_app_id_latest.attr_data[0] != '\0') {
 			BLE_PRINTK("Request for %s: retry_time %d\n",
@@ -834,7 +813,7 @@ request:
 			}
 		}
 	}
-out:
+
 	BLE_PRINTK("notif_attr_app_id_latest.attr_id (%d/%d) retry_time %d\n",
 		   notif_attr_app_id_latest.attr_id, notif_attr_app_id_latest.attr_len, retry_time);
 	return err;
@@ -842,109 +821,105 @@ out:
 
 int bt_start(void)
 {
-	int err = 0;
+	int err;
 
 	while (bt_start_busy) {
 		k_msleep(1);
 	}
 	bt_start_busy = 1;
 
-	/*
-	 * 1.66: no early "return 0" block; every path reaches the common tail
-	 * below.  The jump threader then copies the tail for the two bt_state
-	 * exits right after the first test, which is where the shipped code has
-	 * the shared "bt_start_busy = 0; return 0" block (an early return gives
-	 * the same code but places that block after the success path).
-	 */
-	if (get_dashboard_state()->bt_state != 2 && get_dashboard_state()->bt_state != 0) {
-		ad[1].type = BT_DATA_MANUFACTURER_DATA;
-		ad[1].data_len = sizeof(manuf_data);
-		if (is_master() == 1) {
-			manuf_data[0] = 1;
-		} else {
-			manuf_data[0] = 2;
-		}
-		ad[1].data = manuf_data;
-		strcpy(&manuf_data[1], get_serial_number());
+	if (get_dashboard_state()->bt_state == 2 || get_dashboard_state()->bt_state == 0) {
+		bt_start_busy = 0;
+		return 0;
+	}
 
-		printk("c->esb_channel %d\r\n", get_dashboard_state()->esb_channel);
+	ad[1].type = BT_DATA_MANUFACTURER_DATA;
+	ad[1].data_len = sizeof(manuf_data);
+	if (is_master() == 1) {
+		manuf_data[0] = 1;
+	} else {
+		manuf_data[0] = 2;
+	}
+	ad[1].data = manuf_data;
+	strcpy(&manuf_data[1], get_serial_number());
 
-		if (is_master() == 1) {
-			if (get_pt_test_mode() == 1) {
-				if (get_dashboard_state()->esb_channel != 0xff) {
-					sprintf(device_name, "%sV%d%d%d_%d_R_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
-						get_dashboard_state()->esb_channel,
-						get_dashboard_state()->master_mac[2],
-						get_dashboard_state()->master_mac[1],
-						get_dashboard_state()->master_mac[0]);
-				} else {
-					sprintf(device_name, "%sV%d%d%d_R_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
-						get_dashboard_state()->master_mac[2],
-						get_dashboard_state()->master_mac[1],
-						get_dashboard_state()->master_mac[0]);
-				}
+	printk("c->esb_channel %d\r\n", get_dashboard_state()->esb_channel);
+
+	if (is_master() == 1) {
+		if (get_pt_test_mode() == 1) {
+			if (get_dashboard_state()->esb_channel != 0xff) {
+				sprintf(device_name, "%sV%d%d%d_%d_R_%02X%02X%02X", DEVICE_NAME,
+					get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
+					get_dashboard_state()->esb_channel,
+					get_dashboard_state()->master_mac[2],
+					get_dashboard_state()->master_mac[1],
+					get_dashboard_state()->master_mac[0]);
 			} else {
-				if (get_dashboard_state()->esb_channel != 0xff) {
-					sprintf(device_name, "%s_%d_R_%02X%02X%02X", DEVICE_NAME,
-						get_dashboard_state()->esb_channel,
-						get_dashboard_state()->master_mac[2],
-						get_dashboard_state()->master_mac[1],
-						get_dashboard_state()->master_mac[0]);
-				} else {
-					sprintf(device_name, "%s_R_%02X%02X%02X", DEVICE_NAME,
-						get_dashboard_state()->master_mac[2],
-						get_dashboard_state()->master_mac[1],
-						get_dashboard_state()->master_mac[0]);
-				}
+				sprintf(device_name, "%sV%d%d%d_R_%02X%02X%02X", DEVICE_NAME,
+					get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
+					get_dashboard_state()->master_mac[2],
+					get_dashboard_state()->master_mac[1],
+					get_dashboard_state()->master_mac[0]);
 			}
 		} else {
-			if (get_pt_test_mode() == 1) {
-				if (get_dashboard_state()->esb_channel != 0xff) {
-					sprintf(device_name, "%sV%d%d%d_%d_L_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
-						get_dashboard_state()->esb_channel,
-						get_dashboard_state()->slave_mac[2],
-						get_dashboard_state()->slave_mac[1],
-						get_dashboard_state()->slave_mac[0]);
-				} else {
-					sprintf(device_name, "%sV%d%d%d_L_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
-						get_dashboard_state()->slave_mac[2],
-						get_dashboard_state()->slave_mac[1],
-						get_dashboard_state()->slave_mac[0]);
-				}
+			if (get_dashboard_state()->esb_channel != 0xff) {
+				sprintf(device_name, "%s_%d_R_%02X%02X%02X", DEVICE_NAME,
+					get_dashboard_state()->esb_channel,
+					get_dashboard_state()->master_mac[2],
+					get_dashboard_state()->master_mac[1],
+					get_dashboard_state()->master_mac[0]);
 			} else {
-				if (get_dashboard_state()->esb_channel != 0xff) {
-					sprintf(device_name, "%s_%d_L_%02X%02X%02X", DEVICE_NAME,
-						get_dashboard_state()->esb_channel,
-						get_dashboard_state()->slave_mac[2],
-						get_dashboard_state()->slave_mac[1],
-						get_dashboard_state()->slave_mac[0]);
-				} else {
-					sprintf(device_name, "%s_L_%02X%02X%02X", DEVICE_NAME,
-						get_dashboard_state()->slave_mac[2],
-						get_dashboard_state()->slave_mac[1],
-						get_dashboard_state()->slave_mac[0]);
-				}
+				sprintf(device_name, "%s_R_%02X%02X%02X", DEVICE_NAME,
+					get_dashboard_state()->master_mac[2],
+					get_dashboard_state()->master_mac[1],
+					get_dashboard_state()->master_mac[0]);
 			}
 		}
-
-		sd[0].data = device_name;
-		sd[0].data_len = strlen(device_name);
-
-		err = bt_set_name(device_name);
-		if (err) {
-			G1_LOG_ERR("Failed to set device name (err %d)\n\n", err);
-		} else {
-			err = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE, 0x160, 0x1e0, NULL),
-					      ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-			if (!err) {
-				get_dashboard_state()->bt_state = 2;
-				printk("Advertising %s successfully started uptime %lld\n", device_name,
-				       k_ticks_to_ms_ceil64(k_uptime_ticks()));
+	} else {
+		if (get_pt_test_mode() == 1) {
+			if (get_dashboard_state()->esb_channel != 0xff) {
+				sprintf(device_name, "%sV%d%d%d_%d_L_%02X%02X%02X", DEVICE_NAME,
+					get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
+					get_dashboard_state()->esb_channel,
+					get_dashboard_state()->slave_mac[2],
+					get_dashboard_state()->slave_mac[1],
+					get_dashboard_state()->slave_mac[0]);
+			} else {
+				sprintf(device_name, "%sV%d%d%d_L_%02X%02X%02X", DEVICE_NAME,
+					get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
+					get_dashboard_state()->slave_mac[2],
+					get_dashboard_state()->slave_mac[1],
+					get_dashboard_state()->slave_mac[0]);
 			}
+		} else {
+			if (get_dashboard_state()->esb_channel != 0xff) {
+				sprintf(device_name, "%s_%d_L_%02X%02X%02X", DEVICE_NAME,
+					get_dashboard_state()->esb_channel,
+					get_dashboard_state()->slave_mac[2],
+					get_dashboard_state()->slave_mac[1],
+					get_dashboard_state()->slave_mac[0]);
+			} else {
+				sprintf(device_name, "%s_L_%02X%02X%02X", DEVICE_NAME,
+					get_dashboard_state()->slave_mac[2],
+					get_dashboard_state()->slave_mac[1],
+					get_dashboard_state()->slave_mac[0]);
+			}
+		}
+	}
+
+	sd[0].data = device_name;
+	sd[0].data_len = strlen(device_name);
+
+	err = bt_set_name(device_name);
+	if (err) {
+		G1_LOG_ERR("Failed to set device name (err %d)\n\n", err);
+	} else {
+		err = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE, 0x160, 0x1e0, NULL),
+				      ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+		if (!err) {
+			get_dashboard_state()->bt_state = 2;
+			printk("Advertising %s successfully started uptime %lld\n", device_name,
+			       k_ticks_to_ms_ceil64(k_uptime_ticks()));
 		}
 	}
 
@@ -955,7 +930,24 @@ int bt_start(void)
 	return err;
 }
 
-void recv_ble_data(struct ble_context *ctx)
+/* Rewrites an ANCS date "yyyyMMddTHHmmSS" in place as "MM-dd HH:mm". */
+static void format_ancs_date(uint8_t *s)
+{
+	s[0] = s[4];
+	s[1] = s[5];
+	s[2] = '-';
+	s[3] = s[6];
+	s[4] = s[7];
+	s[5] = ' ';
+	s[6] = s[9];
+	s[7] = s[10];
+	s[8] = ':';
+	s[9] = s[11];
+	s[10] = s[12];
+	s[11] = 0;
+}
+
+static void recv_ble_data(struct ble_context *ctx)
 {
 	uint8_t hdr[4] = {0x4b, 0, 0, 0};
 	struct notif_msg data;
@@ -970,25 +962,22 @@ void recv_ble_data(struct ble_context *ctx)
 		data.uid = notification_latest.notif_uid;
 		dump_ancs("FROM:ancs", &data);
 		if (data.action >= 2) {
-			goto type2;
+			hdr[1] = 2;
+		} else {
+			ret = is_on_whitelist_by_identifier(data.app_identifier);
+			if (ret == 2) {
+				hdr[1] = 2;
+			} else if (ret == 3) {
+				hdr[1] = 4;
+			} else {
+				if (ret == 1) {
+					BLE_PRINTK("blocked! app(%s) not in whitelist \n",
+						   data.app_identifier);
+					send_whilelist_app_info_wrapper(&data);
+				}
+				return;
+			}
 		}
-		ret = is_on_whitelist_by_identifier(data.app_identifier);
-		if (ret == 2) {
-			goto type2;
-		}
-		if (ret == 3) {
-			hdr[1] = 4;
-			goto dispatch;
-		}
-		if (ret != 1) {
-			return;
-		}
-		BLE_PRINTK("blocked! app(%s) not in whitelist \n", data.app_identifier);
-		send_whilelist_app_info_wrapper(&data);
-		return;
-type2:
-		hdr[1] = 2;
-dispatch:
 		if (notification_latest.category_id == BT_ANCS_CATEGORY_ID_MISSED_CALL) {
 			strncpy(data.app_identifier, "com.apple.mobilephone_missed",
 				sizeof(data.app_identifier));
@@ -1034,7 +1023,7 @@ static void ble_ancs_data_req_thread(void *p1, void *p2, void *p3)
 			ctx->notif.action = BT_ANCS_EVENT_ID_NOTIFICATION_REMOVED;
 			ctx->notif.uid = notification_latest.notif_uid;
 			ctx->notif.sync_state = 0;
-			/* vendor bug: a string literal is stored into a char (keeps the
+			/* a string literal is stored into a char (keeps the
 			 * low byte of its address) */
 			ctx->notif.app_identifier[0] = (char)(uintptr_t)"\r";
 			ctx->notif.display_name[0] = (char)(uintptr_t)"\r";
@@ -1059,10 +1048,7 @@ int ancs_main(struct ble_context *ctx)
 	G1_LOG_ERR("Starting Apple Notification Center Service client\n\n");
 
 	while (bt_retry_count) {
-		for (;;) {
-			if (get_dashboard_state()->bt_state != 0 || wait == 0) {
-				break;
-			}
+		while (get_dashboard_state()->bt_state == 0 && wait != 0) {
 			wait--;
 			k_msleep(100);
 		}
@@ -1108,7 +1094,7 @@ int ancs_main(struct ble_context *ctx)
 	return err;
 }
 
-void start_ancs_work_thread(struct ble_context *ctx)
+static void start_ancs_work_thread(struct ble_context *ctx)
 {
 	if (get_dashboard_state()->is_master != 2 || get_pt_test_mode() == 1) {
 		return;
@@ -1160,7 +1146,7 @@ struct bt_conn *get_current_conn(void)
 	return current_conn;
 }
 
-/* align-2 helpers (advertising / bond state), last in this file's align-2 range */
+/* advertising / bond state helpers */
 int stop_ble_advertising(void)
 {
 	int err = 0;

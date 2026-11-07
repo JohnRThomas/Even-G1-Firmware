@@ -1,8 +1,6 @@
 /*
  * Module-private declarations for the sensors / audio files
  * (ext_flash.c, opt3007.c, fuel_gauge.c, charger_box.c, dmic_audio.c, audio_stream.c).
- * Partial views of shared vendor structures, reconstructed from the v1.63
- * app core.
  */
 #ifndef G1_SENSORS_AUDIO_H_
 #define G1_SENSORS_AUDIO_H_
@@ -36,7 +34,7 @@ int disable_power_for_panel(void);
 /* fuel_gauge.c */
 int fuel_gauge_init(const struct device *charger);
 bool is_old_board(void);
-int fuel_gauge_update(const struct device *charger, int unused);
+int fuel_gauge_update(const struct device *charger);
 
 /* charger_box.c */
 enum { BOX_IN_BOX = 0, BOX_LID_CLOSED = 1 }; /* set_box_status() type */
@@ -52,20 +50,14 @@ void init_box_status(void);
 
 /* dmic_audio.c */
 #define DMIC_MSG_SIZE 200
-extern atomic_t audio_stream_recording; /* audio stream record running */
+extern atomic_t audio_stream_recording;
 extern uint8_t dmic_send_pending; /* pending 0xf1 dmic request */
 int enqueue_dmic(void *msg);
 uint32_t get_dmic_num_messages(void);
 int dequeue_dmic(void *msg);
 void app_codec_lc3_test(void *pcm, int len);
 uint8_t dmic_get_stop_state(void);
-/* returns int; production_test.c was built against a void prototype (register allocation
- * around its call differs) and defines DMIC_STREAM_STOP_VOID_PROTOTYPE before including this header */
-#ifdef DMIC_STREAM_STOP_VOID_PROTOTYPE
-void dmic_stream_stop(void);
-#else
 int dmic_stream_stop(void);
-#endif
 int dmic_stream_pause(int pause);
 int dmic_stream_start(void);
 int erase_audio_buffer(void);

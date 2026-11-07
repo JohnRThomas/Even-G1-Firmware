@@ -1,7 +1,6 @@
 /*
  * nPM1300 fuel gauge / charger helpers and charging-box status, derived from
  * the NCS npm1300_fuel_gauge sample (src/fuel_gauge.c).
- * Reconstructed from the v1.63 firmware image.
  */
 #include <stdlib.h>
 #include <zephyr/kernel.h>
@@ -24,15 +23,15 @@
 
 #define DISPLAY_MODE_ABNORMAL_TEMP 0x0c
 
-static int64_t fuel_gauge_ref_time;               /* 0x20004930 */
-static float fg_last_soc;                 /* 0x20008554 */
-static uint32_t fg_last_soc_time;         /* 0x20008550 */
+static int64_t fuel_gauge_ref_time;
+static float fg_last_soc;
+static uint32_t fg_last_soc_time;
 
 static const struct battery_model battery_model = {
 #include "battery_model.inc"
 };
 
-static uint8_t zero_current_count;     /* 0x20019a70 */
+static uint8_t zero_current_count;
 
 int read_sensors(const struct device *charger, float *voltage, float *current, float *temp)
 {
@@ -94,8 +93,7 @@ bool is_old_board(void)
 	return false;
 }
 
-/* callers pass a second argument (0) that the function does not use */
-int fuel_gauge_update(const struct device *charger, int unused)
+int fuel_gauge_update(const struct device *charger)
 {
 	float voltage;
 	float current;

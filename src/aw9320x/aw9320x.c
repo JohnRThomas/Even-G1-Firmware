@@ -13,7 +13,6 @@
 * interrupt handling.  No SPP / OS hooks, debug output compiled out.
 */
 
-
 #include "aw9320x.h"
 #include "aw9320x_fw_info.h"
 
@@ -25,7 +24,7 @@ static uint32_t hostirqen = 0;
 static uint8_t prot_update_fw_flag = 0;
 static struct aw9320x_func *g_aw9320x_func = NULL;
 //Interrupt mode is mutually exclusive to polling mode
-volatile static uint8_t g_is_need_irq = 1;
+static uint8_t g_is_need_irq = 1;
 
 aw9320x_WEARING aw9320x_wearing;
 
@@ -1115,7 +1114,6 @@ static int32_t aw9320x_cycle_write_firmware(
 		memcpy(firmware_info + value_head_len,
 				&(fw_data[start_addr + half_cache_len * i]), half_cache_len);
 
-
 		ret = aw9320x_send_once_cmd(UPDATE_MODULE, UPDATE_TRANSFER_CMD,
 					firmware_info, half_cache_len + value_head_len);
 		if (ret != AW_OK) {
@@ -1538,8 +1536,6 @@ static int32_t aw9320x_update_err_handle(void)
 	return AW_OK;
 }
 
-/* the Awinic reference passes (struct cap_event_status *, uint32_t *); the vendor version uses
- * neither and its callers pass nothing */
 void aw9320x_get_irq_stat(void)
 {
 	int32_t ret = 0;
@@ -1551,28 +1547,14 @@ void aw9320x_get_irq_stat(void)
 		return;
 	}
 
-	/*
-	 * Awinic reference: flag records whether any interrupt source was handled;
-	 * the "no valid interrupt" branch (irq_trigger = AW_FALSE) was emptied by
-	 * the vendor.  The leftover test with its return keeps the target's block
-	 * layout (wearing stores out of line, no IT blocks).
-	 */
-	uint8_t flag = AW_FALSE;
-
 	if ((irq_stat >> REG_IRQSRC_EXIT_PROX_BIT) & 0x01) {
 		aw9320x_wearing = OUT_EAR;
-		flag = AW_TRUE;
 	}
 	if ((irq_stat >> REG_IRQSRC_PROX_BIT) & 0x01) {
 		aw9320x_wearing = IN_EAR;
-		flag = AW_TRUE;
 	}
 	if ((irq_stat >> REG_IRQSRC_INIT_BIT) & 0x01) {
 		aw9320x_para_loaded();
-		flag = AW_TRUE;
-	}
-	if (flag != AW_TRUE) {
-		return;
 	}
 }
 

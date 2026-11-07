@@ -47,7 +47,6 @@ struct aw9320x_thread_func {
 	aw9320x_wait_signal_forever_t wait_signal_forever;
 };
 
-
 struct aw9320x_func {
 	struct aw9320x_i2c_func i2c_func;
 	aw9320x_irq_init_t irq_init;
@@ -95,7 +94,6 @@ struct aw9320x_func {
 #define AW_DATA_OffSET_3			(3)
 #define AW_CHANNEL_NUM_MAX			(8)
 #define AW_CHANNEL_FOR_GPIO			(6)
-
 
 #define AW_FINE_ADJUST_STEP0			(165)
 #define AW_COARSE_ADJUST_STEP0			(9900)
@@ -445,7 +443,6 @@ enum AW_PROT_RECV_LEN {
 #define AW9320X_POLLING_MAX_TIME                (500)
 #define AW_CHIP_CAP                             (3)
 
-
 #define AW_CAP_IRQ_EVENT_REPORT_LEN				(102)
 #define AW_CAP_IRQ_CURVEL_INDEX					(6)
 #define AW_REMOVE_DECIMAL_BITS					(10)
@@ -596,7 +593,6 @@ enum AW93312_EVENT_LIST {
 	EVENT_BACKUP1,
 	EVENT_BACKUP2,
 };
-
 
 enum aw9320x_irq_porx_position {
 	TRIGGER_FAR,

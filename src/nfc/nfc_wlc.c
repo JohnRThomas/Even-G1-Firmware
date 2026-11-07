@@ -3,33 +3,28 @@
  * WLC records, NDEF record encoder, type 5 tag (ST lib_NDEF
  * tagtype5_wrapper.c) and the charging control state machine.
  *
- * Upstream origins (the vendor compiled them into this one translation
- * unit: ndefMessageInit is inlined into wlc_write_ndef_message, and IPA facts cross
- * the "files"):
- *   - ST RFAL NDEF library, plain-C original of
- *     referenced_examples/st25_rfal_ndef/src (stm32duino C++ wrapper):
- *       ndef_record.cpp   ndefRecordReset, ndefRecordGetHeaderLength,
+ * Origins of the code in this file:
+ *   - ST RFAL NDEF library:
+ *       ndef_record.c     ndefRecordReset, ndefRecordGetHeaderLength,
  *                         ndefRecordGetLength, ndefRecordSetType/Id/Payload,
  *                         ndefRecordGetPayload, ndefRecordDecode,
  *                         ndefRecordEncodeHeader, ndefRecordEncode (+ static
- *                         ndefRecordEncodePayload, inlined),
+ *                         ndefRecordEncodePayload),
  *                         ndefRecordGetPayloadLength, ndefRecordGetPayloadItem
- *       ndef_message.cpp  ndefMessageInit (static here), ndefAllocRecord,
+ *       ndef_message.c    ndefMessageInit (static here), ndefAllocRecord,
  *                         ndefMessageGetInfo, ndefMessageAppend,
  *                         ndefMessageEncode, ndefMessageDecode (unused)
- *       ndef_types.cpp    ndefTypeToRecord, ndefRecordSetNdefType
- *       ndef_type_wlc.cpp bufTypeRtdWlcCapability/StatusInfo,
+ *       ndef_types.c      ndefTypeToRecord, ndefRecordSetNdefType
+ *       ndef_type_wlc.c   bufTypeRtdWlcCapability/StatusInfo,
  *                         ndefRtdWlcCapability{GetPayloadLength,
  *                         GetPayloadItem,Init,ToRecord},
  *                         ndefRtdWlcStatusInfo{GetPayloadLength,
  *                         GetPayloadItem,Init,ToRecord}
  *     Error codes from st_errno.h (ReturnCode = uint16_t).
- *   - ST25DV lib_NDEF tagtype5_wrapper.c
- *     (referenced_examples/stm32-st25dv-main): NfcType5_* and
+ *   - ST25DV lib_NDEF tagtype5_wrapper.c: NfcType5_* and
  *     BSP_NFCTAG_GetByteSize.
- *   - Zephyr samples/drivers/adc (referenced_examples/adc/src/main.c):
- *     adc_channels, adc_nfc_init, adc_nfc_run.
- *   - Vendor code: the WLCFOD record and WLC message builder
+ *   - Zephyr samples/drivers/adc: adc_channels, adc_nfc_init, adc_nfc_run.
+ *   - Own code: the WLCFOD record and WLC message builder
  *     (wlc_write_ndef_message), field supervision and the listener state machine.
  */
 #include <math.h>
@@ -55,36 +50,36 @@
 /* data                                                                */
 /* ------------------------------------------------------------------ */
 
-/* ndef_type_wlc.c: RTD WLC type strings.  The vendor dropped the const of the
- * buffer descriptors (they sit in .data at 0x200023c4 / 0x200023bc). */
+/* ndef_type_wlc.c: RTD WLC type strings */
 static const uint8_t ndefRtdTypeWlcCapability[] = "WLCCAP";
 static const uint8_t ndefRtdTypeWlcStatusInfo[] = "WLCSTAI";
 
 ndefConstBuffer8 bufTypeRtdWlcCapability = { ndefRtdTypeWlcCapability, sizeof(ndefRtdTypeWlcCapability) - 1U };
 ndefConstBuffer8 bufTypeRtdWlcStatusInfo = { ndefRtdTypeWlcStatusInfo, sizeof(ndefRtdTypeWlcStatusInfo) - 1U };
+
 static struct wlc_listener wlc_listener = {
 	.state = 1,
 };
-static uint8_t wlc_info_sent = 1;	/* 0x20003046 */
+static uint8_t wlc_info_sent = 1;
 
 static struct nfc_charge nfc_charge;
 static uint32_t nfc_tick_start;
-uint32_t nfc_field_mv;			/* last NFC field voltage (mV * 10) */
+static uint32_t nfc_field_mv;		/* last NFC field voltage (mV * 10) */
 static sCCFileInfo CCFileStruct;
 static uint32_t nfc_field_tick;
-static uint32_t wlcCapabilityItem;	/* 0x200083ec ndef_type_wlc payload items */
-static uint32_t wlcStatusInfoItem;	/* 0x200083e8 */
+static uint32_t wlcCapabilityItem;	/* ndef_type_wlc payload items */
+static uint32_t wlcStatusInfoItem;
 static float wlc_wait_ms;
 static uint32_t nfc_charge_tick;
 static int wlc_tag_configured;
 
-static uint8_t ndefRecordPoolIndex = 0;	/* ndef_message.c; the record pool itself is unused */
-uint8_t nfc_tag_type_ok;			/* ST25DV of the expected type (UID byte 6 is 0x50/0x51) */
+static uint8_t ndefRecordPoolIndex = 0;	/* ndef_message.c */
+static uint8_t nfc_tag_type_ok;		/* ST25DV of the expected type (UID byte 6 is 0x50/0x51) */
 static uint8_t nfc_field_on;
-static uint8_t wlcCapabilityTemp;	/* 0x20019935 */
+static uint8_t wlcCapabilityTemp;
 static uint8_t wlc_field_present;
 static uint8_t nfc_low_field;
-uint16_t wlc_last_battery;
+static uint16_t wlc_last_battery;
 
 /* ------------------------------------------------------------------ */
 /* ndef_type_wlc.c: payload length / payload item encoders             */
@@ -104,12 +99,6 @@ uint16_t wlc_last_battery;
 #define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_MASK		0x7U
 #define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_SHIFT		0U
 #define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_MASK		0x1FU
-
-/*
- * Upstream these are function-local statics ("static uint32_t item",
- * "static uint8_t temp"); they are file-scope here only so that the global
- * symbol map can name them (GCC would call them item.0 / item.2 / temp.1).
- */
 
 static const uint8_t *ndefRtdWlcCapabilityGetPayloadItem(const ndefType *type,
 							 ndefConstBuffer *bufItem, bool begin)
@@ -261,7 +250,6 @@ static const uint8_t *ndefRtdWlcStatusInfoGetPayloadItem(const ndefType *type,
 	return bufItem->buffer;
 }
 
-
 /* ------------------------------------------------------------------ */
 /* NFC ADC (field voltage)                                             */
 /* ------------------------------------------------------------------ */
@@ -273,11 +261,7 @@ static const struct adc_dt_spec adc_channels[] = {
 	DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels, DT_SPEC_AND_COMMA)
 };
 
-/*
- * Zephyr ADC sample style channel loop (one channel).  The loop matters: at fnsplit time the
- * setup path is inside it, so GCC does not split the function into a header and an .part.0
- * (which would reorder the blocks after re-inlining).
- */
+/* Zephyr ADC sample style channel loop (one channel) */
 int adc_nfc_init(void)
 {
 	int err;
@@ -682,17 +666,16 @@ ReturnCode ndefRtdWlcStatusInfoToRecord(const ndefType *type, ndefRecord *record
 	return ERR_NONE;
 }
 
-/* a loop: GCC unrolls it only after the -Os inliner kept the call out of line */
 void wlc_reset_info(struct wlc_listener *wlc)
 {
-	for (int i = 0; i < 2; i++) {
-		wlc->cap_info[4 + i] = 9;
-		wlc->f30[i] = 9;
-	}
+	wlc->cap_info[4] = 9;
+	wlc->cap_info[5] = 9;
+	wlc->f30[0] = 9;
+	wlc->f30[1] = 9;
 }
 
 /* ------------------------------------------------------------------ */
-/* vendor: WLC listener NDEF message (WLCCAP [+ WLCSTAI] [+ WLCFOD])   */
+/* WLC listener NDEF message (WLCCAP [+ WLCSTAI] [+ WLCFOD])           */
 /* ------------------------------------------------------------------ */
 
 /* ndef_message.c */
@@ -736,6 +719,7 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
 	ndefType typeCap;
 	ndefType typeStai;
 	ndefRecord records[4];
+	ndefMessage message;
 	ReturnCode err;
 	int count;
 	int i;
@@ -793,25 +777,17 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
 		count++;
 	}
 
-	{
-		ndefMessage message;
-
-		ndefMessageInit(&message);
-		for (i = 0; i < count; i++) {
-			err |= ndefMessageAppend(&message, &records[i]);
-		}
-
-		bufPayload.buffer = buf;
-		bufPayload.length = sizeof(buf);
-		err |= ndefMessageEncode(&message, &bufPayload);
+	ndefMessageInit(&message);
+	for (i = 0; i < count; i++) {
+		err |= ndefMessageAppend(&message, &records[i]);
 	}
+
+	bufPayload.buffer = buf;
+	bufPayload.length = sizeof(buf);
+	err |= ndefMessageEncode(&message, &bufPayload);
 
 	return (err | (uint16_t)nfc_write_ndef(bufPayload.buffer, bufPayload.length)) ? -1 : 0;
 }
-
-/* ------------------------------------------------------------------ */
-/* align-2 helpers                                                     */
-/* ------------------------------------------------------------------ */
 
 static uint32_t ndefRtdWlcCapabilityGetPayloadLength(const ndefType *type)
 {
@@ -1382,7 +1358,7 @@ ReturnCode ndefMessageAppend(ndefMessage *message, ndefRecord *record)
 	return ERR_NONE;
 }
 
-/* not called by the firmware (dropped by --gc-sections) */
+/* unused */
 ReturnCode ndefMessageDecode(const ndefConstBuffer *bufPayload, ndefMessage *message)
 {
 	ReturnCode err;
@@ -1550,7 +1526,7 @@ void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc)
 		nfc_low_field = 0;
 		break;
 	case 2:
-		if ((int64_t)(k_uptime_ticks() - nfc_charge_tick) <= 3000) {
+		if (k_uptime_ticks() - nfc_charge_tick <= 3000) {
 			return;
 		}
 		if (wlc->state == 10) {
@@ -1737,20 +1713,12 @@ static inline bool wlc_battery_changed(struct wlc_listener *wlc)
 
 void wlc_listener_process(struct wlc_listener *wlc)
 {
-	int diff;
-
 	wlc_update_field_state(wlc, &wlc_field_present);
 	wlc_field_present = 1;
 
 	switch (wlc->state) {
 	case 1:
 		wlc_reset_info(wlc);
-		/*
-		 * The target keeps this (redundant) store after the call; our GCC
-		 * drops a plain store (ipa-modref knows wlc_reset_info cannot touch
-		 * it).  A volatile access keeps it and gives the target's size.
-		 */
-		*(volatile uint8_t *)&wlc_field_present = 1;
 		wlc->state = 2;
 		wlc->charging = 0;
 		return;
@@ -1834,8 +1802,7 @@ void wlc_listener_process(struct wlc_listener *wlc)
 	}
 }
 
-/* production-test protocol back end (pt_data.c).  These two are the last functions of this file
- * in the target: their strings precede this file's __func__ strings. */
+/* production-test protocol back end (pt_data.c) */
 
 int init_nfc_comm(void)
 {

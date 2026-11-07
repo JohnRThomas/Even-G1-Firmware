@@ -29,10 +29,10 @@ struct regulator_npm1300_config {
 #define CHGR_OFFSET_VTERM   0x0C
 #define CHGR_OFFSET_CHG_STAT 0x34
 
-uint8_t nfc_box_status[3];             /* 0x20019a74 */
-static uint8_t in_box_last;            /* 0x20019a73 */
-static uint8_t lid_closed_last;        /* 0x20019a72 */
-static uint8_t charging_last;          /* 0x20019a71 */
+uint8_t nfc_box_status[3];
+static uint8_t in_box_last;
+static uint8_t lid_closed_last;
+static uint8_t charging_last;
 
 int change_termination_voltage(void)
 {
@@ -57,15 +57,15 @@ int enable_charger(void)
 int set_charger_status(void)
 {
 	uint8_t status = 0;
+	bool trickle, cc, cv;
 
 	if (mfd_npm1300_reg_read(NPM_MFD(PMIC_LDO2), CHGR_BASE, CHGR_OFFSET_CHG_STAT, &status) < 0) {
 		printk("Could not get charger status\n");
 		return -1;
 	}
-	int s = status;
-	int trickle = (s >> 2) & 1;
-	int cc = (s >> 3) & 1;
-	int cv = (s >> 4) & 1;
+	trickle = status & BIT(2);
+	cc = status & BIT(3);
+	cv = status & BIT(4);
 
 	if (trickle || cc) {
 		return 0;

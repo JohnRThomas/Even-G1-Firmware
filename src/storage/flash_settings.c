@@ -14,10 +14,8 @@
 #include "storage.h"
 #include "../notify/whitelist.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
-/* the logs print __LINE__: line numbers below follow the vendor file */
-#line 16
 #define SETT_ROOT "ar_glass_userdata_settings"
 
 void local_store_delete(const char *key)
@@ -275,51 +273,43 @@ int write_font(uint32_t addr, const void *data, size_t len)
 	uint8_t buf[4096] = {0};
 	int retry = 0;
 	int ret;
-	uint32_t err;
 
 	while (1) {
 		if (!device_is_ready(FLASH_DEV)) {
 			printk(" [%s] device not ready.\n", FLASH_DEV->name);
 			ret = -1;
-			retry++;
 		} else {
 			ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, 4096);
 			if (ret) {
 				printk("Flash read font failed! %d\n", ret);
-				err = ret;
 			} else if (memcmp(data, buf, len) == 0) {
 				printk("write font data and read data is same, exit\n");
-				return ret;
+				return 0;
 			} else {
-				err = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, 4096);
-				if (err) {
-					printk("Flash erase font failed! %d\n", err);
+				ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, 4096);
+				if (ret) {
+					printk("Flash erase font failed! %d\n", ret);
 				} else {
-					err = get_dashboard_state()->flash_write(get_dashboard_state(),
+					ret = get_dashboard_state()->flash_write(get_dashboard_state(),
 										 addr, data, len);
-					if (err) {
-						printk("Flash write font failed! %d\n", err);
+					if (ret) {
+						printk("Flash write font failed! %d\n", ret);
 					} else {
-						err = get_dashboard_state()->flash_read(
+						ret = get_dashboard_state()->flash_read(
 							get_dashboard_state(), addr, buf, 4096);
-						if (err) {
-							printk("Flash read font failed! %d\n", err);
+						if (ret) {
+							printk("Flash read font failed! %d\n", ret);
 						} else if (memcmp(data, buf, len) == 0) {
-							return ret;
+							return 0;
 						} else {
 							printk("flash verify font failed\n");
 							ret = 1;
-							retry++;
-							goto next;
 						}
 					}
 				}
 			}
-			ret = err;
-			retry++;
-			goto next;	/* explicit (falls through anyway): the extra edge keeps the target's string-register choice (permuter) */
 		}
-next:
+		retry++;
 		if (retry == 10) {
 			return ret;
 		}

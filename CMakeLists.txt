@@ -1,6 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
-#
-# Even Realities G1 application core firmware (reconstruction of v1.66).
+# Even Realities G1 application core firmware.
 #
 #   west build -b nrf5340dk_nrf5340_cpuapp   MCUboot, this image and the network core
 #                                            image (net_core/), packaged in
@@ -20,7 +18,7 @@ if(NOT _ncs_found VERSION_EQUAL REQIURED_NCS_VERSION)
   message(FATAL_ERROR "nRF Connect SDK ${REQIURED_NCS_VERSION} required, found ${_ncs_found} (${NRF_DIR})")
 endif()
 
-project(ar_glasses)
+project(open_g1)
 
 
 target_include_directories(app PRIVATE src/include)

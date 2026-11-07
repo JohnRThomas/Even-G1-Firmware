@@ -6,45 +6,22 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 
-#define GUI_C_INTERNAL
 #include "gui.h"
 #include "../fonts/font_bitmap.h"
 #include "../panel_display/panel.h"
 #include "gui_fade_mask.h"
 
-int gui_font_kerning(uint16_t cur, uint16_t next);
-int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-		  uint32_t max_lines, uint32_t dark_cnt);
+static int gui_font_kerning(uint16_t cur, uint16_t next);
 
 struct gui_text_anim text_anim;
 uint8_t text_anim_buf[0x80];
 /* text grey level used by the gui_utf_draw* family */
-volatile uint8_t text_grey_level = 0x55;
+uint8_t text_grey_level = 0x55;
 
 static uint8_t **frame_buffer;
 atomic_t gui_flags;
 
-/* scroll/line state reset by gui_text_state_reset() (write-only in this image; non-static,
- * otherwise GCC would drop the stores) */
-int gui_aa0c;
-int gui_aa08;
-int gui_aa04;
-int gui_aa00;
-int gui_a9fc;
-int gui_a9f8;
-
-/* advanced UTF draw state, see gui_utf_adv_draw_configure() */
-int adv_param1;   /* 0x2000a9f4 */
-int adv_param2;   /* 0x2000a9f0 */
-int adv_step;     /* 0x2000a9ec */
-int adv_mode;     /* 0x2000a9e8 */
-int adv_e4;       /* 0x2000a9e4 */
-int adv_e0;       /* 0x2000a9e0 */
-int adv_enable;   /* 0x2000a9dc */
-int adv_d8;       /* 0x2000a9d8 */
-
-uint8_t adv_db48;
-uint8_t adv_db47;
+/* set while gui_utf_draw_dark_light_split() is inside a dimmed span */
 static uint8_t dark_light_flag;
 
 /* frame counters of gui_bmp_dynamic_bitmap_draw() */
@@ -153,39 +130,34 @@ int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8
 int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, int no_draw)
 {
 	const uint8_t *data;
+	int w = 0, h = 0;
 
-	if (effect == 0 && cb == NULL) {
-		int w, h;
+	if (effect != 0 || cb != NULL || no_draw != 0) {
+		return 0;
+	}
 
-		if (no_draw == 0) {
-			w = 0;
-			h = 0;
-			if (id < 0x16 || id > 0x87) {
-				if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-					_clean_fb_data(frame_buffer, 0, x, y, x + 24, y + 24);
-				}
-				data = get_small_glyph_bitmap((uint8_t)id, 0x120);
-				copy_to_frame_buffer(frame_buffer, data, 12, 24, x, y);
-				if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-					_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-								get_dashboard_state()->panel.current_column, x, y,
-								x + 24, y + 24);
-				}
-			} else {
-				if (resource_manger_get(4, id, &w, &h, &data, NULL) < 0) {
-					G1_LOG_WRN("can't find resource,please check resource name !\n");
-					return -1;
-				}
-				if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-					_clean_fb_data(frame_buffer, 0, x, y, w + 2 + x, y + h);
-				}
-				copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y);
-				if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-					_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-								get_dashboard_state()->panel.current_column, x, y,
-								w + 2 + x, y + h);
-				}
-			}
+	if (id < 0x16 || id > 0x87) {
+		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+			_clean_fb_data(frame_buffer, 0, x, y, x + 24, y + 24);
+		}
+		data = get_small_glyph_bitmap((uint8_t)id, 0x120);
+		copy_to_frame_buffer(frame_buffer, data, 12, 24, x, y);
+		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+			_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+						get_dashboard_state()->panel.current_column, x, y, x + 24, y + 24);
+		}
+	} else {
+		if (resource_manger_get(4, id, &w, &h, &data, NULL) < 0) {
+			G1_LOG_WRN("can't find resource,please check resource name !\n");
+			return -1;
+		}
+		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+			_clean_fb_data(frame_buffer, 0, x, y, w + 2 + x, y + h);
+		}
+		copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y);
+		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+			_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+						get_dashboard_state()->panel.current_column, x, y, w + 2 + x, y + h);
 		}
 	}
 	return 0;
@@ -228,40 +200,26 @@ int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level)
 
 int gui_text_state_reset(void)
 {
-	gui_aa0c = 0;
-	gui_aa08 = 0;
-	gui_aa04 = 0;
-	gui_aa00 = 0;
-	gui_a9fc = 0;
-	gui_a9f8 = 0;
 	return 0;
 }
 
-/* index is passed by address on purpose: it keeps the vendor compare order (dark_cnt > i) */
-static inline int gui_char_is_dark(const uint32_t *idx, uint32_t dark_cnt)
-{
-	return *idx < dark_cnt;
-}
-
 int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-		 uint32_t max_lines, uint32_t dark_cnt, volatile int effect, gui_effect_cb_t cb,
+		 uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
 		 int no_draw)
 {
 	uint16_t count = 0;
 	const uint8_t *data = NULL;
 	uint16_t *code = utf8_to_unicode_buf(str, &count);
 	int w = 0, h = 0;
-	uint32_t i;
 
 	if (effect == 0 && cb == NULL && no_draw == 0) {
 		int x_off = 0, y_off = 0, line_w = 0, lines = 0;
-		uint32_t y_max;
 
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
 			_clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
 		}
 
-		for (i = 0; (int)i < count; i++) {
+		for (uint32_t i = 0; i < count; i++) {
 			uint8_t glyph[676];
 			uint16_t c = *code++;
 			int ret = check_printable_code(c);
@@ -272,7 +230,7 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
 					continue;
 				}
 				memcpy(glyph, data, h * (w / 2));
-				if (dark_cnt != 0 && gui_char_is_dark(&i, dark_cnt)) {
+				if (dark_cnt != 0 && i < dark_cnt) {
 					for (int k = 0; k < h * (w / 2); k++) {
 						glyph[k] &= text_grey_level;
 					}
@@ -287,8 +245,7 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
 					if (lines >= max_lines) {
 						break;
 					}
-					y_max = y1 - y0;
-					if (y_off >= y_max) {
+					if (y_off >= (uint32_t)(y1 - y0)) {
 						break;
 					}
 					copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -316,8 +273,7 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
 				if (lines >= max_lines) {
 					break;
 				}
-				y_max = y1 - y0;
-				if (y_off >= y_max) {
+				if (y_off >= (uint32_t)(y1 - y0)) {
 					break;
 				}
 				line_w = 0;
@@ -347,13 +303,12 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
 
 	if (effect == 0 && cb == NULL && no_draw == 0) {
 		int x_off = 0, y_off = 0, line_w = 0, lines = 0;
-		uint32_t y_max;
 
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
 			_clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
 		}
 
-		for (uint32_t i = 0; (int)i < count; i++) {
+		for (uint32_t i = 0; i < count; i++) {
 			uint8_t glyph[676];
 			uint16_t c = *code++;
 			int ret = check_printable_code(c);
@@ -389,8 +344,7 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
 					if (lines >= max_lines) {
 						break;
 					}
-					y_max = y1 - y0;
-					if (y_off >= y_max) {
+					if (y_off >= (uint32_t)(y1 - y0)) {
 						break;
 					}
 					copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -418,8 +372,7 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
 				if (lines >= max_lines) {
 					break;
 				}
-				y_max = y1 - y0;
-				if (y_off >= y_max) {
+				if (y_off >= (uint32_t)(y1 - y0)) {
 					break;
 				}
 				line_w = 0;
@@ -439,13 +392,6 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
 	return 0;
 }
 
-
-/* second operand read through a pointer on purpose: keeps the vendor compare operand order */
-static inline int gui_u32_ge(uint32_t a, const uint32_t *b)
-{
-	return a >= *b;
-}
-
 int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
 			  uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
 			  int no_draw)
@@ -457,116 +403,82 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
 
 	if (effect == 0 && cb == NULL && no_draw == 0) {
 		uint8_t glyph[676];
-		int x_off = 0;
-		int y_off = 0;
-		int line_w = 0;
-		int i = 0;
-		int lines = 0;
+		int x_off = 0, y_off = 0, line_w = 0, lines = 0;
+		int width;
 
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
 			_clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
 		}
-		int width = x1 - x0;
-		uint32_t y_max;
+		width = x1 - x0;
 
-		for (; (int)i < count; i++, code++) {
+		for (int i = 0; i < count; i++, code++) {
 			uint16_t c = *code;
 			int ret = check_printable_code(c);
 
 			if (ret == 0) {
-				int gw, gh, bw;
-
 				if (resource_manger_get(font, c, &w, &h, &data, NULL) < 0) {
 					G1_LOG_WRN("can not find 0x%x font resource\n", c);
 					continue;
 				}
-				gw = w;
-				bw = gw / 2;
-				gh = h;
-				memcpy(glyph, data, gh * bw);
-				if (!gui_u32_ge(i, &dark_cnt)) {
-					for (int k = 0; k < gh * bw; k++) {
+				memcpy(glyph, data, h * (w / 2));
+				if (i < dark_cnt) {
+					for (int k = 0; k < h * (w / 2); k++) {
 						glyph[k] &= text_grey_level;
 					}
 				}
-				int kern = gui_font_kerning(code[0], code[1]);
-
-				line_w += gw + kern;
-				if (width < (uint32_t)line_w) {
+				line_w += w + gui_font_kerning(code[0], code[1]);
+				if (line_w > (uint32_t)width) {
 					lines++;
-					y_max = y1 - y0;
-					if (lines >= max_lines || y_off >= y_max) {
+					if (lines >= max_lines || y_off >= (uint32_t)(y1 - y0)) {
 						/* last line is full: make room for an ellipsis */
 						uint16_t *p = code;
-						uint32_t k = i;
-						_Alignas(4) unsigned short ch = c;
+						int k = i;
+						uint16_t ch = c;
 
-						while (k != 0) {
-							if ((uint32_t)(width - x_off) > 3) {
-								break;
-							}
-							ch = p[-1];
-							k--;
-							if (resource_manger_get(font, ch, &w, &h, &data,
-										NULL) < 0) {
-								G1_LOG_WRN("truncate can not find [%d]0x%x font resource\n", k, ch);
-							} else {
-								int kern = gui_font_kerning(p[-1], p[0]);
-
-								x_off = x_off - w - kern;
-								_clean_fb_data(frame_buffer, 0, x0 + x_off,
-									       y0 + (int)y_off, x0 + x_off + w,
-									       y0 + (int)y_off + h);
-							}
+						while (k != 0 && (uint32_t)(width - x_off) <= 3) {
 							p--;
+							k--;
+							ch = *p;
+							if (resource_manger_get(font, ch, &w, &h, &data, NULL) < 0) {
+								G1_LOG_WRN("truncate can not find [%d]0x%x font resource\n",
+									   k, ch);
+							} else {
+								x_off -= w + gui_font_kerning(p[0], p[1]);
+								_clean_fb_data(frame_buffer, 0, x0 + x_off, y0 + y_off,
+									       x0 + x_off + w, y0 + y_off + h);
+							}
 						}
 						if (k == 0) {
 							x_off = 0;
 						}
 						G1_LOG_WRN("end line x0=%d\n", x_off);
-						if (resource_manger_get(font, 0x2026, &w, &h, &data, NULL) <
-						    0) {
+						if (resource_manger_get(font, 0x2026, &w, &h, &data, NULL) < 0) {
 							G1_LOG_WRN("can not find 0x%x font resource\n", ch);
 							continue;
 						}
-						bw = w / 2;
-						gh = h;
-						unsigned int size = gh * bw;
-
-						/* identical arms (see agent_notes/gui_utf_draw_truncate.md):
-						 * the test keeps p live across the size multiply for IRA,
-						 * crossjump merges the two calls and deletes it.
-						 */
-						if ((uintptr_t)p & 1) {
-							memcpy(glyph, data, size);
-						} else {
-							memcpy(&glyph[0], data, size);
-						}
+						memcpy(glyph, data, h * (w / 2));
 						if (i < dark_cnt) {
-							for (int n = 0; n < gh * bw; n++) {
+							for (int n = 0; n < h * (w / 2); n++) {
 								glyph[n] &= text_grey_level;
 							}
 						}
-						copy_to_frame_buffer(frame_buffer, glyph, bw, gh, x0 + x_off,
-								     y0 + (int)y_off);
+						copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
+								     y0 + y_off);
 						break;
 					}
-					uint32_t ny = y_off + gh;
-
+					y_off += h;
 					if (font == 0) {
-						ny++;
+						y_off++;
 					}
-					copy_to_frame_buffer(frame_buffer, glyph, bw, gh, x0, y0 + (int)ny);
-					y_off = ny;
+					copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
 					x_off = w + gui_font_kerning(code[0], code[1]);
 					line_w = x_off;
 				} else {
-					copy_to_frame_buffer(frame_buffer, glyph, bw, gh, x0 + x_off,
-							     y0 + (int)y_off);
+					copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
+							     y0 + y_off);
 					x_off += gui_font_kerning(code[0], code[1]) + w;
 				}
-			}
-			if (ret == -1 && (c == '\r' || c == '\n')) {
+			} else if (ret == -1 && (c == '\r' || c == '\n')) {
 				if (h != 0) {
 					y_off += h;
 					if (font == 0) {
@@ -580,32 +492,27 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
 					}
 				}
 				lines++;
-				if (lines >= max_lines || gui_u32_ge(y_off, &(uint32_t){y1 - y0})) {
+				if (lines >= max_lines || y_off >= (uint32_t)(y1 - y0)) {
 					break;
 				}
 				x_off = 0;
 				line_w = 0;
-				continue;
 			}
 		}
-		if (!(gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING)) {
-			return 0;
+
+		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+			_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+						get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
 		}
 	} else if (cb != NULL) {
 		G1_LOG_WRN("exex process effect callback function\n");
 		return cb(0, str, font, x0, y0);
-	} else {
-		return 0;
 	}
-	_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-				get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
 	return 0;
 }
 
-/* `volatile int effect` (top-level qualifier, only in the definition; the prototype stays
- * compatible) keeps effect in its stack slot during register allocation, like the vendor build. */
 int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, int y0, int x1,
-				   int y1, uint32_t max_lines, uint8_t dark_lines, volatile int effect,
+				   int y1, uint32_t max_lines, uint8_t dark_lines, int effect,
 				   gui_effect_cb_t cb, int no_draw)
 {
 	uint16_t count = 0;
@@ -615,13 +522,12 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
 
 	if (effect == 0 && cb == NULL && no_draw == 0) {
 		int x_off = 0, y_off = 0, line_w = 0, lines = 0;
-		uint32_t y_max;
 
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
 			_clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
 		}
 
-		for (uint32_t i = 0; (int)i < count; i++) {
+		for (uint32_t i = 0; i < count; i++) {
 			uint8_t glyph[676];
 			uint16_t c = *code++;
 			int ret = check_printable_code(c);
@@ -632,7 +538,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
 					continue;
 				}
 				memcpy(glyph, data, h * (w / 2));
-				if (dark_lines != 0 && (int)lines < dark_lines) {
+				if (dark_lines != 0 && lines < dark_lines) {
 					for (int k = 0; k < h * (w / 2); k++) {
 						glyph[k] &= text_grey_level;
 					}
@@ -647,8 +553,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
 					if (lines >= max_lines) {
 						break;
 					}
-					y_max = y1 - y0;
-					if (y_off >= y_max) {
+					if (y_off >= (uint32_t)(y1 - y0)) {
 						break;
 					}
 					copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -676,8 +581,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
 				if (lines >= max_lines) {
 					break;
 				}
-				y_max = y1 - y0;
-				if (y_off >= y_max) {
+				if (y_off >= (uint32_t)(y1 - y0)) {
 					break;
 				}
 				line_w = 0;
@@ -696,13 +600,6 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
 	return 0;
 }
 
-/* read through a pointer so new_line is renamed into SSA after early inlining:
- * this orders its loop PHI after i's (see agent_notes/gui_utf_draw_middle.md) */
-static inline bool gui_bool_get(const bool *b)
-{
-	return *b;
-}
-
 int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
 		  uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
 		  int no_draw)
@@ -713,30 +610,28 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
 	int w = 0, h = 0;
 
 	if (effect == 0 && cb == NULL && no_draw == 0) {
-		uint32_t i;
 		int x_start = x0;
 		uint32_t x_off = 0;
 		uint32_t y_off = 0;
 		uint32_t line_w = 0;
 		int lines = 0;
 		bool new_line = true;
-		uint32_t y_max;
 
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
 			_clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
 		}
 
-		for (i = 0; (int)i < count; i++) {
+		for (uint32_t i = 0; i < count; i++) {
 			uint8_t glyph[676];
 			uint16_t c;
 			int ret;
 
-			if (gui_bool_get(&new_line)) {
+			if (new_line) {
 				/* measure the line up to the next CR/LF */
 				int lw = 0;
 				uint16_t *p = code;
 
-				for (uint32_t j = i; (int)j < count; j++, p++) {
+				for (uint32_t j = i; j < count; j++, p++) {
 					uint16_t ch = *p;
 
 					if (ch == '\r' || ch == '\n') {
@@ -756,23 +651,18 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
 			c = *code++;
 			ret = check_printable_code(c);
 			if (ret == 0) {
-				int gw, gh, bw;
-
 				if (resource_manger_get(font, c, &w, &h, &data, NULL) < 0) {
 					G1_LOG_WRN("can not find 0x%x font resource\n", c);
 				} else {
-					gw = w;
-					bw = gw / 2;
-					gh = h;
-					memcpy(glyph, data, gh * bw);
-					if (gui_char_is_dark(&i, dark_cnt)) {
-						for (int k = 0; k < gh * bw; k++) {
+					memcpy(glyph, data, h * (w / 2));
+					if (i < dark_cnt) {
+						for (int k = 0; k < h * (w / 2); k++) {
 							glyph[k] &= text_grey_level;
 						}
 					}
-					line_w += gui_font_kerning(code[-1], code[0]) + gw;
+					line_w += gui_font_kerning(code[-1], code[0]) + w;
 					if (line_w > x1 - x0) {
-						y_off += gh;
+						y_off += h;
 						if (font == 0) {
 							y_off++;
 						}
@@ -780,16 +670,15 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
 						if (lines >= max_lines) {
 							break;
 						}
-						y_max = y1 - y0;
-						if (y_off >= y_max) {
+						if (y_off >= y1 - y0) {
 							break;
 						}
-						copy_to_frame_buffer(frame_buffer, glyph, bw, gh, x_start,
+						copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start,
 								     y0 + y_off);
 						x_off = gui_font_kerning(code[-1], code[0]) + w;
 						line_w = x_off;
 					} else {
-						copy_to_frame_buffer(frame_buffer, glyph, bw, gh,
+						copy_to_frame_buffer(frame_buffer, glyph, w / 2, h,
 								     x_start + x_off, y0 + y_off);
 						x_off += gui_font_kerning(code[-1], code[0]) + w;
 					}
@@ -862,8 +751,8 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
 			int ret;
 
 			if (new_line) {
-				/* measure the line up to the next CR/LF (16-bit width kept in an int) */
-				int lw = 0;
+				/* measure the line up to the next CR/LF (16-bit width) */
+				uint16_t lw = 0;
 				uint16_t *p = code;
 
 				for (int j = i; j < count; j++, p++) {
@@ -876,38 +765,29 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
 						if (resource_manger_get(font, ch, &w, &h, &data, NULL) < 0) {
 							G1_LOG_WRN("can not find 0x%x font resource\n", ch);
 						} else {
-							lw = (uint16_t)(lw + w);
-							lw = (uint16_t)(lw + gui_font_kerning(p[0], p[1]));
+							lw += w + gui_font_kerning(p[0], p[1]);
 						}
 					}
 				}
-				{
-					uint32_t span = x1 - x0;
-					x_start = lw <= span ? x1 - lw : x0;
-				}
+				x_start = lw <= (uint32_t)(x1 - x0) ? x1 - lw : x0;
 				x_start &= ~1;
 			}
 
 			c = *code++;
 			ret = check_printable_code(c);
 			if (ret == 0) {
-				int gw, gh, bw;
-
 				if (resource_manger_get(font, c, &w, &h, &data, NULL) < 0) {
 					G1_LOG_WRN("can not find 0x%x font resource\n", c);
 				} else {
-					gw = w;
-					bw = gw / 2;
-					gh = h;
-					memcpy(glyph, data, gh * bw);
-					if ((uint32_t)i < dark_cnt) {
-						for (int k = 0; k < gh * bw; k++) {
+					memcpy(glyph, data, h * (w / 2));
+					if (i < dark_cnt) {
+						for (int k = 0; k < h * (w / 2); k++) {
 							glyph[k] &= text_grey_level;
 						}
 					}
-					line_w += gui_font_kerning(code[-1], code[0]) + gw;
+					line_w += gui_font_kerning(code[-1], code[0]) + w;
 					if (line_w > (uint32_t)(x1 - x0)) {
-						y_off += gh;
+						y_off += h;
 						if (font == 0) {
 							y_off++;
 						}
@@ -918,13 +798,13 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
 						if (y_off >= (uint32_t)(y1 - y0)) {
 							break;
 						}
-						copy_to_frame_buffer(frame_buffer, glyph, bw, gh, x_start,
-								     y0 + (int)y_off);
+						copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start,
+								     y0 + y_off);
 						x_off = gui_font_kerning(code[-1], code[0]) + w;
 						line_w = x_off;
 					} else {
-						copy_to_frame_buffer(frame_buffer, glyph, bw, gh,
-								     x_start + x_off, y0 + (int)y_off);
+						copy_to_frame_buffer(frame_buffer, glyph, w / 2, h,
+								     x_start + x_off, y0 + y_off);
 						x_off += gui_font_kerning(code[-1], code[0]) + w;
 					}
 				}
@@ -968,30 +848,9 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
 	return 0;
 }
 
-
-/* read through a pointer on purpose: the variable is rewritten into SSA only after inlining (late SSA version),
- * which gives the vendor compare operand order (gui_u32_get) and pseudo order / register choice (gui_code_get,
- * gui_int_get: lines gets its loop PHI last, so the zero-init copies come out in the vendor order) */
-static inline uint32_t gui_u32_get(const uint32_t *p)
-{
-	return *p;
-}
-
-static inline int gui_int_get(const int *p)
-{
-	return *p;
-}
-
-static inline uint16_t gui_code_get(uint16_t *const *p)
-{
-	return **p;
-}
-
-/* no_draw is unsigned: the zero-init PHI arguments of the unsigned counters (i, line_w) are un-propagated to the
- * no_draw parameter and the int ones (y_off, x_off, lines) to effect, which gives the vendor init/reset copies. */
 int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
 			  uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-			  uint32_t no_draw)
+			  int no_draw)
 {
 	uint16_t count = 0;
 	const uint8_t *data = NULL;
@@ -1002,18 +861,18 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 		int x_off = 0;
 		int y_off = 0;
 		uint32_t line_w = 0;
-		uint32_t i = 0;
 		int lines = 0;
 		uint16_t *code = codes;
+		int width;
 
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
 			_clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
 		}
-		int width = x1 - x0;
+		width = x1 - x0;
 
-		for (; (int)i < count; i++, code++) {
+		for (uint32_t i = 0; i < count; i++, code++) {
 			uint8_t glyph[676];
-			uint16_t c = gui_code_get(&code);
+			uint16_t c = *code;
 			int ret = check_printable_code(c);
 
 			if (ret == 0) {
@@ -1021,14 +880,13 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 					G1_LOG_WRN("can not find 0x%x font resource\n", c);
 				} else {
 					memcpy(glyph, data, h * (w / 2));
-					if (dark_cnt != 0 && gui_char_is_dark(&i, dark_cnt)) {
+					if (dark_cnt != 0 && i < dark_cnt) {
 						for (int k = 0; k < h * (w / 2); k++) {
 							glyph[k] &= text_grey_level;
 						}
 					}
 
 					if (line_w > (uint32_t)width / 2 && lines < max_lines - 1) {
-						const int total = count;
 						const uint16_t split_chars[5] = { ' ', ',', '.', '?', '!' };
 						int k;
 
@@ -1045,7 +903,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 
 							/* find the end of the next word */
 							int found = 0;
-							for (end = start; (int)end < total; end++) {
+							for (end = start; end < count; end++) {
 								for (k = 0; k < 7; k++) {
 									if (codes[end] == end_chars[k]) {
 										if (codes[end] != 0) {
@@ -1059,26 +917,26 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 								}
 							}
 							if (found) {
-								if ((int)(end - i) > 40) {
+								if (end - i > 40) {
 									G1_LOG_WRN("The word is too long and will not be processed\n");
 								} else {
 									int wide = 0;
 
-									for (uint32_t n = start; (int)n < (int)end; n++) {
+									for (uint32_t n = start; n < end; n++) {
 										if (codes[n] > 0x25cc) {
 											wide++;
 										}
 									}
-									if (gui_u32_get(&end) == i) {
+									if (end == i) {
 										G1_LOG_WRN("!!! end_split_character_index == start_split_character_index\n");
 									} else if (wide == 0 ||
-										   (float)wide / (float)(int)(end - i) < 0.5f) {
+										   (float)wide / (float)(end - i) < 0.5f) {
 										int gw = 0, gh = 0;
 										const uint8_t *gdata;
 										uint16_t *p = code;
 										int len = line_w;
 
-										for (uint32_t n = i; (int)n <= (int)end; n++, p++) {
+										for (uint32_t n = i; n <= end; n++, p++) {
 											if (resource_manger_get(font, *p, &gw, &gh,
 														&gdata, NULL) == 0) {
 												len += gui_font_kerning(p[0], p[1]) + gw;
@@ -1101,11 +959,10 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 							y_off++;
 						}
 						lines++;
-						if (gui_int_get(&lines) >= max_lines) {
+						if (lines >= max_lines) {
 							break;
 						}
-						uint32_t y_max = y1 - y0;
-						if (y_off >= y_max) {
+						if (y_off >= (uint32_t)(y1 - y0)) {
 							break;
 						}
 						copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -1123,24 +980,26 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 			} else if (ret != -1 || (c != '\n' && c != '\r')) {
 				continue;
 			}
-				if (h != 0) {
-					y_off += h;
-					if (font == 0) {
-						y_off++;
-					}
+
+			/* line break: CR/LF, or the next word does not fit on this line */
+			if (h != 0) {
+				y_off += h;
+				if (font == 0) {
+					y_off++;
+				}
+			} else {
+				if (font != 0) {
+					y_off += 26;
 				} else {
-					if (font != 0) {
-						y_off += 26;
-					} else {
-						y_off += 27;
-					}
+					y_off += 27;
 				}
-				lines++;
-				if (lines >= max_lines || y_off >= (uint32_t)(y1 - y0)) {
-					break;
-				}
-				line_w = 0;
-				x_off = 0;
+			}
+			lines++;
+			if (lines >= max_lines || y_off >= (uint32_t)(y1 - y0)) {
+				break;
+			}
+			line_w = 0;
+			x_off = 0;
 		}
 
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
@@ -1154,50 +1013,14 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 	return 0;
 }
 
+/* advanced UTF draw commands: 4, 5, 6 and 8 (reset) are accepted and have no effect */
 int gui_utf_adv_draw_configure(struct gui_utf_adv_cfg cfg)
 {
 	switch (cfg.cmd) {
-	case 8:
-		adv_param1 = 0;
-		adv_param2 = 0;
-		adv_step = 0;
-		adv_mode = 0;
-		adv_db48 = 0;
-		adv_e4 = 0;
-		adv_e0 = 0;
-		adv_enable = 0;
-		adv_d8 = 0;
-		adv_db47 = 0;
-		break;
 	case 4:
-		adv_param1 = cfg.param1;
-		adv_param2 = cfg.param2;
-		adv_step = 0;
-		adv_mode = 4;
-		adv_db48 = 0;
-		adv_e4 = 0;
-		adv_e0 = 0;
-		adv_enable = 1;
-		break;
 	case 5:
-		adv_param1 = 0;
-		adv_param2 = 0;
-		adv_step = 3;
-		adv_mode = 5;
-		adv_db48 = 0;
-		adv_e4 = 0;
-		adv_d8 = 0;
-		adv_e0 = 0;
-		adv_enable = 1;
-		break;
 	case 6:
-		adv_step = 2;
-		adv_mode = 6;
-		adv_db48 = 0;
-		adv_e4 = 0;
-		adv_d8 = 0;
-		adv_e0 = 0;
-		adv_enable = 1;
+	case 8:
 		break;
 	default:
 		G1_LOG_ERR("unkonown adv command\n");
@@ -1207,7 +1030,7 @@ int gui_utf_adv_draw_configure(struct gui_utf_adv_cfg cfg)
 }
 
 /* ---------------------------------------------------------------------------
- * small helpers (align-2 region)
+ * small helpers
  */
 int gui_dynamic_bitmap_reset_thunk(void)
 {
@@ -1230,7 +1053,7 @@ int gui_utf_adv_draw_reset(void)
 	return gui_utf_adv_draw_configure(cfg);
 }
 
-/* horizontal text origin: the stored x shift (display depth setting, 22..42) plus the panel's per-eye offset */
+/* horizontal text origin: the stored x shift plus the panel's per-eye offset */
 int gui_screen_x_offset(void)
 {
 	if ((get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) ||
@@ -1293,6 +1116,7 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
 			_clean_fb_data(frame_buffer, 0, x0, y0 - 27, x1, y0);
 		}
 	}
+	return 0;
 }
 
 int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
@@ -1334,20 +1158,14 @@ int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
 		}
 		x = x0;
 		for (int i = 0; i < len; i++) {
-			/*
-			 * A compile-time constant condition in the vendor source (probably a
-			 * config switch): a plain block gives different block layout.
-			 */
-			if (1) {
-				data = NULL;
-				if (resource_manger_get(1, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 ||
-				    data == NULL) {
-					G1_LOG_WRN("The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
-						   (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
-				} else {
-					copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
-					x += w + 6;
-				}
+			data = NULL;
+			if (resource_manger_get(1, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 ||
+			    data == NULL) {
+				G1_LOG_WRN("The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
+					   (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
+			} else {
+				copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
+				x += w + 6;
 			}
 		}
 		if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
@@ -1428,7 +1246,7 @@ int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, u
 				 int unused)
 {
 	uint8_t color;
-	uint32_t pct;
+	int pct;
 	int col;
 	uint8_t **fb;
 
@@ -1455,32 +1273,18 @@ int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, u
 		_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
 					get_dashboard_state()->panel.current_column, x0 - 6, y0, x1 + 6, y1);
 	}
-	gui_bmp_bitmap_draw(0x17, x0 - 4, (int)(pct * (y1 - y0 - 13)) / 100 + y0, 0, 0, 0);
+	gui_bmp_bitmap_draw(0x17, x0 - 4, pct * (y1 - y0 - 13) / 100 + y0, 0, 0, 0);
 	return 0;
-}
-
-/* pix is read through its address on purpose: it keeps the vendor register allocation */
-static inline uint8_t gui_bar_px(const uint8_t *p)
-{
-	return *p;
-}
-
-/* the row base goes through an argument: it keeps the vendor spill-slot order */
-static inline uint8_t **gui_bar_rows(uint8_t **rows)
-{
-	return rows;
 }
 
 int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segments, uint8_t gap,
 				  uint8_t percent)
 {
 	int width, bar_width, fill;
-	uint32_t seg_num, pct;
+	int seg_num, pct;
 	uint8_t pix;
 	int x;
 	int seg_len, seg, seg_w, col0;
-	int col;
-	uint8_t **rows;
 
 	if (x0 > x1 || y0 > y1) {
 		G1_LOG_WRN("input param error,please check postion content\n");
@@ -1495,10 +1299,10 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
 	if (pct > 100) {
 		pct = 100;
 	}
-	bar_width = x1 - x0 - gap * (int)(seg_num - 1);
+	bar_width = x1 - x0 - gap * (seg_num - 1);
 	width = x1 - x0;
-	seg_w = bar_width / (int)seg_num;
-	fill = (int)(bar_width * pct) / 100;
+	seg_w = bar_width / seg_num;
+	fill = bar_width * pct / 100;
 	col0 = x0 / 2;
 
 	if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
@@ -1511,7 +1315,7 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
 	for (x = 0; x < width; x++, seg_len++) {
 		if (seg_len >= seg_w) {
 			seg++;
-			if (seg >= (int)seg_num) {
+			if (seg >= seg_num) {
 				break;
 			}
 			x += gap;
@@ -1520,10 +1324,9 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
 			}
 			seg_len = 0;
 		}
-		/* column and row base are named per column (col via an unsigned sum, the row base via
-		 * gui_bar_rows()): this keeps the vendor spill-slot order (col [sp,#12], row base [sp,#16]) */
-		col = (int)((unsigned int)col0 + (x >> 1));
-		rows = gui_bar_rows(frame_buffer + y0);
+		int col = col0 + (x >> 1);
+		uint8_t **rows = frame_buffer + y0;
+
 		if (fill != 0) {
 			for (int r = 0; r < y1 - y0; r++) {
 				if ((x & 1) == 0) {
@@ -1532,7 +1335,7 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
 					pix |= 0x0f;
 				}
 				if (((x + 1) & 1) == 0) {
-					rows[r][col] = gui_bar_px(&pix);
+					rows[r][col] = pix;
 				}
 			}
 		} else {
@@ -1543,7 +1346,7 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
 					pix |= text_grey_level & 0x0f;
 				}
 				if (((x + 1) & 1) == 0) {
-					rows[r][col] = gui_bar_px(&pix);
+					rows[r][col] = pix;
 				}
 			}
 		}
@@ -1559,11 +1362,10 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
 	return 0;
 }
 
-
 int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color)
 {
 	uint8_t **fb;
-	uint32_t n;
+	int n;
 
 	if (x0 > x1 || y0 > y1 || color > 0x0f) {
 		G1_LOG_WRN("input param error,please check postion content\n");
@@ -1581,14 +1383,13 @@ int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t 
 	int x_byte = x0 / 2;
 
 	fb = frame_buffer;
-	/* bytes per bitmap row; the unsigned difference hides x0 <= x1 from VRP, so GCC keeps the
-	 * row step as max(n, 0) like the target (bic fp, fp, asr #31) */
-	n = (int)((uint32_t)x1 - (uint32_t)x0) >> 3;
+	/* bytes per bitmap row */
+	n = (x1 - x0) >> 3;
 	int k = 0;
 	for (int r = 0; r < y1 - y0; r++) {
-		for (int i = 0; i < (int)n; i++) {
+		for (int i = 0; i < n; i++) {
 			uint8_t bits = bmp[k++];
-			uint32_t pix = 0;
+			uint8_t pix = 0;
 			uint8_t out[4] = { 0 };
 
 			for (int b = 0; b < 8; b++) {
@@ -1619,7 +1420,7 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
 			  uint8_t color1, uint8_t color2)
 {
 	uint8_t **fb;
-	uint32_t n;
+	int n;
 
 	if (x0 > x1 || y0 > y1 || (color1 | color2) > 0x0f) {
 		G1_LOG_WRN("input param error,please check postion content\n");
@@ -1637,10 +1438,10 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
 	int x_byte = x0 / 2;
 
 	fb = frame_buffer;
-	n = (int)((uint32_t)x1 - (uint32_t)x0) >> 3;
+	n = (x1 - x0) >> 3;
 	int k = 0;
 	for (int r = 0; r < y1 - y0; r++) {
-		for (int i = 0; i < (int)n; i++) {
+		for (int i = 0; i < n; i++) {
 			uint8_t bits1 = bmp1[k];
 			uint8_t bits2 = bmp2[k];
 			k++;
@@ -1681,7 +1482,7 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
 int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color)
 {
 	uint8_t **fb;
-	uint32_t n;
+	int n;
 
 	if (x0 > x1 || y0 > y1 || color > 0x0f) {
 		G1_LOG_WRN("input param error,please check postion content\n");
@@ -1695,10 +1496,10 @@ int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp,
 	int x_byte = x0 / 2;
 
 	fb = frame_buffer;
-	n = (int)((uint32_t)x1 - (uint32_t)x0) >> 3;
+	n = (x1 - x0) >> 3;
 	int k = 0;
 	for (int r = 0; r < y1 - y0; r++) {
-		for (int i = 0; i < (int)n; i++) {
+		for (int i = 0; i < n; i++) {
 			uint8_t bits = bmp[k++];
 			uint8_t pix = 0;
 			uint8_t out[4] = { 0 };
@@ -1752,7 +1553,7 @@ int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y)
 	return 0;
 }
 
-int gui_font_kerning(uint16_t cur, uint16_t next)
+static int gui_font_kerning(uint16_t cur, uint16_t next)
 {
 	int n = 0;
 
@@ -1790,7 +1591,7 @@ int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, i
 				G1_LOG_WRN("find ascii postion failed\n");
 			} else {
 				copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
-				if ((uint8_t)str[i] - 0x20U < 0x5f && font == 3) {
+				if ((uint8_t)str[i] >= 0x20 && (uint8_t)str[i] < 0x7f && font == 3) {
 					x = x + w + 3;
 				} else {
 					x += w;

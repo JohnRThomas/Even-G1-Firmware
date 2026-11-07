@@ -6,9 +6,9 @@
 #include <zephyr/bluetooth/conn.h>
 #include "g1_log.h"
 
-int smp_busy;                        /* 0x20007f7c */
-int smp_conn_ok;                     /* 0x20007f78 */
-static struct k_work smp_adv_work;   /* 0x20007f68 (never initialised) */
+int smp_busy;
+int smp_conn_ok;
+static struct k_work smp_adv_work;
 
 static void smp_connected(struct bt_conn *conn, uint8_t err)
 {
@@ -30,7 +30,6 @@ static void smp_disconnected(struct bt_conn *conn, uint8_t reason)
 	smp_conn_ok = 0;
 }
 
-/* named like ble_ancs.c's: the bt_conn_cb area is sorted by name, ties by link order */
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = smp_connected,
 	.disconnected = smp_disconnected,

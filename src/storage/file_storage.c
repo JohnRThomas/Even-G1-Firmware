@@ -3,9 +3,9 @@
  * stores) and the storage commit thread (settings commit, file download
  * into the external flash).
  */
-#include <stdio.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/byteorder.h>
 #include "g1_log.h"
 #include "storage.h"
 #include "../main.h"
@@ -22,34 +22,32 @@ struct file_msg {
 	uint8_t data[FILE_MSG_LEN];
 	uint8_t len;
 };
-static uint8_t file_buf[0x1400];     /* 0x20017d30 */
-uint8_t sys_settings_dirty;          /* 0x20017d2f */
 
-struct k_sem flash_ops_sem;          /* 0x200083c4 */
-uint32_t LAST_FILE_CRC;              /* 0x200083c0 */
-static uint32_t file_addr;           /* 0x200083bc */
-static uint32_t file_buf_len;        /* 0x200083b8 */
-static uint32_t file_type;           /* 0x200083b4 */
-static struct k_msgq file_msgq;      /* 0x20008380 */
-static uint32_t crc32_table[256];    /* 0x20007f80 */
+static uint8_t file_buf[0x1400];
+uint8_t sys_settings_dirty;
+
+struct k_sem flash_ops_sem;
+uint32_t LAST_FILE_CRC;
+static uint32_t file_addr;
+static uint32_t file_buf_len;
+static uint32_t file_type;
+static struct k_msgq file_msgq;
+static uint32_t crc32_table[256];
 static struct k_thread storage_commit_thread_data;
 
 static struct k_thread flash_ops_thread_data;
-/* reverse definition order: flash_ops_stack 0x200226e0, storage_commit_stack 0x20022ee0 */
 K_THREAD_STACK_DEFINE(storage_commit_stack, 0x1400);
 K_THREAD_STACK_DEFINE(flash_ops_stack, 0x800);
 
 static void flash_ops_thread(void *p1, void *p2, void *p3)
 {
-	int note;
-
 	G1_LOG_INF("flash op thread startup ...\n");
 	while (1) {
 		k_sem_take(&flash_ops_sem, K_FOREVER);
 		while (getAudioMessageQueueNum()) {
 			audioStreamFileManagerHandler();
 		}
-		while ((note = getQuickNoteQueueNum()) != 0) {
+		while (getQuickNoteQueueNum()) {
 			QuickNoteStoreHandler();
 		}
 		while (getSettingStorageQueueNum()) {
@@ -135,7 +133,6 @@ void try_to_save_file(struct GlassesState *gs)
 {
 	struct file_msg msg;
 	uint32_t addr;
-	uint8_t ab[4];
 	uint8_t len;
 	bool end = false;
 
@@ -148,11 +145,7 @@ void try_to_save_file(struct GlassesState *gs)
 		memcpy(file_buf + file_buf_len, &msg.data[1], len - 1);
 		file_buf_len += len - 1;
 	} else {
-		ab[3] = msg.data[1];
-		ab[2] = msg.data[2];
-		ab[1] = msg.data[3];
-		ab[0] = msg.data[4];
-		memcpy(&addr, ab, 4);
+		addr = sys_get_be32(&msg.data[1]);
 		file_addr = addr;
 		LAST_FILE_CRC = crc32(LAST_FILE_CRC, &msg.data[1], 4);
 		if (addr == DEMO_IMAGE_ADDR) {
@@ -287,15 +280,4 @@ void start_flash_storage_threads(struct GlassesState *gs)
 	k_thread_create(&storage_commit_thread_data, storage_commit_stack,
 			K_THREAD_STACK_SIZEOF(storage_commit_stack), storage_commit_thread, gs,
 			NULL, NULL, K_PRIO_COOP(5), 0, K_NO_WAIT);
-}
-
-/*
- * Ghost reference experiment (p_periph): the target's libc_nano member order shows that some
- * vendor function, dropped by --gc-sections, referenced fflush() and fseek() (fflush.o, findfp.o
- * and makebuf.o are extracted in the same archive scan as assert.o).  Nothing calls this.
- */
-void dump_file_to_stdio(void)
-{
-	fflush(stdout);
-	fseek(stdout, 0, SEEK_SET);
 }

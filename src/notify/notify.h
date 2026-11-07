@@ -1,7 +1,6 @@
 /*
  * Notification store / app white list / notification UI / dashboard info
  * - module private types and prototypes.
- * Reconstructed from the G1 v1.63 app core.
  */
 #ifndef G1_NOTIFY_H_
 #define G1_NOTIFY_H_
@@ -16,8 +15,8 @@
 #include "g1_date.h"
 
 /*
- * cJSON comes from modules/lib/cjson (CONFIG_CJSON_LIB).  The current
- * prj.conf does not enable it, so fall back to the declarations we use.
+ * cJSON comes from modules/lib/cjson (CONFIG_CJSON_LIB).  Without it,
+ * fall back to the declarations used here.
  */
 #if __has_include(<cJSON.h>)
 #include <cJSON.h>
@@ -62,18 +61,18 @@ cJSON *cJSON_AddStringToObject(cJSON *const object, const char *const name, cons
 
 #define PKCS7_PACK_DONE  0xc9
 
-/* GlassesState->schedule_notif (0xffc) */
+/* GlassesState->schedule_notif */
 struct schedule_notif {
-	uint32_t ts;                                     /* 0x00 */
+	uint32_t ts;
 	uint8_t pad_04[4];
-	char title[17];                                  /* 0x08 */
-	char desc[0x97];                                 /* 0x19 */
+	char title[17];
+	char desc[0x97];
 } __packed;
 
 /* notification.c */
 extern struct notif_msg g_arrMsgContent[MSG_TOTAL_NUM];
 void send_whilelist_app_info_wrapper(struct notif_msg *msg);
-int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, volatile uint8_t *src,
+int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, uint8_t *src,
 				   uint8_t *hdr, uint8_t *arg, uint8_t *out, uint32_t len);
 void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data);
 int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *out);
@@ -86,13 +85,7 @@ struct notif_msg *find_push_message_by_uid(uint32_t uid);
 struct notif_msg *get_message_by_index(int idx);
 void clear_all_messages(void);
 uint8_t count_messages(void);
-/* returns uint8_t; dashboard.c was built against an int prototype (its callers
- * re-extend the result) and defines COUNT_UNREAD_INT_PROTOTYPE before including this header */
-#ifdef COUNT_UNREAD_INT_PROTOTYPE
-int count_unread_messages(void);
-#else
 uint8_t count_unread_messages(void);
-#endif
 void clear_timeout_message(int force);
 void confirm_message(uint32_t uid);
 uint8_t push_message(struct notif_msg *msg);
@@ -124,7 +117,7 @@ void dump_template_gyro_info(void *arg);
 int draw_template_gyro_page(struct jbd_panel_context *panel, void *arg);
 
 /* ui_countdown.c */
-void countdown_tick(void *unused, struct countdown_ts_context *cd);
+void countdown_tick(struct countdown_ts_context *cd);
 int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg);
 int draw_template_notification_page(struct jbd_panel_context *panel, void *arg);
 void countdown_reset(struct countdown_ts_context *cd);
