@@ -14,20 +14,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/hci.h>
 #include <app_version.h>
-#if __has_include(<cJSON.h>)
 #include <cJSON.h>
-#else
-/* cJSON include path is missing until CONFIG_CJSON_LIB=y is set in prj.conf */
-typedef struct cJSON cJSON;
-typedef int cJSON_bool;
-cJSON *cJSON_CreateObject(void);
-cJSON *cJSON_AddNumberToObject(cJSON *const object, const char *const name, const double number);
-cJSON *cJSON_AddStringToObject(cJSON *const object, const char *const name,
-             const char *const string);
-cJSON_bool cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
-char *cJSON_Print(const cJSON *item);
-void cJSON_Delete(cJSON *item);
-#endif
 
 #include "g1_log.h"
 #include "ble_proto.h"

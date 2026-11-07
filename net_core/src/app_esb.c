@@ -12,41 +12,12 @@
 #include <nrf.h>
 
 #include "net_common.h"
+#include "app_esb.h"
+#include "main.h"
+#include "timeslot.h"
 
 LOG_MODULE_REGISTER(app_esb);
 
-/* Event passed to the user callback (0x21004618). */
-struct app_esb_evt {
-  uint8_t type;
-  uint8_t *data;
-  uint32_t len;
-  int8_t rssi;
-};
-
-typedef void (*app_esb_cb_t)(struct app_esb_evt *evt);
-
-/* main.c */
-extern int net_mode_get(void);                  /* mode */
-extern int esb_tx_buf_len_get(void);                  /* pending tx length */
-extern int esb_tx_buf_set(const uint8_t *data, size_t len); /* store pending tx */
-extern void esb_tx_buf_clear(void);                 /* clear pending tx */
-extern void ipc_send_esb_status(uint8_t state);        /* report state to the app core */
-extern int esb_rx_msgq_init(void);                  /* rx msgq init */
-extern int esb_rx_msgq_get(uint8_t *buf);          /* rx msgq get */
-extern uint8_t esb_tx_buf[];                  /* pending tx data */
-extern uint8_t esb_channel;                    /* esb channel */
-extern uint8_t esb_tx_kind;
-extern uint8_t esb_tx_state;
-extern uint8_t esb_tx_done;
-extern uint8_t esb_evt_active;
-
-int on_timeslot_start_stop(int op);
-
-/* timeslot.c */
-extern void timeslot_handler_init(int (*cb)(int op));    /* timeslot start */
-extern uint8_t timeslot_radio_is_on(void);              /* timeslot radio enabled */
-
-/* .data, 1-byte aligned group */
 uint8_t base_addr_0[4] = {0xC9, 0xC9, 0xC9, 0xC9};
 uint8_t base_addr_1[4] = {0xA3, 0xA3, 0xA3, 0xA3};
 uint8_t addr_prefix[2] = {0xE9, 0xD3};
