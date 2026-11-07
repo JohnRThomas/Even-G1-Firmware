@@ -1,0 +1,8 @@
+[submodule "tools/simulator"]
+	path = tools/simulator
+	url = https://github.com/JohnRThomas/Even-G1-Simulator.git
+	branch = main
+[submodule "tools/ota"]
+	path = tools/ota
+	url = https://github.com/JohnRThomas/Even-G1-OTA.git
+	branch = main
