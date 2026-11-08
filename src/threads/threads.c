@@ -359,7 +359,6 @@ void check_work_mode(int in_box, int lid_closed, uint8_t report)
 		}
 		wearing = true;
 		if (!in_box) {
-			enter_wear_burial_point();
 			goto check_report;
 		}
 	} else {
@@ -396,7 +395,6 @@ void check_work_mode(int in_box, int lid_closed, uint8_t report)
 			}
 		}
 	}
-	exit_wear_burial_point();
 check_report:
 
 	if (report) {

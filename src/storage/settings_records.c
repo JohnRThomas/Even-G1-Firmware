@@ -8,7 +8,6 @@
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
-#include <zephyr/random/rand32.h>
 #include <zephyr/sys/reboot.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
@@ -303,60 +302,19 @@ int load_usr_setting(struct GlassesState *gs)
 	return 0;
 }
 
-int update_burial_point_to_flash(struct GlassesState *gs)
+/*
+ * Earlier firmware kept a usage-statistics record here.  It is no longer written
+ * or read; a user data reset still erases what an earlier firmware left behind.
+ */
+#define LEGACY_USAGE_STATS_ADDR 0x135000
+#define LEGACY_USAGE_STATS_SIZE 0x11c
+
+static int erase_legacy_usage_stats(void)
 {
-	struct bp_context bp;
-	int ret;
+	uint8_t blank[LEGACY_USAGE_STATS_SIZE];
 
-	memset(&bp, 0, sizeof(bp));
-	G1_LOG_WRN("update_burial_point_to_flash!!!\n");
-	if (flash_settings_read(BURIAL_POINT_ADDR, &bp, sizeof(bp))) {
-		G1_LOG_WRN("burial_point read error!\n");
-		return -1;
-	}
-	ret = memcmp(&bp, &gs->bp, sizeof(bp));
-	if (ret == 0) {
-		return ret;
-	}
-	ret = flash_settings_write_and_verify(BURIAL_POINT_ADDR, &gs->bp,
-					      sizeof(gs->bp));
-	if (ret) {
-		G1_LOG_WRN("burial_point flash_settings_write_and_verify error!\n");
-		return -1;
-	}
-	/*
-	 * No return statement here in the vendor code (found by the permuter): the
-	 * shipped function returns r0, i.e. the 0 from flash_settings_write_and_verify.
-	 */
-}
-
-int clear_hardware_settings(struct GlassesState *gs)
-{
-	memset(&gs->bp, 0xff, sizeof(gs->bp));
-	flash_settings_write_and_verify(BURIAL_POINT_ADDR, &gs->bp,
-					sizeof(gs->bp));
-	return 0;
-}
-
-int load_burial_point(struct GlassesState *gs)
-{
-	struct bp_context *bp = &gs->bp;
-	uint32_t id;
-	int ret;
-
-	ret = flash_settings_read(BURIAL_POINT_ADDR, bp, sizeof(*bp));
-	if (ret) {
-		G1_LOG_WRN("burial_point read error!\n");
-		return -1;
-	}
-	if ((bp->version == 0xff && bp->day_index == 0xff) || !bp->valid) {
-		id = sys_rand32_get();
-		memset(bp, 0, sizeof(*bp));
-		bp->version = 7;
-		bp->id = id;
-		bp->valid = 1;
-	}
-	return ret;
+	memset(blank, 0xff, sizeof(blank));
+	return flash_settings_write_and_verify(LEGACY_USAGE_STATS_ADDR, blank, sizeof(blank));
 }
 
 void reset_all_usr_data(struct GlassesState *gs, int reboot)
@@ -380,7 +338,7 @@ void reset_all_usr_data(struct GlassesState *gs, int reboot)
 	cleanDashBoardStartUpModeInfo();
 	k_msleep(200);
 	clear_user_settings(gs);
-	clear_hardware_settings(gs);
+	erase_legacy_usage_stats();
 	k_msleep(500);
 	deinit_ncs_memory();
 	k_msleep(500);
@@ -496,8 +454,7 @@ int read_usr_settting_from_flash(struct usr_settings *out)
 
 int load_settings_from_flash(struct GlassesState *gs)
 {
-	if (load_sys_setting(gs) == 0 && load_usr_setting(gs) == 0 &&
-	    load_burial_point(gs) == 0) {
+	if (load_sys_setting(gs) == 0 && load_usr_setting(gs) == 0) {
 		countdown_reset(get_dashboard_state()->countdown_ts);
 	}
 	return 0;
