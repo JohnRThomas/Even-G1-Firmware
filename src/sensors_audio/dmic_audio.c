@@ -11,6 +11,7 @@
 #include <zephyr/drivers/flash.h>
 #include <zephyr/audio/dmic.h>
 #include <zephyr/sys/atomic.h>
+#include <hal/nrf_pdm.h>
 
 #include "lc3.h"
 
@@ -42,6 +43,12 @@
 #define LC3_FRAME_BYTES 20
 
 #define DMIC_MSGQ_LEN 10
+
+/* Microphone gain, in 0.5 dB steps where NRF_PDM_GAIN_DEFAULT (0x28) is 0 dB:
+ * 0x40 is +12 dB.  The Zephyr PDM driver has no gain setting; dmic_configure()
+ * always programs the 0 dB default, so the gain registers are rewritten after it. */
+#define DMIC_PDM_GAIN 0x40
+BUILD_ASSERT(DMIC_PDM_GAIN <= NRF_PDM_GAIN_MAXIMUM);
 
 K_MEM_SLAB_DEFINE_STATIC(dmic_mem_slab, MAX_BLOCK_SIZE, BLOCK_COUNT, 4);
 
@@ -305,6 +312,9 @@ int dmic_stream_start(void)
 				G1_LOG_ERR("Failed to configure the driver: %d\n", ret);
 				goto err;
 			}
+			/* The PDM is still disabled here and the START trigger leaves the
+			 * gain alone, so this value is what the capture runs with. */
+			nrf_pdm_gain_set(NRF_PDM0, DMIC_PDM_GAIN, DMIC_PDM_GAIN);
 			ret = dmic_trigger(dmic_dev, DMIC_TRIGGER_START);
 			if (ret < 0) {
 				G1_LOG_ERR("START trigger failed: %d\n", ret);
