@@ -2,16 +2,14 @@
  * Template countdown timer page of the page dispatcher (ui_task_table in
  * ui_notification.c, screen id 2) and its helpers.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <glasses_state.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #include "../fonts/font_bitmap.h"
 #include "../panel_display/panel.h"
 #include "../ui/ui.h"
-#include "g1_log.h"
 #include "notify.h"
 
 static uint32_t countdown_last_ms;
@@ -83,6 +81,8 @@ int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg) {
 }
 
 int draw_template_notification_page(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(panel);
+  ARG_UNUSED(arg);
   return 0;
 }
 

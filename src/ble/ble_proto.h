@@ -117,6 +117,8 @@ extern uint8_t nav_text_updated;
 extern uint8_t nav_panoramic_map_ready;
 extern uint8_t nav_overview_map_ready;
 extern uint8_t tp_scroll_pending;            /* teleprompter text scrolled */
+extern int debug_pending;                    /* ble_printk() woke the work thread */
+extern uint8_t BIT_MAP_CHUNK_ID;             /* last file upload chunk accepted, 0xff before the first */
 extern uint8_t nav_overview_map_buf[0x1210];    /* navigation overview map as received */
 /* phone data buffers filled by ble_process_put_req (read by DashBoard_Reflash) */
 extern struct stock_item stock_items[4];

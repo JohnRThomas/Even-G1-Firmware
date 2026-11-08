@@ -128,10 +128,10 @@ static void draw_canvas(struct jbd_panel_context *panel) {
   int y0 = gui_screen_y_offset();
   uint8_t lit = (CANVAS_LEVEL << 4) | CANVAS_LEVEL;
 
-  zassert_true(_clean_fb_data(panel->panel_buffer, lit, x0, y0, x0 + CANVAS_W - 1, y0 + CANVAS_H - 1) > 0,
+  zassert_true(clean_fb_data(panel->panel_buffer, lit, x0, y0, x0 + CANVAS_W - 1, y0 + CANVAS_H - 1) > 0,
                "canvas (%d, %d) does not fit the frame", x0, y0);
   zassert_equal(
-    _reflash_fb_data_to_lcd(panel->current_row, panel->current_column, 0, 0, PANEL_WIDTH, PANEL_FB_ROWS - 1), 0);
+    reflash_fb_data_to_lcd(panel->current_row, panel->current_column, 0, 0, PANEL_WIDTH, PANEL_FB_ROWS - 1), 0);
 }
 
 static int dashboard_draws_canvas(struct jbd_panel_context *panel, void *arg, int event) {

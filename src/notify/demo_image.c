@@ -2,18 +2,19 @@
  * Demo / calibration pictures: 1 bpp BMP files in the external flash are
  * converted to the 4 bpp panel format, plus the 9-point position page.
  */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #include "../fonts/font_bitmap.h"
 #include "../gui/gui.h"
 #include "../panel_display/panel.h"
 #include "demo_image.h"
-#include "g1_log.h"
-#include "notify.h"
+#include "glasses_state.h"
 
 #define DEMO_IMAGE_FLASH_ADDR 0x180000
 #define DEMO_IMAGE_SIZE       0x3ebe
@@ -26,14 +27,14 @@ uint8_t demo_mode;
 static uint8_t demo_idx;
 
 uint8_t *line_buf;
-int line_idx;
-int line_x;
+static int line_idx;
+static int line_x;
 static uint8_t demo_shown = 0xff;
 
 static int demo_x = -1;
 static int demo_y = -1;
 
-void pixelto4bithex_for_flash(uint8_t pix, int width, uint16_t row) {
+static __noinline void pixelto4bithex_for_flash(uint8_t pix, int width) {
   if (line_buf == NULL) {
     line_buf = malloc(LINE_BYTES);
     if (line_buf == NULL) {
@@ -42,14 +43,14 @@ void pixelto4bithex_for_flash(uint8_t pix, int width, uint16_t row) {
     }
     memset(line_buf, 0, LINE_BYTES);
   }
-  for (int shift = 0; shift < 8; shift += 2) {
+  for (unsigned int shift = 0; shift < 8; shift += 2) {
     uint8_t v;
 
     if (line_x >= width) {
       return;
     }
     line_x += 2;
-    v = (pix << shift) & 0xc0;
+    v = ((uint32_t)pix << shift) & 0xc0U;
     if (v == 0xc0) {
       line_buf[line_idx] = 0xff;
     } else if (v == 0x80) {
@@ -65,9 +66,9 @@ void pixelto4bithex_for_flash(uint8_t pix, int width, uint16_t row) {
   }
 }
 
-uint32_t bmp_read_u32(const void *p) {
-  return ((const uint8_t *)p)[0] | ((const uint8_t *)p)[1] << 8 | ((const uint8_t *)p)[2] << 16 |
-         (uint32_t)((const uint8_t *)p)[3] << 24;
+static uint32_t bmp_read_u32(const void *p) {
+  return (uint32_t)((const uint8_t *)p)[0] | (uint32_t)((const uint8_t *)p)[1] << 8U |
+         (uint32_t)((const uint8_t *)p)[2] << 16U | (uint32_t)((const uint8_t *)p)[3] << 24U;
 }
 
 void get_demo_image_source_from_flash(void) {
@@ -88,13 +89,13 @@ void get_demo_image_source_from_flash(void) {
     printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
   } else {
     memcpy(&fh, buf, sizeof(fh));
-    if (strncmp(fh.type, "BM", 2)) {
+    if (strncmp(fh.type, "BM", 2) != 0) {
       printk("File is not BMP format \n");
     } else {
       memcpy(&ih, buf + sizeof(fh), sizeof(ih));
-      off = bmp_read_u32(&fh.off_bits);
-      width = bmp_read_u32(&ih.width);
-      height = bmp_read_u32(&ih.height);
+      off = (int)bmp_read_u32(&fh.off_bits);
+      width = (int)bmp_read_u32(&ih.width);
+      height = (int)bmp_read_u32(&ih.height);
       if (ih.bit_count != 1) {
         printf("Unsupported bit depth - %d\r\n", ih.bit_count);
       } else {
@@ -121,7 +122,7 @@ void get_demo_image_source_from_flash(void) {
             break;
           }
           for (int i = 0; i < bytes; i++) {
-            pixelto4bithex_for_flash(~buf[i], width, y);
+            pixelto4bithex_for_flash(~buf[i], width);
           }
           if (line_buf) {
             line_idx = 0;
@@ -134,7 +135,7 @@ void get_demo_image_source_from_flash(void) {
   free(buf);
 }
 
-void pixelto4bithex(uint8_t pix, int width, uint16_t row) {
+static __noinline void pixelto4bithex(uint8_t pix, int width) {
   if (line_buf == NULL) {
     line_buf = malloc(LINE_BYTES);
     if (line_buf == NULL) {
@@ -143,14 +144,14 @@ void pixelto4bithex(uint8_t pix, int width, uint16_t row) {
     }
     memset(line_buf, 0, LINE_BYTES);
   }
-  for (int shift = 0; shift < 8; shift += 2) {
+  for (unsigned int shift = 0; shift < 8; shift += 2) {
     uint8_t v;
 
     if (line_x >= width) {
       return;
     }
     line_x += 2;
-    v = (pix << shift) & 0xc0;
+    v = ((uint32_t)pix << shift) & 0xc0U;
     if (v == 0xc0) {
       line_buf[line_idx] = 0;
     } else if (v == 0x80) {
@@ -166,7 +167,7 @@ void pixelto4bithex(uint8_t pix, int width, uint16_t row) {
   }
 }
 
-void get_demo_image_source(uint32_t idx) {
+static void get_demo_image_source(uint32_t idx) {
   struct bmp_file_header fh;
   struct bmp_info_header ih;
   uint8_t *buf;
@@ -189,13 +190,13 @@ void get_demo_image_source(uint32_t idx) {
     printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
   } else {
     memcpy(&fh, buf, sizeof(fh));
-    if (strncmp(fh.type, "BM", 2)) {
+    if (strncmp(fh.type, "BM", 2) != 0) {
       printk("File is not BMP format \n");
     } else {
       memcpy(&ih, buf + sizeof(fh), sizeof(ih));
-      off = bmp_read_u32(&fh.off_bits);
-      width = bmp_read_u32(&ih.width);
-      height = bmp_read_u32(&ih.height);
+      off = (int)bmp_read_u32(&fh.off_bits);
+      width = (int)bmp_read_u32(&ih.width);
+      height = (int)bmp_read_u32(&ih.height);
       if (ih.bit_count != 1) {
         printf("Unsupported bit depth - %d\r\n", ih.bit_count);
       } else {
@@ -222,7 +223,7 @@ void get_demo_image_source(uint32_t idx) {
             break;
           }
           for (int i = 0; i < bytes; i++) {
-            pixelto4bithex(~buf[i], width, y);
+            pixelto4bithex(~buf[i], width);
           }
           if (line_buf) {
             line_idx = 0;
@@ -252,6 +253,7 @@ void demo_image_next(void) {
 }
 
 int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   int w, h;
 
   if (event == 2) {
@@ -317,8 +319,8 @@ int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event) {
             break;
         }
         copy_to_frame_buffer(panel->panel_buffer, mark, w / 2, h, demo_x, demo_y);
-        _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                demo_x, demo_y, w + demo_x, h + demo_y);
+        reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                               demo_x, demo_y, w + demo_x, h + demo_y);
       }
     }
   } else if (demo_shown != demo_idx) {
@@ -328,12 +330,14 @@ int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event) {
     demo_y = 0;
     get_demo_picture(0, &w, &h);
     get_demo_image_source(demo_idx);
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                            demo_x, demo_y, w + demo_x, h + demo_y);
+    reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                           demo_x, demo_y, w + demo_x, h + demo_y);
   }
   return 0;
 }
 
 int draw_template_new_message_page(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(panel);
+  ARG_UNUSED(arg);
   return 0;
 }

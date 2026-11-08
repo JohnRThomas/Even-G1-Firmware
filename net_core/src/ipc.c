@@ -3,8 +3,14 @@
  * The first byte of every message selects the logical endpoint (struct ipc_ep).
  */
 #include <errno.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/ipc/ipc_service.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 
 #include "ipc.h"
 #include "net_common.h"
@@ -16,6 +22,8 @@ static struct ipc_ept ipc_ept;
 static K_SEM_DEFINE(ept_bound_sem, 0, 1);
 
 static void ipc_ept_recv(const void *data, size_t len, void *priv) {
+  ARG_UNUSED(priv);
+
   const uint8_t *p = data;
   uint8_t id = p[0];
   struct ipc_ops *ops = g_ops;
@@ -58,6 +66,8 @@ static int ipc_send(const void *data, size_t len) {
 }
 
 static void ipc_ept_bound(void *priv) {
+  ARG_UNUSED(priv);
+
   k_sem_give(&ept_bound_sem);
 }
 

@@ -53,7 +53,7 @@ static void events_before(void *fixture) {
   send_response_data_to_ble_fake.custom_fake = forward_response;
   responses_sent = 0;
   /* dashboard.c has no harness reset hook */
-  memset(&_dashboard_prv_data, 0, sizeof(_dashboard_prv_data));
+  memset(&dashboard_prv, 0, sizeof(dashboard_prv));
   pages(0, 0, 0, 0);
 }
 
@@ -216,7 +216,7 @@ ZTEST(events, test_f5_packet_from_the_work_thread_is_sent_through_the_dispatcher
 static void dashboard(uint8_t mode, uint8_t pane) {
   g1_state()->dashboard_ts->disp_mode = mode;
   g1_state()->dashboard_ts->area = pane;
-  _dashboard_prv_data.pane_mode = pane;
+  dashboard_prv.pane_mode = pane;
 }
 
 static void messages(int count, int read) {

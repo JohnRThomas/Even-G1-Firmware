@@ -29,14 +29,19 @@
  */
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/eeprom.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/sys/util_macro.h>
 
 #include <g1_log.h>
 
@@ -54,8 +59,8 @@
 static const uint8_t ndefRtdTypeWlcCapability[] = "WLCCAP";
 static const uint8_t ndefRtdTypeWlcStatusInfo[] = "WLCSTAI";
 
-ndefConstBuffer8 bufTypeRtdWlcCapability = {ndefRtdTypeWlcCapability, sizeof(ndefRtdTypeWlcCapability) - 1U};
-ndefConstBuffer8 bufTypeRtdWlcStatusInfo = {ndefRtdTypeWlcStatusInfo, sizeof(ndefRtdTypeWlcStatusInfo) - 1U};
+static ndefConstBuffer8 bufTypeRtdWlcCapability = {ndefRtdTypeWlcCapability, sizeof(ndefRtdTypeWlcCapability) - 1U};
+static ndefConstBuffer8 bufTypeRtdWlcStatusInfo = {ndefRtdTypeWlcStatusInfo, sizeof(ndefRtdTypeWlcStatusInfo) - 1U};
 
 static struct wlc_listener wlc_listener = {
   .state = 1,
@@ -64,7 +69,7 @@ static uint8_t wlc_info_sent = 1;
 
 static struct nfc_charge nfc_charge;
 static uint32_t nfc_tick_start;
-uint32_t nfc_field_mv;    /* last NFC field voltage (mV * 10) */
+uint32_t nfc_field_mv;
 static sCCFileInfo CCFileStruct;
 static uint32_t nfc_field_tick;
 static uint32_t wlcCapabilityItem;  /* ndef_type_wlc payload items */
@@ -74,7 +79,7 @@ static uint32_t nfc_charge_tick;
 static int wlc_tag_configured;
 
 static uint8_t ndefRecordPoolIndex = 0;  /* ndef_message.c */
-uint8_t nfc_tag_type_ok;    /* ST25DV of the expected type (UID byte 6 is 0x50/0x51) */
+uint8_t nfc_tag_type_ok;
 static uint8_t nfc_field_on;
 static uint8_t wlcCapabilityTemp;
 static uint8_t wlc_field_present;
@@ -394,7 +399,7 @@ int NfcType5_NDEFDetection(void) {
   CCFileStruct.State = TT5_NO_NDEF;
 
   /* Read CCFile */
-  status = NfcType5_ReadCCFile(acc_buffer);
+  status = (int16_t)NfcType5_ReadCCFile(acc_buffer);
   if (status != NDEF_OK) {
     return status;
   }
@@ -404,7 +409,7 @@ int NfcType5_NDEFDetection(void) {
     return NDEF_ERROR_NOT_FORMATED;
   }
   /* Check Version and Access Condition */
-  if ((acc_buffer[1] & 0xFC) != 0x40) {
+  if ((acc_buffer[1] & 0xFCU) != 0x40U) {
     return NDEF_ERROR_NOT_FORMATED;
   }
 
@@ -425,14 +430,14 @@ int NfcType5_NDEFDetection(void) {
   CCFileStruct.TT5Tag = acc_buffer[3];
 
   /* Search for position of NDEF TLV in memory and tag status */
-  while (
-    (eeprom_st25dv_read(global_st25dv_context_ptr, CCFileStruct.NDEF_offset, &tlv_detect, sizeof(TT5_TLV_t)) == 0) &&
-    (CCFileStruct.NDEF_offset < memory_size)) {
+  while ((eeprom_st25dv_read(global_st25dv_context_ptr, (off_t)CCFileStruct.NDEF_offset, &tlv_detect,
+                             sizeof(TT5_TLV_t)) == 0) &&
+         (CCFileStruct.NDEF_offset < memory_size)) {
     /* Detect first NDEF Message in memory */
     if (tlv_detect.Type == NFCT5_NDEF_MSG_TLV) {
       if (tlv_detect.Length == 0x00) {
         CCFileStruct.State = TT5_INITIALIZED;
-      } else if (CCFileStruct.Version & 0x3) {
+      } else if (CCFileStruct.Version & 0x3U) {
         CCFileStruct.State = TT5_READ;
       } else {
         CCFileStruct.State = TT5_READ_WRITE;
@@ -440,7 +445,7 @@ int NfcType5_NDEFDetection(void) {
       return NDEF_OK;
     }
     /* If Proprietary NDEF jump to end of proprietary message */
-    else if (tlv_detect.Type == NFCT5_PROPRIETARY_TLV) {
+    if (tlv_detect.Type == NFCT5_PROPRIETARY_TLV) {
       if (tlv_detect.Length == NFCT5_3_BYTES_L_TLV) {
         CCFileStruct.NDEF_offset += sizeof(TT5_TLV_t) + sys_be16_to_cpu(tlv_detect.Length16);
       } else {
@@ -483,19 +488,19 @@ int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData) {
   }
 
   offset = CCFileStruct.NDEF_offset;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, offset, TLV_Header, TLVHeaderLength);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, (off_t)offset, TLV_Header, TLVHeaderLength);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
 
   offset += TLVHeaderLength;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, offset, pData, Length);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, (off_t)offset, pData, Length);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
 
   offset += Length;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, offset, &NDEF_end, 1);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, (off_t)offset, &NDEF_end, 1);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
@@ -534,7 +539,7 @@ void nfc_configure_gpo(uint32_t gpo_conf) {
     return;
   }
 
-  it_time = ((gpo_conf & 0x3ff) >> 8) | 0x0c;
+  it_time = ((gpo_conf & 0x3ffU) >> 8U) | 0x0cU;
   st25dv_write_it_pulse(global_st25dv_context_ptr, it_time);
 }
 
@@ -558,7 +563,7 @@ int NfcType5_TT5Init(void) {
   }
 
   /* Update CCFile */
-  status = NfcType5_WriteCCFile(accbuffer);
+  status = (int16_t)NfcType5_WriteCCFile(accbuffer);
   if (status != NDEF_OK) {
     return status;
   }
@@ -566,14 +571,14 @@ int NfcType5_TT5Init(void) {
   /* Update NDEF TLV for INITIALIZED state */
   /* Update T */
   cdata = NFCT5_NDEF_MSG_TLV;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, CCFileStruct.NDEF_offset, &cdata, 1);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, (off_t)CCFileStruct.NDEF_offset, &cdata, 1);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
 
   /* Update L */
   cdata = 0x00;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, CCFileStruct.NDEF_offset + 1, &cdata, 1);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, (off_t)CCFileStruct.NDEF_offset + 1, &cdata, 1);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
@@ -727,7 +732,8 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
     wlcStatusInfo.temperatureWlcl = stai_info[7];
     wlcStatusInfo.controlByte2 = stai_info[8];
     count = 2;
-    err |= ndefRtdWlcStatusInfoInit(&typeStai, &wlcStatusInfo) | ndefTypeToRecord(&typeStai, &recordStai);
+    err |= (uint32_t)ndefRtdWlcStatusInfoInit(&typeStai, &wlcStatusInfo) |
+           (uint32_t)ndefTypeToRecord(&typeStai, &recordStai);
     records[1] = recordStai;
   }
 
@@ -1047,13 +1053,13 @@ ReturnCode ndefRecordEncodeHeader(const ndefRecord *record, ndefBuffer *bufHeade
     offset++;
   } else {
     /* Standard record */
-    bufHeader->buffer[offset] = (uint8_t)(payloadLength >> 24);
+    bufHeader->buffer[offset] = (uint8_t)(payloadLength >> 24U);
     offset++;
-    bufHeader->buffer[offset] = (uint8_t)(payloadLength >> 16);
+    bufHeader->buffer[offset] = (uint8_t)(payloadLength >> 16U);
     offset++;
-    bufHeader->buffer[offset] = (uint8_t)(payloadLength >> 8);
+    bufHeader->buffer[offset] = (uint8_t)(payloadLength >> 8U);
     offset++;
-    bufHeader->buffer[offset] = (uint8_t)(payloadLength);
+    bufHeader->buffer[offset] = (uint8_t)payloadLength;
     offset++;
   }
 
@@ -1451,7 +1457,7 @@ int nfc_charge_status(bool had_field) {
   return get_dashboard_state()->battery_left >= 100 ? 1 : 0;
 }
 
-void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc) {
+static void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc) {
   nfc_charge_update_state(chg);
 
   switch (chg->state) {
@@ -1554,7 +1560,7 @@ void nfc_charge_refresh(struct nfc_charge *chg, struct wlc_listener *wlc) {
   nfc_read_field_mv(&chg->field_mv);
   nfc_field_mv = chg->field_mv;
 
-  wlc->stai_info[4] = (get_dashboard_state()->battery_voltage + 200u) >> 8;
+  wlc->stai_info[4] = (get_dashboard_state()->battery_voltage + 200u) >> 8U;
   wlc->stai_info[2] = get_dashboard_state()->battery_left;
   wlc->battery = get_dashboard_state()->battery_left;
   (void)get_dashboard_state();
@@ -1697,7 +1703,7 @@ void wlc_listener_process(struct wlc_listener *wlc) {
     case 7:
     case 9:
       if (!wlc->cap_info[0]) {
-        wlc_wait_ms = pow(2.0, wlc->cap_info[4] + 3) - 50.0;
+        wlc_wait_ms = (float)(pow(2.0, wlc->cap_info[4] + 3) - 50.0);
       }
       nfc_tick_reset();
       wlc->state = 10;

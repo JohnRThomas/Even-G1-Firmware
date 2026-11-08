@@ -1,17 +1,18 @@
 /*
  * Production-test lpuart bring-up (init_serial_port / init_serial_comm).
  */
+#include <stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/__assert.h>
 #include <zephyr/sys/printk.h>
 
-#include "g1_log.h"
 #include "production_test.h"
 
 static uint8_t lpuart_ready;
 
-int init_serial_port(void) {
+static int init_serial_port(void) {
   const struct device *lpuart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 
   if (lpuart_ready) {

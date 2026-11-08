@@ -72,7 +72,7 @@ static ALWAYS_INLINE uint8_t gui_fade_mask_at(unsigned int row, unsigned int ste
   if (step >= GUI_FADE_STEPS - 1) {
     return 0xff;
   }
-  return expand[(gui_fade_mask_bits[row][step - 1][col >> 2] >> (6 - 2 * (col & 3))) & 3];
+  return expand[(unsigned int)(gui_fade_mask_bits[row][step - 1][col >> 2U] >> (6U - 2U * (col & 3U))) & 3U];
 }
 
 atomic_val_t gui_flags_get(void);
@@ -120,6 +120,7 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
                           uint8_t color2);
 int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color);
 int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y);
+int gui_font_kerning(uint16_t cur, uint16_t next);
 int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, int *out_w);
 
 /* gui_strings.c */

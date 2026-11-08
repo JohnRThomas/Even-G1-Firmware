@@ -7,7 +7,7 @@
  *   MD5Transform -> mbedtls_internal_md5_process
  *   MD5Update    -> mbedtls_md5_update
  *   MD5Final     -> mbedtls_md5_finish
- *   Encode / Decode -> Encode / md5_decode
+ *   Encode / Decode -> Encode / md5_decode (both static)
  * mbedtls_md5 (one-shot starts/update/finish) is an addition.
  */
 #include <stddef.h>
@@ -17,58 +17,58 @@
 #include "md5.h"
 
 /* Constants for MD5Transform routine. */
-#define S11 7
-#define S12 12
-#define S13 17
-#define S14 22
-#define S21 5
-#define S22 9
-#define S23 14
-#define S24 20
-#define S31 4
-#define S32 11
-#define S33 16
-#define S34 23
-#define S41 6
-#define S42 10
-#define S43 15
-#define S44 21
+#define S11 7U
+#define S12 12U
+#define S13 17U
+#define S14 22U
+#define S21 5U
+#define S22 9U
+#define S23 14U
+#define S24 20U
+#define S31 4U
+#define S32 11U
+#define S33 16U
+#define S34 23U
+#define S41 6U
+#define S42 10U
+#define S43 15U
+#define S44 21U
 
 static unsigned char PADDING[64] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                     0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                     0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-/* F, G, H and I are basic MD5 functions. */
-#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
-#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
-#define H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | (~z)))
+/* MD5_F, MD5_G, MD5_H and MD5_I are the basic MD5 functions F, G, H and I. */
+#define MD5_F(x, y, z) (((x) & (y)) | ((~(x)) & (z)))
+#define MD5_G(x, y, z) (((x) & (z)) | ((y) & (~(z))))
+#define MD5_H(x, y, z) ((x) ^ (y) ^ (z))
+#define MD5_I(x, y, z) ((y) ^ ((x) | (~(z))))
 
 /* ROTATE_LEFT rotates x left n bits. */
-#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
+#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32U - (n))))
 
 /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4. */
 #define FF(a, b, c, d, x, s, ac)                                                                                       \
   {                                                                                                                    \
-    (a) += F((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                    \
+    (a) += MD5_F((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                \
     (a) = ROTATE_LEFT((a), (s));                                                                                       \
     (a) += (b);                                                                                                        \
   }
 #define GG(a, b, c, d, x, s, ac)                                                                                       \
   {                                                                                                                    \
-    (a) += G((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                    \
+    (a) += MD5_G((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                \
     (a) = ROTATE_LEFT((a), (s));                                                                                       \
     (a) += (b);                                                                                                        \
   }
 #define HH(a, b, c, d, x, s, ac)                                                                                       \
   {                                                                                                                    \
-    (a) += H((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                    \
+    (a) += MD5_H((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                \
     (a) = ROTATE_LEFT((a), (s));                                                                                       \
     (a) += (b);                                                                                                        \
   }
 #define II(a, b, c, d, x, s, ac)                                                                                       \
   {                                                                                                                    \
-    (a) += I((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                    \
+    (a) += MD5_I((b), (c), (d)) + (x) + (uint32_t)(ac);                                                                \
     (a) = ROTATE_LEFT((a), (s));                                                                                       \
     (a) += (b);                                                                                                        \
   }
@@ -78,20 +78,20 @@ static void Encode(unsigned char *output, const uint32_t *input, unsigned int le
   unsigned int i, j;
 
   for (i = 0, j = 0; j < len; i++, j += 4) {
-    output[j] = (unsigned char)(input[i] & 0xff);
-    output[j + 1] = (unsigned char)((input[i] >> 8) & 0xff);
-    output[j + 2] = (unsigned char)((input[i] >> 16) & 0xff);
-    output[j + 3] = (unsigned char)((input[i] >> 24) & 0xff);
+    output[j] = (unsigned char)(input[i] & 0xffU);
+    output[j + 1] = (unsigned char)((input[i] >> 8U) & 0xffU);
+    output[j + 2] = (unsigned char)((input[i] >> 16U) & 0xffU);
+    output[j + 3] = (unsigned char)((input[i] >> 24U) & 0xffU);
   }
 }
 
 /* Decodes input (unsigned char) into output (uint32_t). len is a multiple of 4. */
-void md5_decode(uint32_t *output, const unsigned char *input, unsigned int len) {
+static void md5_decode(uint32_t *output, const unsigned char *input, unsigned int len) {
   unsigned int i, j;
 
   for (i = 0, j = 0; j < len; i++, j += 4) {
-    output[i] = ((uint32_t)input[j]) | (((uint32_t)input[j + 1]) << 8) | (((uint32_t)input[j + 2]) << 16) |
-                (((uint32_t)input[j + 3]) << 24);
+    output[i] = ((uint32_t)input[j]) | (((uint32_t)input[j + 1]) << 8U) | (((uint32_t)input[j + 2]) << 16U) |
+                (((uint32_t)input[j + 3]) << 24U);
   }
 }
 
@@ -190,14 +190,15 @@ void mbedtls_md5_update(mbedtls_md5_context *context, const unsigned char *input
   unsigned int i, index, partLen;
 
   /* Compute number of bytes mod 64 */
-  index = (unsigned int)((context->count[0] >> 3) & 0x3F);
+  index = (context->count[0] >> 3U) & 0x3FU;
   partLen = 64 - index;
 
   /* Update number of bits */
-  if ((context->count[0] += ((uint32_t)inputLen << 3)) < ((uint32_t)inputLen << 3)) {
+  context->count[0] += ((uint32_t)inputLen << 3U);
+  if (context->count[0] < ((uint32_t)inputLen << 3U)) {
     context->count[1]++;
   }
-  context->count[1] += ((uint32_t)inputLen >> 29);
+  context->count[1] += ((uint32_t)inputLen >> 29U);
 
   /* Transform as many times as possible. */
   if (partLen > inputLen) {
@@ -207,6 +208,7 @@ void mbedtls_md5_update(mbedtls_md5_context *context, const unsigned char *input
     mbedtls_internal_md5_process(context->state, context->buffer);
 
     for (i = partLen; i + 64 <= inputLen; i += 64) {
+      /* NOLINTNEXTLINE(clang-analyzer-security.ArrayBound): i + 64 <= inputLen */
       mbedtls_internal_md5_process(context->state, &input[i]);
     }
 
@@ -214,6 +216,7 @@ void mbedtls_md5_update(mbedtls_md5_context *context, const unsigned char *input
   }
 
   /* Buffer remaining input */
+  /* NOLINTNEXTLINE(clang-analyzer-security.ArrayBound): i <= inputLen */
   memcpy(&context->buffer[index], &input[i], inputLen - i);
 }
 
@@ -222,7 +225,7 @@ void mbedtls_md5_finish(mbedtls_md5_context *context, unsigned char digest[16]) 
   unsigned int index, padLen;
 
   /* Pad out to 56 mod 64. */
-  index = (unsigned int)((context->count[0] >> 3) & 0x3f);
+  index = (context->count[0] >> 3U) & 0x3fU;
   padLen = (index < 56) ? (56 - index) : (120 - index);
 
   /* Save number of bits */

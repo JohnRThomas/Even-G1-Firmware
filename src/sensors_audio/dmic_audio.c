@@ -3,14 +3,18 @@
  * of the captured blocks and the DMIC message queue.
  */
 #include <hal/nrf_pdm.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <zephyr/audio/dmic.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include "lc3.h"
 
@@ -18,6 +22,7 @@
 #include "../production_test/production_test.h"
 #include "../utils/common_utils.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "sensors_audio.h"
 
 #define DMIC_DEV  DEVICE_DT_GET(DT_NODELABEL(pdm0))
@@ -32,7 +37,7 @@
 #define SAMPLE_BIT_WIDTH                              16
 #define BYTES_PER_SAMPLE                              sizeof(int16_t)
 #define READ_TIMEOUT                                  1000
-#define BLOCK_SIZE(_sample_rate, _number_of_channels) (BYTES_PER_SAMPLE * (_sample_rate / 10) * _number_of_channels)
+#define BLOCK_SIZE(_sample_rate, _number_of_channels) (BYTES_PER_SAMPLE * ((_sample_rate) / 10) * (_number_of_channels))
 #define MAX_BLOCK_SIZE                                BLOCK_SIZE(MAX_SAMPLE_RATE, 1)
 #define BLOCK_COUNT                                   10
 
@@ -50,7 +55,7 @@ BUILD_ASSERT(DMIC_PDM_GAIN <= NRF_PDM_GAIN_MAXIMUM);
 
 K_MEM_SLAB_DEFINE_STATIC(dmic_mem_slab, MAX_BLOCK_SIZE, BLOCK_COUNT, 4);
 
-struct k_msgq dmic_msgq;
+static struct k_msgq dmic_msgq;
 atomic_t audio_stream_recording;
 static uint32_t audio_flash_offset = AUDIO_FLASH_START;
 uint8_t dmic_send_pending;                        /* set when the BLE rx thread was kicked */
@@ -60,7 +65,7 @@ struct dmic_msg {
   uint8_t data[DMIC_MSG_SIZE];
 };
 
-int init_dmic_msgq(void) {
+static int init_dmic_msgq(void) {
   int ret = k_msgq_alloc_init(&dmic_msgq, DMIC_MSG_SIZE, DMIC_MSGQ_LEN);
 
   if (ret) {
@@ -69,7 +74,7 @@ int init_dmic_msgq(void) {
   return ret;
 }
 
-int clean_dmic_msgq(void) {
+static int clean_dmic_msgq(void) {
   int ret = k_msgq_cleanup(&dmic_msgq);
 
   if (ret) {
@@ -141,7 +146,7 @@ void app_codec_lc3_test(void *pcm, int len) {
     if (ret == 0) {
       if (get_pt_test_mode() == 1) {
         if (audio_flash_offset < AUDIO_FLASH_END) {
-          ret = flash_write(flash_dev, audio_flash_offset, out, frames * LC3_FRAME_BYTES);
+          ret = flash_write(flash_dev, (off_t)audio_flash_offset, out, frames * LC3_FRAME_BYTES);
           if (ret) {
             G1_LOG_ERR("Flash write failed! %d\n\n", ret);
           } else {
@@ -180,10 +185,8 @@ uint8_t dmic_get_stop_state(void) {
 }
 
 int dmic_stream_stop(void) {
-  if (dmic_stop_state != 1) {
-    if (get_pt_test_mode() == 1 || get_dashboard_state()->is_master == 1) {
-      dmic_stop_state = 1;
-    }
+  if (dmic_stop_state != 1 && (get_pt_test_mode() == 1 || get_dashboard_state()->is_master == 1)) {
+    dmic_stop_state = 1;
   }
   return 0;
 }
@@ -220,7 +223,7 @@ static int do_pdm_transfer(const struct device *dmic_dev) {
     ret = -1;
   } else if (get_pt_test_mode() == 1 && get_dashboard_state()->mic_nocompress == 1) {
     if (audio_flash_offset < AUDIO_FLASH_END - size) {
-      ret = flash_write(FLASH_DEV, audio_flash_offset, buffer, size);
+      ret = flash_write(FLASH_DEV, (off_t)audio_flash_offset, buffer, size);
       if (ret) {
         G1_LOG_ERR("Flash write failed! %d\n\n", ret);
         ret = -1;
@@ -230,7 +233,7 @@ static int do_pdm_transfer(const struct device *dmic_dev) {
       }
     }
   } else if (buffer) {
-    app_codec_lc3_test(buffer, size);
+    app_codec_lc3_test(buffer, (int)size);
   }
 
   if (buffer) {

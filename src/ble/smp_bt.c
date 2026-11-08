@@ -2,15 +2,18 @@
  * BT connection callbacks of the SMP (mcumgr over BLE) transport glue.
  */
 #include "g1_log.h"
+#include <stdint.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/kernel.h>
+#include <zephyr/toolchain.h>
 
-int smp_busy;
-int smp_conn_ok;
+static int smp_busy;
+static int smp_conn_ok;
 static struct k_work smp_adv_work;
 
 static void smp_connected(struct bt_conn *conn, uint8_t err) {
+  ARG_UNUSED(conn);
   if (err) {
     G1_LOG_ERR("failed (err 0x%02x)\n", err);
     return;
@@ -20,6 +23,7 @@ static void smp_connected(struct bt_conn *conn, uint8_t err) {
 }
 
 static void smp_disconnected(struct bt_conn *conn, uint8_t reason) {
+  ARG_UNUSED(conn);
   G1_LOG_ERR("(reason 0x%02x)\n", reason);
   if (smp_adv_work.handler) {
     k_work_submit(&smp_adv_work);

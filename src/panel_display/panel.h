@@ -43,7 +43,7 @@ void set_brightness_to_panel_reg_in_running(uint8_t level);
 void register_jdb_panel_context(struct jbd_panel_context *c);
 
 /* panel_fb.c */
-int _clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, int y_end);
+int clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, int y_end);
 void update_brightness_level_for_jdb_panel(uint8_t level, uint16_t *lum, uint8_t *cur);
 void *clear_panel(struct jbd_panel_context *c);
 void panel_draw_cb(struct jbd_panel_context *c);
@@ -56,9 +56,9 @@ void copy_frame_buffer_rows(uint8_t **fb, int dst_x, int dst_y, int src_x, int s
 /* jbd_panel_flush.c */
 extern uint32_t JDB_PANEL_ID;
 extern struct k_mutex lcd_mutex;
-int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end);
-int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end,
-                               int offset);
+int reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end);
+int reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end,
+                              int offset);
 int jbd_panel_suspend(void);
 int jbd_panel_resume(struct jbd_panel_context *c);
 void lock_lcd_mutex(k_timeout_t timeout);
@@ -72,7 +72,7 @@ void wr_cur_reg(uint8_t param);
 void wr_lum_reg(uint16_t param);
 void clr_cache(uint8_t val);
 void jbd_clear_cache_sync(uint8_t val);
-void display_image(uint32_t row, uint32_t col, uint8_t *buf, int len);
+void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len);
 void panel_rst(void);
 void panel_init(void);
 

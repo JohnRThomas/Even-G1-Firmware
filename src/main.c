@@ -2,16 +2,20 @@
  * Even Realities G1 - application core main.
  */
 #include <hal/nrf_ipc.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/mfd/npm1300.h>
+#include <zephyr/drivers/regulator.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <zephyr/sys/reboot.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #define MODULE main
 #include <caf/events/module_state_event.h>
@@ -22,6 +26,7 @@
 #include "dashboard/dashboard.h"
 #include "display/proxy_thread.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "imu/imu_fusion.h"
 #include "ipc/ipc_host.h"
 #include "main.h"
@@ -42,14 +47,14 @@
 /* ------------------------------------------------------------------ */
 /* globals                                                             */
 /* ------------------------------------------------------------------ */
-uint8_t runtime_mode;           /* settings key "runtime_mode" */
+static uint8_t runtime_mode;    /* settings key "runtime_mode" */
 char net_build_time[32];            /* name reported by the net core */
 uint8_t slave_msg_key_pending;
 static uint8_t timer_count;
 static uint8_t work_mode_busy;
 static uint8_t esbm_last_seq;
 struct GlassesState *GLOBAL_STATE;
-int DEVICE_ROLE;
+static int DEVICE_ROLE;
 int esb_tx_count;
 int esb_tx_fail_count;
 int esb_rx_count;
@@ -57,14 +62,14 @@ int esb_rx_count;
 int esb_signal;                 /* cpunet ESB package counters */
 static bool first_sync = true;
 int LOG_LEVEL = 2;
-int rtc_sync_timer_running = 1;
+static int rtc_sync_timer_running = 1;
 
-void timeout_handler(struct k_timer *timer);
-void periodic_timer_expiry(struct k_timer *timer);
+static void timeout_handler(struct k_timer *timer);
+static void periodic_timer_expiry(struct k_timer *timer);
 
 /* 60 s housekeeping timer */
-K_TIMER_DEFINE(periodic_timer, periodic_timer_expiry, NULL);
-K_TIMER_DEFINE(rtc_sync_timer, timeout_handler, NULL);
+static K_TIMER_DEFINE(periodic_timer, periodic_timer_expiry, NULL);
+static K_TIMER_DEFINE(rtc_sync_timer, timeout_handler, NULL);
 
 /* retained block shared with bootloader / net core, linked at 0x2007fc00 */
 struct ncs_mem ncs_mem __attribute__((section(".ncs_mem")));
@@ -85,7 +90,7 @@ enum work_module {
 static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len);
 static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len);
 static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len);
-void update_work_module(int enable, int module);
+static void update_work_module(int enable, uint16_t module);
 
 #define RTC_SYNC_WORD (*(volatile uint32_t *)0x20070000)
 
@@ -96,7 +101,8 @@ void update_work_module(int enable, int module);
 
 #define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
 
-void periodic_timer_expiry(struct k_timer *timer) {
+static void periodic_timer_expiry(struct k_timer *timer) {
+  ARG_UNUSED(timer);
   if (get_pt_test_mode() == 1) {
     return;
   }
@@ -126,12 +132,13 @@ static void switch_to_dfu_mode(struct k_sem *sem) {
   system_reboot_delayed();
 }
 
-#define ESB_CMD_MASK 0x3f
-#define ESB_DIR_MASK 0xc0
-#define ESB_DIR_UP   0x80
-#define ESB_DIR_DOWN 0x40
+#define ESB_CMD_MASK 0x3fU
+#define ESB_DIR_MASK 0xc0U
+#define ESB_DIR_UP   0x80U
+#define ESB_DIR_DOWN 0x40U
 
 static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len) {
+  ARG_UNUSED(len);
   uint8_t buf[22] = {0};
   struct esb_sync_pkt *new_data_pkg = (struct esb_sync_pkt *)buf;
   struct esb_sync_pkt *data_pkg = &gs->sync;
@@ -157,11 +164,9 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       G1_LOG(0, "slave recv suspend package\n");
       return 0;
     }
-  } else if (cmd == 2) {
-    if (gs->suspend_state == 0) {
-      data_pkg->package_id++;
-      G1_LOG(0, "slave recv resume package\n");
-    }
+  } else if (cmd == 2 && gs->suspend_state == 0) {
+    data_pkg->package_id++;
+    G1_LOG(0, "slave recv resume package\n");
   }
   if (data_pkg->screen_id != new_data_pkg->screen_id && cmd == 8) {
     data_pkg->package_id++;
@@ -416,7 +421,7 @@ int power_down_panel(void) {
   return 0;
 }
 
-int power_down_imu_and_mic(void) {
+static int power_down_imu_and_mic(void) {
   int ret;
 
   ret = mfd_npm1300_reg_write(NPM_MFD(PMIC_LDO2), 0x08, 0x03, 1);
@@ -428,7 +433,7 @@ int power_down_imu_and_mic(void) {
   return 0;
 }
 
-int dump_pmic_state(void) {
+static int dump_pmic_state(void) {
   const struct regulator_npm1300_config *config = PMIC_LDO2->config;
   uint8_t val = 0;
 
@@ -502,7 +507,7 @@ enum {
   IPC_MSG_ESB_STATUS = 0x0d,
 };
 
-void timeout_handler(struct k_timer *timer) {
+static void timeout_handler(struct k_timer *timer) {
   uint32_t ticks = sys_clock_tick_get_32();
 
   if (RTC_SYNC_WORD == 0xa5a5a5a5) {
@@ -524,7 +529,6 @@ static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, 
 
   switch (data[0]) {
     case IPC_MSG_TICK_SYNC:
-      uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
       if (k_sem_count_get(&gs->ipc_sem) == 0) {
         k_sem_give(&gs->ipc_sem);
       }
@@ -689,6 +693,7 @@ int erase_dfu_flash(void) {
 }
 
 int set_shipmode(int enable) {
+  ARG_UNUSED(enable);
   int ret;
 
   power_down_panel();
@@ -711,7 +716,7 @@ void set_band_for_ESB(uint8_t band) {
   global_ipc_service_send(msg, 4);
 }
 
-void imu_module_set_mode(int enable) {
+static void imu_module_set_mode(int enable) {
   int mode = 0;
 
   if (enable == 1) {
@@ -722,13 +727,13 @@ void imu_module_set_mode(int enable) {
   update_imu_mode(&GLOBAL_STATE->imu, mode);
 }
 
-void update_work_module(int enable, int module) {
+static void update_work_module(int enable, uint16_t module) {
   struct GlassesState *gs = GLOBAL_STATE;
 
   if (enable) {
     gs->module_mask |= module;
   } else {
-    gs->module_mask &= ~module;
+    gs->module_mask &= ~(uint32_t)module;
   }
   if (!gs->work_mode) {
     return;
@@ -788,6 +793,8 @@ void update_work_module(int enable, int module) {
       if (!enable) {
         set_shipmode(1);
       }
+      break;
+    default:
       break;
   }
 }
@@ -917,9 +924,10 @@ int change_work_mode(int mode) {
 }
 
 static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len) {
+  ARG_UNUSED(len);
   const struct notif_msg *src;
   struct notif_msg *slot;
-  uint8_t cmd = data[0] & 0x3f;
+  uint8_t cmd = data[0] & 0x3fU;
 
   if (cmd != 0 && cmd != 12 && cmd != 13) {
     if (esbm_last_seq == data[0x15]) {
@@ -1038,12 +1046,17 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
         }
       }
       break;
+    default:
+      break;
   }
   return 0;
 }
 
 /* IPC endpoint callback for "cpunet-esbs-ctrl" */
-int ipc_ep3_recv_stub(struct GlassesState *gs, const uint8_t *data, size_t len) {
+static int ipc_ep3_recv_stub(struct GlassesState *gs, const uint8_t *data, size_t len) {
+  ARG_UNUSED(gs);
+  ARG_UNUSED(data);
+  ARG_UNUSED(len);
   return 0;
 }
 
@@ -1075,6 +1088,8 @@ static void role_init(struct GlassesState *s) {
       s->fw_ver.minor = APP_VERSION_MINOR;
       s->fw_ver.patch = APP_PATCHLEVEL;
       s->esb_pkt.flags |= BIT(2);
+      break;
+    default:
       break;
   }
 }

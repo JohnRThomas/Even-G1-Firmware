@@ -1,0 +1,33 @@
+# Issues are fixed in the code. The CheckOptions at the end cover the places where the SDK,
+# not this code, decides; the few NOLINT comments in the sources each say why.
+# bugprone-easily-swappable-parameters is off: it reports every function with two
+# neighbouring parameters of one type (x, y, w, h; SDK callback signatures), and the only
+# fix is a different signature.
+Checks: >
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  misc-*,
+  performance-*,
+  concurrency-*,
+  portability-*,
+  readability-misleading-indentation,
+  readability-redundant-*,
+  readability-non-const-parameter,
+  readability-inconsistent-declaration-parameter-name,
+  readability-duplicate-include,
+  readability-else-after-return
+WarningsAsErrors: '*'
+CheckOptions:
+  # Reported inside the SDK's own headers regardless of the header filter.
+  misc-header-include-cycle.IgnoredFilesList: 'kernel\.h'
+  # Headers the SDK wants reached through an umbrella header (<zephyr/kernel.h>, <errno.h>,
+  # <zephyr/sys/atomic.h>, <nrfx.h>, <nrf.h>) or that the build force-includes (autoconf.h).
+  # include-cleaner would otherwise ask for the internal header and call the umbrella unused.
+  misc-include-cleaner.IgnoreHeaders: 'autoconf\.h;errno\.h;sys/cdefs\.h;zephyr/kernel\.h;zephyr/kernel/.*;zephyr/sys_clock\.h;zephyr/sys/time_units\.h;zephyr/sys/arch_interface\.h;zephyr/sys/atomic\.h;zephyr/sys/atomic_builtin\.h;nrfx?\.h;nrfx_config\.h;nrf5340_.*\.h;drivers/nrfx_.*\.h'
+  # Without this the check attaches stray notes (NDEF_TYPE_ID_COUNT in nfc_wlc.h) to
+  # warnings in SDK headers, which then pass the header filter.
+  bugprone-tagged-union-member-count.EnableCountingEnumHeuristic: false
+  # ld --wrap fixes these names (src/ble/bt_conn_security.c).
+  bugprone-reserved-identifier.AllowedIdentifiers: '__real_.*;__wrap_.*'

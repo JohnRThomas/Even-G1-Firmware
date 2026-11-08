@@ -11,9 +11,12 @@
 #include "../utils/common_utils.h"
 #include "../utils/md5.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "threads.h"
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 /* BLE request header as handed over by the SPI/BLE protocol layer */
 struct ble_req {
@@ -49,7 +52,7 @@ static int read_fw_pack_from_nor_flash_by_qspi(uint32_t addr, uint8_t *buf, uint
     G1_LOG_ERR("read flash fail: %d\n\n", ret);
     return ret;
   }
-  return len;
+  return (int)len;
 }
 
 static int process_recv_ble_req(struct ble_req *head, uint8_t *out) {
@@ -112,7 +115,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
     if (!process_fw_read(addr, total, out)) {
       return 0;
     }
-    return total;
+    return (int)total;
   }
 
   req = head->req_type;
@@ -158,10 +161,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
             } else if (v != 12 && arg != 1) {
               show_not_disturb_bitmap(1);
             }
-          } else if (state->is_master == 2 && cur == 12) {
-            if (v != 12 && arg != 1) {
-              show_not_disturb_bitmap(1);
-            }
+          } else if (state->is_master == 2 && cur == 12 && v != 12 && arg != 1) {
+            show_not_disturb_bitmap(1);
           }
           state->display_mode = v;
           notify_dashboard(state, head);
@@ -282,7 +283,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
     }
     out[0] = BLE_RESP_OK;
     return 1;
-  } else if (req >= 0x29 && req <= 0x45) {
+  }
+  if (req >= 0x29 && req <= 0x45) {
     switch (req) {
       case BLE_CMD_SILENT_MODE_GET:
         out[0] = state->display_mode;
@@ -352,7 +354,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
                                               out, len);
       case BLE_CMD_SYNC_DISPLAY:
         v = data[0];
-        if (v & 2) {
+        if (v & 2U) {
           state->esb_hdr.cmd = 3;
           state->esb_hdr.dir = 2;
           state->esb_arg1 = 1;
@@ -363,7 +365,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
           memset(&pkt[12], 0, 21);
           state->ipc_ctx.send(pkt, sizeof(pkt));
         }
-        if ((v & 1) && state->switch_to_dfu_cb) {
+        if ((v & 1U) && state->switch_to_dfu_cb) {
           state->switch_to_dfu_cb(&state->main_sem);
         }
         break;

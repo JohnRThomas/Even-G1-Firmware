@@ -2,10 +2,13 @@
  * UI page: raster height / canvas distance adjustment.
  */
 #include "../dashboard/dashboard.h"
+#include "../gui/gui.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
-int CURRENT_HORIZONTAL_OFFSET = -1;
-int CURRENT_VERTICAL_OFFSET = -1;
+static int CURRENT_HORIZONTAL_OFFSET = -1;
+static int CURRENT_VERTICAL_OFFSET = -1;
 
 void cal_panel_canvas_coord(int *horizontal_offset, int *vertical_offset) {
   if (horizontal_offset != NULL) {

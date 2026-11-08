@@ -14,16 +14,16 @@
  *   requires, the requested level.  Zephyr's version returns 0 without doing
  *   anything in that case.
  */
+#include "ble_ancs.h"
 #include <../subsys/bluetooth/host/conn_internal.h>
 #include <../subsys/bluetooth/host/smp.h>
 #include <errno.h>
+#include <stdint.h>
+#include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/sys/atomic.h>
-
-struct bt_conn *__real_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer);
-struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer);
-int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec);
+#include <zephyr/sys/util_macro.h>
 
 struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer) {
   struct bt_conn *conn = __real_bt_conn_add_le(id, peer);
@@ -52,8 +52,8 @@ int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec) {
     sec = BT_SECURITY_L3;
   }
 
-  atomic_set_bit_to(conn->flags, BT_CONN_FORCE_PAIR, sec & BT_SECURITY_FORCE_PAIR);
-  conn->required_sec_level = sec & ~BT_SECURITY_FORCE_PAIR;
+  atomic_set_bit_to(conn->flags, BT_CONN_FORCE_PAIR, (uint32_t)sec & (uint32_t)BT_SECURITY_FORCE_PAIR);
+  conn->required_sec_level = (uint32_t)sec & ~(uint32_t)BT_SECURITY_FORCE_PAIR;
 
   err = bt_smp_start_security(conn);
 

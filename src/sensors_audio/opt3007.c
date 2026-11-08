@@ -3,14 +3,20 @@
  * zephyr/drivers/sensor/opt3001/opt3001.c, plus the panel LDSW1 power switch.
  */
 #include <errno.h>
+#include <stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/mfd/npm1300.h>
 #include <zephyr/drivers/regulator.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "sensors_audio.h"
 
 #define OPT3001_I2C_ADDR 0x45
@@ -26,8 +32,8 @@
 #define OPT3001_CONVERSION_MODE_MASK       (BIT(10) | BIT(9))
 #define OPT3001_CONVERSION_MODE_CONTINUOUS (BIT(10) | BIT(9))
 
-#define OPT3001_SAMPLE_EXPONENT_SHIFT 12
-#define OPT3001_MANTISSA_MASK         0xfff
+#define OPT3001_SAMPLE_EXPONENT_SHIFT 12U
+#define OPT3001_MANTISSA_MASK         0xfffU
 
 /* Copy of the private config struct of drivers/regulator/regulator_npm1300.c */
 struct regulator_npm1300_config {
@@ -44,7 +50,7 @@ struct regulator_npm1300_config {
 #define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
 
 /* bus + address; only .bus is used, the transfers pass OPT3001_I2C_ADDR directly */
-struct i2c_dt_spec opt3001_i2c_device = {
+static struct i2c_dt_spec opt3001_i2c_device = {
   .bus = DEVICE_DT_GET(DT_NODELABEL(i2c1)),
   .addr = OPT3001_I2C_ADDR,
 };
@@ -66,12 +72,12 @@ static int opt3001_reg_read(uint8_t reg, uint16_t *val) {
     G1_LOG_ERR("ERR: opt3007 i2c read addr=0x%x,\n", OPT3001_I2C_ADDR);
     return -ENOENT;
   }
-  *val = ((uint16_t)value[0] << 8) + value[1];
+  *val = ((uint16_t)value[0] << 8U) + value[1];
   return 0;
 }
 
 static int opt3001_reg_write(uint8_t reg, uint16_t val) {
-  uint8_t tx_buf[3] = {reg, val >> 8, val & 0xff};
+  uint8_t tx_buf[3] = {reg, val >> 8U, val & 0xffU};
   int ret;
 
   if (!device_is_ready(opt3001_i2c_device.bus)) {
@@ -94,8 +100,8 @@ static int opt3001_reg_update(uint8_t reg, uint16_t mask, uint16_t val) {
     return -EIO;
   }
 
-  new_val = old_val & ~mask;
-  new_val |= val & mask;
+  new_val = old_val & (uint16_t)~mask;
+  new_val |= (uint16_t)(val & mask);
 
   return opt3001_reg_write(reg, new_val);
 }
@@ -103,13 +109,14 @@ static int opt3001_reg_update(uint8_t reg, uint16_t mask, uint16_t val) {
 int opt3007_read(int arg) {
   uint16_t value;
 
+  ARG_UNUSED(arg);
   if (!opt3007_ready) {
     return -1;
   }
   if (opt3001_reg_read(OPT3001_REG_RESULT, &value) != 0) {
     return -1;
   }
-  return (value & OPT3001_MANTISSA_MASK) << (value >> OPT3001_SAMPLE_EXPONENT_SHIFT);
+  return (int)((value & OPT3001_MANTISSA_MASK) << ((unsigned int)value >> OPT3001_SAMPLE_EXPONENT_SHIFT));
 }
 
 static uint8_t als_lux_to_level(int lux) {
@@ -140,12 +147,12 @@ static uint8_t als_lux_to_level(int lux) {
  * (a0 unset or <= 60000) the raw lux is mapped piecewise; with one, the
  * calibrated lux moves the level between 0/3/6/12/19/26/42 with hysteresis.
  */
-uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* ctx is unused */
-{
+uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) {
   int lux;
   uint8_t level;
   float l;
 
+  ARG_UNUSED(ctx);
   if (!opt3007_ready) {
     return 0xff;
   }
@@ -159,7 +166,7 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* ctx is unus
     return als_lux_to_level(lux);
   }
 
-  l = lux * (get_dashboard_state()->luminance_curve / 1000000.0);
+  l = (float)(lux * (get_dashboard_state()->luminance_curve / 1000000.0));
   level = als_level;
   switch (level) {
     case 0:
@@ -206,6 +213,8 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* ctx is unus
       if (l < 960.0) {
         level = 26;
       }
+      break;
+    default:
       break;
   }
   als_level = level;

@@ -3,11 +3,15 @@
  * flash storage, JSON exchange with the phone app and look-up.
  * Record layout and limits: whitelist.h.
  */
+#include <cJSON.h>
+#include <glasses_state.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #include "../ble/ble_proto.h"
 #include "../storage/storage.h"
@@ -16,11 +20,11 @@
 #include "whitelist.h"
 
 static char *whitelist_buf;
-struct app_whitelist g_appWhiteListInfo;
+static struct app_whitelist g_appWhiteListInfo;
 
-void dump_whitelist(void);
+static void dump_whitelist(void);
 
-int store_whitelist(void) {
+static int store_whitelist(void) {
   int ret;
   uint8_t retry = 3;
 
@@ -38,7 +42,7 @@ int store_whitelist(void) {
   return ret;
 }
 
-int load_whitelist(void) {
+static int load_whitelist(void) {
   struct app_whitelist tmp;
   int ret;
 
@@ -125,8 +129,9 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name) {
   return 1;
 }
 
-void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uint8_t *data, uint16_t len,
+void put_whitelist_app_from_app(struct ble_context *ctx, const uint8_t *hdr, const uint8_t *data, uint16_t len,
                                 uint8_t *rsp) {
+  ARG_UNUSED(hdr);
   if (whitelist_buf == NULL) {
     whitelist_buf = malloc(PKCS7_PACK_BUF_SIZE);
     if (whitelist_buf == NULL) {
@@ -502,7 +507,7 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp) {
   free(buf);
 }
 
-void dump_whitelist(void) {
+static void dump_whitelist(void) {
   char *buf = malloc(WHITELIST_JSON_BUF_LEN);
 
   if (buf == NULL) {

@@ -2,17 +2,20 @@
  * Production-test lpuart transport (UART async API), derived from the NCS
  * lpuart sample (nrf/samples/peripheral/lpuart).
  */
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/__assert.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #include "g1_log.h"
 #include "production_test.h"
 
 #define BUF_SIZE 256
-static K_MEM_SLAB_DEFINE(uart_slab, BUF_SIZE, 3, 4);
+K_MEM_SLAB_DEFINE_STATIC(uart_slab, BUF_SIZE, 3, 4);
 
 /* last complete frame received on the lpuart */
 static uint8_t serial_rx_buf[BUF_SIZE];
@@ -30,6 +33,7 @@ static void serial_rx_dump(struct uart_event *evt, size_t offset) {
 }
 
 static void uart_callback(const struct device *dev, struct uart_event *evt, void *user_data) {
+  ARG_UNUSED(dev);
   struct device *uart = user_data;
   uint8_t *p;
   uint8_t *buf;

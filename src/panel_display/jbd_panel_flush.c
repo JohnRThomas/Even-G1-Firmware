@@ -1,18 +1,20 @@
 /*
- * JBD panel frame buffer flush (_reflash_fb_data_to_lcd / _ex), deep power
+ * JBD panel frame buffer flush (reflash_fb_data_to_lcd / _ex), deep power
  * down / resume and the LCD mutex.
  */
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "panel.h"
 
 uint32_t JDB_PANEL_ID;
 struct k_mutex lcd_mutex;
 
-int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end) {
+int reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
   int ret;
@@ -30,14 +32,14 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
   for (; y_start <= y_end; y_start++) {
     uint8_t *p = c->current_buffer + y_start * PANEL_FB_STRIDE + x_start / 2 - 5;
     int len = x_end / 2 - x_start / 2 + 5;
-    uint32_t addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
+    uint32_t addr = (((column + y_start) << 10U) & 0x7fc00U) | ((x_start + row) & 0x3ffU);
     uint8_t backup[5];
 
     memcpy(backup, p, sizeof(backup));
     p[0] = SPI_WR_BUFFER;
-    p[1] = (addr >> 16) & 0xff;
-    p[2] = (addr >> 8) & 0xff;
-    p[3] = addr & 0xff;
+    p[1] = (addr >> 16U) & 0xffU;
+    p[2] = (addr >> 8U) & 0xffU;
+    p[3] = addr & 0xffU;
     p[4] = 0xff;
     /* the dummy clocks: the byte behind the window, as it is in the frame buffer, since the
      * panel takes in its first pixel */
@@ -54,8 +56,8 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
   return 0;
 }
 
-int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end,
-                               int offset) {
+int reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end,
+                              int offset) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
   int ret;
@@ -73,14 +75,14 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
   for (; y_start <= y_end; y_start++) {
     uint8_t *p = c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE + x_start / 2 - 5;
     int len = x_end / 2 - x_start / 2 + 5;
-    uint32_t addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
+    uint32_t addr = (((column + y_start) << 10U) & 0x7fc00U) | ((x_start + row) & 0x3ffU);
     uint8_t backup[5];
 
     memcpy(backup, p, sizeof(backup));
     p[0] = SPI_WR_BUFFER;
-    p[1] = (addr >> 16) & 0xff;
-    p[2] = (addr >> 8) & 0xff;
-    p[3] = addr & 0xff;
+    p[1] = (addr >> 16U) & 0xffU;
+    p[2] = (addr >> 8U) & 0xffU;
+    p[3] = addr & 0xffU;
     p[4] = 0xff;
     /* the dummy clocks: the byte behind the window, as it is in the frame buffer, since the
      * panel takes in its first pixel */

@@ -10,20 +10,20 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "storage.h"
+#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/conn.h>
-#include <zephyr/device.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/reboot.h>
+#include <zephyr/toolchain.h>
 
 char SERIAL_NUMBER[32] = "S100demodevice";
 char glasses_name[32] = "S100demoglasses";
 
 int save_sys_settings(struct GlassesState *gs, int force) {
+  ARG_UNUSED(force);
   struct sys_settings s = {0};
 
   s.valid = 1;
@@ -68,9 +68,9 @@ int load_sys_setting(struct GlassesState *gs) {
   }
   G1_LOG_WRN("read sys settings success!\n");
   gs->aging_discharge_time_s = s.aging_discharge_time_s;
-  gs->first_enter_flag = s.valid;
+  gs->first_enter_flag = (int)s.valid;
   gs->esb_channel = s.esb_channel;
-  gs->imu.ref = s.imu_base;
+  gs->imu.ref = (int)s.imu_base;
   gs->opt3007_context.lux_base_max = s.lux_base_max;
   gs->panel.voltage = s.panel_voltage;
   if (s.sn[0] != 0xff) {
@@ -86,12 +86,12 @@ int load_sys_setting(struct GlassesState *gs) {
   gs->aging_charge_time_s = s.aging_charge_time_s;
   gs->canvas_x = s.canvas_x;
   gs->canvas_y = s.canvas_y;
-  gs->lux_base_low = s.lux_base[1];
-  gs->lux_base_mid = s.lux_base[0];
-  gs->lux_base_high = s.lux_base[2];
+  gs->lux_base_low = (int)s.lux_base[1];
+  gs->lux_base_mid = (int)s.lux_base[0];
+  gs->lux_base_high = (int)s.lux_base[2];
   gs->lux_base_spare = s.lux_base_spare;
-  gs->luminance_curve = s.luminance_curve;
-  gs->luminance_curve_a1 = s.luminance_curve_a1;
+  gs->luminance_curve = (int)s.luminance_curve;
+  gs->luminance_curve_a1 = (int)s.luminance_curve_a1;
   gs->panel.lum_base_0 = s.lum_base[0];
   gs->panel.lum_base_1 = s.lum_base[1];
   gs->panel.lum_gear = s.lum_base[2];
@@ -151,6 +151,7 @@ int load_sys_setting(struct GlassesState *gs) {
 }
 
 int save_usr_settings(struct GlassesState *gs, int unused) {
+  ARG_UNUSED(unused);
   struct usr_settings s = {0};
 
   s.display_mode = gs->display_mode;
@@ -221,7 +222,7 @@ int load_usr_setting(struct GlassesState *gs) {
   gs->panel.panel_brightness_level = s.brightness_level;
   gs->imu.level = s.wakeup_angle;
   gs->imu.dof3_enable = s.dof3_enable;
-  gs->imu.div = s.imu_div ? s.imu_div : 400;
+  gs->imu.div = (int)(s.imu_div ? s.imu_div : 400);
   gs->opt3007_context.auto_brightness = s.auto_brightness;
   gs->bonded = s.bonded;
   gs->check_mode = s.check_mode;
@@ -234,7 +235,7 @@ int load_usr_setting(struct GlassesState *gs) {
   gs->charge_limit_lower = s.charge_limit_lower;
   test_mode = s.test_mode;
   gs->panel.canvas_distance_gear = s.canvas_distance_gear;
-  gs->imu.base = s.user_horiz_pitch;
+  gs->imu.base = (int)s.user_horiz_pitch;
   gs->double_tap_customize = s.double_tap_customize;
   gs->dashboard_ts->date_format = s.date_format;
   gs->panel.brightness_percent = s.brightness_percent;

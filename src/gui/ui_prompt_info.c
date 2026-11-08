@@ -1,10 +1,14 @@
 /*
  * UI page: prompt information.
  */
+#include <glasses_state.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/toolchain.h>
 
 #include "../panel_display/panel.h"
+#include "g1_log.h"
 #include "gui.h"
 
 #define PROMPT_ACTION_MAX 2
@@ -38,6 +42,7 @@ static int prompt_info_reflash(void) {
 }
 
 int ui_prompt_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
+  ARG_UNUSED(arg);
   get_dashboard_state();
   set_frame_buffer(ctx->panel_buffer);
   set_showing_notification_on_gui();
@@ -73,8 +78,8 @@ int ui_prompt_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
               }
             }
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
       } else if (event == 2) {

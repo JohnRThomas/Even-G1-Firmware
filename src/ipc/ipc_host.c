@@ -2,10 +2,14 @@
  * IPC service (icmsg, "ipc0") glue between the application core and the
  * network core: endpoint, receive dispatch table and send helper.
  */
+#include <stddef.h>
+#include <stdint.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/ipc/ipc_service.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/reboot.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 
 #include "../threads/threads.h"
 
@@ -13,7 +17,7 @@
 #include <g1_log.h>
 #include <glasses_state.h>
 
-int register_ipc_service_recv_callback(struct ipc_ep_cfg *ep);
+static int register_ipc_service_recv_callback(struct ipc_ep_cfg *ep);
 
 static struct ipc_service_context *GLOBAL_IPC_SERVICE_CONTEXT;
 static int ipc_ready;
@@ -22,7 +26,7 @@ static int ipc_send_fail_cnt;
 
 static K_SEM_DEFINE(ipc0_bound_sem, 0, 1);
 
-void ipc0_ept_recv(const void *data, size_t len, void *priv);
+static void ipc0_ept_recv(const void *data, size_t len, void *priv);
 
 int global_ipc_service_send(const void *data, size_t len) {
   int ret;
@@ -47,6 +51,8 @@ int global_ipc_service_send(const void *data, size_t len) {
 }
 
 static void ipc0_ept_bound(void *priv) {
+  ARG_UNUSED(priv);
+
   k_sem_give(&ipc0_bound_sem);
 }
 
@@ -87,7 +93,9 @@ int serialization_init(void) {
   return ret;
 }
 
-void ipc0_ept_recv(const void *data, size_t len, void *priv) {
+static void ipc0_ept_recv(const void *data, size_t len, void *priv) {
+  ARG_UNUSED(priv);
+
   struct ipc_service_context *ctx = GLOBAL_IPC_SERVICE_CONTEXT;
   const uint8_t *buf = data;
   uint8_t cmd;
@@ -121,7 +129,7 @@ int register_ipc_service_context(struct ipc_service_context *ctx) {
   return 0;
 }
 
-int register_ipc_service_recv_callback(struct ipc_ep_cfg *ep) {
+static int register_ipc_service_recv_callback(struct ipc_ep_cfg *ep) {
   struct ipc_service_context *ctx = GLOBAL_IPC_SERVICE_CONTEXT;
 
   if (ctx->count < IPC_RECEIVER_MAX) {

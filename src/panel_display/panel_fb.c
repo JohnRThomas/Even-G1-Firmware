@@ -3,16 +3,19 @@
  * frame buffer copies, on top of the panel context (get_jdb_panel_context()).
  */
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/util.h>
 
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "panel.h"
 
 /* the current register (46h) is 6 bits wide */
 #define JBD_CUR_REG_MAX 63
 
-int _clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, int y_end) {
+int clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, int y_end) {
   int y;
 
   if (x_end >= PANEL_WIDTH) {
@@ -45,8 +48,8 @@ void update_brightness_level_for_jdb_panel(uint8_t level, uint16_t *lum, uint8_t
     *lum = (get_dashboard_state()->panel.brightness_max + 1) * 111;
     *cur = MIN(level - 6, JBD_CUR_REG_MAX);
   }
-  if ((get_dashboard_state()->panel.brightness_percent > 69) &
-      (get_dashboard_state()->panel.brightness_percent < 100)) {
+  if ((unsigned int)(get_dashboard_state()->panel.brightness_percent > 69) &
+      (unsigned int)(get_dashboard_state()->panel.brightness_percent < 100)) {
     *lum = *lum * get_dashboard_state()->panel.brightness_percent / 100;
   }
   if (*lum == 0) {
@@ -60,7 +63,7 @@ void *clear_panel(struct jbd_panel_context *c) {
 
 void panel_draw_cb(struct jbd_panel_context *c) {
   if (c->init_done) {
-    display_image(c->current_row, c->current_column, c->panel_buffer[0], c->current_buffer_size);
+    display_image(c->current_row, c->current_column, c->panel_buffer[0], (int)c->current_buffer_size);
   }
 }
 

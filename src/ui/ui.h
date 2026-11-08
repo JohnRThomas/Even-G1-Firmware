@@ -86,8 +86,8 @@ extern uint8_t nav_overview_decoded;
 extern uint8_t nav_map_bitmaps[2][0x908];   /* navigation bitmaps (overview / arrow) */
 int nav_prv_reset(void);
 void navigation_direction_img_display(int direction);
-void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav);
-void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav);
+void navigation_overview_map_display(const uint8_t *nav);
+void navigation_panoramic_map_display(const uint8_t *nav);
 int draw_template_navigation_page(struct jbd_panel_context *panel, void *arg);
 void nav_draw_service_lost(void);
 void nav_draw_route_generating(void);
@@ -102,8 +102,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event);
 extern uint8_t onboarding_shown_sub_step;             /* onboarding sub-step shown (slave_display_thread) */
 int init_onboarding_info(void);
 void onboarding_request_redraw(void);
-void onboarding_draw_static_page(int event);
-void onboarding_draw_animated_page(int event);
+void onboarding_draw_static_page(void);
+void onboarding_draw_animated_page(void);
 void onboarding_check_step_finished(void);
 int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event);
 struct ble_req_hdr;

@@ -1,14 +1,23 @@
 /*
  * UI page: real-time translation (language pair, clock, translated text).
  */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <zephyr/toolchain.h>
+
+#include "../gui/gui.h"
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "g1_date.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
 #define TRANS_LANG_NUM 25
 
-const char *trans_lang_name[TRANS_LANG_NUM] = {
+static const char *trans_lang_name[TRANS_LANG_NUM] = {
   "CN", "EN", "JP", "KR", "FR", "DE", "ES", "RU", "NL", "NO", "DK", "SV", "FI",
   "IT", "AR", "HI", "BN", "HK", "PL", "CZ", "TR", "PT", "UK", "EL", "HU",
 };
@@ -27,6 +36,7 @@ static char trans_text[0x1e0];
 static uint8_t trans_mode;
 
 int draw_template_translate_screen(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   struct trans_info *ti = &gs->ui.trans;
 
@@ -101,6 +111,7 @@ void translate_draw_hint_page(int which) {
 }
 
 int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   int done = 0;
   struct GlassesState *gs = get_dashboard_state();
   struct trans_info *ti = &gs->ui.trans;
@@ -165,8 +176,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
               }
             }
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
         return 0;
@@ -253,10 +264,10 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
                 }
               }
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
           }
-          _clean_fb_data(fb, 0, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
+          clean_fb_data(fb, 0, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
           if (!trans_ui.suspend_en) {
             gui_bmp_dynamic_bitmap_draw(1, X0, Y0 + 0x36, 0, 0, 0, 0);
           }
@@ -282,8 +293,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
                 }
               }
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
           }
           set_showing_notification_on_gui();
         } else {

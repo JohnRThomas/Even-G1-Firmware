@@ -2,10 +2,17 @@
  * "Do not disturb" bitmap page (ui_bitmap_task) and the do-not-disturb
  * master/slave synchronisation.
  */
+#include <stdint.h>
+#include <string.h>
+#include <zephyr/toolchain.h>
+
+#include "../gui/gui.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
-uint8_t dnd_bitmap_mode;                        /* do-not-disturb page mode */
+static uint8_t dnd_bitmap_mode;                       /* do-not-disturb page mode */
 static uint8_t bitmap_state;
 
 static void bitmap_state_reset(void) {
@@ -13,6 +20,7 @@ static void bitmap_state_reset(void) {
 }
 
 int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   set_frame_buffer(panel->panel_buffer);
   set_showing_notification_on_gui();
 
@@ -73,7 +81,7 @@ int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event) {
   return 0;
 }
 
-int not_disturb_sync_data(const uint8_t *data, uint8_t len) {
+static int not_disturb_sync_data(const uint8_t *data, uint8_t len) {
   if (data == NULL) {
     return -1;
   }
@@ -97,7 +105,7 @@ int not_disturb_sync_data(const uint8_t *data, uint8_t len) {
       len = 1;
       buf[1] = data[0];
     }
-    if ((unsigned int)sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
+    if (sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
       G1_LOG_ERR("not_disturb SYNC TO master failed...\n");
       return -1;
     }

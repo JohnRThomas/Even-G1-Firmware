@@ -2,9 +2,16 @@
  * Even AI screen task (voice assistant: listening / answer text pages)
  * and its status icon helper.
  */
+#include <stdint.h>
+#include <string.h>
+#include <zephyr/toolchain.h>
+
+#include "../gui/gui.h"
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
 #define EVEN_AI_TEXT_MAX 0x1e0
@@ -14,11 +21,11 @@ struct even_ai_prv_data {
   uint8_t entered;
 };
 
-struct even_ai_prv_data even_ai_prv;
-char even_ai_text[EVEN_AI_TEXT_MAX];
+static struct even_ai_prv_data even_ai_prv;
+static char even_ai_text[EVEN_AI_TEXT_MAX];
 uint8_t even_ai_scrolling;                        /* text animation running (touch_key_thread) */
-int even_ai_answer_shown;                            /* page needs a clear */
-int even_ai_text_drawn;                            /* text page drawn once */
+static int even_ai_answer_shown;                           /* page needs a clear */
+static int even_ai_text_drawn;                           /* text page drawn once */
 
 /* localized messages */
 enum {
@@ -58,12 +65,12 @@ static int even_ai_page = -1;
       gui_dynamic_bitmap_reset();                                                                                      \
       even_ai_icon = (id);                                                                                             \
       gui_icon_area_clear(gui_screen_x_offset(), gui_screen_y_offset() + 0x36);                                        \
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,   \
-                              0, 0, GUI_SCREEN_WIDTH, 199);                                                            \
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, \
+                             0, GUI_SCREEN_WIDTH, 199);                                                                \
     }                                                                                                                  \
   } while (0)
 
-int even_ai_draw_status_icon(const uint8_t *status) {
+static int even_ai_draw_status_icon(const uint8_t *status) {
   uint8_t s = *status;
 
   if (s <= 5) {
@@ -77,15 +84,11 @@ int even_ai_draw_status_icon(const uint8_t *status) {
     gui_bmp_dynamic_bitmap_draw(4, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0, 0);
   } else if (s <= 11) {
     EVEN_AI_ICON_SWITCH(0xff);
-  } else if (s == 12 || s == 13) {
+  } else if (s == 12 || s == 13 || s == 15) {
     /* nothing */
-  } else if (s == 15) {
-    /* nothing */
-  } else if (s == 14 || s == 16) {
-    if (even_ai_icon != 0xff) {
-      gui_dynamic_bitmap_reset();
-      even_ai_icon = 0xff;
-    }
+  } else if ((s == 14 || s == 16) && even_ai_icon != 0xff) {
+    gui_dynamic_bitmap_reset();
+    even_ai_icon = 0xff;
   }
   return 0;
 }
@@ -102,6 +105,7 @@ static void even_ai_reset(void) {
 }
 
 int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   uint8_t lang = get_current_language();
   uint8_t **fb = panel->panel_buffer;
@@ -178,8 +182,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
             if (status != 14) {
               return 0;
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH - 1, 199);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH - 1, 199);
             break;
           } else if (status == 15 || status == 16) {
             if (status != 16) {
@@ -202,8 +206,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
               }
             }
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
       } else if (event == UI_EVT_EXIT) {
@@ -247,8 +251,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
                 }
               }
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH, 199);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH, 199);
           }
           set_showing_notification_on_gui();
           break;
@@ -271,11 +275,11 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
                 }
               }
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, gui_screen_x_offset() + 0x58,
-                                    gui_screen_y_offset(), gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x88);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, gui_screen_x_offset() + 0x58,
+                                   gui_screen_y_offset(), gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x88);
           }
-          _clean_fb_data(gfb, 0, 0, 0x10, GUI_SCREEN_WIDTH, 0xb8);
+          clean_fb_data(gfb, 0, 0, 0x10, GUI_SCREEN_WIDTH, 0xb8);
           even_ai_draw_status_icon(ai);
           clear_showing_notification_on_gui();
           status = gs->ui.ai.status;
@@ -290,8 +294,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
             if (status != 14) {
               return 0;
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH - 1, 199);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH - 1, 199);
           } else if (status == 15 || status == 16) {
             if (status != 16) {
               return 0;
@@ -329,8 +333,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
                 }
               }
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
           }
           set_showing_notification_on_gui();
           even_ai_draw_status_icon(ai);
@@ -360,8 +364,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
           if (status != 14) {
             return 0;
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH - 1, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH - 1, 199);
           break;
         }
         if (status == 15 || status == 16) {
@@ -384,11 +388,11 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
         memcpy(even_ai_text, gs->ui.ai.text, gs->ui.ai.text_len);
         if (gs->ui.ai.status == 8 || gs->ui.ai.status == 9 || even_ai_text_drawn == 0) {
           if (gui_screen_y_offset() <= 32) {
-            _clean_fb_data(fb, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() + 0x88,
-                           gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0xa3);
+            clean_fb_data(fb, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() + 0x88,
+                          gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0xa3);
           } else if (gui_screen_y_offset() > 32) {
-            _clean_fb_data(fb, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() - 0x1a,
-                           gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 1);
+            clean_fb_data(fb, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() - 0x1a,
+                          gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 1);
           }
           gui_utf_draw(0, even_ai_text, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset(),
                        gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x88, 5, 0, 0, NULL, 0);

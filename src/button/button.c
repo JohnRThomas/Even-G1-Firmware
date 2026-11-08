@@ -2,10 +2,13 @@
  * Even Realities G1 - GPIO lines, touch/NFC interrupt buttons and the
  * hardware-id straps.
  */
+#include <stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include "../aw9320x/aw9320x.h"
 #include "../nfc/nfc_wlc.h"
@@ -31,6 +34,10 @@ static const struct gpio_dt_spec pmic_reset_gpio = {.port = GPIO0, .pin = 23, .d
 static const struct gpio_dt_spec button_irq_gpio_spec = GPIO_DT_SPEC_GET(DT_NODELABEL(sw0), gpios);
 
 static void button2_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+  ARG_UNUSED(dev);
+  ARG_UNUSED(cb);
+  ARG_UNUSED(pins);
+
   trigger_nfc_event();
   if (get_dashboard_state()->work_mode == 8 || can_enter_low_power == 2) {
     if (++button2_count > 4) {
@@ -46,6 +53,9 @@ static void button2_pressed(const struct device *dev, struct gpio_callback *cb, 
 }
 
 static void button1_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+  ARG_UNUSED(dev);
+  ARG_UNUSED(cb);
+
   gpio_pin_interrupt_configure_dt(&button_irq_gpio_spec, GPIO_INT_DISABLE);
   if (pins == BIT(9) && aw93203_ready) {
     touch_irq_pending = 1;

@@ -46,7 +46,8 @@ typedef struct {
 #define ndefBufferIsInvalid(buf) (((buf)->buffer == NULL) && ((buf)->length != 0U))
 
 /* nfc_utils.h */
-#define GETU32(a) (((uint32_t)(a)[0] << 24) | ((uint32_t)(a)[1] << 16) | ((uint32_t)(a)[2] << 8) | ((uint32_t)(a)[3]))
+#define GETU32(a)                                                                                                      \
+  (((uint32_t)(a)[0] << 24U) | ((uint32_t)(a)[1] << 16U) | ((uint32_t)(a)[2] << 8U) | ((uint32_t)(a)[3]))
 #define ST_MEMCPY memcpy
 
 /* ndef_record.h */
@@ -61,13 +62,13 @@ typedef struct {
   ((((MB) & 1U) << 7U) | (((ME) & 1U) << 6U) | (((CF) & 1U) << 5U) | (((SR) & 1U) << 4U) | (((IL) & 1U) << 3U) |       \
    ((uint8_t)(TNF) & NDEF_TNF_MASK))
 
-#define ndefHeaderSR(record)  (((record)->header & 0x10U) >> 4)
-#define ndefHeaderIL(record)  (((record)->header & 0x08U) >> 3)
+#define ndefHeaderSR(record)  (((record)->header & 0x10U) >> 4U)
+#define ndefHeaderIL(record)  (((record)->header & 0x08U) >> 3U)
 #define ndefHeaderTNF(record) ((record)->header & NDEF_TNF_MASK)
 
-#define ndefHeaderSetMB(record)         ((record)->header |= (1U << 7))
-#define ndefHeaderSetME(record)         ((record)->header |= (1U << 6))
-#define ndefHeaderSetIL(record)         ((record)->header |= (1U << 3))
+#define ndefHeaderSetMB(record)         ((record)->header |= (1U << 7U))
+#define ndefHeaderSetME(record)         ((record)->header |= (1U << 6U))
+#define ndefHeaderSetIL(record)         ((record)->header |= (1U << 3U))
 #define ndefHeaderSetTNF(record, value) ((record)->header |= (uint8_t)(value) & NDEF_TNF_MASK)
 
 #define ndefHeaderClearMB(record) ((record)->header &= 0x7FU)
@@ -77,7 +78,7 @@ typedef struct {
 #define ndefHeaderSetValueSR(record, value)                                                                            \
   do {                                                                                                                 \
     (record)->header &= 0xEFU;                                                                                         \
-    (record)->header |= (((uint8_t)(value)) & 1U) << 4;                                                                \
+    (record)->header |= (((uint8_t)(value)) & 1U) << 4U;                                                               \
   } while (0)
 
 #define ndefHeaderIsSetSR(record) (ndefHeaderSR(record) == 1U)
@@ -222,6 +223,7 @@ const uint8_t *ndefRecordGetPayloadItem(const ndefRecord *record, ndefConstBuffe
 ReturnCode ndefMessageGetInfo(const ndefMessage *message, ndefMessageInfo *info);
 ReturnCode ndefMessageAppend(ndefMessage *message, ndefRecord *record);
 ReturnCode ndefMessageEncode(const ndefMessage *message, ndefBuffer *bufPayload);
+ReturnCode ndefMessageDecode(const ndefConstBuffer *bufPayload, ndefMessage *message);
 
 /* ndef_types.c */
 ReturnCode ndefTypeToRecord(const ndefType *type, ndefRecord *record);
@@ -321,6 +323,9 @@ struct nfc_charge {
   uint8_t f03[5];
   uint32_t field_mv;  /* adc_nfc_run() * 10 */
 };
+
+extern uint32_t nfc_field_mv;   /* last NFC field voltage (mV * 10) */
+extern uint8_t nfc_tag_type_ok; /* ST25DV of the expected type (UID byte 6 is 0x50/0x51) */
 
 int adc_nfc_init(void);
 uint32_t adc_nfc_run(void);

@@ -46,6 +46,7 @@ struct proxy_voice_manager {
 } __packed;
 
 /* proxy_thread.c */
+extern struct k_msgq proxy_msgq;
 int start_proxy_thread_handler(void *gs);
 int send_response_data_to_msgqueue(const void *data, uint32_t len);
 int send_response_data_to_ble(void);

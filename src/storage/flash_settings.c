@@ -9,12 +9,17 @@
 #include "../threads/threads.h"
 #include "../utils/common_utils.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "storage.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 
 #define SETT_ROOT         "ar_glass_userdata_settings"
 /* the QSPI NOR driver takes write lengths above 4 only in multiples of 4 */
@@ -46,6 +51,7 @@ int local_store_write(const char *key, const void *val, size_t len) {
 }
 
 static int sett_handler(const char *key, size_t len, settings_read_cb read_cb, void *cb_arg) {
+  ARG_UNUSED(len);
   int rc;
 
   if (!strcmp(key, "ble_whitelist_app")) {
@@ -261,7 +267,7 @@ int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size) 
 
   BLE_PRINTK("size is %d\n", size);
   pages = size / EXT_FLASH_SECTOR_SIZE + 1;
-  last = size - (pages - 1) * EXT_FLASH_SECTOR_SIZE;
+  last = (int16_t)(size - (pages - 1) * EXT_FLASH_SECTOR_SIZE);
   for (i = 0; i < pages; i++) {
     ret += flash_settings_write_and_verify(addr + i * EXT_FLASH_SECTOR_SIZE, data + i * EXT_FLASH_SECTOR_SIZE,
                                            i < pages - 1 ? EXT_FLASH_SECTOR_SIZE : last);
@@ -347,7 +353,7 @@ int calc_flash_crc(uint16_t *crc, int addr, uint32_t size) {
   }
   for (uint16_t page = 0; page < pages; page++) {
     pos = addr + page * FLASH_CRC_CHUNK_LEN;
-    len = size + addr - pos;
+    len = (int)(size + addr - pos);
     if (len >= FLASH_CRC_CHUNK_LEN) {
       len = FLASH_CRC_CHUNK_LEN;
     }

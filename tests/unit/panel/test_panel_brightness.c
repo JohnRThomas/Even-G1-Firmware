@@ -5,10 +5,6 @@
  */
 #include "panel_support.h"
 
-/* jbd_panel.c calls these before it defines them, and no firmware header declares them */
-int panel_off(struct jbd_panel_context *panel);
-int panel_on(struct jbd_panel_context *panel);
-
 #include "panel_display/jbd_panel.c"
 
 #define LUM_MAX_90HZ 7109

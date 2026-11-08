@@ -2,11 +2,13 @@
  * JBD013VGA SPI transport, derived from the JBD reference code, on top of
  * the spi_interface_t of the panel context.
  */
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "panel.h"
 
 /* 02h, three address bytes, FFh */
@@ -17,14 +19,14 @@ void spi_wr_buffer(uint16_t col, uint16_t row, uint8_t *buf, uint32_t len) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
   uint8_t *p = buf;
-  uint32_t addr = ((row << 10) & 0x7fc00) | (col & 0x3ff);
+  uint32_t addr = (((uint32_t)row << 10U) & 0x7fc00U) | ((uint32_t)col & 0x3ffU);
   uint8_t backup[WR_BUFFER_HDR_SIZE];
 
   /* the header goes in front of buf, over the end of the previous row inside the frame */
   memcpy(backup, p - sizeof(backup), sizeof(backup));
   p[-5] = SPI_WR_BUFFER;
-  p[-4] = addr >> 16;
-  p[-3] = addr >> 8;
+  p[-4] = addr >> 16U;
+  p[-3] = addr >> 8U;
   p[-2] = addr;
   p[-1] = 0xff;
   lock_lcd_mutex(K_FOREVER);

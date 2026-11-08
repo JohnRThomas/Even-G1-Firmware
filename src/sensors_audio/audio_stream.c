@@ -3,17 +3,20 @@
  * queued here and written into one of four 128 KiB voice blocks on the
  * external flash.  A 4 KiB manager sector at 0x400000 describes the blocks.
  */
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/util_macro.h>
 
 #include "../display/display_thread.h"
 #include "../display/proxy_thread.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "sensors_audio.h"
 #include <g1_date.h>
 
@@ -133,7 +136,7 @@ static void delVoiceBlock(uint8_t num) {
 int clearAudioMessageQueue(void) {
   struct audio_stream_msg msg;
   int ret = 0;
-  int n = k_msgq_num_used_get(&audio_stream_msgq);
+  int n = (int)k_msgq_num_used_get(&audio_stream_msgq);
 
   while (n > 0) {
     ret = k_msgq_get(&audio_stream_msgq, &msg, K_NO_WAIT);
@@ -223,7 +226,7 @@ atomic_val_t clearAudioBlockInUse(void) {
   return atomic_clear(&audio_block_in_use);
 }
 
-atomic_val_t getAudioBlockInUse(void) {
+static atomic_val_t getAudioBlockInUse(void) {
   return atomic_get(&audio_block_in_use);
 }
 
@@ -307,12 +310,11 @@ int audioStreamFileManagerHandler(void) {
         audio_record_state = 1;
         audio_stream_crc = 0;
         return 0;
-      } else if (msg.cmd == AUDIO_STREAM_STOP) {
+      }
+      if (msg.cmd == AUDIO_STREAM_STOP || msg.cmd == AUDIO_STREAM_DATA) {
         clearAudioMessageQueue();
       } else if (msg.cmd == AUDIO_STREAM_DELETE) {
         delVoiceBlock(msg.data[0]);
-      } else if (msg.cmd == AUDIO_STREAM_DATA) {
-        clearAudioMessageQueue();
       }
       return 0;
     }
@@ -333,7 +335,8 @@ int audioStreamFileManagerHandler(void) {
         audio_record_state = 0;
         G1_LOG_ERR("A start command occurred during recording to exit the recording\n");
         return 0;
-      } else if (msg.cmd == AUDIO_STREAM_DATA) {
+      }
+      if (msg.cmd == AUDIO_STREAM_DATA) {
         if (audio_cache_offset + msg.len < VOICE_SECTOR_SIZE) {
           memcpy(&audio_cache[audio_cache_offset], msg.data, msg.len);
           audio_cache_offset += msg.len;
@@ -415,7 +418,7 @@ int audioStreamFileManagerHandler(void) {
         VOICE_MGR->blocks[audio_block_num].start_addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE;
         VOICE_MGR->blocks[audio_block_num].end_addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE +
                                                       audio_sector_count * VOICE_SECTOR_SIZE + audio_cache_offset;
-        VOICE_MGR->blocks[audio_block_num].timestamp = get_date();
+        VOICE_MGR->blocks[audio_block_num].timestamp = (int32_t)get_date();
         VOICE_MGR->blocks[audio_block_num].crc32 = audio_stream_crc;
         G1_LOG_INF("upgrade Num.%d voice manager block,total write sector num = %d, total write "
                    "byte = %d ,crc32 = %d\n",
@@ -452,7 +455,8 @@ int audioStreamFileManagerHandler(void) {
         }
         G1_LOG_INF("audio manager block upgrade success\n");
         return 0;
-      } else if (msg.cmd == AUDIO_STREAM_DELETE) {
+      }
+      if (msg.cmd == AUDIO_STREAM_DELETE) {
         G1_LOG_WRN("A delete command occurred during the recording process. The recording "
                    "was stopped and the deletion action was performed,Delete num = %d\n",
                    msg.data[0]);
@@ -460,7 +464,10 @@ int audioStreamFileManagerHandler(void) {
         audio_record_state = 0;
         return 0;
       }
+      break;
     }
+    default:
+      break;
   }
   return 0;
 }

@@ -2,10 +2,17 @@
  * Quick note (voice memo) screen task and the DMIC record start/stop
  * helpers it uses.
  */
+#include <stdint.h>
+#include <string.h>
+#include <zephyr/toolchain.h>
+
 #include "../display/display_thread.h"
+#include "../gui/gui.h"
 #include "../panel_display/panel.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
 /* quick note page private state */
@@ -18,8 +25,8 @@ struct quicknote_prv_data {
   uint8_t timeout_cnt;
 };
 
-int exit_display_ms = 4000;
-struct quicknote_prv_data quicknote_prv;
+static int exit_display_ms = 4000;
+static struct quicknote_prv_data quicknote_prv;
 uint8_t quicknote_result_shown;                        /* "result" page drawn */
 
 void dmic_record_start(void) {
@@ -43,6 +50,7 @@ void quicknote_timeout_reset(void) {
 }
 
 int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   uint8_t lang = get_current_language();
   struct quicknote_prv_data *qn = &quicknote_prv;
@@ -112,8 +120,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
               }
             }
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
         if (get_dashboard_state()->is_master == 1) {
@@ -150,8 +158,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
           if (status == 8) {
             if (qn->last_status != 8) {
               qn->last_status = status;
-              _clean_fb_data(panel->panel_buffer, 0, gui_screen_x_offset() + 0x14, gui_screen_y_offset(),
-                             gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88);
+              clean_fb_data(panel->panel_buffer, 0, gui_screen_x_offset() + 0x14, gui_screen_y_offset(),
+                            gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88);
             }
             if (gs->ui.qn.mode == 0) {
               const char *text = gs->ui.qn.text;
@@ -197,6 +205,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
                              gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88, 1, 0, 0, NULL, 0);
                 break;
               }
+              default:
+                break;
             }
           }
         }
@@ -204,10 +214,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
           gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0, 0);
         }
       }
-      if (quicknote_result_shown != 0) {
-        if (qn->ts + 3999 < k_uptime_get()) {
-          get_dashboard_state()->quicknote_show_info->enable = 0;
-        }
+      if (quicknote_result_shown != 0 && qn->ts + 3999 < k_uptime_get()) {
+        get_dashboard_state()->quicknote_show_info->enable = 0;
       }
       if (event == UI_EVT_EXIT) {
         G1_LOG_INF("quick note function exit ...\n");
@@ -298,8 +306,15 @@ int day_of_week(int year, int month, int day) {
 }
 
 void draw_countdown_running_status(uint8_t **fb, void *arg, int a, int b, int c) {
+  ARG_UNUSED(fb);
+  ARG_UNUSED(arg);
+  ARG_UNUSED(a);
+  ARG_UNUSED(b);
+  ARG_UNUSED(c);
 }
 
 int draw_template_bitmap_page(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(panel);
+  ARG_UNUSED(arg);
   return 0;
 }

@@ -3,12 +3,13 @@
  * (derived from nrf/samples/mpsl/timeslot).
  */
 #include <hal/nrf_timer.h>
-#include <mpsl.h>
 #include <mpsl_timeslot.h>
 #include <nrf.h>
-#include <zephyr/irq.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include "app_esb.h"
 #include "main.h"
@@ -128,7 +129,7 @@ static void mpsl_nonpreemptible_thread(void) {
   }
 }
 
-void schedule_request(enum mpsl_timeslot_call api_call) {
+static void schedule_request(enum mpsl_timeslot_call api_call) {
   int err;
 
   err = k_msgq_put(&mpsl_api_msgq, &api_call, K_NO_WAIT);
@@ -140,6 +141,7 @@ void schedule_request(enum mpsl_timeslot_call api_call) {
 
 static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot_session_id_t session_id,
                                                                    uint32_t signal_type) {
+  ARG_UNUSED(session_id);
   mpsl_timeslot_signal_return_param_t *p_ret_val = NULL;
   uint8_t busy;
 
@@ -316,5 +318,8 @@ uint8_t timeslot_radio_is_on(void) {
   return timeslot_radio_on;
 }
 
+/* Both reports come from inside the kernel macro. */
+/* NOLINTBEGIN(misc-misplaced-const,misc-use-internal-linkage) */
 K_THREAD_DEFINE(mpsl_nonpreemptible_thread_id, CONFIG_MAIN_STACK_SIZE, mpsl_nonpreemptible_thread, NULL, NULL, NULL,
                 K_PRIO_COOP(0), 0, 0);
+/* NOLINTEND(misc-misplaced-const,misc-use-internal-linkage) */

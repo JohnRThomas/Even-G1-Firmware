@@ -9,7 +9,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
@@ -17,6 +20,7 @@
 #include "../utils/common_utils.h"
 #include "display_thread.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "proxy_thread.h"
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
@@ -38,7 +42,7 @@ K_MSGQ_DEFINE(proxy_msgq, sizeof(struct proxy_msg), 16, 4);
 static K_THREAD_STACK_DEFINE(proxy_stack, PROXY_STACK_SIZE);
 static struct k_thread proxy_thread;
 
-k_tid_t proxy_tid;
+static k_tid_t proxy_tid;
 static int audio_file_start;
 static int audio_file_end;
 static int audio_pkt_total;
@@ -63,6 +67,9 @@ int start_proxy_thread_handler(void *gs) {
 }
 
 void proxy_thread_handler(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
+
   struct GlassesState *gs = p1;
   struct proxy_msg msg;
   int ret;
@@ -147,10 +154,10 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
           audio_pkt_seq++;
           audio_response_packet_buf[4] = 2;
           audio_response_packet_buf[5] = audio_pkt_total;
-          audio_response_packet_buf[6] = audio_pkt_total >> 8;
+          audio_response_packet_buf[6] = (uint32_t)audio_pkt_total >> 8U;
           audio_pkt_index++;
           audio_response_packet_buf[7] = audio_pkt_index;
-          audio_response_packet_buf[8] = audio_pkt_index >> 8;
+          audio_response_packet_buf[8] = (uint32_t)audio_pkt_index >> 8U;
           audio_response_packet_buf[9] = audio_block_idx + 1;
           n = MIN(audio_file_size - audio_file_sent, AUDIO_CHUNK_SIZE);
           memcpy(&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE], audio_file_buf, n);
@@ -201,10 +208,10 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
             audio_pkt_seq++;
             audio_response_packet_buf[4] = 2;
             audio_response_packet_buf[5] = audio_pkt_total;
-            audio_response_packet_buf[6] = audio_pkt_total >> 8;
+            audio_response_packet_buf[6] = (uint32_t)audio_pkt_total >> 8U;
             audio_pkt_index++;
             audio_response_packet_buf[7] = audio_pkt_index;
-            audio_response_packet_buf[8] = audio_pkt_index >> 8;
+            audio_response_packet_buf[8] = (uint32_t)audio_pkt_index >> 8U;
             audio_response_packet_buf[9] = audio_block_idx + 1;
             memset(audio_file_buf, 0, sizeof(audio_file_buf));
             if (get_dashboard_state()->flash_read(get_dashboard_state(), audio_file_start + audio_file_sent,

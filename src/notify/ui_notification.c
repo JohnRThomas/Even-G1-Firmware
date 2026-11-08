@@ -3,11 +3,13 @@
  * received, unread counter), the page dispatcher table and two
  * template/test pages.
  */
+#include <glasses_state.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 
 #include "../dashboard/dashboard.h"
 #include "../gui/gui.h"
@@ -17,6 +19,7 @@
 #include "../ui/ui.h"
 #include "../utils/common_utils.h"
 #include "demo_image.h"
+#include "g1_date.h"
 #include "g1_log.h"
 #include "notify.h"
 
@@ -40,7 +43,7 @@ struct ui_task {
 };
 
 static int last_uid = -1;
-struct ui_task ui_task_table[] = {
+static struct ui_task ui_task_table[] = {
   {13, 0, draw_template_gyro_page, dump_template_gyro_info},
   {2, 0, draw_template_countdown_page, NULL},
   {3, 0, draw_template_dashboard_page, NULL},
@@ -85,7 +88,7 @@ int panel_related(struct jbd_panel_context *panel, int idx, void *arg) {
   return 0;
 }
 
-void draw_time(char *buf, uint32_t recv_time) {
+static __noinline void draw_time(char *buf, uint32_t recv_time) {
   uint8_t **fb = get_dashboard_state()->panel.panel_buffer;
   uint32_t now = get_date();
   uint32_t diff = now - recv_time;
@@ -267,8 +270,8 @@ void draw_time(char *buf, uint32_t recv_time) {
       sprintf(buf, "%02d/%02d", date.month, date.day);
     }
   }
-  _clean_fb_data(fb, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(), gui_screen_x_offset() + 512,
-                 gui_screen_y_offset() + 27);
+  clean_fb_data(fb, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(), gui_screen_x_offset() + 512,
+                gui_screen_y_offset() + 27);
   gui_utf_draw_align_right(0, buf, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(), gui_screen_x_offset() + 512,
                            gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
   BLE_PRINTK("gui_getScreenoffset_x=%d,timeDiffBuf is %s \n", gui_screen_x_offset(), buf);
@@ -370,7 +373,7 @@ void draw_message(uint8_t unread, struct notif_msg *msg) {
   }
 }
 
-void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg) {
+static __noinline void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg) {
   if (msg == NULL) {
     BLE_PRINTK("[%s-%d]curMsg is NULL !\n", __func__, __LINE__);
     return;
@@ -393,8 +396,8 @@ void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg) 
       }
     }
     k_sleep(K_MSEC(5));
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,
-                            640, 199);
+    reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,
+                           640, 199);
   }
   set_showing_notification_on_gui();
 }
@@ -412,6 +415,7 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
   uint8_t idx;
   uint8_t num;
 
+  ARG_UNUSED(arg);
   if (event == 2) {
     BLE_PRINTK("ui_ancs_notificaton_task exit !");
     last_idx = 0xff;
@@ -431,10 +435,6 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
   }
   idx = get_cur_show_msg_idx();
   num = count_unread_messages();
-  /* note: msg is still NULL here */
-  if (last_idx == idx && last_num == num && msg->uid == last_uid) {
-    return 0;
-  }
   if (pull_message(&msg) >= MSG_NORMAL_NUM) {
     BLE_PRINTK("pull message error !\r\n");
     last_idx = 0xff;
@@ -470,7 +470,7 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
   draw_message(num, msg);
   last_idx = idx;
   last_num = num;
-  last_uid = msg->uid;
+  last_uid = (int)msg->uid;
   msg_busy = 0;
   return 0;
 }

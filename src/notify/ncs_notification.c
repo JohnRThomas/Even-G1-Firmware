@@ -2,14 +2,17 @@
  * NCS (Android) notification JSON parser, called by
  * post_notification_cmd_process() (notification.c).
  */
+#include <cJSON.h>
 #include <errno.h>
+#include <glasses_state.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
 
 #include "../utils/common_utils.h"
+#include "g1_date.h"
 #include "g1_log.h"
 #include "notify.h"
 
@@ -19,16 +22,16 @@ static void utf8_drop_partial_tail(char *s) {
   size_t lead = len;
   size_t need;
 
-  while (lead > 0 && ((uint8_t)s[lead - 1] & 0xc0) == 0x80) {
+  while (lead > 0 && ((uint8_t)s[lead - 1] & 0xc0U) == 0x80U) {
     lead--;
   }
-  if (lead == 0 || ((uint8_t)s[lead - 1] & 0xc0) != 0xc0) {
+  if (lead == 0 || ((uint8_t)s[lead - 1] & 0xc0U) != 0xc0U) {
     return;
   }
   lead--;
-  if (((uint8_t)s[lead] & 0xf0) == 0xf0) {
+  if (((uint8_t)s[lead] & 0xf0U) == 0xf0U) {
     need = 4;
-  } else if (((uint8_t)s[lead] & 0xe0) == 0xe0) {
+  } else if (((uint8_t)s[lead] & 0xe0U) == 0xe0U) {
     need = 3;
   } else {
     need = 2;

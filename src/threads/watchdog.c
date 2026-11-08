@@ -5,6 +5,7 @@
 #include "threads.h"
 #include <string.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/kernel.h>
 

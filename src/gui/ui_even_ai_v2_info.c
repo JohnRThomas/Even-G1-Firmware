@@ -1,13 +1,17 @@
 /*
  * UI page: Even AI (v2) information.
  */
+#include <glasses_state.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/toolchain.h>
 
 #include "../panel_display/panel.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
 #include "gui.h"
 
 static struct {
@@ -266,9 +270,7 @@ static int even_ai_v2_info_reflash(int force) {
           x_off = 136;
           break;
         case 8:
-          if (lang == 6) {
-            x_off = 196;
-          } else if (lang == 5) {
+          if (lang == 5) {
             x_off = 160;
           } else if (lang == 7) {
             x_off = 164;
@@ -282,9 +284,7 @@ static int even_ai_v2_info_reflash(int force) {
           gui_bmp_bitmap_draw(0x4e, x + x_off, y + 58, 0, 0, 0);
           break;
         case 9:
-          if (lang == 6) {
-            x_off = 194;
-          } else if (lang == 5) {
+          if (lang == 5) {
             x_off = 144;
           } else if (lang == 7) {
             x_off = 148;
@@ -436,8 +436,6 @@ static int even_ai_v2_info_reflash(int force) {
         case 19:
           if (lang == 6) {
             x_off = 198;
-          } else if (lang == 5) {
-            x_off = 204;
           } else if (lang == 7) {
             x_off = 214;
           } else if (lang == 14) {
@@ -497,6 +495,7 @@ static int even_ai_v2_info_reflash(int force) {
 }
 
 int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
 
   set_frame_buffer(ctx->panel_buffer);
@@ -527,8 +526,8 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
               }
             }
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
         even_ai_v2_ui.state = 1;

@@ -3,12 +3,21 @@
  * panoramic map page) and the navigation task, which share the private data
  * and the map bitmaps.
  */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <zephyr/toolchain.h>
+
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
+#include "../gui/gui.h"
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "../utils/common_utils.h"
+#include "g1_date.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
 #define NAV_MAP_RAW_SIZE 0x1210
@@ -16,7 +25,7 @@
 uint8_t nav_map_bitmaps[2][0x908];          /* overview map bitmap / mask */
 uint8_t nav_overview_decoded;
 uint8_t nav_panoramic_drawn;
-char nav_summary_line[0x80];                 /* "total time total distance" line */
+static char nav_summary_line[0x80];               /* "total time total distance" line */
 struct nav_prv_data nav_prv;
 
 #define NAV_DRAW_CLOCK()                                                                                               \
@@ -41,7 +50,7 @@ void navigation_direction_img_display(int direction) {
 
 #define nav_load_overview_map(info)                                                                                    \
   do {                                                                                                                 \
-    if (info->map_size == NAV_MAP_RAW_SIZE) {                                                                          \
+    if ((info)->map_size == NAV_MAP_RAW_SIZE) {                                                                        \
       G1_LOG_INF("Data is in raw format.\n");                                                                          \
       memset(nav_map_bitmaps, 0, NAV_MAP_RAW_SIZE);                                                                    \
       k_mutex_lock(&nav_map_mutex, K_FOREVER);                                                                         \
@@ -50,13 +59,13 @@ void navigation_direction_img_display(int direction) {
       G1_LOG_INF("Data is in rle compress raw format.\n");                                                             \
       memset(nav_map_bitmaps, 0, NAV_MAP_RAW_SIZE);                                                                    \
       k_mutex_lock(&nav_map_mutex, K_FOREVER);                                                                         \
-      rle_decode(nav_overview_map_buf, info->map_size, nav_map_bitmaps[0]);                                            \
+      rle_decode(nav_overview_map_buf, (info)->map_size, nav_map_bitmaps[0]);                                          \
     }                                                                                                                  \
     nav_overview_decoded = 1;                                                                                          \
     k_mutex_unlock(&nav_map_mutex);                                                                                    \
   } while (0)
 
-void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav) {
+void navigation_overview_map_display(const uint8_t *nav) {
   const struct nav_page *info = (const struct nav_page *)nav;
 
   if (nav_prv.overview_shown == 0) {
@@ -75,15 +84,15 @@ void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav) {
           }
         }
       }
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
-                              0, GUI_SCREEN_WIDTH, 199);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
+                             0, GUI_SCREEN_WIDTH, 199);
     }
     if (nav_overview_map_ready == 1 && nav_overview_decoded == 0) {
       nav_load_overview_map(info);
     }
     clear_showing_notification_on_gui();
     for (int i = 1; i < 4; i++) {
-      _clean_fb_data(fb, 0, 0, 0, GUI_SCREEN_WIDTH, 199);
+      clean_fb_data(fb, 0, 0, 0, GUI_SCREEN_WIDTH, 199);
       gui_bitmps_merge_draw(X0 + 0x1b6, Y0, X0 + 0x240, Y0 + 0x88, nav_map_bitmaps[0], nav_map_bitmaps[1], 2, 0xf);
       memset(nav_summary_line, 0, sizeof(nav_summary_line));
       snprintf(nav_summary_line, sizeof(nav_summary_line), "%s %s", info->total_time, info->total_distance);
@@ -102,8 +111,8 @@ void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav) {
           }
         }
       }
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
-                              0, GUI_SCREEN_WIDTH, 199);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
+                             0, GUI_SCREEN_WIDTH, 199);
     }
     set_showing_notification_on_gui();
     gui_utf_draw(0, nav_summary_line, 0, X0 + 0xe8, Y0, X0 + 0x1ae, Y0 + 0x1b, 1, 0, 0, NULL, 0);
@@ -139,8 +148,8 @@ void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav) {
 
 #define nav_draw_position(info)                                                                                        \
   do {                                                                                                                 \
-    if (info->pos_x <= 0x1e8 && info->pos_y <= 0x88) {                                                                 \
-      gui_4bit_bitmap_override(0x5f, info->pos_x + X0 + 0x52, info->pos_y - 6 + Y0);                                   \
+    if ((info)->pos_x <= 0x1e8 && (info)->pos_y <= 0x88) {                                                             \
+      gui_4bit_bitmap_override(0x5f, (info)->pos_x + X0 + 0x52, (info)->pos_y - 6 + Y0);                               \
     } else {                                                                                                           \
       G1_LOG_ERR("APP send navigation offset overstep ,stop draw....\n");                                              \
     }                                                                                                                  \
@@ -148,12 +157,12 @@ void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav) {
 
 #define nav_draw_panoramic_text(info)                                                                                  \
   do {                                                                                                                 \
-    gui_utf_draw(0, info->speed, 0, X0, Y0 + 0x37, X0 + 0x4c, Y0 + 0x52, 1, 0, 0, NULL, 0);                            \
-    gui_utf_draw(0, info->total_time, 0, X0, Y0 + 0x52, X0 + 0x4c, Y0 + 0x6d, 1, 0, 0, NULL, 0);                       \
-    gui_utf_draw(0, info->total_distance, 0, X0, Y0 + 0x6d, X0 + 0x4c, Y0 + 0x88, 1, 0, 0, NULL, 0);                   \
+    gui_utf_draw(0, (info)->speed, 0, X0, Y0 + 0x37, X0 + 0x4c, Y0 + 0x52, 1, 0, 0, NULL, 0);                          \
+    gui_utf_draw(0, (info)->total_time, 0, X0, Y0 + 0x52, X0 + 0x4c, Y0 + 0x6d, 1, 0, 0, NULL, 0);                     \
+    gui_utf_draw(0, (info)->total_distance, 0, X0, Y0 + 0x6d, X0 + 0x4c, Y0 + 0x88, 1, 0, 0, NULL, 0);                 \
   } while (0)
 
-void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav) {
+void navigation_panoramic_map_display(const uint8_t *nav) {
   const struct nav_page *info = (const struct nav_page *)nav;
 
   if (nav_prv.panoramic_shown == 0) {
@@ -172,12 +181,12 @@ void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav) {
           }
         }
       }
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
-                              0, GUI_SCREEN_WIDTH, 199);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
+                             0, GUI_SCREEN_WIDTH, 199);
     }
     clear_showing_notification_on_gui();
     for (int i = 1; i < 4; i++) {
-      _clean_fb_data(fb, 0, 0, 0, GUI_SCREEN_WIDTH, 199);
+      clean_fb_data(fb, 0, 0, 0, GUI_SCREEN_WIDTH, 199);
       if (nav_panoramic_map_ready == 1) {
         gui_bitmps_merge_draw(X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88, panoramic_map_buf, panoramic_map_mask, 2, 0xf);
         nav_draw_position(info);
@@ -198,8 +207,8 @@ void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav) {
           }
         }
       }
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
-                              0, GUI_SCREEN_WIDTH, 199);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
+                             0, GUI_SCREEN_WIDTH, 199);
     }
     set_showing_notification_on_gui();
     if (nav_panoramic_map_ready == 1) {
@@ -221,9 +230,9 @@ void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav) {
         nav_draw_panoramic_text(info);
       }
     } else {
-      _clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                              X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
+      clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                             X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
       gui_utf_draw(0, get_string(0x48), 0, X0, Y0 + 0x37, X0 + 0x240, Y0 + 0x88, 3, 0, 0, NULL, 0);
     }
   }
@@ -246,6 +255,8 @@ void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav) {
 /* ---- navigation task ---- */
 
 int draw_template_navigation_page(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(panel);
+  ARG_UNUSED(arg);
   return 0;
 }
 
@@ -258,6 +269,7 @@ void nav_draw_route_generating(void) {
 }
 
 int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   uint8_t *nav = gs->ui.buf;
 
@@ -300,7 +312,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           nav_overview_decoded = 0;
           nav_prv.sync_cnt = 10;
           nav_prv.ts = k_uptime_get();
-          navigation_overview_map_display(gs, nav);
+          navigation_overview_map_display(nav);
         }
       }
       if (get_dashboard_state()->is_master == 1 && nav_prv.synced == 1) {
@@ -376,7 +388,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           if (nav_prv.imu_action == 2) {
             G1_LOG_INF("navigation arrived 2 rst reflash, "
                        "navigation_panoramic_map_display reflash\n");
-            navigation_panoramic_map_display(gs, nav);
+            navigation_panoramic_map_display(nav);
           } else {
             G1_LOG_INF("navigation arrived 1 rst reflash\n");
             if (!nav_prv.arrived_cleared) {
@@ -395,10 +407,10 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           }
         } else if (nav_prv.imu_action == 2) {
           G1_LOG_INF("navigation_panoramic_map_display reflash\n");
-          navigation_panoramic_map_display(gs, nav);
+          navigation_panoramic_map_display(nav);
         } else {
           G1_LOG_INF("navigation_overview_map_display reflash\n");
-          navigation_overview_map_display(gs, nav);
+          navigation_overview_map_display(nav);
         }
       } else if (event == UI_EVT_REFRESH) {
         struct g1_date date = {0};

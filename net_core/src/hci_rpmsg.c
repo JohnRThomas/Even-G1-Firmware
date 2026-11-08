@@ -3,28 +3,29 @@
  */
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
-#include <zephyr/sys/util.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include <zephyr/ipc/ipc_service.h>
 
-#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/buf.h>
-#include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/hci_raw.h>
+#include <zephyr/bluetooth/hci_types.h>
 #include <zephyr/bluetooth/hci_vs.h>
-#include <zephyr/bluetooth/l2cap.h>
 #include <zephyr/net/buf.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/logging/log_ctrl.h>
-
-#include <hal/nrf_gpio.h>
 
 #include "hci_rpmsg.h"
 #include "net_common.h"
@@ -186,6 +187,10 @@ static void hci_rpmsg_rx(uint8_t *data, size_t len) {
 }
 
 static void tx_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p1);
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
+
   while (1) {
     struct net_buf *buf;
     int err;
@@ -254,10 +259,16 @@ void bt_ctlr_assert_handle(char *file, uint32_t line) {
 #endif /* CONFIG_BT_CTLR_ASSERT_HANDLER */
 
 static void hci_ept_bound(void *priv) {
+  ARG_UNUSED(priv);
+
   k_sem_give(&ipc_bound_sem);
 }
 
 static void rx_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p1);
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
+
   k_sem_take(&ipc_bound_sem, K_FOREVER);
 
   while (1) {
@@ -271,6 +282,8 @@ static void rx_thread(void *p1, void *p2, void *p3) {
 }
 
 static void hci_ept_recv(const void *data, size_t len, void *priv) {
+  ARG_UNUSED(priv);
+
   hci_rpmsg_rx((uint8_t *)data, len);
 }
 
@@ -318,7 +331,7 @@ int hci_rpmsg_get_static_addr(uint8_t *addr) {
   char str[18];
 
   if (((NRF_FICR->DEVICEADDR[0] != UINT32_MAX) || ((NRF_FICR->DEVICEADDR[1] & UINT16_MAX) != UINT16_MAX)) &&
-      (NRF_FICR->DEVICEADDRTYPE & 0x01)) {
+      (NRF_FICR->DEVICEADDRTYPE & 0x01U)) {
     sys_put_le32(NRF_FICR->DEVICEADDR[0], &addrs[0].bdaddr.val[0]);
     sys_put_le16(NRF_FICR->DEVICEADDR[1], &addrs[0].bdaddr.val[4]);
     BT_ADDR_SET_STATIC(&addrs[0].bdaddr);

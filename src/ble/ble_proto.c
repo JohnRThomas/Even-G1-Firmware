@@ -4,15 +4,19 @@
  */
 #include <app_version.h>
 #include <cJSON.h>
+#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
-#include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/hci_types.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
-#include <zephyr/sys/reboot.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include "../dashboard/dashboard.h"
 #include "../display/display_thread.h"
@@ -31,8 +35,11 @@
 #include "../ui/ui.h"
 #include "../utils/common_utils.h"
 #include "ble_ancs.h"
+#include "ble_cmd.h"
 #include "ble_proto.h"
+#include "g1_date.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 
 uint8_t nav_overview_map_buf[0x1210];
 uint8_t panoramic_map_buf[PANORAMIC_MAP_SIZE];   /* panoramic map / citywalk data */
@@ -155,10 +162,11 @@ struct put_pkt_hdr {
   } while (0)
 
 /* little endian helpers */
-#define GET_LE32(p) ((uint32_t)(p)[0] | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24))
+#define GET_LE32(p)                                                                                                    \
+  ((uint32_t)(p)[0] | ((uint32_t)(p)[1] << 8U) | ((uint32_t)(p)[2] << 16U) | ((uint32_t)(p)[3] << 24U))
 #define GET_LE64(p)                                                                                                    \
-  ((uint64_t)(p)[0] | ((uint64_t)(p)[1] << 8) | ((uint64_t)(p)[2] << 16) | ((uint64_t)(p)[3] << 24) |                  \
-   ((uint64_t)(p)[4] << 32) | ((uint64_t)(p)[5] << 40) | ((uint64_t)(p)[6] << 48) | ((uint64_t)(p)[7] << 56))
+  ((uint64_t)(p)[0] | ((uint64_t)(p)[1] << 8U) | ((uint64_t)(p)[2] << 16U) | ((uint64_t)(p)[3] << 24U) |               \
+   ((uint64_t)(p)[4] << 32U) | ((uint64_t)(p)[5] << 40U) | ((uint64_t)(p)[6] << 48U) | ((uint64_t)(p)[7] << 56U))
 
 /* response of a post request: cmd, u16 length, seq, sub command, status, ... */
 #define POST_RESP_LEN(r) (*(uint16_t *)&(r)[1])
@@ -309,7 +317,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               get_dashboard_state()->horiz_pitch_cfg[1] = data[6];
               if (get_dashboard_state()->horiz_pitch_cfg[1] == 1) {
                 G1_LOG_WRN("ble set user horiz pitch:%d\n", imu_pitch_x100);
-                get_dashboard_state()->imu.base = imu_pitch_x100;
+                get_dashboard_state()->imu.base = (int)imu_pitch_x100;
                 get_dashboard_state()->dashboard_cmd = 0;
                 k_sem_give(&get_dashboard_state()->dashboard_position_sem);
               }
@@ -318,6 +326,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             } else {
               get_dashboard_state()->horiz_pitch_cfg[0] = 0;
             }
+            break;
+          default:
             break;
         }
         resp[5] = PKCS7_PACK_DONE;
@@ -357,6 +367,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           memset(resp, 0, sizeof(resp));
           memcpy(resp, data, data_len);
           ctx->write(resp, data_len);
+          break;
+        default:
           break;
       }
       break;
@@ -530,7 +542,6 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
-            return;
           } else if (idx == 1) {
             G1_LOG_INF("Action ID = 1,Received schedule multiple initialization "
                        "packets, currently the first packet of data\n");
@@ -544,7 +555,6 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             sched_total = total;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
-            return;
           } else if (idx < total) {
             if (sched_cnt != idx - 1) {
               G1_LOG_WRN("There is a packet order error, current packet order = "
@@ -562,7 +572,6 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             sched_cnt++;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
-            return;
           } else if (idx == total) {
             const uint8_t *p;
 
@@ -653,10 +662,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
-            return;
-          } else {
-            return;
           }
+          return;
         case DASHBOARD_SUB_PANE_STOCK: /* stocks */
           idx = *(uint16_t *)&data[7];
           total = *(uint16_t *)&data[5];
@@ -704,7 +711,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     return;
                   }
                   st = &stock_items[num - 1];
-                  if (memcmp(st->code, &data[0x10], MIN(data[0xf], 0x20))) {
+                  if (memcmp(st->code, &data[0x10], MIN(data[0xf], 0x20)) != 0) {
                     memset(st->code, 0, sizeof(st->code));
                     cleanStocksIndex();
                   }
@@ -726,7 +733,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     POST_TO_HOST(10);
                     return;
                   }
-                  if (memcmp(st->company, &p[2], MIN(p[1], 0x40))) {
+                  if (memcmp(st->company, &p[2], MIN(p[1], 0x40)) != 0) {
                     memset(st->company, 0, sizeof(st->company));
                     cleanStocksIndex();
                   }
@@ -936,7 +943,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     return;
                   }
                   st = &stock_items[num - 1];
-                  if (memcmp(st->code, &p[2], MIN(p[1], 0x20))) {
+                  if (memcmp(st->code, &p[2], MIN(p[1], 0x20)) != 0) {
                     memset(st->code, 0, sizeof(st->code));
                     cleanStocksIndex();
                   }
@@ -958,7 +965,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     POST_TO_HOST(10);
                     return;
                   }
-                  if (memcmp(st->company, &p[2], MIN(p[1], 0x40))) {
+                  if (memcmp(st->company, &p[2], MIN(p[1], 0x40)) != 0) {
                     memset(st->company, 0, sizeof(st->company));
                     cleanStocksIndex();
                   }
@@ -1115,7 +1122,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     POST_TO_HOST(10);
                   }
                   nw = &news_items[num - 1];
-                  if (memcmp(nw->source, &p[2], MIN(p[1], 0x40))) {
+                  if (memcmp(nw->source, &p[2], MIN(p[1], 0x40)) != 0) {
                     memset(nw->source, 0, sizeof(nw->source));
                     cleanNewsIndex();
                   }
@@ -1136,7 +1143,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     POST_TO_HOST(10);
                     return;
                   }
-                  if (memcmp(nw->text, &p[2], p[1])) {
+                  if (memcmp(nw->text, &p[2], p[1]) != 0) {
                     memset(nw->text, 0, sizeof(nw->text));
                     cleanNewsIndex();
                   }
@@ -1235,7 +1242,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     POST_TO_HOST(10);
                   }
                   nw = &news_items[num - 1];
-                  if (memcmp(nw->source, &p[2], MIN(p[1], 0x40))) {
+                  if (memcmp(nw->source, &p[2], MIN(p[1], 0x40)) != 0) {
                     memset(nw->source, 0, sizeof(nw->source));
                     cleanNewsIndex();
                   }
@@ -1256,7 +1263,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                     POST_TO_HOST(10);
                     return;
                   }
-                  if (memcmp(nw->text, &p[2], p[1])) {
+                  if (memcmp(nw->text, &p[2], p[1]) != 0) {
                     memset(nw->text, 0, sizeof(nw->text));
                     cleanNewsIndex();
                   }
@@ -1302,7 +1309,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
             if (get_dashboard_state()->dashboard_ts->citywalk_mode == 3) {
               get_dashboard_state()->dashboard_ts->arrow_x = *(uint16_t *)&data[0xc];
-              if (get_dashboard_state()->dashboard_ts->arrow_x & 1) {
+              if (get_dashboard_state()->dashboard_ts->arrow_x & 1U) {
                 get_dashboard_state()->dashboard_ts->arrow_x--;
               }
               get_dashboard_state()->dashboard_ts->arrow_y = *(uint16_t *)&data[0xe];
@@ -1434,6 +1441,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           }
           ctx->write(resp, 10);
           break;
+        default:
+          break;
       }
       break;
     }
@@ -1487,8 +1496,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             set_esb_recv_state(data[3], 0, 0);
             tp->action = 1;
             tp->ready = 1;
-            tp->mode = data[10] & 0xf;
-            tp->mode_flag = data[10] & 0x80;
+            tp->mode = data[10] & 0xfU;
+            tp->mode_flag = data[10] & 0x80U;
             tp->countdown_s = data[9];
             tp->scroll_pct = data[0xb];
             tp->mark_pos = 0;
@@ -1520,8 +1529,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             memset(&tp_buf, 0, sizeof(tp_buf));
             tp_buf.action = 1;
             tp_buf.ready = 0;
-            tp_buf.mode = data[10] & 0xf;
-            tp_buf.mode_flag = data[10] & 0x80;
+            tp_buf.mode = data[10] & 0xfU;
+            tp_buf.mode_flag = data[10] & 0x80U;
             tp_buf.countdown_s = data[9];
             tp_buf.scroll_pct = data[0xb];
             tp_buf.mark_pos = 0;
@@ -1797,6 +1806,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           memcpy(resp, data, 6);
           POST_TO_HOST(6);
           break;
+        default:
+          break;
       }
       break;
     }
@@ -1895,7 +1906,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           total = *(uint16_t *)&data[5];
           idx = *(uint16_t *)&data[7];
           if (total == 1) {
-            int num = data[9] & 0xf;
+            int num = (int)(data[9] & 0xfU);
             uint8_t flag = data[10];
             int n = num - 1;
 
@@ -1920,7 +1931,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               uint16_t xl;
 
               memcpy(QN_ITEM(n).title, &data[0xc], MIN(tl, sizeof(QN_ITEM(n).title) - 1));
-              xl = data[tl + 0xc] | (data[tl + 0xd] << 8);
+              xl = data[tl + 0xc] | ((uint32_t)data[tl + 0xd] << 8U);
               memcpy(QN_ITEM(n).text, &data[tl + 0xe], MIN(xl, sizeof(QN_ITEM(n).text)));
               G1_LOG_INF("title length = %d,text length = %d\n", tl, xl);
               QN_ITEM(n).valid = 1;
@@ -2209,6 +2220,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             resp[5] = 1;
           }
           ctx->write(resp, 6);
+          break;
+        default:
           break;
       }
       break;
@@ -2632,6 +2645,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           }
           break;
         }
+        default:
+          break;
       }
       break;
     }
@@ -2987,6 +3002,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
   }
 }
 static void DashboardLockTimerExpiry_callback(struct k_timer *timer) {
+  ARG_UNUSED(timer);
   G1_LOG_INF("dashboard lock timeout,release .\n");
   atomic_clear_bit(&dashboard_lock_requested, DASHBOARD_LOCK_BIT);
   atomic_clear_bit(&dashboard_lock_reported, DASHBOARD_LOCK_BIT);
@@ -3165,7 +3181,7 @@ int send_dmic_msg(struct ble_context *ctx) {
                  get_dashboard_state()->dashboard_mode == 6 ? dashboard_send_fail_count : send_fail_count);
     }
     dmic_seq++;
-  } while (dmic_seq & 3);
+  } while (dmic_seq & 3U);
   return 0;
 }
 static void ble_process_get_req(struct ble_context *ctx, struct ble_req_hdr *hdr, uint8_t *data) {
@@ -3428,6 +3444,8 @@ void g1_printk(const char *fmt, ...) {
   va_end(ap);
 }
 static void ble_work_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct ble_context *ctx = p1;
   struct bt_data_msg msg;
   int err;
@@ -3646,7 +3664,7 @@ void ble_handle_rx_data(uint8_t *data, uint32_t len, int dump) {
     return;
   }
   if (dump) {
-    dump_hex("BLE-rec", data, len);
+    dump_hex("BLE-rec", data, (int)len);
   }
   if (spec_ble_command_hook(data, len)) {
     ble_dispatch_raw_packet(data, len);
@@ -3772,7 +3790,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         uint8_t kind;
 
         spim_transfer(ctx, rx, 8);
-        kind = data[4] & 0xf0;
+        kind = data[4] & 0xf0U;
         if (kind == 0x60) {
           dmic_stream_stop();
           get_dashboard_state()->dash_buf->type = 10;
@@ -3914,11 +3932,11 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             update_persist_task_status(get_dashboard_state(), 0x13, 2);
           } else if (mode == 3) {
             dmic_stream_pause(1);
-            get_dashboard_state()->transcribe_buf->flags &= ~1;
+            get_dashboard_state()->transcribe_buf->flags &= ~1U;
           } else if (mode == 4) {
             dmic_stream_pause(0);
             if (get_dashboard_state()->transcribe_buf->mode != 2) {
-              get_dashboard_state()->transcribe_buf->flags |= 1;
+              get_dashboard_state()->transcribe_buf->flags |= 1U;
             }
           }
           break;
@@ -3938,9 +3956,9 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             G1_LOG_INF("received transcribe packet,total packet = 1\n");
             get_dashboard_state()->transcribe_buf->status = data[9];
             if (data[10] == 1 || get_dashboard_state()->transcribe_buf->mode == 2) {
-              get_dashboard_state()->transcribe_buf->flags &= ~1;
+              get_dashboard_state()->transcribe_buf->flags &= ~1U;
             } else {
-              get_dashboard_state()->transcribe_buf->flags |= 1;
+              get_dashboard_state()->transcribe_buf->flags |= 1U;
             }
             get_dashboard_state()->transcribe_buf->dark_lines = data[11];
             memset(multi_packet_buf, 0, MULTI_PACKET_BUF_SIZE);
@@ -4002,9 +4020,9 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                          "for data update.\n");
               get_dashboard_state()->transcribe_buf->status = data[9];
               if (data[10] == 1 || get_dashboard_state()->transcribe_buf->mode == 2) {
-                get_dashboard_state()->transcribe_buf->flags &= ~1;
+                get_dashboard_state()->transcribe_buf->flags &= ~1U;
               } else {
-                get_dashboard_state()->transcribe_buf->flags |= 1;
+                get_dashboard_state()->transcribe_buf->flags |= 1U;
               }
               get_dashboard_state()->transcribe_buf->dark_lines = data[11];
               memcpy(multi_packet_buf + multi_packet_len, data + 12, data_len - 12);
@@ -4287,9 +4305,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           resp[3] = data[3];
           resp[4] = 5;
           resp[5] = PKCS7_PACK_DONE;
-          if (get_dashboard_state()->evenai_buf->state == 0) {
-            resp[5] = PKCS7_PACK_ERR;
-          } else if (get_dashboard_state()->evenai_buf->state > 1) {
+          if (get_dashboard_state()->evenai_buf->state == 0 || get_dashboard_state()->evenai_buf->state > 1) {
             resp[5] = PKCS7_PACK_ERR;
           } else {
             resp[5] = PKCS7_PACK_DONE;
@@ -4324,9 +4340,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         resp[3] = data[3];
         resp[4] = 5;
         resp[5] = PKCS7_PACK_DONE;
-        if (get_dashboard_state()->evenai_buf->state == 0) {
-          resp[5] = PKCS7_PACK_ERR;
-        } else if (get_dashboard_state()->evenai_buf->state > 1) {
+        if (get_dashboard_state()->evenai_buf->state == 0 || get_dashboard_state()->evenai_buf->state > 1) {
           resp[5] = PKCS7_PACK_ERR;
         } else {
           resp[5] = PKCS7_PACK_DONE;
@@ -4410,7 +4424,7 @@ static int mobile_send_notification_to_ble_device_test(const char *title, const 
   cJSON_AddItemToObject(root, "ncs_notification", notif);
   str = cJSON_Print(root);
   G1_LOG_INF("%s\n", str);
-  len = strlen(str);
+  len = (int)strlen(str);
   total = DIV_ROUND_UP(len, NOTIF_CHUNK_DATA_SIZE);
   chunk[0] = BLE_CMD_NOTIFICATION_SEND;
   chunk[2] = total;
@@ -4483,7 +4497,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   pos = strstr(buf, "#2@");
   if (pos == buf) {
     pos += 3;
-    val = atoi(pos);
+    val = (int)strtol(pos, NULL, 10);
     G1_LOG_INF("模拟抬头/低头触发:pos:%s, val=%d\n\n", pos, val);
     buf[0] = 5;
     buf[1] = 1;
@@ -4495,7 +4509,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   pos = strstr(buf, "#3@");
   if (pos == buf) {
     pos += 3;
-    val = atoi(pos);
+    val = (int)strtol(pos, NULL, 10);
     G1_LOG_INF("pos:%s, new screen_id=%d\n\n", pos, val);
     buf[0] = 5;
     buf[1] = 3;
@@ -4507,7 +4521,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   pos = strstr(buf, "#4@");
   if (pos == buf) {
     pos += 3;
-    val = atoi(pos);
+    val = (int)strtol(pos, NULL, 10);
     if (val > 2) {
       BLE_PRINTK("%s(): pos:%s, new log_level_set=%d\n\n", __func__, pos, val);
     }
@@ -4543,10 +4557,10 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     }
     memcpy(en, p, q - p);
     G1_LOG_INF("en:%s\n\n", en);
-    sec = atoi(cmd) * 60 + 3610;
+    sec = (int)strtol(cmd, NULL, 10) * 60 + 3610;
     buf[0] = 7;
     memcpy(&buf[1], &sec, sizeof(sec));
-    enable = atoi(en);
+    enable = (int)strtol(en, NULL, 10);
     buf[5] = enable;
     G1_LOG_INF("enable: %d, sec:%d\n\n", enable, sec);
     ble_dispatch_raw_packet((uint8_t *)buf, 6);
@@ -4574,14 +4588,14 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       return -1;
     }
     memcpy(cmd_type, pos, n);
-    cmd = atoi(cmd_type);
+    cmd = (int)strtol(cmd_type, NULL, 10);
     G1_LOG_INF("cmd=%d\n", cmd);
     if (cmd == 4) {
       G1_LOG_INF("BLE_REQ_PUT_NOTIFI_WHIHTLIST_APP需要单独处理.\n\n");
       char json[256] = {0};
 
       strcpy(json, "{\"whitelist_app\":\"com.apple.MobileSMS:com.tencent.xin:com.tencent.mqq\"}");
-      n = strlen(json);
+      n = (int)strlen(json);
       G1_LOG_INF("cmd_type:%s, value=%s, tx_len=%d, jstr_len=%d, jsonstr=%s\n\n", cmd_type, value, 0, n, json);
       subcontracing_send_data_pkcs7((uint8_t *)json, n, 4, ble_dispatch_raw_packet);
       return 0;
@@ -4599,7 +4613,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       root = cJSON_CreateObject();
       cJSON_AddItemToObject(root, "teleprompter_info", info);
       str = cJSON_Print(root);
-      n = strlen(str);
+      n = (int)strlen(str);
       G1_LOG_INF("cmd_type:%s, value=%s, tx_len=%d, jstr_len=%d, jsonstr=%s\n\n", cmd_type, value, 0, n, str);
       subcontracing_send_data_pkcs7((uint8_t *)str, n, 9, ble_dispatch_raw_packet);
       cJSON_Delete(root);
@@ -4617,7 +4631,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       root = cJSON_CreateObject();
       cJSON_AddItemToObject(root, "navigation_info", info);
       str = cJSON_Print(root);
-      n = strlen(str);
+      n = (int)strlen(str);
       G1_LOG_INF("cmd_type:%s, value=%s, tx_len=%d, jstr_len=%d, jsonstr=%s\n\n", cmd_type, value, 0, n, str);
       subcontracing_send_data_pkcs7((uint8_t *)str, n, 10, ble_dispatch_raw_packet);
       cJSON_Delete(root);
@@ -4647,7 +4661,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       return mobile_send_notification_to_ble_device_test(title, msg, ble_dispatch_raw_packet);
     }
     buf[0] = cmd;
-    buf[1] = atoi(value);
+    buf[1] = (int)strtol(value, NULL, 10);
     G1_LOG_INF("**cmd_type:%s, value=%s, tx_len=%d\n\n", cmd_type, value, 2);
     ble_dispatch_raw_packet((uint8_t *)buf, 2);
     return 0;
@@ -4678,7 +4692,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       const char *p = audio;
 
       for (i = 0; i < sizeof(audio); i++) {
-        audio[i] = (i & 0xf) + '0';
+        audio[i] = (char)(((uint32_t)i & 0xfU) + '0');
       }
       t0 = k_uptime_get();
       for (i = 0; i < 9; i++) {
@@ -4703,7 +4717,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   }
 
   if (strncmp(buf, "#b", 2) == 0) {
-    val = atoi(&buf[2]);
+    val = (int)strtol(&buf[2], NULL, 10);
     state->esb_channel = val;
     printk("\n*****test set esb channel***** %d\n", (uint8_t)val);
     state->dashboard_cmd = 0;
@@ -4713,7 +4727,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   }
 
   if (strncmp(buf, "#d", 2) == 0) {
-    val = atoi(&buf[2]);
+    val = (int)strtol(&buf[2], NULL, 10);
     state->display_mode = val;
     printk("\n*****display mode***** %d\n", (uint8_t)val);
     if (state->display_mode == 11) {
@@ -4735,14 +4749,14 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     if (buf[2] == '0') {
       dmic_stream_stop();
     } else {
-      state->pending |= 4;
+      state->pending |= 4U;
     }
     k_sem_give(&state->main_sem);
     return 0;
   }
 
   if (strncmp(buf, "#f", 2) == 0) {
-    state->pending |= 8;
+    state->pending |= 8U;
     k_sem_give(&state->main_sem);
     return 0;
   }
@@ -4763,7 +4777,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
 
   if (strncmp(buf, "#l", 2) == 0) {
     /* off: 0xc1 or ASCII "1"; on: anything else */
-    if ((uint8_t)buf[2] == 0xc1 || atoi(&buf[2]) == 1) {
+    if ((uint8_t)buf[2] == 0xc1 || (int)strtol(&buf[2], NULL, 10) == 1) {
       BLE_DEBUG = 0;
     } else {
       BLE_DEBUG = 1;
@@ -4774,7 +4788,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#o", 2) == 0) {
     char out[20] = {0};
 
-    state->imu.ref = imu_pitch_x100;
+    state->imu.ref = (int)imu_pitch_x100;
     sprintf(out, "base: %d", imu_pitch_x100);
     ctx->write(out, sizeof(out));
     state->dashboard_cmd = 0;
@@ -4788,11 +4802,11 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     uint32_t lux = opt3007_get_max_lux();
 
     if (buf[2] != '\0') {
-      if (atoi(&buf[2]) < 2U) {
-        state->opt3007_context.auto_brightness = atoi(&buf[2]);
+      if ((int)strtol(&buf[2], NULL, 10) < 2U) {
+        state->opt3007_context.auto_brightness = (int)strtol(&buf[2], NULL, 10);
       } else {
         state->opt3007_context.auto_brightness = 0;
-        state->panel.panel_brightness_level = atoi(&buf[2]);
+        state->panel.panel_brightness_level = (int)strtol(&buf[2], NULL, 10);
       }
     }
     if (lux == 0xffffffff) {
@@ -4817,7 +4831,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#u", 2) == 0) {
     char out[20] = {0};
 
-    val = atoi(&buf[2]);
+    val = (int)strtol(&buf[2], NULL, 10);
     state->imu.level = val;
     sprintf(out, "level: %d", (uint8_t)val);
     ctx->write(out, sizeof(out));
@@ -4863,7 +4877,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#j", 2) == 0) {
     char out[20] = {0};
 
-    if (atoi(&buf[2]) == 1) {
+    if ((int)strtol(&buf[2], NULL, 10) == 1) {
       state->spi.init_cb(&state->spi);
       if (state->flash_ops.fn) {
         state->flash_ops.fn(&state->flash_ops);
@@ -4883,7 +4897,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#s", 2) == 0) {
     char out[20] = {0};
 
-    change_work_mode(buf[2] != '\0' ? atoi(&buf[2]) : 7);
+    change_work_mode(buf[2] != '\0' ? (int)strtol(&buf[2], NULL, 10) : 7);
     ctx->write(out, sizeof(out));
     return 0;
   }
@@ -4891,7 +4905,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#h", 2) == 0) {
     char out[64] = {0};
 
-    switch (atoi(&buf[2])) {
+    switch ((int)strtol(&buf[2], NULL, 10)) {
       case 1:
         state->dashboard_cmd = 0x19;
         sys_settings_dirty = 1;
@@ -4947,6 +4961,8 @@ static int ble_process_report_response(struct ble_context *ctx, struct ble_req_h
     case BLE_CMD_EVENT:
       deal_event_to_phone(ctx, data);
       return 0;
+    default:
+      break;
   }
   G1_LOG_WRN("@tx error post req_type: %d\n", cmd);
   resp[1] = PKCS7_PACK_ERR;

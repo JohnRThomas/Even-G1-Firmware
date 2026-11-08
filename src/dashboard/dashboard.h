@@ -27,7 +27,7 @@
 #define GUI_FB_ROW_BYTES 320
 
 /*
- * Dashboard page private state (_dashboard_prv_data), defined
+ * Dashboard page private state (dashboard_prv), defined
  * in dashboard.c.
  */
 struct dashboard_prv_data {
@@ -57,7 +57,7 @@ struct dashboard_prv_data {
   uint8_t screen_cleared;      /* cleared by set_screen_cleared() */
   uint8_t msg_count;
 };
-extern struct dashboard_prv_data _dashboard_prv_data;
+extern struct dashboard_prv_data dashboard_prv;
 
 /* every dashboard coordinate is written relative to the screen origin */
 #define DB_X(n) (gui_screen_x_offset() + (n))

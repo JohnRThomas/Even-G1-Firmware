@@ -2,7 +2,7 @@
  * Dashboard: "new message" page, dashboard info init (quick notes), the
  * notes / stocks / news / calendar page index helpers, the dashboard renderer
  * DashBoard_Reflash and the dashboard screen task ui_DashBoard_task with its
- * app sync helpers.  They share _dashboard_prv_data.
+ * app sync helpers.  They share dashboard_prv.
  */
 #include "dashboard.h"
 #include "../ble/ble_proto.h"
@@ -18,11 +18,16 @@
 #include "../threads/threads.h"
 #include "../ui/ui.h"
 #include "../utils/common_utils.h"
+#include "g1_date.h"
+#include "g1_log.h"
+#include "glasses_state.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #define QUICKNOTE_NUM       4
 #define QUICKNOTE_TITLE_LEN 0x29
@@ -37,6 +42,7 @@ static uint8_t new_msg_drawn;
 static uint8_t new_msg_entered;
 
 int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *state = get_dashboard_state();
   uint8_t type;
 
@@ -98,8 +104,8 @@ int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int 
         }
       }
     }
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,
-                            640, 199);
+    reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,
+                           640, 199);
   }
   set_showing_notification_on_gui();
   new_msg_entered = 1;
@@ -112,25 +118,25 @@ void dashboard_draw_add_note_hint(void) {
   const char *str;
 
   if (flag == 1) {
-    if (_dashboard_prv_data.language != lang) {
-      _dashboard_prv_data.language = lang;
-      _clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 266,
-                     gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                              gui_screen_x_offset() + 266, gui_screen_y_offset() + 28, gui_screen_x_offset() + 564,
-                              gui_screen_y_offset() + 136);
+    if (dashboard_prv.language != lang) {
+      dashboard_prv.language = lang;
+      clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 266,
+                    gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                             gui_screen_x_offset() + 266, gui_screen_y_offset() + 28, gui_screen_x_offset() + 564,
+                             gui_screen_y_offset() + 136);
     }
     str = get_string(0x53);
     gui_utf_draw_middle(0, str, 0, gui_screen_x_offset() + 266, gui_screen_y_offset() + 40, gui_screen_x_offset() + 564,
                         gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
   } else {
-    if (_dashboard_prv_data.language != lang) {
-      _dashboard_prv_data.language = lang;
-      _clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 266,
-                     gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                              gui_screen_x_offset() + 266, gui_screen_y_offset() + 28, gui_screen_x_offset() + 564,
-                              gui_screen_y_offset() + 136);
+    if (dashboard_prv.language != lang) {
+      dashboard_prv.language = lang;
+      clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 266,
+                    gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                             gui_screen_x_offset() + 266, gui_screen_y_offset() + 28, gui_screen_x_offset() + 564,
+                             gui_screen_y_offset() + 136);
     }
     str = get_string(0x53);
     gui_utf_draw_middle(0, str, 0, gui_screen_x_offset() + 224, gui_screen_y_offset() + 40, gui_screen_x_offset() + 522,
@@ -141,13 +147,13 @@ void dashboard_draw_add_note_hint(void) {
 void dashboard_draw_add_note_hint_wide(void) {
   uint8_t lang = get_current_language();
 
-  if (_dashboard_prv_data.language != lang) {
-    _dashboard_prv_data.language = lang;
-    _clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 210,
-                   gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                            gui_screen_x_offset() + 210, gui_screen_y_offset() + 28, gui_screen_x_offset() + 564,
-                            gui_screen_y_offset() + 136);
+  if (dashboard_prv.language != lang) {
+    dashboard_prv.language = lang;
+    clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 210, gui_screen_y_offset() + 28,
+                  gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+    reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                           gui_screen_x_offset() + 210, gui_screen_y_offset() + 28, gui_screen_x_offset() + 564,
+                           gui_screen_y_offset() + 136);
   }
   gui_utf_draw_middle(0, get_string(0x53), 0, gui_screen_x_offset() + 184, gui_screen_y_offset() + 40,
                       gui_screen_x_offset() + 564, gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
@@ -163,7 +169,7 @@ void init_dashboard_info(void) {
     G1_LOG_INF("system startup ,NCS memory is invaild\n");
     get_dashboard_state()->dashboard_ts->ts = 1704067200;          /* 2024-01-01 */
     get_dashboard_state()->dashboard_ts->ms_ts = 1704067200000ULL;
-    set_wall_clock_ms(get_dashboard_state()->dashboard_ts->ms_ts);
+    set_wall_clock_ms((int64_t)get_dashboard_state()->dashboard_ts->ms_ts);
   }
   for (uint8_t i = 0; i < QUICKNOTE_NUM; i++) {
     ret = getQuickNoteDataFromFlash(i, get_dashboard_state()->quicknote->notes[i].title, QUICKNOTE_TITLE_LEN,
@@ -181,26 +187,26 @@ void init_dashboard_info(void) {
 }
 
 uint8_t getNotesIndex(void) {
-  _dashboard_prv_data.notes_index = notes_index;
+  dashboard_prv.notes_index = notes_index;
   set_ncs_mem_notes_index(notes_index);
-  return _dashboard_prv_data.notes_index;
+  return dashboard_prv.notes_index;
 }
 
 int setNotesIndex(int idx) {
-  _dashboard_prv_data.notes_index = idx;
+  dashboard_prv.notes_index = idx;
   notes_index = idx;
   set_ncs_mem_notes_index(idx);
   return 0;
 }
 
 void cleanNotesIndex(void) {
-  _dashboard_prv_data.notes_index = 0;
+  dashboard_prv.notes_index = 0;
   notes_index = 0;
   set_ncs_mem_notes_index(0);
 }
 
 uint8_t get_pane_mode(void) {
-  return _dashboard_prv_data.pane_mode;
+  return dashboard_prv.pane_mode;
 }
 
 /* advances the dashboard clock by the whole seconds elapsed, keeping the phone's schedule time stamp in sync */
@@ -230,10 +236,14 @@ uint32_t set_date(uint32_t ts) {
 
 /* no-op draw (task) callbacks of ui_task_table (notify/ui_notification.c): ids 3/6 and 8 */
 int draw_template_dashboard_page(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(panel);
+  ARG_UNUSED(arg);
   return 0;
 }
 
 int draw_template_schedule_page(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(panel);
+  ARG_UNUSED(arg);
   return 0;
 }
 
@@ -249,16 +259,16 @@ int power_info_battery_ok(void) {
 }
 
 /* dashboard UI state (indices, last drawn modes), see dashboard.h */
-struct dashboard_prv_data _dashboard_prv_data;
+struct dashboard_prv_data dashboard_prv;
 
 /* x shift of the weather / message group of the compact layout (mode 2) */
 static uint16_t weather_x_shift = 0x16;
 
 #define DB_CLEAN_FB(x0, y0, x1, y1)                                                                                    \
-  _clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, DB_X(x0), DB_Y(y0), DB_X(x1), DB_Y(y1))
+  clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, DB_X(x0), DB_Y(y0), DB_X(x1), DB_Y(y1))
 #define DB_REFLASH_FB(x0, y0, x1, y1)                                                                                  \
-  _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,       \
-                          DB_X(x0), DB_Y(y0), DB_X(x1), DB_Y(y1))
+  reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,        \
+                         DB_X(x0), DB_Y(y0), DB_X(x1), DB_Y(y1))
 
 #define DB_TEXT(fn, str, font, x0, y0, x1, y1, lines)                                                                  \
   fn(0, str, font, DB_X(x0), DB_Y(y0), DB_X(x1), DB_Y(y1), lines, 0, 0, NULL, 0)
@@ -274,7 +284,7 @@ static inline void db_draw_clock(int x0, int y0, int x1, int y1) {
 }
 
 void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh, uint8_t display_mode) {
-  struct dashboard_prv_data *ctx = &_dashboard_prv_data;
+  struct dashboard_prv_data *ctx = &dashboard_prv;
   uint32_t connected;
   const char *s;
   int count;
@@ -341,7 +351,7 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 
             gui_bmp_bitmap_draw(weather_icon_to_bitmap(db->weather_icon), DB_X(0xa0), DB_Y(1), 0, 0, 0);
             state = get_dashboard_state();
-            temp = db->temperature;
+            temp = (int)db->temperature;
             if (state->dashboard_ts->temp_unit == 0) {
               memset(str, 0, sizeof(str));
               G1_LOG_INF("temperature = %d\n", temp);
@@ -756,7 +766,7 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 
             gui_bmp_bitmap_draw(weather_icon_to_bitmap(db->weather_icon), DB_X(0), DB_Y(0x6d), 0, 0, 0);
             state = get_dashboard_state();
-            temp = db->temperature;
+            temp = (int)db->temperature;
             if (state->dashboard_ts->temp_unit == 0) {
               memset(str, 0, sizeof(str));
               G1_LOG_INF("temperature = %d\n", temp);
@@ -1171,6 +1181,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
         case 4:
           gui_bmp_bitmap_draw(0x48, DB_X(0xba), DB_Y(2), 0, 0, 0);
           break;
+        default:
+          break;
       }
       get_current_language();
       s = get_string(0x4f);
@@ -1212,7 +1224,7 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
             gui_bmp_bitmap_draw(weather_icon_to_bitmap(db->weather_icon),
                                 gui_screen_x_offset() + weather_x_shift + 0x100, DB_Y(0x1c), 0, 0, 0);
             state = get_dashboard_state();
-            temp = db->temperature;
+            temp = (int)db->temperature;
             if (state->dashboard_ts->temp_unit == 0) {
               memset(str, 0, sizeof(str));
               G1_LOG_INF("temperature = %d\n", temp);
@@ -1309,64 +1321,64 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 static int dashboard_fade_step;
 
 uint8_t getStocksIndex(void) {
-  _dashboard_prv_data.stocks_index = stocks_index;
+  dashboard_prv.stocks_index = stocks_index;
   G1_LOG_INF(" %s index = %d\n", __func__, stocks_index);
-  return _dashboard_prv_data.stocks_index;
+  return dashboard_prv.stocks_index;
 }
 
 int setStocksIndex(int idx) {
-  _dashboard_prv_data.stocks_index = idx;
+  dashboard_prv.stocks_index = idx;
   stocks_index = idx;
   G1_LOG_INF(" %s index = %d\n", __func__, (uint8_t)idx);
   return 0;
 }
 
 void cleanStocksIndex(void) {
-  _dashboard_prv_data.stocks_index = 0;
+  dashboard_prv.stocks_index = 0;
   stocks_index = 0;
   G1_LOG_INF(" %s index = %d\n", __func__, 0);
 }
 
 uint8_t getNewsIndex(void) {
-  _dashboard_prv_data.news_index = news_index;
+  dashboard_prv.news_index = news_index;
   G1_LOG_INF(" %s index = %d\n", __func__, news_index);
-  return _dashboard_prv_data.news_index;
+  return dashboard_prv.news_index;
 }
 
 int setNewsIndex(int idx) {
-  _dashboard_prv_data.news_index = idx;
+  dashboard_prv.news_index = idx;
   news_index = idx;
   G1_LOG_INF(" %s index = %d\n", __func__, (uint8_t)idx);
   return 0;
 }
 
 void cleanNewsIndex(void) {
-  _dashboard_prv_data.news_index = 0;
+  dashboard_prv.news_index = 0;
   news_index = 0;
   G1_LOG_INF(" %s index = %d\n", __func__, 0);
 }
 
 uint8_t getCalenadrIndex(void) {
-  _dashboard_prv_data.calendar_index = calendar_index;
+  dashboard_prv.calendar_index = calendar_index;
   G1_LOG_INF(" calendar %s index = %d\n", __func__, calendar_index);
-  return _dashboard_prv_data.calendar_index;
+  return dashboard_prv.calendar_index;
 }
 
 int setCalenadrIndex(int idx) {
-  _dashboard_prv_data.calendar_index = idx;
+  dashboard_prv.calendar_index = idx;
   calendar_index = idx;
   G1_LOG_INF("calendar %s index = %d\n", __func__, (uint8_t)idx);
   return 0;
 }
 
 void cleanCalenadrIndex(void) {
-  _dashboard_prv_data.calendar_index = 0;
+  dashboard_prv.calendar_index = 0;
   calendar_index = 0;
   G1_LOG_INF(" %s index = %d\n", __func__, 0);
 }
 
 void set_screen_cleared(void) {
-  _dashboard_prv_data.screen_cleared = 0;
+  dashboard_prv.screen_cleared = 0;
 }
 
 int send_message_count_to_app(void) {
@@ -1382,13 +1394,13 @@ int send_message_count_to_app(void) {
   data[6] = get_dashboard_state()->dashboard_ts->low_power;
   data[7] = get_dashboard_state()->dashboard_ts->disp_mode;
   data[8] = get_dashboard_state()->dashboard_ts->area;
-  if (_dashboard_prv_data.pane_mode == 0) {
+  if (dashboard_prv.pane_mode == 0) {
     data[9] = getNotesIndex() + 1;
-  } else if (_dashboard_prv_data.pane_mode == 1) {
+  } else if (dashboard_prv.pane_mode == 1) {
     data[9] = getStocksIndex() + 1;
-  } else if (_dashboard_prv_data.pane_mode == 2) {
+  } else if (dashboard_prv.pane_mode == 2) {
     data[9] = getNewsIndex() + 1;
-  } else if (_dashboard_prv_data.pane_mode == 3) {
+  } else if (dashboard_prv.pane_mode == 3) {
     data[9] = getCalenadrIndex() + 1;
   }
   send_response_data_to_msgqueue(data, 10);
@@ -1405,14 +1417,14 @@ int sync_dashboard_key_event_to_app(void) {
   data[1] = 0x08;
   data[4] = 0x02;
   data[5] = get_dashboard_state()->dashboard_ts->disp_mode;
-  data[6] = _dashboard_prv_data.pane_mode;
-  if (_dashboard_prv_data.pane_mode == 0) {
+  data[6] = dashboard_prv.pane_mode;
+  if (dashboard_prv.pane_mode == 0) {
     data[7] = getNotesIndex() + 1;
-  } else if (_dashboard_prv_data.pane_mode == 1) {
+  } else if (dashboard_prv.pane_mode == 1) {
     data[7] = getStocksIndex() + 1;
-  } else if (_dashboard_prv_data.pane_mode == 2) {
+  } else if (dashboard_prv.pane_mode == 2) {
     data[7] = getNewsIndex() + 1;
-  } else if (_dashboard_prv_data.pane_mode == 3) {
+  } else if (dashboard_prv.pane_mode == 3) {
     data[7] = getCalenadrIndex() + 1;
     G1_LOG_ERR("calendar index = %d\n", data[7]);
   }
@@ -1435,9 +1447,10 @@ int sync_dashboard_key_event_to_app(void) {
   } while (0)
 
 int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   struct db_info *db = &gs->ui.db;
-  struct dashboard_prv_data *prv = &_dashboard_prv_data;
+  struct dashboard_prv_data *prv = &dashboard_prv;
 
   set_frame_buffer(panel->panel_buffer);
 
@@ -1486,39 +1499,39 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
                 }
               }
             }
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH, 199);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH, 199);
           }
           set_showing_notification_on_gui();
           if (get_dashboard_state()->is_master == 1) {
             uint8_t sync[2];
             uint8_t idx;
-            int val;
+            unsigned int val;
             int ret;
 
             sync[0] = 0x02;
             sync[1] = 0x02;
             if (prv->pane_mode == 0) {
               idx = getNotesIndex();
-              val = sync[1] | ((idx << 4) & 0xf0);
+              val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
               sync[1] = val;
               G1_LOG_INF("master sync quicknote index to slave ,index = %d\n", val);
             } else if (prv->pane_mode == 1) {
               sync[1] = 0x04;
               idx = getStocksIndex();
-              val = sync[1] | ((idx << 4) & 0xf0);
+              val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
               sync[1] = val;
               G1_LOG_INF("master sync stocks index to slave,index = %d\n", val);
             } else if (prv->pane_mode == 2) {
               sync[1] = 0x06;
               idx = getNewsIndex();
-              val = sync[1] | ((idx << 4) & 0xf0);
+              val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
               sync[1] = val;
               G1_LOG_INF("master sync news index to slave,index = %d\n", val);
             } else if (prv->pane_mode == 3) {
               sync[1] = 0x08;
               idx = getCalenadrIndex();
-              val = sync[1] | ((idx << 4) & 0xf0);
+              val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
               sync[1] = val;
               G1_LOG_INF("master sync news index to slave,index = %d\n", val);
             }
@@ -1590,30 +1603,22 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
         G1_LOG_ERR("received key press event,_dashboard_prv_data.display_mode = %d\n", prv->display_mode);
         mode = prv->pane_mode;
         G1_LOG_ERR("_CurrentCustomAreaType = %d\n", mode);
-        if (mode == 0) {
-          if (prv->notes_count > 1) {
-            notes_index = prv->notes_index = (uint8_t)(prv->notes_index + 1) % prv->notes_count;
-            set_ncs_mem_notes_index(notes_index);
-            G1_LOG_INF("current quicknote index = %d\n", prv->notes_index);
-          }
+        if (mode == 0 && prv->notes_count > 1) {
+          notes_index = prv->notes_index = (uint8_t)(prv->notes_index + 1) % prv->notes_count;
+          set_ncs_mem_notes_index(notes_index);
+          G1_LOG_INF("current quicknote index = %d\n", prv->notes_index);
         }
-        if (mode == 1) {
-          if (prv->stocks_count > 1) {
-            stocks_index = prv->stocks_index = (uint8_t)(prv->stocks_index + 1) % prv->stocks_count;
-            G1_LOG_INF("current stocks index = %d\n", prv->stocks_index);
-          }
+        if (mode == 1 && prv->stocks_count > 1) {
+          stocks_index = prv->stocks_index = (uint8_t)(prv->stocks_index + 1) % prv->stocks_count;
+          G1_LOG_INF("current stocks index = %d\n", prv->stocks_index);
         }
-        if (mode == 2) {
-          if (prv->news_count > 1 && prv->news_index != 3) {
-            news_index = prv->news_index = (uint8_t)(prv->news_index + 1) % prv->news_count;
-            G1_LOG_INF("current news index = %d\n", prv->news_index);
-          }
+        if (mode == 2 && prv->news_count > 1 && prv->news_index != 3) {
+          news_index = prv->news_index = (uint8_t)(prv->news_index + 1) % prv->news_count;
+          G1_LOG_INF("current news index = %d\n", prv->news_index);
         }
-        if (mode == 3) {
-          if (prv->calendar_count != 0) {
-            calendar_index = prv->calendar_index = (uint8_t)(prv->calendar_index + 1) % prv->calendar_count;
-            G1_LOG_ERR("current calendar index = %d\n", prv->calendar_index);
-          }
+        if (mode == 3 && prv->calendar_count != 0) {
+          calendar_index = prv->calendar_index = (uint8_t)(prv->calendar_index + 1) % prv->calendar_count;
+          G1_LOG_ERR("current calendar index = %d\n", prv->calendar_index);
         }
         if (mode != 4) {
           DashBoard_Reflash(db, get_dashboard_state(), 4, gs->ui.db.display_mode);

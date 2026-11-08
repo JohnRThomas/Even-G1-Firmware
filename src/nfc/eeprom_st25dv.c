@@ -2,13 +2,17 @@
  * ST25DV as a Zephyr EEPROM: I2C transfers, retry/lock wrappers, the
  * mailbox helpers and the hand-made device instance.
  */
+#include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/eeprom.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
 
 #include "st25dv.h"
 
@@ -26,7 +30,7 @@ static struct eeprom_st25dv_config st25dv_device = {
   .bus_addr = ST25DV_ADDR_DATA_I2C,
 };
 
-void i2c_delay(void) {
+static void i2c_delay(void) {
   k_sleep(K_MSEC(1));
 }
 
@@ -36,7 +40,7 @@ static int st25dv_write(const struct eeprom_st25dv_config *config, uint16_t addr
   struct i2c_msg msg;
   int ret;
 
-  block[0] = offset >> 8;
+  block[0] = (uint32_t)offset >> 8U;
   block[1] = offset;
   memcpy(&block[2], buf, len);
 
@@ -62,7 +66,7 @@ int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf,
   int ret = 0;
 
   /* in writes of at most ST25DV_WRITE_MAX bytes, each with its own retries */
-  for (; len; offset += n, data += n, len -= n) {
+  for (; len; offset += (off_t)n, data += n, len -= n) {
     n = MIN(len, ST25DV_WRITE_MAX);
     retries = ST25DV_RETRIES;
     while (1) {
@@ -215,7 +219,7 @@ int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **bu
   }
 
   /* MB_EN and RF_PUT_MSG */
-  if ((mb_ctrl & 0x05) != 0x05) {
+  if ((mb_ctrl & 0x05U) != 0x05U) {
     return -3;
   }
 
@@ -248,7 +252,7 @@ int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void 
   }
 
   /* HOST_PUT_MSG or RF_PUT_MSG still pending */
-  if (mb_ctrl & 0x06) {
+  if (mb_ctrl & 0x06U) {
     printk("eeprom_st25dv_write_i2c_mb_mailbox_ram no write\n");
     return -3;
   }

@@ -32,8 +32,11 @@ int parse_app_white_list_json(const char *json);
 int is_the_same_whitelist_app(const char *json);
 uint8_t *get_app_whitelist_info(void); /* BLE whitelist buffer */
 uint8_t is_on_whitelist_by_identifier(const char *pkg_name);
-void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uint8_t *data, uint16_t len, uint8_t *rsp);
+void put_whitelist_app_from_app(struct ble_context *ctx, const uint8_t *hdr, const uint8_t *data, uint16_t len,
+                                uint8_t *rsp);
 void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp);
 void load_app_white_list_from_flash(void);
+int is_app_name_same(const char *id, const char *name);
+uint16_t convert_app_whitelist_to_json(char *buf);
 
 #endif /* G1_WHITELIST_H_ */

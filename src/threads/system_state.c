@@ -3,8 +3,10 @@
  */
 #include "g1_log.h"
 #include "threads.h"
-#include <string.h>
+#include <glasses_state.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
+#include <zephyr/toolchain.h>
 
 int trigger_screen_state_change(const char *who, struct GlassesState *state, uint8_t on) {
   if (state->screen_on == on) {
@@ -34,6 +36,8 @@ int set_imu_on_state(struct GlassesState *state, uint32_t on) {
 }
 
 int trigger_imu_state_change(void *dev, struct GlassesState *state, bool on) {
+  ARG_UNUSED(dev);
+
   set_imu_on_state(state, on);
   trigger_screen_state_change(on ? "imu-on" : "imu-off", state, on);
   return 0;

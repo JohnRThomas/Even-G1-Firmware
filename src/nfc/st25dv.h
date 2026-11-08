@@ -15,7 +15,7 @@
 
 /* I2C addresses: user memory / dynamic registers at 0x53, system area at 0x57 */
 #define ST25DV_ADDR_DATA_I2C     0x53
-#define ST25DV_ADDR_SYST_I2C_BIT 0x04
+#define ST25DV_ADDR_SYST_I2C_BIT 0x04U
 
 /* system configuration area (E2 = 1) */
 #define ST25DV_GPO_REG       0x0000
