@@ -295,7 +295,7 @@ int hci_rpmsg_init(void)
 {
 	int err;
 	const struct device *hci_ipc_instance =
-		DEVICE_DT_GET(DT_CHOSEN(zephyr_bt_hci_rpmsg_ipc));
+		DEVICE_DT_GET(DT_CHOSEN(zephyr_bt_hci_ipc));
 
 	/* Enable the raw interface, this will in turn open the HCI driver */
 	bt_enable_raw(&rx_queue);
