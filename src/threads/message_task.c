@@ -1137,5 +1137,5 @@ void reset_dash_buf(int clear)
 	} else {
 		get_dashboard_state()->dash_buf->data[0] = 13;
 	}
-	memset(&get_dashboard_state()->dash_buf->data[1], 0, 0x1df);
+	memset(&get_dashboard_state()->dash_buf->data[1], 0, DASH_DATA_LEN - 1);
 }

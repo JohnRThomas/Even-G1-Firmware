@@ -12,34 +12,13 @@
 #include <zephyr/drivers/timer/nrf_rtc_timer.h>
 
 #include "net_common.h"
+#include "main.h"
+#include "app_esb.h"
+#include "hci_rpmsg.h"
+#include "ipc.h"
+#include "timeslot.h"
 
 /* G1_BUILD_TIME (reported to the app core) is defined by ../CMakeLists.txt */
-
-/* Event passed by the ESB/timeslot layer to the handler given to app_esb_init. */
-struct app_esb_evt {
-	uint8_t id;             /* 0 = TX success, 1 = TX failed, 2 = RX received */
-	uint8_t *data;
-	uint32_t len;
-	uint8_t rssi;
-};
-
-/* ipc.c / hci_rpmsg.c */
-extern int ipc_init(void);
-extern int ipc_ops_init(struct ipc_ops *ops);
-extern int hci_rpmsg_init(void);
-extern int hci_rpmsg_get_static_addr(uint8_t *addr);
-/* app_esb.c */
-extern void esb_ops_init(struct esb_ops *ops);
-extern uint8_t addr_prefix[2];
-extern uint8_t base_addr_1[4];
-extern uint8_t base_addr_0[4];
-/* timeslot.c */
-extern int app_esb_init(int role, void (*handler)(struct app_esb_evt *evt));
-extern void esb_link_set_high(void);
-extern void esb_link_set_low(void);
-extern void esb_link_set_paused(void);
-extern int esb_link_state_get(void);
-extern void timeslot_handler_stop(void);
 
 int net_log_level = 2;
 static int sync_offset = -EBUSY;
@@ -63,7 +42,7 @@ static uint8_t last_rssi;
 uint8_t esb_tx_done;
 uint8_t esb_tx_state;
 uint8_t esb_tx_kind;
-uint8_t esb_tx_buf[0xfc];
+uint8_t esb_tx_buf[ESB_TX_BUF_SIZE];
 uint8_t esb_channel;
 static uint8_t rx_repeat;
 static uint8_t last_seq;
@@ -223,7 +202,7 @@ static void app_esb_event_handler(struct app_esb_evt *evt)
 {
 	esb_evt_active = 1;
 
-	switch (evt->id) {
+	switch (evt->type) {
 	case 0:
 		esb_tx_ok_cnt++;
 		break;

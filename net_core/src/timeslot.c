@@ -11,6 +11,9 @@
 #include <nrf.h>
 
 #include "net_common.h"
+#include "timeslot.h"
+#include "app_esb.h"
+#include "main.h"
 
 LOG_MODULE_REGISTER(timeslot);
 
@@ -21,15 +24,6 @@ enum mpsl_timeslot_call {
 	REQ_MAKE_REQUEST_NORMAL,
 	REQ_CLOSE_SESSION,
 };
-
-/* main.c */
-extern int net_mode_get(void);
-extern int net_role_get(void);
-/* app_esb.c */
-extern int esb_tx_busy_get(void);
-extern int on_timeslot_start_stop(int op);
-/* esb.c (CONFIG_ESB_DYNAMIC_INTERRUPTS) */
-extern void RADIO_IRQHandler(void);
 
 /* Timeslot requests */
 static mpsl_timeslot_request_t timeslot_request_earliest = {
@@ -275,7 +269,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(
 		signal_callback_return_param.callback_action =
 			MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
 		if (timeslot_radio_on) {
-			RADIO_IRQHandler();
+			RADIO_IRQHandler(NULL);
 		} else {
 			NVIC_ClearPendingIRQ(RADIO_IRQn);
 			NVIC_DisableIRQ(RADIO_IRQn);

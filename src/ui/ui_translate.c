@@ -17,10 +17,8 @@ static struct {
 	uint8_t state;
 	uint8_t entered;
 	uint8_t suspend_en;
-	uint8_t pad_03[7];
 	uint16_t hour;                   /* last drawn clock */
 	uint16_t minute;
-	uint8_t pad_0e[2];
 	uint8_t translation_type;        /* last drawn language pair */
 	uint8_t original_type;
 } trans_ui;
@@ -125,7 +123,11 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 			gui_utf_adv_draw_reset();
 			gui_screen_clear();
 			gui_text_state_reset();
-			memset(&trans_ui.suspend_en, 0, 0x10);
+			trans_ui.suspend_en = 0;
+			trans_ui.hour = 0;
+			trans_ui.minute = 0;
+			trans_ui.translation_type = 0;
+			trans_ui.original_type = 0;
 			text_anim.buf_size = 0x80;
 			text_anim.f_08 = 0;
 			text_anim.f_0c = 0;

@@ -135,11 +135,11 @@ void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uin
 				uint16_t len, uint8_t *rsp)
 {
 	if (whitelist_buf == NULL) {
-		whitelist_buf = malloc(0x1800);
+		whitelist_buf = malloc(WHITELIST_JSON_BUF_LEN);
 		if (whitelist_buf == NULL) {
 			BLE_PRINTK("[%s-%d] malloc failed !!\n", __func__, __LINE__);
 		} else {
-			memset(whitelist_buf, 0, 0x1800);
+			memset(whitelist_buf, 0, WHITELIST_JSON_BUF_LEN);
 		}
 	}
 	if (whitelist_buf != NULL) {
@@ -507,7 +507,7 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp)
 
 void dump_whitelist(void)
 {
-	char *buf = malloc(0x1800);
+	char *buf = malloc(WHITELIST_JSON_BUF_LEN);
 
 	if (buf == NULL) {
 		BLE_PRINTK("[%s-%d] malloc failed !!\n", __func__, __LINE__);

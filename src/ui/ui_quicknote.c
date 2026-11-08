@@ -11,15 +11,12 @@
 /* quick note page private state */
 struct quicknote_prv_data {
 	uint8_t state;            /* 0 init, 1 running, 2 exiting (logo) */
-	uint8_t pad_01[3];
 	int32_t exit_delay;
 	int64_t ts;
 	uint8_t last_status;
 	uint8_t recording;
 	uint8_t timeout_cnt;
-	uint8_t pad_13[0x0d];
 };
-BUILD_ASSERT(sizeof(struct quicknote_prv_data) == 0x20);
 
 int exit_display_ms = 4000;
 struct quicknote_prv_data quicknote_prv;

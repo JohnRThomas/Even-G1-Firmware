@@ -43,22 +43,16 @@ struct nav_prv_data {
 	uint8_t panoramic_shown;
 	uint8_t overview_shown;
 	uint8_t synced;                  /* init sync with the phone done */
-	uint8_t pad_07[7];
 	uint16_t hour;          /* last drawn clock */
 	uint16_t minute;
-	uint8_t pad_12[2];
 	uint8_t arrived;        /* 1 arriving, 2 arrived */
 	uint8_t arrived_cleared;
-	uint8_t pad_16[2];
 	int64_t timeout;        /* auto exit delay after arrival */
 	int64_t arrived_ts;
 	uint8_t imu_action;              /* 2 = panoramic map */
-	uint8_t pad_29[4];
 	uint8_t sync_cnt;       /* heart beat counter */
-	uint8_t pad_2e[2];
 	int64_t ts;
 };
-BUILD_ASSERT(sizeof(struct nav_prv_data) == 0x38);
 
 /* ui_quicknote.c */
 extern uint8_t quicknote_result_shown;

@@ -198,9 +198,9 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			}
 			return 1;
 		case BLE_CMD_TELEPROMPTER_INFO:
-			memcpy(state->teleprompter, data, 0x217);
+			memcpy(state->teleprompter, data, sizeof(struct teleprompter_info));
 			if (!data[1]) {
-				memset(state->teleprompter, 0, 0x217);
+				memset(state->teleprompter, 0, sizeof(struct teleprompter_info));
 			}
 			if (data[1]) {
 				update_persist_task_status(state, 9, 2);
@@ -210,7 +210,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			if (dmic_get_stop_state()) {
 				return 0;
 			}
-			state->translate_src->data[0x1e5 - 6] = 0;
+			state->translate_src->data[TRANSLATE_DATA_LEN - 1] = 0;
 			if (!state->translate_src->data[0]) {
 				state->translate_src->data[0] = 10;
 			}
@@ -223,7 +223,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			if (dmic_get_stop_state()) {
 				return 0;
 			}
-			state->translate_dst->data[0x1e5 - 6] = 0;
+			state->translate_dst->data[TRANSLATE_DATA_LEN - 1] = 0;
 			if (!state->translate_dst->data[0]) {
 				state->translate_dst->data[0] = 10;
 			}
@@ -233,7 +233,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			}
 			return 1;
 		case BLE_CMD_HEAD_UP_ACTION_SET:
-			memcpy(state->user_sched_info, data, 0x16a);
+			memcpy(state->user_sched_info, data, sizeof(struct user_schedule_context));
 			*(uint32_t *)state->dashboard_ts = state->user_sched_info->ts;
 			accumulate_elapsed_seconds((uint32_t *)state->dashboard_ts, 0, 1);
 			notify_dashboard(state, head);
@@ -310,7 +310,9 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			out[2] = state->battery_voltage;
 			out[3] = state->battery_current;
 			out[4] = state->battery_temp;
-			memcpy(&out[5], &state->master_fw_ver, 14);
+			memcpy(&out[5], &state->master_fw_ver, sizeof(struct fw_ver));
+			memcpy(&out[8], &state->fw_ver, sizeof(struct fw_ver));
+			memset(&out[11], 0, 8); /* reserved */
 			return 0x13;
 		case BLE_CMD_MAC_GET:
 			memcpy(&out[0], state->master_mac, 6);

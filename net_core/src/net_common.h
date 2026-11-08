@@ -36,10 +36,12 @@ struct ipc_ops {
 	int (*reg)(struct ipc_ep *ep);
 };
 
+#define ESB_OPS_BUF_SIZE 0x100
+
 struct esb_ops {
 	void (*start)(void);                    /* starts the ESB thread */
 	struct ipc_ep ep;
-	uint8_t *buf;
+	uint8_t *buf;                           /* ESB_OPS_BUF_SIZE bytes */
 };
 
 struct net_ctx {
@@ -54,8 +56,5 @@ struct net_ctx {
 	uint8_t mac0[6];
 	uint8_t mac1[6];
 };
-
-BUILD_ASSERT(sizeof(struct k_sem) == 0x18);
-BUILD_ASSERT(sizeof(struct net_ctx) == 0xd0);
 
 #endif /* NET_COMMON_H_ */

@@ -10,51 +10,10 @@
 #include <stddef.h>
 #include <zephyr/kernel.h>
 #include <glasses_state.h>
+#include <cJSON.h>
 
 #include "g1_log.h"
 #include "g1_date.h"
-
-/*
- * cJSON comes from modules/lib/cjson (CONFIG_CJSON_LIB).  Without it,
- * fall back to the declarations used here.
- */
-#if __has_include(<cJSON.h>)
-#include <cJSON.h>
-#else
-#define cJSON_False  (1 << 0)
-#define cJSON_True   (1 << 1)
-#define cJSON_NULL   (1 << 2)
-#define cJSON_Number (1 << 3)
-#define cJSON_String (1 << 4)
-#define cJSON_Array  (1 << 5)
-#define cJSON_Object (1 << 6)
-typedef int cJSON_bool;
-typedef struct cJSON {
-	struct cJSON *next;
-	struct cJSON *prev;
-	struct cJSON *child;
-	int type;
-	char *valuestring;
-	int valueint;
-	double valuedouble;
-	char *string;
-} cJSON;
-cJSON *cJSON_Parse(const char *value);
-char *cJSON_Print(const cJSON *item);
-char *cJSON_PrintUnformatted(const cJSON *item);
-void cJSON_Delete(cJSON *item);
-int cJSON_GetArraySize(const cJSON *array);
-cJSON *cJSON_GetArrayItem(const cJSON *array, int index);
-cJSON *cJSON_GetObjectItem(const cJSON *const object, const char *const string);
-cJSON_bool cJSON_IsArray(const cJSON *const item);
-cJSON *cJSON_CreateObject(void);
-cJSON *cJSON_CreateArray(void);
-cJSON *cJSON_CreateString(const char *string);
-cJSON_bool cJSON_AddItemToArray(cJSON *array, cJSON *item);
-cJSON_bool cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
-cJSON *cJSON_AddBoolToObject(cJSON *const object, const char *const name, const cJSON_bool boolean);
-cJSON *cJSON_AddStringToObject(cJSON *const object, const char *const name, const char *const string);
-#endif
 
 #define MSG_NORMAL_NUM   10   /* g_arrMsgContent[0..9]: shown messages */
 #define MSG_TOTAL_NUM    20   /* g_arrMsgContent[10..19]: push queue */
@@ -64,7 +23,6 @@ cJSON *cJSON_AddStringToObject(cJSON *const object, const char *const name, cons
 /* GlassesState->schedule_notif */
 struct schedule_notif {
 	uint32_t ts;
-	uint8_t pad_04[4];
 	char title[17];
 	char desc[0x97];
 } __packed;

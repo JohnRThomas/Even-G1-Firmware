@@ -106,7 +106,7 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
 
 	/* receiver idle: hand the packet over directly
 	 * (short packets go to small_buf) */
-	if (len > 20) {
+	if (len > BLE_SMALL_PKT_MAX) {
 		/* long packet */
 		if (len > sizeof(ctx->rx_data)) {
 			BLE_PRINTK("[%s-%d]len is %d, too large ! \n", __FUNCTION__, __LINE__, len);
@@ -117,7 +117,7 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
 	} else {
 		/* short packet */
 		memcpy(ctx->small_buf, data, len);
-		memset(ctx->small_buf + len, 0, 20 - len);
+		memset(ctx->small_buf + len, 0, BLE_SMALL_PKT_MAX - len);
 		ctx->rx_len = 0;
 		ctx->small_len = len;
 	}
@@ -155,18 +155,15 @@ struct ble_context *get_ble_context(void)
 
 void ble_context_init(struct ble_context *ctx)
 {
-	/* the two large rx buffers lie past the end of ble_context */
-	ctx->large_buf_0 = (uint8_t *)ctx + 0x394;
 	ctx->init_cb = start_ble_work_thread;
 	k_mutex_init(&nus_mutex);
 	ctx->write = ble_write_thread;
 	k_sem_init(&ctx->rx_sem, 0, 1);
 	k_sem_init(&ctx->tx_sem, 0, 2);
-	ctx->large_buf_1 = (uint8_t *)ctx + 0x8d4;
 	ctx->connected = 0;
 	ctx->send_enabled = 0;
 	ctx->restart_adv = 0;
 	ble_ctx = ctx;
-	ctx->small_buf = malloc(21);
-	memset(ctx->small_buf, 0, 21);
+	ctx->small_buf = malloc(BLE_SMALL_BUF_SIZE);
+	memset(ctx->small_buf, 0, BLE_SMALL_BUF_SIZE);
 }

@@ -16,7 +16,6 @@ struct ahrs {
 	float q0, q1, q2, q3;	/* quaternion of sensor frame relative to auxiliary frame */
 	float integralFBx, integralFBy, integralFBz;	/* integral error terms scaled by Ki */
 	char anglesComputed;
-	uint8_t pad_29[3];
 	float roll;		/* rad */
 	float pitch;
 	float yaw;

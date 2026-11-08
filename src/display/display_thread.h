@@ -26,7 +26,6 @@ enum disp_msg_type {
 
 struct disp_msg {
 	uint8_t type;      /* enum disp_msg_type */
-	uint8_t pad_01;
 	uint16_t len;      /* payload length */
 	uint8_t data[20];  /* payload: [0] = 1 valid, [1] = screen id */
 };

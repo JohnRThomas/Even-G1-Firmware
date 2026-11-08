@@ -199,25 +199,25 @@ static void storage_commit_thread(void *p1, void *p2, void *p3)
 		}
 		switch (gs->dashboard_cmd) {
 		case 1:
-			gs->store.write("brightness_level", &gs->panel.panel_brightness_level, 1);
+			gs->store.write("brightness_level", &gs->panel.panel_brightness_level, sizeof(uint8_t));
 			break;
 		case 2:
-			gs->store.write("3dof_enable", &gs->imu.dof3_enable, 1);
+			gs->store.write("3dof_enable", &gs->imu.dof3_enable, sizeof(uint8_t));
 			break;
 		case 3:
-			gs->store.write("display_mode", &gs->display_mode, 1);
+			gs->store.write("display_mode", &gs->display_mode, sizeof(uint8_t));
 			break;
 		case 7:
-			gs->store.write("countdown_ts", gs->countdown_ts, 7);
+			gs->store.write("countdown_ts", gs->countdown_ts, sizeof(struct countdown_ts_context));
 			break;
 		case 6:
-			gs->store.write("dashboard_ts", gs->dashboard_ts, 0x75);
+			gs->store.write("dashboard_ts", gs->dashboard_ts, sizeof(struct dashboard_ts_context));
 			break;
 		case 8:
-			gs->store.write("user_sched_info", gs->user_sched_info, 0x16a);
+			gs->store.write("user_sched_info", gs->user_sched_info, sizeof(struct user_schedule_context));
 			break;
 		case 0x0b:
-			gs->store.write("wakeup_angle", &gs->imu.level, 1);
+			gs->store.write("wakeup_angle", &gs->imu.level, sizeof(uint8_t));
 			break;
 		case 0x16:
 			if (file_type == DEMO_IMAGE_ADDR) {

@@ -87,10 +87,10 @@ struct db_info {
 	int8_t temperature;                      /* Celsius */
 	uint8_t pad_06;
 	uint8_t new_msg_count;
-	uint8_t pad_08[0x5f - 0x08];
+	uint8_t pad_08[0x57];
 	uint8_t date_format;                     /* 0 = mm/dd, 1 = dd-mm, else dd/mm */
 	uint8_t low_power;                            /* 1 = show the 0x42 icon */
-	uint8_t pad_61[0x65 - 0x61];
+	uint8_t pad_61[4];
 	uint8_t display_mode;
 	uint8_t pane_mode;
 	uint8_t calendar_disp_mode;
@@ -143,7 +143,7 @@ union screen_payload {
 		uint8_t mode;
 		uint8_t scroll_line;
 		uint8_t pad_06[2];
-		char text[0x5dc - 8];
+		char text[0x5d4];
 	} __packed qn;                           /* quicknote */
 	struct {
 		uint8_t status;
@@ -196,11 +196,13 @@ union screen_payload {
 		uint8_t pad_00[0xae];
 		uint8_t status;                  /* 1 arriving, 2 arrived */
 		uint8_t pad_af[6];
-		char text[0x5dc - 0xb5];
+		char text[0x527];
 	} __packed nav_arrived;                  /* navigation, arrival page */
 } __packed;
 
 /* GlassesState->dash_buf: dashboard data received with cmd 0x4e */
+#define DASH_DATA_LEN 0x1e0
+
 struct dash_data_buf {
 	uint8_t type;
 	uint8_t screen_status;
@@ -208,7 +210,7 @@ struct dash_data_buf {
 	uint8_t scroll_pct;
 	uint8_t page_count;
 	uint8_t seq;
-	uint8_t data[0x1e0];
+	uint8_t data[DASH_DATA_LEN];
 	uint16_t len;
 } __packed;
 
@@ -291,36 +293,23 @@ struct notif_msg {
 	char date[32];
 	uint32_t action;
 };
-BUILD_ASSERT(sizeof(struct notif_msg) == 0x1b4);
 
 /* the master/slave ESB sync sends a notification as two 0xda-byte halves */
-#define NOTIF_MSG_HALF 0xda
+#define NOTIF_MSG_HALF (sizeof(struct notif_msg) / 2)
 
-/* ble_nus.c points the rx buffers at ctx + 0x394 / ctx + 0x8d4, which lie
- * outside this struct. */
 struct ble_context {
 	int (*init_cb)(struct ble_context *ctx);
-	uint8_t pad_004[0x00c - 0x004];
 	int (*write)(const uint8_t *data, uint16_t len);
 	uint8_t *tx_buf;                         /* malloc(0x2b8) */
 	uint32_t tx_len;
 	uint8_t charging;
-	uint8_t pad_019[0x034 - 0x019];
 	struct notif_msg notif;
 	struct k_sem ancs_get_attr_data_sem;
 	struct k_sem ancs_get_attr_req_sem;
 	struct k_sem rx_sem;
 	struct k_sem tx_sem;
 	uint8_t receiver_thd_is_running;
-	uint8_t pad_249[3];
-	union {
-		uint8_t *rx_bufs[3];
-		struct {
-			uint8_t *large_buf_0;
-			uint8_t *large_buf_1;
-			uint8_t *small_buf;
-		};
-	};
+	uint8_t *small_buf;                      /* packets of up to BLE_SMALL_PKT_MAX bytes */
 	uint8_t rx_data[0x100];
 	uint32_t rx_len;
 	uint32_t rx_pending;
@@ -331,7 +320,6 @@ struct ble_context {
 	uint8_t security_pending;
 	uint32_t last_rx_time;
 	uint32_t connected_time;
-	uint8_t pad_370[0x378 - 0x370];
 };
 
 /* ------------------------------------------------------------------ SPI / panel */
@@ -356,7 +344,6 @@ struct spi_master_ctx {
 	uint8_t ss;
 	uint8_t speed_mhz;
 	uint8_t xfer_done;
-	uint8_t pad_1f;
 };
 
 struct flash_ops {
@@ -386,11 +373,9 @@ struct jbd_panel_context {
 	uint32_t current_buffer_size;
 	uint8_t raster_height_offset;
 	uint8_t canvas_distance_gear;
-	uint8_t pad_356[2];
 	uint32_t y_offset;
 	uint32_t init_done;
 	uint32_t f_360;
-	uint8_t pad_364[4];
 	uint8_t voltage;
 	uint8_t panel_brightness_level;
 	uint8_t last_synced_brightness;
@@ -405,7 +390,6 @@ struct jbd_panel_context {
 		};
 	};
 	uint8_t brightness_percent;
-	uint8_t pad_375[3];
 	struct spi_master_ctx *spi_callbacks;
 };
 
@@ -414,23 +398,18 @@ struct jbd_panel_context {
 /* imu_fusion_context */
 struct imu_ctx {
 	uint8_t mode;
-	uint8_t pad_01[3];
 	uint32_t on;
 	int thr_low;
 	int thr_high;
 	uint8_t level;                           /* wakeup angle */
 	uint8_t wear;
-	uint8_t pad_12[2];
 	uint8_t inited;
 	uint8_t thread_running;
-	uint8_t pad_16[2];
 	uint32_t sample_period_ms;
 	const struct device *dev;
 	struct sensor_value odr;
 	struct ahrs fusion;
-	uint8_t pad_6c[0x7c - 0x6c];
 	uint8_t dof3_enable;
-	uint8_t pad_7d[3];
 	int ref;
 	int base;                                /* user horizontal pitch */
 	int div;
@@ -442,13 +421,10 @@ struct imu_ctx {
 
 struct opt3007_context {
 	int (*init_cb)(struct opt3007_context *ctx);
-	uint8_t pad_04[8];
 	int (*read_cb)(int arg);
 	int ready;
 	uint32_t lux_base_max;
 	uint8_t auto_brightness;
-	uint8_t pad_19[3];
-	void *owner;
 };
 
 /* ------------------------------------------------------------------ storage */
@@ -519,7 +495,7 @@ struct user_schedule_context {
 	uint32_t ts;                             /* time stamp from the phone (0 = none) */
 	uint8_t f_168;
 	uint8_t f_169;
-};
+} __packed;
 
 /* GlassesState->teleprompter */
 struct teleprompter_info {
@@ -538,13 +514,15 @@ struct teleprompter_info {
 } __packed;
 
 /* GlassesState->translate_src / translate_dst */
+#define TRANSLATE_DATA_LEN 0x1e0
+
 struct translate_buf {
 	uint8_t translation_type;
 	uint8_t original_type;
 	uint8_t suspend;
 	uint8_t screen_status;
 	uint16_t char_pos;
-	uint8_t data[0x1e0];
+	uint8_t data[TRANSLATE_DATA_LEN];
 	uint16_t len;
 } __packed;
 
@@ -627,13 +605,18 @@ struct quicknote_ctx {
 
 /* ------------------------------------------------------------------ GlassesState */
 
+/* GlassesState->esb_up_snapshot / esb_down_snapshot: block data, then the sequence byte */
+#define ESB_SNAPSHOT_SEQ  0x200
+#define ESB_SNAPSHOT_SIZE (ESB_SNAPSHOT_SEQ + 1)
+
+#define HORIZ_PITCH_CFG_SIZE 2
+
 struct GlassesState {
 	uint8_t is_master;                       /* 1 master (left), 2 slave */
 	uint8_t work_mode;                       /* 1 / 8: busy / 9 */
 	uint8_t esb_channel;
 	uint8_t esb_master_addr;
 	uint8_t esb_slave_addr;
-	uint8_t pad_005[3];
 	struct k_sem ipc_sem;
 	struct k_sem sem_1;
 	struct k_sem sem_2;
@@ -684,9 +667,7 @@ struct GlassesState {
 		};
 	};
 	union screen_payload ui;
-	uint8_t pad_6cb;
 	struct esb_pkt esb_pkt;
-	uint8_t pad_6e2[2];
 
 	/* IPC (net core) */
 	struct ipc_ep_cfg ipc_ep[4];
@@ -696,11 +677,8 @@ struct GlassesState {
 	struct k_sem imu_sem;
 	uint8_t imu_busy;
 	uint8_t schedule_notif_pending;
-	uint8_t pad_b0e[2];
 	struct spi_master_ctx spi;
 	struct flash_ops flash_ops;
-	uint8_t pad_b38[0xb50 - 0xb38];
-	uint8_t opt3007_bus_ctx[0xb6c - 0xb50];            /* opt3007 owner area */
 	struct jbd_panel_context panel;
 	struct imu_ctx imu;
 	struct opt3007_context opt3007_context;
@@ -733,14 +711,11 @@ struct GlassesState {
 	uint8_t battery_voltage;
 	uint8_t battery_current;
 	uint8_t battery_temp;
-	uint8_t pad_fcb;
 	int8_t battery_current_ma;
-	uint8_t pad_fcd;
 	int16_t battery_temp_x100;
 
 	struct fw_ver master_fw_ver;
 	struct fw_ver fw_ver;
-	uint8_t pad_fd6[0xfde - 0xfd6];
 	uint8_t master_mac[6];
 	uint8_t slave_mac[6];
 	uint8_t suspend_state;
@@ -748,7 +723,6 @@ struct GlassesState {
 	uint8_t screen_on;
 	uint8_t imu_event;
 	uint8_t display_mode;
-	uint8_t pad_fef;
 
 	/* per-feature contexts */
 	struct dashboard_ts_context *dashboard_ts;
@@ -764,12 +738,12 @@ struct GlassesState {
 	struct bitmap_show_info *bitmap_info;
 	struct onboarding_ctx *onboarding;
 	uint8_t *raster_height_cfg;
-	uint8_t *horiz_pitch_cfg;                /* main.c clears it as one uint16_t */
+	uint8_t *horiz_pitch_cfg;                /* HORIZ_PITCH_CFG_SIZE bytes */
 	struct prompt_info *ts_info;
 	struct transcribe_buf *transcribe_buf;   /* ble_proto.h */
 	struct quicknote_ctx *quicknote;
 	struct quicknote_show_info *quicknote_show_info;
-	uint8_t *esb_up_snapshot;
+	uint8_t *esb_up_snapshot;                /* ESB_SNAPSHOT_SIZE bytes */
 	uint8_t *esb_down_snapshot;
 	void (*switch_to_dfu_cb)(struct k_sem *sem);
 	int (*flash_read)(struct GlassesState *gs, uint32_t addr, void *buf, size_t len);
@@ -782,9 +756,7 @@ struct GlassesState {
 	uint8_t bt_state;
 	uint8_t pending;                         /* refresh flags */
 	uint8_t sync_ack;
-	uint8_t pad_106f;
 	uint16_t module_mask;                    /* bit 7: BLE connected to the app */
-	uint8_t pad_1072[6];
 	int64_t last_sync_ts;
 	uint8_t phone_is_ios;
 	union {
@@ -800,19 +772,16 @@ struct GlassesState {
 	};
 	uint16_t canvas_x;
 	uint16_t canvas_y;
-	uint8_t pad_108e[2];
 	int32_t aw_diff;                         /* touch diff */
 	int accel[3];
 	uint8_t comflag;
 	uint8_t ext_flash_ok;
 	uint16_t flash_page_count;
 	uint8_t mic_nocompress;
-	uint8_t pad_10a5[3];
 
 	/* charger */
 	uint8_t aging_test_count;
 	uint8_t aging_start_soc;
-	uint8_t pad_10aa[2];
 	uint32_t aging_start_uptime_s;
 	uint32_t aging_elapsed_s;
 	uint32_t aging_charge_time_s;
@@ -822,11 +791,9 @@ struct GlassesState {
 		struct triple aging_discharge_step_raw;
 	};
 	uint8_t aging_touch_count;
-	uint8_t pad_10c9[3];
 	uint32_t aging_charge_check_count;
 	uint8_t aging_charge_check_result;
 	uint8_t aging_no_charge_count;
-	uint8_t pad_10d2[2];
 	uint8_t check_mode;
 	uint8_t user_data_reset_pending;
 	uint8_t message_mode;
@@ -847,45 +814,6 @@ struct GlassesState {
 		};
 	};
 } __aligned(8);
-
-BUILD_ASSERT(sizeof(union screen_payload) == 0x5dc);
-BUILD_ASSERT(sizeof(struct esb_sync_pkt) == 0x15);
-BUILD_ASSERT(sizeof(struct esb_pkt) == 0x16);
-BUILD_ASSERT(sizeof(struct ble_context) == 0x378);
-BUILD_ASSERT(sizeof(struct spi_master_ctx) == 0x20);
-BUILD_ASSERT(sizeof(struct jbd_panel_context) == 0x37c);
-BUILD_ASSERT(sizeof(struct imu_ctx) == 0x9c);
-BUILD_ASSERT(sizeof(struct opt3007_context) == 0x20);
-BUILD_ASSERT(sizeof(struct dashboard_ts_context) == 0x75);
-BUILD_ASSERT(sizeof(struct countdown_ts_context) == 7);
-BUILD_ASSERT(sizeof(struct user_schedule_context) == 0x16c);
-BUILD_ASSERT(sizeof(struct teleprompter_info) == 0x217);
-BUILD_ASSERT(sizeof(struct nav_info) == 0xf5);
-BUILD_ASSERT(sizeof(struct translate_buf) == 0x1e8);
-BUILD_ASSERT(sizeof(struct bitmap_show_info) == 0xb);
-BUILD_ASSERT(sizeof(struct onboarding_ctx) == 0x21);
-BUILD_ASSERT(sizeof(struct prompt_info) == 10);
-BUILD_ASSERT(sizeof(struct quicknote_ctx) == 0x50f);
-
-BUILD_ASSERT(offsetof(struct GlassesState, touch_sem) == 0x0b0);
-BUILD_ASSERT(offsetof(struct GlassesState, dashboard_mode) == 0x0d5);
-BUILD_ASSERT(offsetof(struct GlassesState, ui.ai.text_len) == 0x2d6);
-BUILD_ASSERT(offsetof(struct GlassesState, ui.tp.text) == 0x106);
-BUILD_ASSERT(offsetof(struct GlassesState, ui.nav.map_size) == 0x1a0);
-BUILD_ASSERT(offsetof(struct GlassesState, ui.nav_arrived.text) == 0x1a4);
-BUILD_ASSERT(sizeof(struct ipc_service_context) == 0x68);
-BUILD_ASSERT(offsetof(struct GlassesState, esb_pkt) == 0x6cc);
-BUILD_ASSERT(offsetof(struct GlassesState, ipc_ctx) == 0x714);
-BUILD_ASSERT(offsetof(struct GlassesState, ble_context) == 0x77c);
-BUILD_ASSERT(offsetof(struct GlassesState, spi) == 0xb10);
-BUILD_ASSERT(offsetof(struct GlassesState, panel) == 0xb6c);
-BUILD_ASSERT(offsetof(struct GlassesState, imu) == 0xee8);
-BUILD_ASSERT(offsetof(struct GlassesState, battery_info) == 0xfc4);
-BUILD_ASSERT(offsetof(struct GlassesState, dashboard_ts) == 0xff0);
-BUILD_ASSERT(offsetof(struct GlassesState, flash_read) == 0x1044);
-BUILD_ASSERT(offsetof(struct GlassesState, module_mask) == 0x1070);
-BUILD_ASSERT(offsetof(struct GlassesState, last_sync_ts) == 0x1078);
-BUILD_ASSERT(offsetof(struct GlassesState, bonded_addr) == 0x1081);
 
 struct GlassesState *get_dashboard_state(void);
 

@@ -27,6 +27,7 @@
 #include <hal/nrf_gpio.h>
 
 #include "net_common.h"
+#include "hci_rpmsg.h"
 
 LOG_MODULE_REGISTER(hci_rpmsg, CONFIG_BT_LOG_LEVEL);
 

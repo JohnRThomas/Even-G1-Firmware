@@ -35,7 +35,6 @@ static int imu_fusion_init(struct imu_ctx *c);
 struct imu_motion {
 	uint8_t warmed_up;
 	uint8_t state;			/* 0 idle, 1 moving, 2 settled */
-	uint8_t pad_02[2];
 	uint32_t samples;
 	int move_cnt;
 	int still_cnt;

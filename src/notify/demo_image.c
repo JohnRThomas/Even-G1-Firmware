@@ -20,6 +20,7 @@
 #define DEMO_IMAGE_NUM         5
 #define FLASH_IMAGE_ADDR       0x1c0000
 #define LINE_BYTES             320
+#define BMP_READ_BUF_LEN       0x50   /* BMP headers, or one 1 bpp row of a 640 px image */
 
 uint8_t demo_mode;
 static uint8_t demo_idx;
@@ -79,13 +80,13 @@ void get_demo_image_source_from_flash(void)
 	uint32_t addr = FLASH_IMAGE_ADDR;
 	int width, off, height, bytes, stride, ret;
 
-	buf = malloc(0x50);
+	buf = malloc(BMP_READ_BUF_LEN);
 	if (buf == NULL) {
 		printk("[%s-%d]malloc error \n", __func__, __LINE__);
 		return;
 	}
-	memset(buf, 0, 0x50);
-	ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, 0x50);
+	memset(buf, 0, BMP_READ_BUF_LEN);
+	ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, BMP_READ_BUF_LEN);
 	if (ret) {
 		printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
 	} else {
@@ -115,7 +116,7 @@ void get_demo_image_source_from_flash(void)
 				line_idx = 0;
 				for (int y = 0; y < height; y++) {
 					line_x = 0;
-					memset(buf, 0, 0x50);
+					memset(buf, 0, BMP_READ_BUF_LEN);
 					addr = FLASH_IMAGE_ADDR + off + (height - 1 - y) * stride;
 					ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, bytes);
 					if (ret) {
@@ -177,19 +178,19 @@ void get_demo_image_source(uint32_t idx)
 	uint32_t addr;
 	int off, width, height, bytes, stride, ret;
 
-	buf = malloc(0x50);
+	buf = malloc(BMP_READ_BUF_LEN);
 	if (buf == NULL) {
 		printk("[%s-%d]malloc error \n", __func__, __LINE__);
 		return;
 	}
-	memset(buf, 0, 0x50);
+	memset(buf, 0, BMP_READ_BUF_LEN);
 	if (idx >= DEMO_IMAGE_NUM) {
 		printk("error imgIdx is %d,reset as zero !\n", idx);
 		idx = 0;
 	}
 	ret = get_dashboard_state()->flash_read(get_dashboard_state(),
 						  idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR,
-						  buf, 0x50);
+						  buf, BMP_READ_BUF_LEN);
 	if (ret) {
 		printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
 	} else {
@@ -219,7 +220,7 @@ void get_demo_image_source(uint32_t idx)
 				line_idx = 0;
 				for (int y = 0; y < height; y++) {
 					line_x = 0;
-					memset(buf, 0, 0x50);
+					memset(buf, 0, BMP_READ_BUF_LEN);
 					addr = idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR + off + (height - 1 - y) * stride;
 					ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, bytes);
 					if (ret) {

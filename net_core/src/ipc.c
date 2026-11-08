@@ -7,6 +7,7 @@
 #include <zephyr/ipc/ipc_service.h>
 
 #include "net_common.h"
+#include "ipc.h"
 
 static struct ipc_ops *g_ops;
 static int ipc_ready;

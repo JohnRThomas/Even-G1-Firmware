@@ -162,7 +162,6 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 struct font_glyph_idx {
 	uint16_t code;
 	uint8_t width;      /* in bytes (2 pixels per byte) */
-	uint8_t pad;
 };
 extern const int font26_glyph_count;
 extern const int font_b_glyph_count;

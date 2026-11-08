@@ -15,9 +15,8 @@
 static int JBD_LUM_REG_VAL;
 static int JBD_CUR_REG_VAL;
 
-/* the SPI interface sits 0x5c bytes in front of the panel context in GlassesState */
-#define PANEL_SPI(c) ((struct spi_master_ctx *)((uint8_t *)(c) - 0x5c))
-BUILD_ASSERT(offsetof(struct GlassesState, panel) - offsetof(struct GlassesState, spi) == 0x5c);
+/* the SPI interface of the GlassesState holding the panel context */
+#define PANEL_SPI(c) (&CONTAINER_OF(c, struct GlassesState, panel)->spi)
 
 int panel_off(struct jbd_panel_context *c);
 int panel_on(struct jbd_panel_context *c);

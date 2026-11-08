@@ -20,10 +20,8 @@ enum {
 
 struct quicknote_msg {
 	uint8_t cmd;
-	uint8_t reserved;
 	uint16_t len;
 	uint8_t index;
-	uint8_t pad;
 };
 
 /* one note in flash */

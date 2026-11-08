@@ -40,6 +40,7 @@
 
 #define BLE_TX_BUF_SIZE 0x2b8
 #define BLE_SMALL_PKT_MAX 20
+#define BLE_SMALL_BUF_SIZE (BLE_SMALL_PKT_MAX + 1)
 
 /* request header handed to ble_process_req_dispatch() */
 struct ble_req_hdr {

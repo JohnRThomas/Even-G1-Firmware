@@ -344,13 +344,13 @@ void reset_all_usr_data(struct GlassesState *gs, int reboot)
 
 int get_settings_from_flash(struct GlassesState *gs)
 {
-	gs->store.write("dashboard_ts", gs->dashboard_ts, 0x75);
-	gs->store.write("countdown_ts", gs->countdown_ts, 7);
-	gs->store.write("brightness_level", &gs->panel.panel_brightness_level, 1);
-	gs->store.write("3dof_enable", &gs->imu.dof3_enable, 1);
-	gs->store.write("display_mode", &gs->display_mode, 1);
-	gs->store.write("wakeup_angle", &gs->imu.level, 1);
-	gs->store.write("first_enter_flag", &gs->first_enter_flag, 4);
+	gs->store.write("dashboard_ts", gs->dashboard_ts, sizeof(struct dashboard_ts_context));
+	gs->store.write("countdown_ts", gs->countdown_ts, sizeof(struct countdown_ts_context));
+	gs->store.write("brightness_level", &gs->panel.panel_brightness_level, sizeof(uint8_t));
+	gs->store.write("3dof_enable", &gs->imu.dof3_enable, sizeof(uint8_t));
+	gs->store.write("display_mode", &gs->display_mode, sizeof(uint8_t));
+	gs->store.write("wakeup_angle", &gs->imu.level, sizeof(uint8_t));
+	gs->store.write("first_enter_flag", &gs->first_enter_flag, sizeof(int));
 	return 0;
 }
 

@@ -26,7 +26,6 @@ enum proxy_msg_type {
 
 struct proxy_msg {
 	uint8_t type;
-	uint8_t pad;
 	uint16_t len;
 	uint8_t data[PROXY_MSG_DATA_MAX];
 };

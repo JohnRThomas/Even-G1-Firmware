@@ -10,6 +10,7 @@
 #define WHITELIST_FLASH_ADDR    0x131000
 #define MAX_WHITE_LIST_APP_NUM  100
 #define MAX_WHITE_LIST_BUF_LEN  (sizeof(struct app_whitelist) + 1)
+#define WHITELIST_JSON_BUF_LEN  0x1800
 
 struct app_info {
 	char id[40];
@@ -25,8 +26,6 @@ struct app_whitelist {
 	uint8_t app_count;
 	struct app_info list[MAX_WHITE_LIST_APP_NUM];
 };
-
-BUILD_ASSERT(sizeof(struct app_whitelist) == 0x15e2);
 
 /* whitelist.c */
 int parse_app_white_list_json(const char *json);

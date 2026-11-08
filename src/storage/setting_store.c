@@ -21,10 +21,8 @@ enum {
 
 struct setting_msg {
 	uint8_t cmd;
-	uint8_t reserved;
 	uint16_t len;
 	uint8_t value;
-	uint8_t pad;
 };
 
 K_MSGQ_DEFINE(setting_msgq, sizeof(struct setting_msg), SETTING_QUEUE_DEPTH, 4);

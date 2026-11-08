@@ -12,39 +12,11 @@
 #include <nrf.h>
 
 #include "net_common.h"
+#include "app_esb.h"
+#include "main.h"
+#include "timeslot.h"
 
 LOG_MODULE_REGISTER(app_esb);
-
-/* Event passed to the user callback. */
-struct app_esb_evt {
-	uint8_t type;
-	uint8_t *data;
-	uint32_t len;
-	int8_t rssi;
-};
-
-typedef void (*app_esb_cb_t)(struct app_esb_evt *evt);
-
-/* main.c */
-extern int net_mode_get(void);
-extern int esb_tx_buf_len_get(void);
-extern int esb_tx_buf_set(const uint8_t *data, size_t len);
-extern void esb_tx_buf_clear(void);
-extern void ipc_send_esb_status(uint8_t state);        /* report state to the app core */
-extern int esb_rx_msgq_init(void);
-extern int esb_rx_msgq_get(uint8_t *buf);
-extern uint8_t esb_tx_buf[];
-extern uint8_t esb_channel;
-extern uint8_t esb_tx_kind;
-extern uint8_t esb_tx_state;
-extern uint8_t esb_tx_done;
-extern uint8_t esb_evt_active;
-
-int on_timeslot_start_stop(int op);
-
-/* timeslot.c */
-extern void timeslot_handler_init(int (*cb)(int op));
-extern uint8_t timeslot_radio_is_on(void);
 
 uint8_t base_addr_0[4] = {0xC9, 0xC9, 0xC9, 0xC9};
 uint8_t base_addr_1[4] = {0xA3, 0xA3, 0xA3, 0xA3};
@@ -144,8 +116,8 @@ void esb_ops_init(struct esb_ops *ops)
 	struct net_ctx *ctx = CONTAINER_OF(ops, struct net_ctx, esb);
 	uint8_t *buf;
 
-	ops->buf = k_malloc(0x100);
-	memset(ops->buf, 0, 0x100);
+	ops->buf = k_malloc(ESB_OPS_BUF_SIZE);
+	memset(ops->buf, 0, ESB_OPS_BUF_SIZE);
 	buf = ops->buf;
 	buf[0] = 0xfb;
 	memcpy(&buf[0x11], ctx->mac1, 6);

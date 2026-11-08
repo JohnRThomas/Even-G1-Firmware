@@ -44,14 +44,11 @@ struct dashboard_prv_data {
 	uint8_t notes_shown;
 	uint8_t news_shown;
 	uint8_t init_done;
-	uint8_t pad_0d;
 	uint8_t power_info_sent;
-	uint8_t pad_0f;
 	int64_t enter_ts;
 	uint8_t language;
 	uint8_t display_mode;
 	uint8_t pane_mode;
-	uint8_t pad_1b;
 	uint32_t ble_connected;
 	uint8_t calendar_disp_mode;
 	uint8_t stocks_disp_mode;
@@ -59,9 +56,7 @@ struct dashboard_prv_data {
 	uint8_t citywalk_disp_mode;
 	uint8_t screen_cleared;      /* cleared by set_screen_cleared() */
 	uint8_t msg_count;
-	uint8_t pad_26[2];
 };
-BUILD_ASSERT(sizeof(struct dashboard_prv_data) == 0x28);
 extern struct dashboard_prv_data _dashboard_prv_data;
 
 /* every dashboard coordinate is written relative to the screen origin */

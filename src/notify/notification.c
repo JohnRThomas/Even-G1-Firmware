@@ -50,6 +50,8 @@ static char android_calendar_list[5][32] = {
 };
 
 struct notif_msg g_arrMsgContent[MSG_TOTAL_NUM];
+#define NCS_BUF_LEN 0x800
+
 static char *ncs_buf;
 static struct notif_msg push_msg_copy;
 
@@ -209,11 +211,11 @@ void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_
 		return;
 	}
 	if (ncs_buf == NULL) {
-		ncs_buf = malloc(0x800);
+		ncs_buf = malloc(NCS_BUF_LEN);
 		if (ncs_buf == NULL) {
 			BLE_PRINTK("[%s-%d] malloc failed !!\n", __FUNCTION__, __LINE__);
 		} else {
-			memset(ncs_buf, 0, 0x800);
+			memset(ncs_buf, 0, NCS_BUF_LEN);
 		}
 	}
 	if (ncs_buf != NULL) {

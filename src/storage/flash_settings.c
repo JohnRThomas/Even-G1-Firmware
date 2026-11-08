@@ -47,7 +47,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 	int rc;
 
 	if (!strcmp(key, "ble_whitelist_app")) {
-		rc = read_cb(cb_arg, get_app_whitelist_info(), 0x15e2);
+		rc = read_cb(cb_arg, get_app_whitelist_info(), sizeof(struct app_whitelist));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -58,7 +58,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		if (get_dashboard_state()->dashboard_ts == NULL) {
 			return 0;
 		}
-		rc = read_cb(cb_arg, get_dashboard_state()->dashboard_ts, 0x75);
+		rc = read_cb(cb_arg, get_dashboard_state()->dashboard_ts, sizeof(struct dashboard_ts_context));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -70,7 +70,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		if (get_dashboard_state()->countdown_ts == NULL) {
 			return 0;
 		}
-		rc = read_cb(cb_arg, get_dashboard_state()->countdown_ts, 7);
+		rc = read_cb(cb_arg, get_dashboard_state()->countdown_ts, sizeof(struct countdown_ts_context));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -79,7 +79,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		return 0;
 	}
 	if (!strcmp(key, "first_enter_flag")) {
-		rc = read_cb(cb_arg, &get_dashboard_state()->first_enter_flag, 4);
+		rc = read_cb(cb_arg, &get_dashboard_state()->first_enter_flag, sizeof(int));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -88,7 +88,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		return 0;
 	}
 	if (!strcmp(key, "brightness_level")) {
-		rc = read_cb(cb_arg, &get_dashboard_state()->panel.panel_brightness_level, 1);
+		rc = read_cb(cb_arg, &get_dashboard_state()->panel.panel_brightness_level, sizeof(uint8_t));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -97,7 +97,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		return 0;
 	}
 	if (!strcmp(key, "3dof_enable")) {
-		rc = read_cb(cb_arg, &get_dashboard_state()->imu.dof3_enable, 1);
+		rc = read_cb(cb_arg, &get_dashboard_state()->imu.dof3_enable, sizeof(uint8_t));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -106,7 +106,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		return 0;
 	}
 	if (!strcmp(key, "display_mode")) {
-		rc = read_cb(cb_arg, &get_dashboard_state()->display_mode, 1);
+		rc = read_cb(cb_arg, &get_dashboard_state()->display_mode, sizeof(uint8_t));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -115,7 +115,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		return 0;
 	}
 	if (!strcmp(key, "runtime_mode")) {
-		rc = read_cb(cb_arg, &get_dashboard_state()->work_mode, 1);
+		rc = read_cb(cb_arg, &get_dashboard_state()->work_mode, sizeof(uint8_t));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -127,7 +127,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		if (get_dashboard_state()->user_sched_info == NULL) {
 			return 0;
 		}
-		rc = read_cb(cb_arg, get_dashboard_state()->user_sched_info, 0x16a);
+		rc = read_cb(cb_arg, get_dashboard_state()->user_sched_info, sizeof(struct user_schedule_context));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -135,7 +135,7 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		return 0;
 	}
 	if (!strcmp(key, "wakeup_angle")) {
-		rc = read_cb(cb_arg, &get_dashboard_state()->imu.level, 1);
+		rc = read_cb(cb_arg, &get_dashboard_state()->imu.level, sizeof(uint8_t));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -208,7 +208,7 @@ int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
 	uint8_t *buf;
 	int ret;
 
-	buf = malloc(4096);
+	buf = malloc(EXT_FLASH_SECTOR_SIZE);
 	if (buf == NULL) {
 		BLE_PRINTK("[%s-%d]error, have no memory ! \n", __func__, __LINE__);
 		return -1;
@@ -217,24 +217,24 @@ int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
 		printk(" [%s] device not ready.\n", FLASH_DEV->name);
 		ret = -1;
 	} else {
-		memset(buf, 0, 4096);
-		ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, 4096);
+		memset(buf, 0, EXT_FLASH_SECTOR_SIZE);
+		ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
 		if (ret) {
 			printk("Flash read failed! %d\n", ret);
 		} else if (memcmp(data, buf, len) == 0) {
 			printk("write data and read data is same, exit\n");
 		} else {
-			ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, 4096);
+			ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
 			if (ret) {
 				printk("Flash erase failed! %d\n", ret);
 			} else {
-				memset(buf, 0, 4096);
+				memset(buf, 0, EXT_FLASH_SECTOR_SIZE);
 				memcpy(buf, data, len);
-				ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, buf, 4096);
+				ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
 				if (ret) {
 					printk("Flash write failed! %d addr %08X size %d\n", ret, addr, len);
 				} else {
-					ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, 4096);
+					ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
 					if (ret) {
 						printk("Flash read failed! %d\n", ret);
 					} else if (memcmp(data, buf, len) == 0) {
@@ -259,18 +259,18 @@ int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size)
 	uint8_t i;
 
 	BLE_PRINTK("size is %d\n", size);
-	pages = (size >> 12) + 1;
-	last = size - (pages - 1) * 4096;
+	pages = size / EXT_FLASH_SECTOR_SIZE + 1;
+	last = size - (pages - 1) * EXT_FLASH_SECTOR_SIZE;
 	for (i = 0; i < pages; i++) {
-		ret += flash_settings_write_and_verify(addr + i * 4096, data + i * 4096,
-						       i < pages - 1 ? 4096 : last);
+		ret += flash_settings_write_and_verify(addr + i * EXT_FLASH_SECTOR_SIZE, data + i * EXT_FLASH_SECTOR_SIZE,
+						       i < pages - 1 ? EXT_FLASH_SECTOR_SIZE : last);
 	}
 	return ret;
 }
 
 int write_font(uint32_t addr, const void *data, size_t len)
 {
-	uint8_t buf[4096] = {0};
+	uint8_t buf[EXT_FLASH_SECTOR_SIZE] = {0};
 	int retry = 0;
 	int ret;
 
@@ -279,14 +279,14 @@ int write_font(uint32_t addr, const void *data, size_t len)
 			printk(" [%s] device not ready.\n", FLASH_DEV->name);
 			ret = -1;
 		} else {
-			ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, 4096);
+			ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
 			if (ret) {
 				printk("Flash read font failed! %d\n", ret);
 			} else if (memcmp(data, buf, len) == 0) {
 				printk("write font data and read data is same, exit\n");
 				return 0;
 			} else {
-				ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, 4096);
+				ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
 				if (ret) {
 					printk("Flash erase font failed! %d\n", ret);
 				} else {
@@ -296,7 +296,7 @@ int write_font(uint32_t addr, const void *data, size_t len)
 						printk("Flash write font failed! %d\n", ret);
 					} else {
 						ret = get_dashboard_state()->flash_read(
-							get_dashboard_state(), addr, buf, 4096);
+							get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
 						if (ret) {
 							printk("Flash read font failed! %d\n", ret);
 						} else if (memcmp(data, buf, len) == 0) {
@@ -317,6 +317,8 @@ int write_font(uint32_t addr, const void *data, size_t len)
 	}
 }
 
+#define FLASH_CRC_CHUNK_LEN 1024
+
 int calc_flash_crc(uint16_t *crc, int addr, uint32_t size)
 {
 	uint16_t pages;
@@ -330,21 +332,21 @@ int calc_flash_crc(uint16_t *crc, int addr, uint32_t size)
 		G1_LOG_INF("calc_flash_crc para is NULL\n\n");
 		return -1;
 	}
-	pages = size / 1024;
-	if (size % 1024) {
+	pages = size / FLASH_CRC_CHUNK_LEN;
+	if (size % FLASH_CRC_CHUNK_LEN) {
 		pages++;
 	}
-	uint8_t buf[1024] = {0xff};
+	uint8_t buf[FLASH_CRC_CHUNK_LEN] = {0xff};
 
 	if (!device_is_ready(FLASH_DEV)) {
 		printk(" [%s] device not ready.\n", FLASH_DEV->name);
 		return -1;
 	}
 	for (uint16_t page = 0; page < pages; page++) {
-		pos = addr + page * 1024;
+		pos = addr + page * FLASH_CRC_CHUNK_LEN;
 		len = size + addr - pos;
-		if (len >= 1024) {
-			len = 1024;
+		if (len >= FLASH_CRC_CHUNK_LEN) {
+			len = FLASH_CRC_CHUNK_LEN;
 		}
 		ret = get_dashboard_state()->flash_read(get_dashboard_state(), pos, buf, len);
 		if (ret) {

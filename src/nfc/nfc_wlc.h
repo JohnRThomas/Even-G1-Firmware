@@ -263,7 +263,6 @@ typedef struct {
 	uint8_t rsved2;
 	uint16_t ExtMemorySize;
 	TT5_State State;
-	uint8_t pad_09[3];
 	uint32_t NDEF_offset;
 } sCCFileInfo;
 
@@ -320,7 +319,6 @@ struct nfc_charge {
 	uint8_t state;		/* 1 = charging, 2 = no field, 3 = updating, 4 = battery full */
 	uint8_t f03[5];
 	uint32_t field_mv;	/* adc_nfc_run() * 10 */
-	uint8_t pad_0c[0xc];
 };
 
 int adc_nfc_init(void);

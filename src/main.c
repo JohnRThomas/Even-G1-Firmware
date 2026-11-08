@@ -119,7 +119,7 @@ static void switch_to_dfu_mode(struct k_sem *sem)
 		k_sem_give(sem);
 		return;
 	}
-	ret = GLOBAL_STATE->store.write("runtime_mode", &runtime_mode, 1);
+	ret = GLOBAL_STATE->store.write("runtime_mode", &runtime_mode, sizeof(uint8_t));
 	if (ret != 0) {
 		G1_LOG(0, "failed to switch to ble mode [%d]\n", ret);
 		return;
@@ -197,12 +197,12 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 			if ((buf[0] & ESB_DIR_MASK) == ESB_DIR_UP ||
 			    (new_data_pkg->screen_id == 0x10 && GLOBAL_STATE->dash_buf->type >= 6 &&
 			     GLOBAL_STATE->dash_buf->type <= 9)) {
-				if (gs->esb_up_id != data[3] && gs->esb_up_snapshot[0x200] != data[3]) {
+				if (gs->esb_up_id != data[3] && gs->esb_up_snapshot[ESB_SNAPSHOT_SEQ] != data[3]) {
 					data_pkg->package_id++;
 					G1_LOG(0, "slave recv wrong up package\n");
 					return 0;
 				}
-			} else if (gs->esb_down_id != data[4] && gs->esb_down_snapshot[0x200] != data[4]) {
+			} else if (gs->esb_down_id != data[4] && gs->esb_down_snapshot[ESB_SNAPSHOT_SEQ] != data[4]) {
 				data_pkg->package_id++;
 				G1_LOG(0, "slave recv wrong down package\n");
 				return 0;
@@ -1029,7 +1029,7 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 		slot = get_message_by_index(data[0xd]);
 		if (slot && !slot->busy &&
 		    (src->uid != slot->uid || src->recv_time != slot->recv_time || slot->sync_state != 1)) {
-			memcpy(slot, &data[1], 0xda);
+			memcpy(slot, &data[1], NOTIF_MSG_HALF);
 			slot->sync_state = 1;
 		}
 		break;
@@ -1039,7 +1039,7 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 		}
 		slot = get_push_message();
 		if (slot && !slot->busy && slot->sync_state != 3) {
-			memcpy((uint8_t *)slot + NOTIF_MSG_HALF, &data[1], 0xda);
+			memcpy((uint8_t *)slot + NOTIF_MSG_HALF, &data[1], NOTIF_MSG_HALF);
 			slot->sync_state = 3;
 		}
 		break;
@@ -1145,75 +1145,75 @@ static struct GlassesState *init_context(void)
 	s->module_mask = 0;
 	change_work_mode(0);
 
-	s->dashboard_ts = malloc(0x75);
+	s->dashboard_ts = malloc(sizeof(struct dashboard_ts_context));
 	if (s->dashboard_ts) {
-		memset(s->dashboard_ts, 0, 0x75);
+		memset(s->dashboard_ts, 0, sizeof(struct dashboard_ts_context));
 	}
 	set_date(1704067200); /* 2024-01-01 00:00:00 */
 
-	s->countdown_ts = malloc(7);
-	s->task_status = malloc(5);
+	s->countdown_ts = malloc(sizeof(struct countdown_ts_context));
+	s->task_status = malloc(sizeof(struct msg_status));
 	if (s->task_status) {
 		s->task_status->task = 0;
 		s->task_status->status = 0;
 	}
-	s->teleprompter = malloc(0x217);
+	s->teleprompter = malloc(sizeof(struct teleprompter_info));
 	if (s->teleprompter) {
-		memset(s->teleprompter, 0, 0x217);
+		memset(s->teleprompter, 0, sizeof(struct teleprompter_info));
 	}
-	s->nav = malloc(0xf5);
-	s->translate_src = malloc(0x1e8);
-	s->translate_dst = malloc(0x1e8);
-	s->dash_buf = malloc(0x1e9);
-	s->evenai_buf = malloc(0x210);
+	s->nav = malloc(sizeof(struct nav_info));
+	s->translate_src = malloc(sizeof(struct translate_buf));
+	s->translate_dst = malloc(sizeof(struct translate_buf));
+	s->dash_buf = malloc(sizeof(struct dash_data_buf));
+	s->evenai_buf = malloc(sizeof(struct evenai_buf));
 	if (s->evenai_buf) {
-		memset(s->evenai_buf, 0, 0x210);
+		memset(s->evenai_buf, 0, sizeof(struct evenai_buf));
 	}
-	s->quicknote = malloc(0x50f);
+	s->quicknote = malloc(sizeof(struct quicknote_ctx));
 	if (s->quicknote) {
-		memset(s->quicknote, 0, 0x50f);
+		memset(s->quicknote, 0, sizeof(struct quicknote_ctx));
 	}
-	s->quicknote_show_info = malloc(0x152);
+	s->quicknote_show_info = malloc(sizeof(struct quicknote_show_info));
 	if (s->quicknote_show_info) {
-		memset(s->quicknote_show_info, 0, 0x152);
+		memset(s->quicknote_show_info, 0, sizeof(struct quicknote_show_info));
 	}
-	s->esb_up_snapshot = malloc(0x201);
+	s->esb_up_snapshot = malloc(ESB_SNAPSHOT_SIZE);
 	if (s->esb_up_snapshot) {
-		memset(s->esb_up_snapshot, 0, 0x201);
+		memset(s->esb_up_snapshot, 0, ESB_SNAPSHOT_SIZE);
 	}
-	s->esb_down_snapshot = malloc(0x201);
+	s->esb_down_snapshot = malloc(ESB_SNAPSHOT_SIZE);
 	if (s->esb_down_snapshot) {
-		memset(s->esb_down_snapshot, 0, 0x201);
+		memset(s->esb_down_snapshot, 0, ESB_SNAPSHOT_SIZE);
 	}
-	s->user_sched_info = malloc(sizeof(*s->user_sched_info));
+	s->user_sched_info = malloc(sizeof(struct user_schedule_context));
 	if (s->user_sched_info) {
 		s->user_sched_info->f_168 = 0;
 		s->user_sched_info->ts = 0;
 	}
-	s->schedule_notif = malloc(0xaf);
-	s->bitmap_info = malloc(0xb);
+	s->schedule_notif = malloc(sizeof(struct schedule_notif));
+	s->bitmap_info = malloc(sizeof(struct bitmap_show_info));
 	if (s->bitmap_info) {
-		memset(s->bitmap_info, 0, 0xb);
+		memset(s->bitmap_info, 0, sizeof(struct bitmap_show_info));
 	}
-	s->onboarding = malloc(0x21);
+	s->onboarding = malloc(sizeof(struct onboarding_ctx));
 	init_onboarding_info();
-	s->raster_height_cfg = malloc(1);
+	s->raster_height_cfg = malloc(sizeof(uint8_t));
 	if (s->raster_height_cfg) {
 		*s->raster_height_cfg = 0;
 	}
-	s->horiz_pitch_cfg = malloc(2);
+	s->horiz_pitch_cfg = malloc(HORIZ_PITCH_CFG_SIZE);
 	if (s->horiz_pitch_cfg) {
-		*(uint16_t *)s->horiz_pitch_cfg = 0; /* clears both bytes at once */
+		memset(s->horiz_pitch_cfg, 0, HORIZ_PITCH_CFG_SIZE);
 	}
-	s->ts_info = malloc(10);
+	s->ts_info = malloc(sizeof(struct prompt_info));
 	if (s->ts_info) {
 		s->ts_info->init.word_a = 0;
 		s->ts_info->init.word_b = 0;
 		s->ts_info->init.half_c = 0;
 	}
-	s->transcribe_buf = malloc(0x208);
+	s->transcribe_buf = malloc(sizeof(struct transcribe_buf));
 	if (s->transcribe_buf) {
-		memset(s->transcribe_buf, 0, 0x208);
+		memset(s->transcribe_buf, 0, sizeof(struct transcribe_buf));
 	}
 	memset(&s->bonded_addr, 0xff, sizeof(s->bonded_addr));
 	s->bond_flags = 0;

@@ -293,7 +293,6 @@ void opt3007_chip_deinit(void)
 
 void register_opt3007_context(struct opt3007_context *ctx)
 {
-	ctx->owner = CONTAINER_OF(ctx, struct GlassesState, opt3007_context)->opt3007_bus_ctx;
 	ctx->init_cb = opt3007_chip_init;
 	ctx->read_cb = opt3007_read;
 }

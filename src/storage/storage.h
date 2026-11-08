@@ -39,8 +39,6 @@ struct sys_settings {
 	uint8_t aging_touch_count;
 	uint8_t aging_charge_check_result;
 };
-BUILD_ASSERT(sizeof(struct sys_settings) == 0x98);
-BUILD_ASSERT(offsetof(struct sys_settings, lux_base) == 0x64);
 
 /* User settings, flash 0x134000 */
 struct usr_settings {
@@ -68,12 +66,12 @@ struct usr_settings {
 	struct u8pair longpress_head_up_mic;
 	uint8_t reserved[6];
 };
-BUILD_ASSERT(sizeof(struct usr_settings) == 0x2c);
 
 #define SYS_SETTINGS_ADDR   0x130000
 #define USR_SETTINGS_ADDR   0x134000
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
+#define EXT_FLASH_SECTOR_SIZE 4096
 
 /* QuickNote context behind GLOBAL_STATE->quicknote */
 #define QUICKNOTE_TITLE_LEN 0x29

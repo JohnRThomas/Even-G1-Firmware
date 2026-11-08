@@ -40,9 +40,7 @@
 struct eeprom_st25dv_config {
 	const struct device *bus;	/* i2c@9000 */
 	uint16_t bus_addr;		/* 0x53 */
-	uint16_t pad_06;
 	uint16_t addr;			/* 0x53 */
-	uint16_t pad_0a;
 	size_t size;			/* 0x1000 */
 };
 
@@ -53,7 +51,6 @@ struct st25dv_passwd {
 
 struct st25dv_mem_size {
 	uint8_t blk_size;
-	uint8_t pad_01;
 	uint16_t mem_size;
 };
 
