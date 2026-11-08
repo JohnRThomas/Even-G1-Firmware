@@ -210,8 +210,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 
 						if (pix != 0) {
 							fb[row][col] =
-								pix & gui_fade_mask[row % 26][steps[i]]
-										   [col];
+								pix & gui_fade_mask_at(row % 26, steps[i], col);
 						}
 					}
 				}
@@ -260,8 +259,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 
 							if (pix != 0) {
 								fb[row][col] =
-									pix & gui_fade_mask[row % 26][steps[i]]
-											   [col];
+									pix & gui_fade_mask_at(row % 26, steps[i], col);
 							}
 						}
 					}
@@ -288,7 +286,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 
 							if (pix != 0) {
 								gfb[row][col] =
-									pix & gui_fade_mask[row % 26][k][col];
+									pix & gui_fade_mask_at(row % 26, k, col);
 							}
 						}
 					}
@@ -354,8 +352,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event)
 
 							if (pix != 0) {
 								line[xh + col] =
-									pix & gui_fade_mask[row % 26][steps[i]]
-											   [col];
+									pix & gui_fade_mask_at(row % 26, steps[i], col);
 							}
 						}
 					}

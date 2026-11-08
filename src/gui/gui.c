@@ -1468,7 +1468,7 @@ int gui_screen_fade_out(void)
 		for (int row = 0; row < 199; row++) {
 			for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
 				if (frame_buffer[row][col] != 0) {
-					frame_buffer[row][col] &= gui_fade_mask[row % 26][7 - step][col];
+					frame_buffer[row][col] &= gui_fade_mask_at(row % 26, 7 - step, col);
 				}
 			}
 		}
@@ -1486,7 +1486,7 @@ int hide_icon_notification_on_gui(void)
 		for (int row = 0; row < 199; row++) {
 			for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
 				if (frame_buffer[row][col] != 0) {
-					frame_buffer[row][col] &= gui_fade_mask[row % 26][7 - step][col];
+					frame_buffer[row][col] &= gui_fade_mask_at(row % 26, 7 - step, col);
 				}
 			}
 		}

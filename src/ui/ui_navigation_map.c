@@ -79,7 +79,7 @@ void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav)
 					uint8_t pix = fb[row][col];
 
 					if (pix != 0) {
-						fb[row][col] = pix & gui_fade_mask[row % 26][k][col];
+						fb[row][col] = pix & gui_fade_mask_at(row % 26, k, col);
 					}
 				}
 			}
@@ -112,7 +112,7 @@ void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav)
 
 					if (pix != 0) {
 						fb[row][col] =
-							pix & gui_fade_mask[row % 26][steps[i]][col];
+							pix & gui_fade_mask_at(row % 26, steps[i], col);
 					}
 				}
 			}
@@ -191,7 +191,7 @@ void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav)
 					uint8_t pix = fb[row][col];
 
 					if (pix != 0) {
-						fb[row][col] = pix & gui_fade_mask[row % 26][k][col];
+						fb[row][col] = pix & gui_fade_mask_at(row % 26, k, col);
 					}
 				}
 			}
@@ -220,7 +220,7 @@ void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav)
 
 					if (pix != 0) {
 						fb[row][col] =
-							pix & gui_fade_mask[row % 26][steps[i]][col];
+							pix & gui_fade_mask_at(row % 26, steps[i], col);
 					}
 				}
 			}

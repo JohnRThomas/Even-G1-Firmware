@@ -51,7 +51,32 @@ extern struct gui_text_anim text_anim;
 extern uint8_t text_anim_buf[0x80];
 extern volatile uint8_t text_grey_level;   /* text grey level (.data 0x20003698 = 0x55) */
 extern atomic_t gui_flags;               /* 0x2000aa10, GUI_FLAG_* */
-extern const uint8_t gui_fade_mask[26][8][GUI_FB_ROW_BYTES]; /* gui_fade_mask.h */
+
+/* Fade mask (gui_fade_mask.h): one bit per pixel, fade steps 1..6 only. */
+#define GUI_FADE_PATTERN_ROWS 26
+#define GUI_FADE_STEPS        8
+#define GUI_FADE_STORED_STEPS (GUI_FADE_STEPS - 2)
+#define GUI_FADE_ROW_BYTES    (GUI_FB_ROW_BYTES / 4)
+extern const uint8_t gui_fade_mask_bits[GUI_FADE_PATTERN_ROWS][GUI_FADE_STORED_STEPS][GUI_FADE_ROW_BYTES];
+
+/*
+ * Mask for frame-buffer byte col (two 4-bit pixels) of pattern row row
+ * (0..GUI_FADE_PATTERN_ROWS - 1) at fade step step: 0 clears both pixels, 7 and
+ * above keeps both, 1..6 come from gui_fade_mask_bits.  Always inlined: the
+ * fade loops call it once per frame-buffer byte.
+ */
+static ALWAYS_INLINE uint8_t gui_fade_mask_at(unsigned int row, unsigned int step, unsigned int col)
+{
+	static const uint8_t expand[4] = { 0x00, 0x0f, 0xf0, 0xff };
+
+	if (step == 0) {
+		return 0x00;
+	}
+	if (step >= GUI_FADE_STEPS - 1) {
+		return 0xff;
+	}
+	return expand[(gui_fade_mask_bits[row][step - 1][col >> 2] >> (6 - 2 * (col & 3))) & 3];
+}
 atomic_val_t gui_flags_get(void);
 int set_frame_buffer(uint8_t **fb);
 int gui_screen_clear(void);

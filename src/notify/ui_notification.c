@@ -400,7 +400,7 @@ void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg)
 				uint8_t level[8] = {1, 3, 5, 7, 7, 7, 7, 7};
 
 				if (fb[y][x]) {
-					fb[y][x] &= gui_fade_mask[y % 26][level[step]][x];
+					fb[y][x] &= gui_fade_mask_at(y % 26, level[step], x);
 				}
 			}
 		}

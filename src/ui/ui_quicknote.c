@@ -138,8 +138,7 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 
 						if (pix != 0) {
 							panel->panel_buffer[row][col] =
-								pix & gui_fade_mask[row % 26][steps[i]]
-										   [col];
+								pix & gui_fade_mask_at(row % 26, steps[i], col);
 						}
 					}
 				}
