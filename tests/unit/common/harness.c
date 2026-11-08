@@ -9,7 +9,7 @@
 #include "notify/notify.h"
 #include "notify/whitelist.h"
 #include "storage/storage.h"
-#include "utils/burial_point.h"
+#include "utils/common_utils.h"
 
 DEFINE_FFF_GLOBALS;
 

@@ -1298,13 +1298,13 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
 int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
        bool is_24h)
 {
-  struct bp_date date = { 0 };
+  struct g1_date date = { 0 };
   size_t len;
   const uint8_t *data;
   int w, h;
   int x;
 
-  init_burial_point_date(ts, &date);
+  timestamp_to_date(ts, &date);
   char buf[16] = { 0 };
 
   if (is_24h) {

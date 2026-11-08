@@ -41,8 +41,6 @@ FAKE_VALUE_FUNC(int, update_persist_task_status_to_idle, struct GlassesState *);
 FAKE_VOID_FUNC(aw93203_init);
 FAKE_VALUE_FUNC(int32_t, aw9320x_read_chipid);
 FAKE_VALUE_FUNC(int, display_reflash_screen, uint8_t);
-FAKE_VOID_FUNC(enter_wear_burial_point);
-FAKE_VOID_FUNC(exit_wear_burial_point);
 FAKE_VOID_FUNC(free_demo_line_buf);
 FAKE_VALUE_FUNC(int, global_system_resume, struct GlassesState *);
 FAKE_VALUE_FUNC(int, global_system_suspend, struct GlassesState *);

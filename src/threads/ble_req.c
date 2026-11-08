@@ -15,7 +15,7 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../ui/ui.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 #include "../utils/md5.h"
 
 /* BLE request header as handed over by the SPI/BLE protocol layer */

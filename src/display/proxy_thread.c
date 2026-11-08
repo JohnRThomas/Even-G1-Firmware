@@ -17,7 +17,7 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 

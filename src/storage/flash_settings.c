@@ -14,7 +14,7 @@
 #include "storage.h"
 #include "../notify/whitelist.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 /* the logs print __LINE__: line numbers below follow the vendor file */
 #line 16

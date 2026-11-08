@@ -19,7 +19,7 @@
 #include "sensors_audio.h"
 #include "../ble/ble_ancs.h"
 #include "../production_test/production_test.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define DMIC_DEV  DEVICE_DT_GET(DT_NODELABEL(pdm0))
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))

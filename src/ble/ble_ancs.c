@@ -31,7 +31,7 @@
 #include "../spim_spis/spim.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define DEVICE_NAME "Even G1"
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)

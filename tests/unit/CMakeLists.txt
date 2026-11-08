@@ -7,7 +7,6 @@ g1_unit_suite(ahrs FIRMWARE ahrs/ahrs.c FAKES misc)
 # liblc3 needs the FPU, Zephyr's dmic_nrfx_pdm.c onoff, the recording CRC check crc32_ieee()
 g1_unit_suite(audio FIRMWARE ble/ble_proto.c utils/common_utils.c storage/setting_store.c
               storage/file_storage.c FAKES all KCONFIG CRC=y FPU=y LIBLC3=y ONOFF=y)
-g1_unit_suite(burial FIRMWARE ${G1_FW_PROTOCOL} FAKES all)
 g1_unit_suite(buttons_gpio DRIVERS FAKES misc)
 g1_unit_suite(canvas_position FIRMWARE ui/ui_raster_height.c gui/gui.c fonts/gui_fonts.c
               fonts/font_bitmap.c fonts/font_ascii.c panel_display/panel_fb.c

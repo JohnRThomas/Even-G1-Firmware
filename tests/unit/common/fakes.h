@@ -110,8 +110,6 @@ extern uint32_t imu_pitch_x100;
 extern atomic_t dashboard_head_up_opened;
 DECLARE_FAKE_VOID_FUNC(set_brightness_to_panel_reg_in_running, uint8_t);
 extern uint32_t JDB_PANEL_ID;
-/* no entropy driver in the unit build */
-DECLARE_FAKE_VALUE_FUNC(uint32_t, z_impl_sys_rand32_get);
 /* GlassesState->panel.set_brightness_cb */
 DECLARE_FAKE_VALUE_FUNC(int, g1_fake_panel_set_brightness, struct jbd_panel_context *, uint8_t);
 /* what pt_comm.c, pt_data.c and production_test.c call */

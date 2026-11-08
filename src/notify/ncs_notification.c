@@ -10,7 +10,7 @@
 
 #include "g1_log.h"
 #include "notify.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 void parse_ncs_notification(char *json, struct notif_msg *msg)
 {

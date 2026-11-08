@@ -73,7 +73,6 @@ BUILD_ASSERT(sizeof(struct usr_settings) == 0x2c);
 
 #define SYS_SETTINGS_ADDR   0x130000
 #define USR_SETTINGS_ADDR   0x134000
-#define BURIAL_POINT_ADDR   0x135000
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
@@ -105,8 +104,6 @@ int load_sys_setting(struct GlassesState *gs);
 int save_usr_settings(struct GlassesState *gs, int unused);
 int clear_user_settings(struct GlassesState *gs);
 int load_usr_setting(struct GlassesState *gs);
-int update_burial_point_to_flash(struct GlassesState *gs);
-int load_burial_point(struct GlassesState *gs);
 void reset_all_usr_data(struct GlassesState *gs, int reboot);
 int get_settings_from_flash(struct GlassesState *gs);
 char *get_serial_number(void);
