@@ -16,13 +16,14 @@
 #include "main.h"
 #include "timeslot.h"
 
+/* NOLINTNEXTLINE(misc-use-internal-linkage): kernel macro */
 LOG_MODULE_REGISTER(app_esb);
 
 uint8_t base_addr_0[4] = {0xC9, 0xC9, 0xC9, 0xC9};
 uint8_t base_addr_1[4] = {0xA3, 0xA3, 0xA3, 0xA3};
 uint8_t addr_prefix[2] = {0xE9, 0xD3};
 
-int esb_link_state = 1;
+static int esb_link_state = 1;
 
 static app_esb_cb_t app_evt_cb;
 static struct app_esb_evt app_evt;
@@ -36,7 +37,7 @@ static struct esb_payload ack_payload;
 static struct esb_payload rx_payload;
 static struct esb_payload tx_payload;
 
-K_THREAD_STACK_DEFINE(esb_thread_stack, 0x600);
+static K_THREAD_STACK_DEFINE(esb_thread_stack, 0x600);
 static struct k_thread esb_thread_data;
 
 static int esb_ipc_recv(struct net_ctx *ctx, const uint8_t *data, size_t len)
@@ -136,7 +137,7 @@ void esb_ops_init(struct esb_ops *ops)
 
 static void event_handler(struct esb_evt const *event);
 
-int esb_initialize(uint8_t prx)
+static int esb_initialize(uint8_t prx)
 {
 	int err;
 	struct esb_config config = ESB_DEFAULT_CONFIG;
@@ -234,14 +235,12 @@ static void esb_send(uint8_t load)
 		}
 	}
 
-	if (esb_prx == 0) {
-		if (esb_start_tx() == 0) {
-			tx_count++;
-		}
+	if (esb_prx == 0 && esb_start_tx() == 0) {
+		tx_count++;
 	}
 }
 
-void esb_send_idle(void)
+static void esb_send_idle(void)
 {
 	uint8_t tmp[CONFIG_ESB_MAX_PAYLOAD_LENGTH] = {0};
 
@@ -350,7 +349,7 @@ int app_esb_init(uint8_t prx, app_esb_cb_t cb)
 	return 0;
 }
 
-int app_esb_suspend(void)
+static int app_esb_suspend(void)
 {
 	radio_active = 0;
 	NRF_P0->OUTSET = BIT(29);
@@ -382,7 +381,7 @@ int app_esb_suspend(void)
 	return 0;
 }
 
-int app_esb_resume(void)
+static int app_esb_resume(void)
 {
 	int err;
 
@@ -409,6 +408,8 @@ int on_timeslot_start_stop(int op)
 			NRF_P0->OUTCLR = BIT(31);
 			return app_esb_suspend();
 		}
+		break;
+	default:
 		break;
 	}
 	return op;

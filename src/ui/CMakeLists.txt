@@ -1,10 +1,9 @@
 target_sources(app PRIVATE
-  ui_quicknote.c
-  ui_even_ai.c
-  ui_bitmap.c
-  ui_teleprompter.c
-  ui_navigation_map.c
-  ui_translate.c
-  ui_onboarding.c
-  ui_raster_height.c
+  display_thread.c
+  input.c
+  screen_dispatch.c
+  screen_task.c
 )
+
+add_subdirectory(gui)
+add_subdirectory(screens)

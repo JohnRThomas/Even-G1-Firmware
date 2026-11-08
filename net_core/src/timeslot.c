@@ -15,6 +15,7 @@
 #include "app_esb.h"
 #include "main.h"
 
+/* NOLINTNEXTLINE(misc-use-internal-linkage): kernel macro */
 LOG_MODULE_REGISTER(timeslot);
 
 /* MPSL API calls that can be requested for the non-preemptible thread */
@@ -57,6 +58,7 @@ static uint8_t timeslot_stopped;
 static uint8_t timeslot_extension_failed;
 
 /* Message queue for requesting MPSL API calls to non-preemptible thread */
+/* NOLINTNEXTLINE(misc-use-internal-linkage): kernel macro */
 K_MSGQ_DEFINE(mpsl_api_msgq, sizeof(enum mpsl_timeslot_call), 4, 4);
 
 static void set_timeslot_active_status(bool on)
@@ -134,7 +136,7 @@ static void mpsl_nonpreemptible_thread(void)
 	}
 }
 
-void schedule_request(enum mpsl_timeslot_call api_call)
+static void schedule_request(enum mpsl_timeslot_call api_call)
 {
 	int err;
 
@@ -338,8 +340,8 @@ uint8_t timeslot_radio_is_on(void)
 	return timeslot_radio_on;
 }
 
-/* Both reports come from inside the kernel macro. */
-/* NOLINTBEGIN(misc-misplaced-const,bugprone-branch-clone) */
+/* All reports come from inside the kernel macro. */
+/* NOLINTBEGIN(misc-misplaced-const,bugprone-branch-clone,misc-use-internal-linkage) */
 K_THREAD_DEFINE(mpsl_nonpreemptible_thread_id, CONFIG_MAIN_STACK_SIZE, mpsl_nonpreemptible_thread,
 		NULL, NULL, NULL, K_PRIO_COOP(0), 0, 0);
-/* NOLINTEND(misc-misplaced-const,bugprone-branch-clone) */
+/* NOLINTEND(misc-misplaced-const,bugprone-branch-clone,misc-use-internal-linkage) */

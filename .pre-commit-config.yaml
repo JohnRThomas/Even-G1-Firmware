@@ -1,4 +1,4 @@
-exclude: ^(src/gui/resource_bitmaps\.h|src/gui/gui_fade_mask\.h|src/fonts/gui_fonts\.c|src/aw9320x/aw9320x_fw_info\.h)$
+exclude: ^(src/ui/gui/resource_bitmaps\.h|src/ui/gui/gui_fade_mask\.h|src/ui/gui/fonts/gui_fonts\.c|src/drivers/touch/aw9320x_fw_info\.h)$
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -23,7 +23,7 @@ repos:
     hooks:
       - id: clang-tidy
         name: clang-tidy
-        entry: python3 scripts/clang_tidy_hook.py
+        entry: python3 tools/clang_tidy_hook.py
         language: python
         additional_dependencies: [clang-tidy==23.1.4]
         files: ^(src|net_core/src)/.*\.c$

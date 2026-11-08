@@ -1,0 +1,8 @@
+add_subdirectory(audio)
+add_subdirectory(imu)
+add_subdirectory(nfc_wlc)
+add_subdirectory(notifications)
+add_subdirectory(power)
+add_subdirectory(production_test)
+add_subdirectory(storage)
+add_subdirectory(tasks)

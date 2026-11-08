@@ -20,8 +20,7 @@ endif()
 
 project(open_g1)
 
-
-target_include_directories(app PRIVATE src/include)
+target_include_directories(app PRIVATE src)
 
 # struct ncs_mem at 0x2007fc00 (shared with bootloader / net core)
 zephyr_linker_sources(SECTIONS linker/ncs_mem.ld)
@@ -29,14 +28,14 @@ zephyr_linker_sources(SECTIONS linker/ncs_mem.ld)
 add_subdirectory(src)
 
 # The NCS ANCS client accepts notification attributes of at most 32 bytes; this
-# firmware registers a 256-byte message buffer.  src/ble/ancs_attr_max.h raises the
+# firmware registers a 256-byte message buffer.  src/comm/ble/ancs_attr_max.h raises the
 # limit; it is force-included in front of the SDK source that checks it.
 set(G1_ANCS_CLIENT_SRC ${ZEPHYR_NRF_MODULE_DIR}/subsys/bluetooth/services/ancs_client.c)
 if(NOT EXISTS ${G1_ANCS_CLIENT_SRC})
   message(FATAL_ERROR "NCS ANCS client source not found: cannot raise its attribute limit")
 endif()
 set_property(SOURCE ${G1_ANCS_CLIENT_SRC} TARGET_DIRECTORY zephyr APPEND PROPERTY
-             COMPILE_OPTIONS -include ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/ancs_attr_max.h)
+             COMPILE_OPTIONS -include ${CMAKE_CURRENT_SOURCE_DIR}/src/comm/ble/ancs_attr_max.h)
 
 # Build identification in the boot log and the "#t" debug command: configure time and
 # the git commit of this tree.
@@ -47,5 +46,5 @@ execute_process(COMMAND git rev-parse --short=8 HEAD
 if(NOT G1_GIT_COMMIT)
   set(G1_GIT_COMMIT unknown)
 endif()
-set_property(SOURCE src/main.c src/ble/ble_proto.c TARGET_DIRECTORY app APPEND PROPERTY
+set_property(SOURCE src/main.c src/comm/ble/debug_cmd.c TARGET_DIRECTORY app APPEND PROPERTY
              COMPILE_DEFINITIONS G1_BUILD_TIME="${G1_BUILD_TIME}" G1_GIT_COMMIT="${G1_GIT_COMMIT}")

@@ -29,6 +29,7 @@
 #include "net_common.h"
 #include "hci_rpmsg.h"
 
+/* NOLINTNEXTLINE(misc-use-internal-linkage): kernel macro */
 LOG_MODULE_REGISTER(hci_rpmsg, CONFIG_BT_LOG_LEVEL);
 
 static struct ipc_ept hci_ept;
@@ -248,6 +249,8 @@ static void hci_rpmsg_send(struct net_buf *buf)
 }
 
 #if defined(CONFIG_BT_CTLR_ASSERT_HANDLER)
+/* Called by the SoftDevice Controller library. */
+/* NOLINTNEXTLINE(misc-use-internal-linkage) */
 void bt_ctlr_assert_handle(char *file, uint32_t line)
 {
 	/* Disable interrupts, this is unrecoverable */

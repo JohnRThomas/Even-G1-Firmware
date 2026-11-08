@@ -1,0 +1,158 @@
+/*
+ * SPI master (nrfx SPIM3 / SPIM4) used by the display panel.
+ */
+#include <string.h>
+#include <zephyr/kernel.h>
+#include <zephyr/irq.h>
+#include <nrfx_spim.h>
+
+#include "system/logging.h"
+#include "system/glasses_state.h"
+#include "drivers/spi/spim.h"
+
+static uint8_t spim4_irq_connected;
+static uint8_t spim3_irq_connected;
+
+static void spim_event_handler(nrfx_spim_evt_t const *p_event, void *p_context)
+{
+	struct spi_master_ctx *ctx = p_context;
+
+	if (p_event->type == NRFX_SPIM_EVENT_DONE) {
+		ctx->xfer_done = 1;
+	}
+}
+
+static int spi_master_trans_data_tx_rx(struct spi_master_ctx *ctx, const uint8_t *tx, size_t tx_len,
+				       uint8_t *rx, size_t rx_len)
+{
+	nrfx_spim_xfer_desc_t desc = NRFX_SPIM_XFER_TRX(tx, tx_len, rx, rx_len);
+	nrfx_err_t err;
+
+	if (!ctx->is_initialized) {
+		G1_LOG_ERR("wait init_done.\n");
+		return -1;
+	}
+
+	err = nrfx_spim_xfer(&ctx->spim, &desc, 0);
+	if (err != NRFX_SUCCESS) {
+		G1_LOG_ERR("sipm(bus=%d)-sync fail: status: %d -- %d\n", ctx->bus, err,
+			   NRFX_SUCCESS);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int spi_master_deinit(struct spi_master_ctx *ctx)
+{
+	nrfx_spim_t spim3;
+	nrfx_spim_t spim4;
+	uint8_t bus, sck, mosi, miso, ss, speed;
+
+	spim3.p_reg = NRF_SPIM3;
+	spim3.drv_inst_idx = NRFX_SPIM3_INST_IDX;
+	spim4.p_reg = NRF_SPIM4;
+	spim4.drv_inst_idx = NRFX_SPIM4_INST_IDX;
+	if (!ctx->is_initialized) {
+		return 0;
+	}
+	bus = ctx->bus;
+	sck = ctx->sck;
+	mosi = ctx->mosi;
+	miso = ctx->miso;
+	ss = ctx->ss;
+	speed = ctx->speed_mhz;
+
+	switch (bus) {
+	case 3:
+		memcpy(&ctx->spim, &spim3, sizeof(nrfx_spim_t));
+		break;
+	case 4:
+		memcpy(&ctx->spim, &spim4, sizeof(nrfx_spim_t));
+		break;
+	default:
+		G1_LOG_ERR(" SPIM BUS ERR!\n");
+		return 0;
+	}
+
+	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus, speed, sck, mosi,
+		   miso, ss);
+	nrfx_spim_uninit(&ctx->spim);
+	G1_LOG_INF("spim(bus=%d): uninit finish\n", ctx->bus);
+	ctx->is_initialized = 0;
+
+	return 0;
+}
+
+static int spi_master_init(struct spi_master_ctx *ctx)
+{
+	nrfx_spim_t spim3 = NRFX_SPIM_INSTANCE(3);
+	nrfx_spim_t spim4 = NRFX_SPIM_INSTANCE(4);
+	nrfx_spim_config_t config = {
+		.irq_priority = 7,
+		.orc = 0xff,
+		.dcx_pin = NRF_SPIM_PIN_NOT_CONNECTED,
+		.rx_delay = 2,
+		.ss_duration = 2,
+	};
+	nrfx_err_t status;
+	uint8_t bus;
+
+	if (ctx->is_initialized == 1) {
+		return 0;
+	}
+	config.frequency = ctx->speed_mhz * 1000000;
+	bus = ctx->bus;
+	config.sck_pin = ctx->sck;
+	config.mosi_pin = ctx->mosi;
+	config.miso_pin = ctx->miso;
+	config.ss_pin = ctx->ss;
+
+	switch (bus) {
+	case 3:
+		memcpy(&ctx->spim, &spim3, sizeof(nrfx_spim_t));
+		break;
+	case 4:
+		memcpy(&ctx->spim, &spim4, sizeof(nrfx_spim_t));
+		break;
+	default:
+		G1_LOG_ERR(" SPIM BUS ERR!\n");
+		return 0;
+	}
+
+	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus, ctx->speed_mhz,
+		   ctx->sck, ctx->mosi, ctx->miso, ctx->ss);
+
+	if (ctx->bus == 3) {
+		status = nrfx_spim_init(&ctx->spim, &config, spim_event_handler, ctx);
+	} else {
+		status = nrfx_spim_init(&ctx->spim, &config, NULL, NULL);
+	}
+	__ASSERT_NO_MSG(status == NRFX_SUCCESS);
+
+	if (ctx->bus != 3) {
+		if (!spim4_irq_connected) {
+			spim4_irq_connected = 1;
+			IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_SPIM4), 6,
+					   nrfx_spim_4_irq_handler, 0);
+		}
+	} else {
+		if (!spim3_irq_connected) {
+			spim3_irq_connected = 1;
+			IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_SPIM3), 6,
+					   nrfx_spim_3_irq_handler, 0);
+		}
+	}
+
+	G1_LOG_INF("spim(bus=%d): init finish\n", ctx->bus);
+	ctx->is_initialized = 1;
+
+	return 0;
+}
+
+void spi_master_register_context(struct spi_master_ctx *ctx)
+{
+	ctx->init_cb = spi_master_init;
+	ctx->xfer_cb = spi_master_trans_data_tx_rx;
+	ctx->deinit_cb = spi_master_deinit;
+}

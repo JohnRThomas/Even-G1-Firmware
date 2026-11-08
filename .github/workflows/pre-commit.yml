@@ -1,0 +1,56 @@
+name: pre-commit
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  format:
+    name: clang-format and whitespace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: clang-tidy
+
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-latest
+    container: ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.6.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: even_g1_fw
+
+      # The west workspace is a few GB; keep it between runs.  The key has no hash
+      # of this tree because the workspace does not depend on it.
+      - name: Cache the NCS v2.6.0 workspace
+        id: ncs-cache
+        uses: actions/cache@v4
+        with:
+          path: ncs
+          key: ncs-v2.6.0-narrow
+
+      - name: Fetch NCS v2.6.0
+        if: steps.ncs-cache.outputs.cache-hit != 'true'
+        run: |
+          west init -m https://github.com/nrfconnect/sdk-nrf --mr v2.6.0 ncs
+          cd ncs
+          west update --narrow -o=--depth=1
+
+      - name: Build both cores
+        working-directory: even_g1_fw
+        run: |
+          export ZEPHYR_BASE="$GITHUB_WORKSPACE/ncs/zephyr"
+          west build -b nrf5340dk_nrf5340_cpuapp
+
+      - name: Run clang-tidy on the whole tree
+        working-directory: even_g1_fw
+        run: |
+          git config --global --add safe.directory "$PWD"
+          pip install pre-commit
+          pre-commit run clang-tidy --all-files

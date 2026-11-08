@@ -1,0 +1,20 @@
+target_sources(app PRIVATE
+  dashboard.c
+  demo_image.c
+  template_pages.c
+  ui_bitmap.c
+  ui_countdown.c
+  ui_even_ai.c
+  ui_even_ai_v2_info.c
+  ui_navigation_map.c
+  ui_new_message.c
+  ui_notification.c
+  ui_onboarding.c
+  ui_prompt_info.c
+  ui_quicknote.c
+  ui_raster_height.c
+  ui_set_imu_pitch.c
+  ui_teleprompter.c
+  ui_transcribe_info.c
+  ui_translate.c
+)
