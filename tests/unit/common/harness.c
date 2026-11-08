@@ -95,6 +95,8 @@ int dequeue_file(void *out);
 void ble_proto_test_reset(void);
 
 #pragma weak ble_proto_test_reset
+#pragma weak BLE_DEBUG
+#pragma weak ble_printk
 #pragma weak app_list_init
 #pragma weak load_app_white_list_from_flash
 #pragma weak setting_msgq
@@ -112,6 +114,22 @@ void ble_proto_test_reset(void);
 #pragma weak glasses_name
 #pragma weak init_boot_seconds
 #pragma weak set_wall_clock_ms
+
+/* routes like ble_proto.c's: ble_printk() when BLE_DEBUG is set, otherwise printk() */
+__weak void g1_printk(const char *fmt, ...)
+{
+  char buf[200];
+  va_list ap;
+
+  va_start(ap, fmt);
+  if (&BLE_DEBUG && BLE_DEBUG && ble_printk) {
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    ble_printk("%s", buf);
+  } else {
+    vprintk(fmt, ap);
+  }
+  va_end(ap);
+}
 
 extern struct k_msgq setting_msgq;
 extern struct k_msgq quicknote_msgq;
