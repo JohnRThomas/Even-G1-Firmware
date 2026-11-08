@@ -243,20 +243,6 @@ static inline int gui_char_is_dark(const uint32_t *idx, uint32_t dark_cnt)
 	return *idx < dark_cnt;
 }
 
-/* G1_LOG_WRN with &__func__[0]: identical code, but GIMPLE does not tail-merge it with G1_LOG_WRN */
-#define GUI_DW_CB_LOG()                                                                       \
-	do {                                                                                  \
-		if (LOG_LEVEL > 1) {                                                          \
-			if (BLE_DEBUG) {                                                      \
-				ble_printk("%s(): exex process effect callback function\n",  \
-					   &__func__[0]);                                     \
-			} else {                                                              \
-				printk("%s(): exex process effect callback function\n",      \
-				       &__func__[0]);                                         \
-			}                                                                     \
-		}                                                                             \
-	} while (0)
-
 int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
 		 uint32_t max_lines, uint32_t dark_cnt, volatile int effect, gui_effect_cb_t cb,
 		 int no_draw)
@@ -344,19 +330,7 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
 						get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
 		}
 	} else if (cb != NULL) {
-		/* Same log in every arm (see agent_notes/gui_utf_draw_darkword_by_lines.md):
-		 * the no_draw tests only add IRA references; post-reload crossjump merges
-		 * the identical arms and deletes them.
-		 */
-		if (no_draw == 1) {
-			G1_LOG_WRN("exex process effect callback function\n");
-		} else if (no_draw == 2) {
-			GUI_DW_CB_LOG();
-		} else if (no_draw == 3) {
-			GUI_DW_CB_LOG();
-		} else {
-			GUI_DW_CB_LOG();
-		}
+		G1_LOG_WRN("exex process effect callback function\n");
 		return cb(0, str, font, x0, y0);
 	}
 	return 0;
@@ -535,23 +509,7 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
 							k--;
 							if (resource_manger_get(font, ch, &w, &h, &data,
 										NULL) < 0) {
-								/* G1_LOG_WRN expanded by hand: the printk arm is written
-								 * twice (identical calls; &__func__[0] keeps GIMPLE from
-								 * merging them, RTL crossjump does). The ch test only
-								 * adds IRA references and is deleted with the merge.
-								 */
-								if (LOG_LEVEL > 1) {
-									if (BLE_DEBUG) {
-										ble_printk("%s(): truncate can not find [%d]0x%x font resource\n",
-											   __func__, k, ch);
-									} else if (ch & 1) {
-										printk("%s(): truncate can not find [%d]0x%x font resource\n",
-										       __func__, k, ch);
-									} else {
-										printk("%s(): truncate can not find [%d]0x%x font resource\n",
-										       &__func__[0], k, ch);
-									}
-								}
+								G1_LOG_WRN("truncate can not find [%d]0x%x font resource\n", k, ch);
 							} else {
 								int kern = gui_font_kerning(p[-1], p[0]);
 
@@ -732,19 +690,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
 						get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
 		}
 	} else if (cb != NULL) {
-		/* Same log in every arm (see agent_notes/gui_utf_draw_darkword_by_lines.md):
-		 * the no_draw tests only add IRA references; post-reload crossjump merges
-		 * the identical arms and deletes them.
-		 */
-		if (no_draw == 1) {
-			G1_LOG_WRN("exex process effect callback function\n");
-		} else if (no_draw == 2) {
-			GUI_DW_CB_LOG();
-		} else if (no_draw == 3) {
-			GUI_DW_CB_LOG();
-		} else {
-			GUI_DW_CB_LOG();
-		}
+		G1_LOG_WRN("exex process effect callback function\n");
 		return cb(0, str, font, x0, y0);
 	}
 	return 0;
@@ -1023,25 +969,6 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
 }
 
 
-/*
- * G1_LOG_WRN variant for gui_utf_Wordwrap_draw: the printk call is
- * written twice behind a test, once with __func__ and once with &__func__[0].  Both arms print the same line;
- * GIMPLE keeps them apart, post-reload cross-jumping merges them and deletes the test.  The tests only add
- * register-allocation references (they keep the vendor register / stack-slot assignment).
- */
-#define GUI_WW_LOG(cond, fmt, ...)                                                            \
-	do {                                                                                  \
-		if (LOG_LEVEL > 1) {                                                          \
-			if (BLE_DEBUG) {                                                      \
-				ble_printk("%s(): " fmt, __func__, ##__VA_ARGS__);            \
-			} else if (cond) {                                                    \
-				printk("%s(): " fmt, __func__, ##__VA_ARGS__);                \
-			} else {                                                              \
-				printk("%s(): " fmt, &__func__[0], ##__VA_ARGS__);            \
-			}                                                                     \
-		}                                                                             \
-	} while (0)
-
 /* read through a pointer on purpose: the variable is rewritten into SSA only after inlining (late SSA version),
  * which gives the vendor compare operand order (gui_u32_get) and pseudo order / register choice (gui_code_get,
  * gui_int_get: lines gets its loop PHI last, so the zero-init copies come out in the vendor order) */
@@ -1091,7 +1018,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 
 			if (ret == 0) {
 				if (resource_manger_get(font, c, &w, &h, &data, NULL) < 0) {
-					GUI_WW_LOG(line_w & 1, "can not find 0x%x font resource\n", c);
+					G1_LOG_WRN("can not find 0x%x font resource\n", c);
 				} else {
 					memcpy(glyph, data, h * (w / 2));
 					if (dark_cnt != 0 && gui_char_is_dark(&i, dark_cnt)) {
@@ -1133,7 +1060,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 							}
 							if (found) {
 								if ((int)(end - i) > 40) {
-									GUI_WW_LOG(x_off & 1, "The word is too long and will not be processed\n");
+									G1_LOG_WRN("The word is too long and will not be processed\n");
 								} else {
 									int wide = 0;
 
@@ -1143,7 +1070,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 										}
 									}
 									if (gui_u32_get(&end) == i) {
-										GUI_WW_LOG(font & 1, "!!! end_split_character_index == start_split_character_index\n");
+										G1_LOG_WRN("!!! end_split_character_index == start_split_character_index\n");
 									} else if (wide == 0 ||
 										   (float)wide / (float)(int)(end - i) < 0.5f) {
 										int gw = 0, gh = 0;

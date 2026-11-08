@@ -306,32 +306,6 @@ void nav_draw_route_generating(void)
 		     NULL, 0);
 }
 
-/*
- * G1_LOG() copy for the two log lines that appear in both case 0 and case 1 of
- * ui_navigation_task.  compiler_barrier() emits no code.  It is a statement
- * that GIMPLE tail merging (pass_tail_merge in PRE) cannot compare, so the
- * case-0 and case-1 printk blocks stay separate there.  RTL cross-jumping
- * merges them later and keeps the case-1 printk stubs where the target has
- * them.  With plain G1_LOG, GCC merges the blocks in GIMPLE and the stubs end
- * up with case 0 (2352 B vs 2356 B).  -fno-tree-tail-merge does not help
- * either (it is worse).  Alternatives tried, none of which match:
- * - printk branch first (if (!BLE_DEBUG)): 2352 B.
- * - __FUNCTION__ in the printk call: 2368 B.
- * - a volatile read of BLE_DEBUG: 2352 B.
- * The barrier is needed in all four uses.
- */
-#define NAV_LOG(lvl, fmt)                                                           \
-	do {                                                                        \
-		if (LOG_LEVEL > (lvl)) {                                            \
-			if (BLE_DEBUG) {                                            \
-				ble_printk("%s(): " fmt, __func__);                 \
-			} else {                                                    \
-				printk("%s(): " fmt, __func__);                     \
-				compiler_barrier();                                 \
-			}                                                           \
-		}                                                                   \
-	} while (0)
-
 int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event)
 {
 	struct GlassesState *gs = get_dashboard_state();
@@ -411,14 +385,14 @@ clear:
 					goto abnormal;
 				}
 			}
-			NAV_LOG(0, "SYNC TO Slave failed...,don't exec Navigation exit action,master auto "
+			G1_LOG_ERR("SYNC TO Slave failed...,don't exec Navigation exit action,master auto "
 				   "exit...\n");
 			return 0;
 		}
 		if (event != UI_EVT_MASTER_CLOSE) {
 			return 0;
 		}
-		NAV_LOG(2, "Received exit command from master, exit teleprompter mode\n");
+		G1_LOG_INF("Received exit command from master, exit teleprompter mode\n");
 		goto abnormal;
 
 	case 1:
@@ -533,14 +507,14 @@ clear:
 					goto abnormal;
 				}
 			}
-			NAV_LOG(0, "SYNC TO Slave failed...,don't exec Navigation exit action,master auto "
+			G1_LOG_ERR("SYNC TO Slave failed...,don't exec Navigation exit action,master auto "
 				   "exit...\n");
 			return 0;
 		}
 		if (event != UI_EVT_MASTER_CLOSE) {
 			return 0;
 		}
-		NAV_LOG(2, "Received exit command from master, exit teleprompter mode\n");
+		G1_LOG_INF("Received exit command from master, exit teleprompter mode\n");
 		goto abnormal;
 
 	case 2:

@@ -449,14 +449,7 @@ exit_text:
 			memset(tp, 0, sizeof(*tp));
 		}
 		if (event == UI_EVT_EXIT) {
-			/* G1_LOG_INF() spelled out: &__func__[0] keeps GIMPLE tail merge off these arms */
-			if (LOG_LEVEL > 2) {
-				if (BLE_DEBUG) {
-					ble_printk("%s(): received exit command,clear screen...\n", &__func__[0]);
-				} else {
-					printk("%s(): received exit command,clear screen...\n", &__func__[0]);
-				}
-			}
+			G1_LOG_INF("received exit command,clear screen...\n");
 			goto exit_text;
 		}
 		break;

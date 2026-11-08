@@ -212,7 +212,7 @@ int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
 
 	buf = malloc(4096);
 	if (buf == NULL) {
-		G1_PRINT("[%s-%d]error, have no memory ! \n", __func__, __LINE__);
+		BLE_PRINTK("[%s-%d]error, have no memory ! \n", __func__, __LINE__);
 		return -1;
 	}
 	if (!device_is_ready(FLASH_DEV)) {
@@ -260,7 +260,7 @@ int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size)
 	int16_t last;
 	uint8_t i;
 
-	G1_PRINT("size is %d\n", size);
+	BLE_PRINTK("size is %d\n", size);
 	pages = (size >> 12) + 1;
 	last = size - (pages - 1) * 4096;
 	for (i = 0; i < pages; i++) {

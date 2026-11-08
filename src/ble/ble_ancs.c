@@ -984,22 +984,11 @@ void recv_ble_data(struct ble_context *ctx)
 		if (ret != 1) {
 			return;
 		}
-		/*
-		 * BLE_PRINTK() split in two: the type-2 path sits between the two arms
-		 * (inside the ble_printk block, after its return), the plain printk arm
-		 * follows it (see ai_helpers/agent_notes/recv_ble_data.md)
-		 */
-		if (BLE_DEBUG) {
-			ble_printk("blocked! app(%s) not in whitelist \n", data.app_identifier);
-			send_whilelist_app_info_wrapper(&data);
-			return;
-type2:
-			hdr[1] = 2;
-			goto dispatch;
-		}
-		printk("blocked! app(%s) not in whitelist \n", data.app_identifier);
+		BLE_PRINTK("blocked! app(%s) not in whitelist \n", data.app_identifier);
 		send_whilelist_app_info_wrapper(&data);
 		return;
+type2:
+		hdr[1] = 2;
 dispatch:
 		if (notification_latest.category_id == BT_ANCS_CATEGORY_ID_MISSED_CALL) {
 			strncpy(data.app_identifier, "com.apple.mobilephone_missed",

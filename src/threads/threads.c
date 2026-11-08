@@ -1908,15 +1908,8 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3)
 		}
 		wait = is_task_running(state);
 		if (!wait) {
-			if (LOG_LEVEL <= 0) {
-				goto next;
-			}
-			if (*(unsigned int *)&BLE_DEBUG) {
-				ble_printk("%s(): no running task, goto next trun\n", __func__);
-				goto next;
-			}
-			printk("%s(): no running task, goto next trun\n", __func__);
-			goto skip;
+			G1_LOG_ERR("no running task, goto next trun\n");
+			goto next;
 		}
 		k_mutex_lock(&screen_payload_mutex, K_FOREVER);
 		screen = state->dashboard_mode;
@@ -2663,21 +2656,7 @@ e_since:
 			if (press_dur > 15000) {
 press_end:
 				if (press_dur > 36000) {
-					/*
-					 * G1_LOG_ERR expanded by hand; the printk arm is written twice
-					 * behind a test on lp_timeout (both arms print the same; the
-					 * test is merged away by the compiler, it only gives
-					 * lp_timeout the register-allocation weight of the vendor build).
-					 */
-					if (LOG_LEVEL > 0) {
-						if (BLE_DEBUG) {
-							ble_printk("%s(): #############################Long press end################################\n\n", __func__);
-						} else if (lp_timeout) {
-							printk("%s(): #############################Long press end################################\n\n", __func__);
-						} else {
-							printk("%s(): #############################Long press end################################\n\n", &__func__[0]);
-						}
-					}
+					G1_LOG_ERR("#############################Long press end################################\n\n");
 					key_event_type = 5;
 					trigger_key_event();
 					if (0) {

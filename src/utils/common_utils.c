@@ -153,22 +153,9 @@ void dump_ancs_detail(const char *tag, struct notif_msg *n)
 
 void dump_ancs(const char *tag, struct notif_msg *n)
 {
-
-	if (BLE_DEBUG) {
-		ble_printk("app_identifier:(%s)\n", n->app_identifier);
-	} else {
-		printk("app_identifier:(%s)\n", n->app_identifier);
-	}
-	if (BLE_DEBUG) {
-		ble_printk("message:(%s)\n", n->message);
-	} else {
-		printk("message:(%s)\n", n->message);
-	}
-	if (BLE_DEBUG) {
-		ble_printk("uid :(%d)\n", n->uid);
-	} else {
-		printk("uid :(%d)\n", n->uid);
-	}
+	BLE_PRINTK("app_identifier:(%s)\n", n->app_identifier);
+	BLE_PRINTK("message:(%s)\n", n->message);
+	BLE_PRINTK("uid :(%d)\n", n->uid);
 }
 
 void dump_hex(const char *tag, const uint8_t *data, int len)
