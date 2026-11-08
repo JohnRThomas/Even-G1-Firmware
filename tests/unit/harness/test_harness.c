@@ -1,3 +1,5 @@
+#include <app_version.h>
+
 #include "harness.h"
 #include "fakes.h"
 
@@ -105,9 +107,9 @@ ZTEST(harness, test_reset_2_state_is_rebuilt_like_init_context)
   zassert_equal(gs->module_mask, 0x0dfb);
   expect_fill(gs->master_mac, sizeof(gs->master_mac), 0xff, "master_mac");
   expect_fill(gs->slave_mac, sizeof(gs->slave_mac), 0xff, "slave_mac");
-  zassert_equal(gs->master_fw_ver.major, 1);
-  zassert_equal(gs->master_fw_ver.minor, 6);
-  zassert_equal(gs->master_fw_ver.patch, 6);
+  zassert_equal(gs->master_fw_ver.major, APP_VERSION_MAJOR);
+  zassert_equal(gs->master_fw_ver.minor, APP_VERSION_MINOR);
+  zassert_equal(gs->master_fw_ver.patch, APP_PATCHLEVEL);
   zassert_equal(k_sem_count_get(&gs->ble_context.tx_sem), 0);
   expect_no_frame();
   zassert_equal(set_date_fake.call_count, 0);
@@ -123,7 +125,7 @@ ZTEST(harness, test_set_role_slave_like_role_init)
 
   g1_unit_set_role(G1_ROLE_SLAVE);
   zassert_equal(gs->is_master, 2);
-  zassert_equal(gs->fw_ver.minor, 6);
+  zassert_equal(gs->fw_ver.minor, APP_VERSION_MINOR);
   zassert_equal(gs->master_fw_ver.minor, 0);
   zassert_true(gs->esb_pkt.flags & BIT(2));
   zassert_false(gs->sync.flags & BIT(2));
