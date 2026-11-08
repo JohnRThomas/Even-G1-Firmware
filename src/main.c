@@ -16,6 +16,7 @@
 #define MODULE main
 #include <caf/events/module_state_event.h>
 
+#include <app_version.h>
 #include <g1_date.h>
 #include <vendor_drivers.h>
 #include "g1_log.h"
@@ -1111,15 +1112,15 @@ static void role_init(struct GlassesState *s)
 
 	switch (s->is_master) {
 	case 1:
-		s->master_fw_ver.major = 1;
-		s->master_fw_ver.minor = 6;
-		s->master_fw_ver.patch = 6;
+		s->master_fw_ver.major = APP_VERSION_MAJOR;
+		s->master_fw_ver.minor = APP_VERSION_MINOR;
+		s->master_fw_ver.patch = APP_PATCHLEVEL;
 		s->sync.flags |= BIT(2);
 		break;
 	case 2:
-		s->fw_ver.major = 1;
-		s->fw_ver.minor = 6;
-		s->fw_ver.patch = 6;
+		s->fw_ver.major = APP_VERSION_MAJOR;
+		s->fw_ver.minor = APP_VERSION_MINOR;
+		s->fw_ver.patch = APP_PATCHLEVEL;
 		s->esb_pkt.flags |= BIT(2);
 		break;
 	}
@@ -1367,7 +1368,8 @@ int main(void)
 	G1_LOG(0, "Synchronization using %s driver\n", "mbox");
 	k_timer_start(&rtc_sync_timer, K_MSEC(50), K_MSEC(50));
 	serialization_init();
-	G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n", 1, 6, 6,
+	G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n",
+	       APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_PATCHLEVEL,
 	       G1_GIT_COMMIT, G1_BUILD_TIME);
 
 	s = init_context();

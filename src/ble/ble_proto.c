@@ -13,6 +13,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/hci.h>
+#include <app_version.h>
 #if __has_include(<cJSON.h>)
 #include <cJSON.h>
 #else
@@ -4980,7 +4981,8 @@ int spec_ble_command_hook(uint8_t *data, uint32_t len)
 		char out[200] = {0};
 
 		sprintf(out, "net build time: %s, app build time %s, ver %d.%d.%d, JBD DeviceID %x\n\r",
-			net_build_time, G1_BUILD_TIME, 1, 6, 6, JDB_PANEL_ID);
+			net_build_time, G1_BUILD_TIME, APP_VERSION_MAJOR, APP_VERSION_MINOR,
+			APP_PATCHLEVEL, JDB_PANEL_ID);
 		ctx->write(out, sizeof(out));
 		return 0;
 	}
