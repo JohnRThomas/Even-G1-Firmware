@@ -17,7 +17,6 @@
 #include "threads.h"
 #include "../aw9320x/aw9320x.h"
 #include "../ble/ble_ancs.h"
-#include "../ble/hci_cmd_timeout.h"
 #include "../button/button.h"
 #include "../dashboard/dashboard.h"
 #include "../display/display_thread.h"
@@ -2870,10 +2869,12 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3)
 	for (;;) {
 		cnt++;
 		if (cnt % 5 == 0) {
-			if (get_dashboard_state()->work_mode != 1) {
-				err = hci_cmd_send_timeout(BT_HCI_OP_READ_LOCAL_VERSION_INFO, 2000);
+			/* bt_enable() discards commands queued before it, so the controller is
+			 * only pinged once the host has finished enabling */
+			if (get_dashboard_state()->work_mode != 1 && bt_is_ready()) {
+				err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_LOCAL_VERSION_INFO, NULL, NULL);
 				if (err) {
-					if (++hci_fail_cnt > 2 || err == -ETIMEDOUT) {
+					if (++hci_fail_cnt > 2) {
 						hci_fail_cnt = 0;
 						G1_LOG_ERR("watch dog reset becase bt hci cmd send sync failed\n");
 						system_reboot_delayed();
@@ -2965,7 +2966,8 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3)
 			try_enter_low_power_mode();
 			check_work_mode(in_box, lid_closed, connected);
 			check_disp_onboarding(in_box);
-			if (conn && !state->phone_is_ios &&
+			/* Remove the 30s timeout for android devices */
+			if (conn && false /* !state->phone_is_ios */ &&
 			    (uint32_t)(k_uptime_get() - state->ble_context.last_rx_time) > 30000 && state->work_mode != 1) {
 				state->ble_context.last_rx_time = k_uptime_get();
 				bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
