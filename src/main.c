@@ -1111,15 +1111,15 @@ static void role_init(struct GlassesState *s)
 
 	switch (s->is_master) {
 	case 1:
-		s->master_fw_ver.major = 1;
-		s->master_fw_ver.minor = 6;
-		s->master_fw_ver.patch = 6;
+		s->master_fw_ver.major = FW_VER_MAJOR;
+		s->master_fw_ver.minor = FW_VER_MINOR;
+		s->master_fw_ver.patch = FW_VER_PATCH;
 		s->sync.flags |= BIT(2);
 		break;
 	case 2:
-		s->fw_ver.major = 1;
-		s->fw_ver.minor = 6;
-		s->fw_ver.patch = 6;
+		s->fw_ver.major = FW_VER_MAJOR;
+		s->fw_ver.minor = FW_VER_MINOR;
+		s->fw_ver.patch = FW_VER_PATCH;
 		s->esb_pkt.flags |= BIT(2);
 		break;
 	}
@@ -1367,7 +1367,8 @@ int main(void)
 	G1_LOG(0, "Synchronization using %s driver\n", "mbox");
 	k_timer_start(&rtc_sync_timer, K_MSEC(50), K_MSEC(50));
 	serialization_init();
-	G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n", 1, 6, 6,
+	G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n",
+	       FW_VER_MAJOR, FW_VER_MINOR, FW_VER_PATCH,
 	       G1_GIT_COMMIT, G1_BUILD_TIME);
 
 	s = init_context();

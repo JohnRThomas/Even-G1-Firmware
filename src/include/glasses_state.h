@@ -47,6 +47,10 @@ struct msg_status {
 	uint8_t status;                          /* 0x04 */
 } __packed;
 
+#define FW_VER_MAJOR 1
+#define FW_VER_MINOR 6
+#define FW_VER_PATCH 7
+
 struct fw_ver {
 	uint8_t major;
 	uint8_t minor;

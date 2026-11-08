@@ -869,13 +869,14 @@ int bt_start(void)
 			if (get_pt_test_mode() == 1) {
 				if (get_dashboard_state()->esb_channel != 0xff) {
 					sprintf(device_name, "%sV%d%d%d_%d_R_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), 6, 6, get_dashboard_state()->esb_channel,
+						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
+						get_dashboard_state()->esb_channel,
 						get_dashboard_state()->master_mac[2],
 						get_dashboard_state()->master_mac[1],
 						get_dashboard_state()->master_mac[0]);
 				} else {
 					sprintf(device_name, "%sV%d%d%d_R_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), 6, 6,
+						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
 						get_dashboard_state()->master_mac[2],
 						get_dashboard_state()->master_mac[1],
 						get_dashboard_state()->master_mac[0]);
@@ -898,13 +899,14 @@ int bt_start(void)
 			if (get_pt_test_mode() == 1) {
 				if (get_dashboard_state()->esb_channel != 0xff) {
 					sprintf(device_name, "%sV%d%d%d_%d_L_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), 6, 6, get_dashboard_state()->esb_channel,
+						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
+						get_dashboard_state()->esb_channel,
 						get_dashboard_state()->slave_mac[2],
 						get_dashboard_state()->slave_mac[1],
 						get_dashboard_state()->slave_mac[0]);
 				} else {
 					sprintf(device_name, "%sV%d%d%d_L_%02X%02X%02X", DEVICE_NAME,
-						get_pt_version_major(), 6, 6,
+						get_pt_version_major(), FW_VER_MINOR, FW_VER_PATCH,
 						get_dashboard_state()->slave_mac[2],
 						get_dashboard_state()->slave_mac[1],
 						get_dashboard_state()->slave_mac[0]);
