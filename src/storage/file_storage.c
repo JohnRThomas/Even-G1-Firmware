@@ -248,9 +248,6 @@ static void storage_commit_thread(void *p1, void *p2, void *p3)
 		case 0x1a:
 			force_sys = 1;
 			break;
-		case 0x3e:
-			update_burial_point_to_flash(get_dashboard_state());
-			break;
 		case 0x11:
 			k_sleep(K_SECONDS(10));
 			change_work_mode(7);

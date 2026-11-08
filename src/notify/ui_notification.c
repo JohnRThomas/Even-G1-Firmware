@@ -439,7 +439,6 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
 			gui_screen_clear();
 		}
 		msg_busy = 0;
-		exit_notification_burial_point();
 		return 0;
 	}
 	if (event == 0) {
@@ -478,7 +477,6 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
 		set_frame_buffer(fb);
 		set_showing_notification_on_gui();
 		gui_screen_clear();
-		enter_notification_burial_point();
 	}
 	if (particle_pending) {
 		draw_particle_effects(fb, num, msg);

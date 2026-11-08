@@ -106,11 +106,6 @@ void periodic_timer_expiry(struct k_timer *timer)
 		return;
 	}
 	timer_count++;
-	get_burial_point_day_index();
-	update_burial_point_day_index();
-	if (get_wearing_state() == 1 && !is_in_box()) {
-		add_wear_burial_time(60000);
-	}
 	if (timer_count > 9) {
 		timer_count = 0;
 		GLOBAL_STATE->dashboard_cmd = 0x3e;
@@ -1269,7 +1264,6 @@ static struct GlassesState *init_context(void)
 
 	ble_context_init(&s->ble_context);
 	if (s->is_master == 1) {
-		burial_point_record_info_init();
 		k_timer_start(&periodic_timer, K_SECONDS(60), K_SECONDS(60));
 		power_for_imu_and_mic();
 		s->imu.dev = DEVICE_DT_GET(DT_NODELABEL(lsm6dso));

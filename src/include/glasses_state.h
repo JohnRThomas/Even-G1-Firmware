@@ -485,41 +485,6 @@ struct triple {
 	uint32_t v[3];
 };
 
-/* ------------------------------------------------------------------ burial point */
-
-struct bp_day {
-	uint16_t year;                           /* 0x0 */
-	uint8_t month;                           /* 0x2 */
-	uint8_t day;                             /* 0x3 */
-	uint32_t sum_time;                       /* 0x4 seconds */
-	uint32_t count;                          /* 0x8 */
-};
-
-struct bp_session {
-	uint8_t active;                          /* 0x00 */
-	uint8_t day_index;                       /* 0x01 */
-	int64_t start_time;                      /* 0x02 k_uptime_get() */
-	uint8_t pad_0a[0x10];
-} __packed;
-
-/* persisted statistics record (gs + 0x1128, 0x11c bytes) */
-struct bp_context {
-	uint32_t id;                             /* 0x00 random id */
-	uint32_t wear_sum_time;                  /* 0x04 */
-	uint32_t wear_count;                     /* 0x08 */
-	uint32_t dashboard_sum_time;             /* 0x0c */
-	uint32_t dashboard_count;                /* 0x10 */
-	uint8_t version;                         /* 0x14 */
-	uint8_t day_index;                       /* 0x15 */
-	uint8_t valid;                           /* 0x16 */
-	uint8_t pad_17;
-	struct bp_day wear_day[7];               /* 0x18 */
-	struct bp_day dashboard_day[7];          /* 0x6c */
-	uint32_t notification_sum_time;          /* 0xc0 */
-	uint32_t notification_count;             /* 0xc4 */
-	struct bp_day notification_day[7];       /* 0xc8 */
-};
-
 /* ------------------------------------------------------------------ feature blocks */
 
 /* GlassesState->dashboard_ts (0xff0, 0x75 bytes, persisted as the "dashboard_ts" setting) */
@@ -883,12 +848,6 @@ struct GlassesState {
 	uint8_t charge_limit_upper;              /* 0x10d8 */
 	uint8_t charge_limit_lower;              /* 0x10d9 */
 
-	/* burial point (usage statistics) */
-	struct bp_session bp_dashboard;          /* 0x10da */
-	struct bp_session bp_wear;               /* 0x10f4 */
-	struct bp_session bp_notification;       /* 0x110e */
-	struct bp_context bp;                    /* 0x1128 */
-
 	uint8_t double_tap_customize;                          /* 0x1244 */
 	uint8_t double_tap_dashboard_on;                          /* 0x1245 */
 	union {
@@ -911,8 +870,6 @@ BUILD_ASSERT(sizeof(struct spi_master_ctx) == 0x20);
 BUILD_ASSERT(sizeof(struct jbd_panel_context) == 0x37c);
 BUILD_ASSERT(sizeof(struct imu_ctx) == 0x9c);
 BUILD_ASSERT(sizeof(struct opt3007_context) == 0x20);
-BUILD_ASSERT(sizeof(struct bp_session) == 0x1a);
-BUILD_ASSERT(sizeof(struct bp_context) == 0x11c);
 BUILD_ASSERT(sizeof(struct dashboard_ts_context) == 0x75);
 BUILD_ASSERT(sizeof(struct countdown_ts_context) == 7);
 BUILD_ASSERT(sizeof(struct user_schedule_context) == 0x16c); /* 0x16a bytes used, 2 bytes tail padding */
@@ -943,9 +900,6 @@ BUILD_ASSERT(offsetof(struct GlassesState, flash_read) == 0x1044);
 BUILD_ASSERT(offsetof(struct GlassesState, module_mask) == 0x1070);
 BUILD_ASSERT(offsetof(struct GlassesState, last_sync_ts) == 0x1078);
 BUILD_ASSERT(offsetof(struct GlassesState, bonded_addr) == 0x1081);
-BUILD_ASSERT(offsetof(struct GlassesState, bp_dashboard) == 0x10da);
-BUILD_ASSERT(offsetof(struct GlassesState, bp) == 0x1128);
-BUILD_ASSERT(sizeof(struct GlassesState) == 0x1248);
 
 struct GlassesState *get_dashboard_state(void);
 

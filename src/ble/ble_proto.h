@@ -28,6 +28,12 @@
 #define PKCS7_PACK_ERR   0xca
 #define PKCS7_PACK_MORE  0xcb /* more packets follow */
 
+/* Usage-statistics record sent in reply to BLE_CMD_BURIAL_POINT_GET (always empty) */
+#define USAGE_STATS_RECORD_SIZE    0x11c
+#define USAGE_STATS_VERSION_OFFSET 0x14
+#define USAGE_STATS_VALID_OFFSET   0x16
+#define USAGE_STATS_VERSION        7
+
 /* Debug log message queue (ble_printk -> phone) */
 #define DEBUG_MSG_SIZE 200
 #define DEBUG_MSGQ_MAX 20

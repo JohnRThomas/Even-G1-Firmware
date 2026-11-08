@@ -1657,14 +1657,12 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 	switch (prv->state) {
 	case 0:
 		G1_LOG_INF("Enter DASHBOARD_INIT_STATUS task....\n");
-		enter_dashboard_burial_point();
 		if (event == UI_EVT_EXIT) {
 			G1_LOG_INF("dashboard function exit ...\n");
 			get_dashboard_state()->dashboard_ts->dashboard_on = 0;
 			report_event_to_phone(0x1f);
 			gui_screen_clear();
 			atomic_clear_bit(&dashboard_head_up_opened, 1);
-			exit_dashboard_burial_point();
 			memset(prv, 0, sizeof(*prv));
 			return 0;
 		}
@@ -1800,7 +1798,6 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 		report_event_to_phone(0x1f);
 		gui_screen_fade_out();
 		atomic_clear_bit(&dashboard_head_up_opened, 1);
-		exit_dashboard_burial_point();
 		memset(prv, 0, sizeof(*prv));
 		return 0;
 	}
