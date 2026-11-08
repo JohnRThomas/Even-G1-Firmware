@@ -170,7 +170,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 
 						if (panel->panel_buffer[row][col] != 0) {
 							panel->panel_buffer[row][col] &=
-								gui_fade_mask[row % 26][steps[i]][col];
+								gui_fade_mask_at(row % 26, steps[i], col);
 						}
 					}
 				}
@@ -266,7 +266,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 							     col++) {
 								if (fb[row][col] != 0) {
 									fb[row][col] &=
-										gui_fade_mask[row % 26][step][col];
+										gui_fade_mask_at(row % 26, step, col);
 								}
 							}
 						}
@@ -300,7 +300,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 
 								if (line[c] != 0) {
 									line[c] &=
-										gui_fade_mask[r % 26][steps[i]][c];
+										gui_fade_mask_at(r % 26, steps[i], c);
 								}
 							}
 						}

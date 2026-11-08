@@ -96,7 +96,7 @@ int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int 
 				uint8_t level[8] = {1, 2, 3, 4, 5, 6, 7, 7};
 
 				if (panel->panel_buffer[y][x]) {
-					panel->panel_buffer[y][x] &= gui_fade_mask[y % 26][level[step]][x];
+					panel->panel_buffer[y][x] &= gui_fade_mask_at(y % 26, level[step], x);
 				}
 			}
 		}
@@ -1705,9 +1705,7 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 
 							if (pix != 0) {
 								panel->panel_buffer[row][col] =
-									pix & gui_fade_mask[row % 26]
-											   [steps[dashboard_fade_step]]
-											   [col];
+									pix & gui_fade_mask_at(row % 26, steps[dashboard_fade_step], col);
 							}
 						}
 					}

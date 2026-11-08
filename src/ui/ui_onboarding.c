@@ -56,7 +56,7 @@ void onboarding_request_redraw(void)
 				uint8_t *line = gs->panel.panel_buffer[row];           \
                                                                                            \
 				if (line[col] != 0) {                                      \
-					line[col] &= gui_fade_mask[row % 26][steps[fade_step]][col]; \
+					line[col] &= gui_fade_mask_at(row % 26, steps[fade_step], col); \
 				}                                                          \
 			}                                                                  \
 		}                                                                          \

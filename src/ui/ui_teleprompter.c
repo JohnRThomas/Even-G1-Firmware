@@ -122,8 +122,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event)
 						uint8_t pix = fb[row][col];
 
 						if (pix != 0) {
-							fb[row][col] = pix & gui_fade_mask[row % 26]
-											  [steps[i]][col];
+							fb[row][col] = pix & gui_fade_mask_at(row % 26, steps[i], col);
 						}
 					}
 				}
