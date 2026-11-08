@@ -2,5 +2,6 @@ build*/
 .cache/
 .vscode/
 **/__pycache__/
+dfu_application_*.*.*.zip
 
 toolchain_libs/

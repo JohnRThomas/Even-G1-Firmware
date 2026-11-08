@@ -66,3 +66,17 @@ if(NOT G1_GIT_COMMIT)
 endif()
 set_property(SOURCE src/main.c src/ble/ble_proto.c TARGET_DIRECTORY app APPEND PROPERTY
              COMPILE_DEFINITIONS G1_BUILD_TIME="${G1_BUILD_TIME}" G1_GIT_COMMIT="${G1_GIT_COMMIT}")
+
+# Once the DFU package is built, move it out of the build tree to
+# ./dfu_application_<major>.<minor>.<patch>.zip, versioned from ./VERSION.
+if(TARGET dfu_application_zip)
+  set(G1_DFU_ZIP ${ZEPHYR_BINARY_DIR}/dfu_application.zip)
+  set(G1_DFU_ZIP_OUT
+      ${CMAKE_CURRENT_SOURCE_DIR}/dfu_application_${APP_VERSION_MAJOR}.${APP_VERSION_MINOR}.${APP_PATCHLEVEL}.zip)
+  add_custom_target(dfu_application_versioned_zip ALL
+    COMMAND ${CMAKE_COMMAND} -E copy ${G1_DFU_ZIP} ${G1_DFU_ZIP_OUT}
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${G1_DFU_ZIP}
+    COMMENT "Moving dfu_application.zip to ${G1_DFU_ZIP_OUT}"
+    VERBATIM)
+  add_dependencies(dfu_application_versioned_zip dfu_application_zip)
+endif()
