@@ -15,8 +15,7 @@
 #include <glasses_state.h>
 
 /* print without the LOG_LEVEL check / "%s(): " prefix */
-#define G1_PRINTK(fmt, ...) \
-	do { if (BLE_DEBUG) ble_printk(fmt, ##__VA_ARGS__); else printk(fmt, ##__VA_ARGS__); } while (0)
+#define G1_PRINTK(fmt, ...) g1_printk(fmt, ##__VA_ARGS__)
 
 /* threads.c */
 extern uint8_t watchdog_enabled;

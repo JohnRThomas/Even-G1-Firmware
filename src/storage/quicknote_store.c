@@ -13,24 +13,6 @@
 #define QUICKNOTE_NUM         4
 #define QUICKNOTE_QUEUE_DEPTH 20
 
-/*
- * G1_LOG_ERR() with LOG_LEVEL read through a volatile access.  The shipped
- * QuickNoteStoreHandler re-reads LOG_LEVEL for the store range-check error
- * instead of sharing one (hoisted) load with the following log; the code is
- * the same after the post-reload head merge, but the extra reference of the
- * &LOG_LEVEL register decides the register order (index in r7).
- */
-#define QUICKNOTE_LOG_ERR_RELOAD(fmt, ...)                                         \
-	do {                                                                        \
-		if (*(volatile int *)&LOG_LEVEL > 0) {                              \
-			if (BLE_DEBUG) {                                            \
-				ble_printk("%s(): " fmt, __func__, ##__VA_ARGS__);  \
-			} else {                                                    \
-				printk("%s(): " fmt, __func__, ##__VA_ARGS__);      \
-			}                                                           \
-		}                                                                   \
-	} while (0)
-
 enum {
 	QUICKNOTE_CMD_STORE = 1,
 	QUICKNOTE_CMD_DELETE = 2,
@@ -177,7 +159,7 @@ unsigned int QuickNoteStoreHandler(void)
 
 		index = msg.index;
 		if (index >= QUICKNOTE_NUM) {
-			QUICKNOTE_LOG_ERR_RELOAD("quicknote upgrade index out of range\n");
+			G1_LOG_ERR("quicknote upgrade index out of range\n");
 			return -1;
 		}
 		G1_LOG_INF("start quicknote text check...\r\n\n");

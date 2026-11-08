@@ -2784,17 +2784,7 @@ speed_oversize:
 				    get_dashboard_state()->dash_buf->type == 2) {
 					get_dashboard_state()->dash_buf->type = 3;
 				}
-				if (LOG_LEVEL > 2) {
-					int dbg = BLE_DEBUG;
-					if (dbg != 0) {
-						if (dbg > 0)
-							ble_printk("%s(): received open dmic command\n", __func__);
-						else
-							ble_printk("%s(): received open dmic command\n", &__func__[0]);
-					} else {
-						printk("%s(): received open dmic command\n", __func__);
-					}
-				}
+				G1_LOG_INF("received open dmic command\n");
 				request_dmic_stream_start();
 				resp[1] = PKCS7_PACK_DONE;
 			} else {
@@ -3467,23 +3457,39 @@ int dequeue_debug(void *msg)
 	}
 	return ret;
 }
-void ble_printk(const char *fmt, ...)
+static __noinline void ble_vprintk(const char *fmt, va_list ap)
 {
 	struct ble_context *ctx = get_ble_context();
 	char buf[DEBUG_MSG_SIZE];
-	va_list ap;
 
-	va_start(ap, fmt);
 	memset(buf, 0, sizeof(buf));
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	enqueue_debug(buf);
-	buf[0] = '\0';
-	va_end(ap);
 
 	if (!ctx->receiver_thd_is_running && k_sem_count_get(&ctx->rx_sem) == 0) {
 		debug_pending = 1;
 		k_sem_give(&ctx->rx_sem);
 	}
+}
+void ble_printk(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	ble_vprintk(fmt, ap);
+	va_end(ap);
+}
+void g1_printk(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	if (BLE_DEBUG) {
+		ble_vprintk(fmt, ap);
+	} else {
+		vprintk(fmt, ap);
+	}
+	va_end(ap);
 }
 static void ble_work_thread(void *p1, void *p2, void *p3)
 {

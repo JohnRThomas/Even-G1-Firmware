@@ -37,16 +37,6 @@
 #define PT_SN_LEN         14
 #define PT_GLASSES_SN_LEN 11
 
-/* "[%s-%d]" style messages: BLE_DEBUG only, no LOG_LEVEL gate */
-#define PT_PRINT(fmt, ...)                                                          \
-	do {                                                                        \
-		if (BLE_DEBUG) {                                                    \
-			ble_printk(fmt, ##__VA_ARGS__);                             \
-		} else {                                                            \
-			printk(fmt, ##__VA_ARGS__);                                 \
-		}                                                                   \
-	} while (0)
-
 /* ------------------------------------------------------------------ */
 /* module data                                                         */
 /* ------------------------------------------------------------------ */
@@ -1743,7 +1733,7 @@ uint8_t get_pt_test_mode(void)
 
 void set_test_mode(uint8_t mode)
 {
-	PT_PRINT("set testmode is %d \n", mode);
+	BLE_PRINTK("set testmode is %d \n", mode);
 	pt_test_mode = mode;
 }
 
@@ -1766,7 +1756,7 @@ int enter_into_testmode(const uint8_t *req, uint32_t req_len, uint8_t **resp,
 	p[3] = 1;
 	val = req[4];
 	if (val > 1) {
-		PT_PRINT("[%s-%d]invalid vaule\n", __func__, __LINE__);
+		BLE_PRINTK("[%s-%d]invalid vaule\n", __func__, __LINE__);
 		p[4] = 3;
 	} else if (pt_test_mode == val) {
 		p[4] = 4;
@@ -1833,7 +1823,7 @@ int set_mic_nocompress(const uint8_t *req, uint32_t req_len, uint8_t **resp,
 	p[3] = 1;
 	val = req[4];
 	if (val > 1) {
-		PT_PRINT("[%s-%d]invalid vaule \n", __func__, __LINE__);
+		BLE_PRINTK("[%s-%d]invalid vaule \n", __func__, __LINE__);
 		p[4] = 3;
 	} else if (get_dashboard_state()->mic_nocompress == val) {
 		p[4] = 4;
@@ -1973,7 +1963,7 @@ int set_aging_test_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
 	p[3] = 1;
 	val = req[4];
 	if (val > 1) {
-		PT_PRINT("[%s-%d]invalid vaule \n", __func__, __LINE__);
+		BLE_PRINTK("[%s-%d]invalid vaule \n", __func__, __LINE__);
 		p[4] = 3;
 	} else if (aging_mode == val) {
 		p[4] = 4;

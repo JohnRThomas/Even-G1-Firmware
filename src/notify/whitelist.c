@@ -301,7 +301,6 @@ int is_the_same_whitelist_app(const char *json)
 	uint8_t count;
 	uint8_t same;
 	int ret = 0;
-	int arg;
 
 	root = cJSON_Parse(json);
 	if (root == NULL) {
@@ -322,11 +321,7 @@ fail:
 			ret = 0;
 out:
 			cJSON_Delete(root);
-			arg = ret;
-			if (!BLE_DEBUG) {
-				break;
-			}
-			goto dbg;
+			break;
 		}
 		if (g_appWhiteListInfo.call_enable != (item->type == cJSON_True)) {
 			BLE_PRINTK("callEnable is not the same !\n");
@@ -423,14 +418,7 @@ out:
 		}
 		goto out;
 	} while (0);
-	printk("is_the_same_whitelist_app ret is %d\n", ret);
-	if ((uintptr_t)__builtin_dwarf_cfa() & 3) {
-		arg = 0;
-		goto dbg;
-	}
-	return ret;
-dbg:
-	ble_printk("is_the_same_whitelist_app ret is %d\n", arg);
+	BLE_PRINTK("is_the_same_whitelist_app ret is %d\n", ret);
 	return ret;
 }
 

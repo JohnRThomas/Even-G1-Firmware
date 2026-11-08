@@ -77,16 +77,6 @@ BUILD_ASSERT(sizeof(struct usr_settings) == 0x2c);
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
-/* plain vendor print (no LOG_LEVEL gate) */
-#define G1_PRINT(fmt, ...)                                   \
-	do {                                                 \
-		if (BLE_DEBUG) {                             \
-			ble_printk(fmt, ##__VA_ARGS__);      \
-		} else {                                     \
-			printk(fmt, ##__VA_ARGS__);          \
-		}                                            \
-	} while (0)
-
 /* QuickNote context behind GLOBAL_STATE->quicknote (partial) */
 #define QUICKNOTE_TITLE_LEN 0x29
 #define QUICKNOTE_TEXT_LEN  0x119
