@@ -10,7 +10,7 @@
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 BUILD_ASSERT(offsetof(struct nav_page, map_size) == 0xb1);
 
@@ -468,9 +468,9 @@ clear:
         navigation_overview_map_display(gs, nav);
       }
     } else if (event == UI_EVT_REFRESH) {
-      struct bp_date date = { 0 };
+      struct g1_date date = { 0 };
 
-      init_burial_point_date(get_date(), &date);
+      timestamp_to_date(get_date(), &date);
       if (nav_prv.minute != date.minute || date.hour != nav_prv.hour) {
         nav_prv.minute = date.minute;
         nav_prv.hour = date.hour;

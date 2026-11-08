@@ -64,8 +64,6 @@ FAKE_VALUE_FUNC(uint8_t, get_current_language);
 /* harness reset zeroes it */
 __weak volatile struct app_setting CURRENT_LANGUAGE;
 
-DEFINE_FAKE_VALUE_FUNC(uint32_t, z_impl_sys_rand32_get);
-
 DEFINE_FAKE_VALUE_FUNC(int, g1_fake_panel_set_brightness, struct jbd_panel_context *, uint8_t);
 
 DEFINE_FAKE_VALUE_FUNC(int64_t, nfc_deadline_set, uint32_t);
@@ -148,8 +146,6 @@ static void fakes_misc_reset(bool keep_media)
 
   RESET_FAKE(set_brightness_to_panel_reg_in_running);
   JDB_PANEL_ID = 0;
-
-  RESET_FAKE(z_impl_sys_rand32_get);
 
   RESET_FAKE(g1_fake_panel_set_brightness);
   g1_fake_panel_set_brightness_fake.custom_fake = panel_set_brightness_default;

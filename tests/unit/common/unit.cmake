@@ -19,8 +19,8 @@ set(G1_UNIT_FW_SRC_DIR ${G1_UNIT_REPO_DIR}/src)
 # Phone protocol: dispatcher, request thread, notifications and the stores they write.
 set(G1_FW_PROTOCOL ble/ble_proto.c threads/ble_req.c notify/notification.c
     notify/ncs_notification.c notify/whitelist.c utils/common_utils.c utils/md5.c
-    utils/burial_point.c storage/settings_records.c storage/setting_store.c
-    storage/quicknote_store.c storage/file_storage.c)
+    storage/settings_records.c storage/setting_store.c storage/quicknote_store.c
+    storage/file_storage.c)
 
 macro(g1_unit_suite suite)
   if("${suite}" STREQUAL "${G1_UNIT_SUITE}")

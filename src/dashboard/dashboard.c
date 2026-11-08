@@ -23,7 +23,7 @@
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "../ui/ui.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define QUICKNOTE_NUM        4
 #define QUICKNOTE_TITLE_LEN  0x29
@@ -223,7 +223,7 @@ uint8_t get_pane_mode(void)
   return _dashboard_prv_data.pane_mode;
 }
 
-/* restart the burial-point timer, keeping the phone's schedule time stamp in sync */
+/* advances the dashboard clock by the whole seconds elapsed, keeping the phone's schedule time stamp in sync */
 void update_dashboard_clock(struct GlassesState *gs, uint32_t *total_s)
 {
   if (gs->user_sched_info->ts != 0) {
@@ -341,10 +341,10 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
       G1_LOG_INF("display_mode = %d ,exec screen clear\n", ctx->display_mode);
     }
 
-    struct bp_date date = {0};
+    struct g1_date date = {0};
 
     if (connected == 1) {
-      init_burial_point_date(get_date(), &date);
+      timestamp_to_date(get_date(), &date);
       const char *week =
         get_string(day_of_week(date.year, date.month, date.day) + 40);
       char date_str[20] = "";
@@ -727,7 +727,7 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
         }
       }
     } else {
-      init_burial_point_date(get_date(), &date);
+      timestamp_to_date(get_date(), &date);
       const char *week =
         get_string(day_of_week(date.year, date.month, date.day) + 40);
       char date_str[20] = "";
@@ -819,10 +819,10 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
       G1_LOG_INF("display_mode = %d ,exec screen clear\n", ctx->display_mode);
     }
 
-    struct bp_date date = {0};
+    struct g1_date date = {0};
 
     if (connected == 1) {
-      init_burial_point_date(get_date(), &date);
+      timestamp_to_date(get_date(), &date);
       const char *week =
         get_string(day_of_week(date.year, date.month, date.day) + 40);
       char date_str[20] = "";
@@ -1259,7 +1259,7 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
       }
     }
 
-    init_burial_point_date(get_date(), &date);
+    timestamp_to_date(get_date(), &date);
     const char *week = get_string(day_of_week(date.year, date.month, date.day) + 40);
     char date_str[20] = "";
 
@@ -1441,9 +1441,9 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
             gui_screen_x_offset() + weather_x_shift + 0x1a4,
             DB_Y(0x37), NULL);
       }
-      struct bp_date date = {0};
+      struct g1_date date = {0};
 
-      init_burial_point_date(get_date(), &date);
+      timestamp_to_date(get_date(), &date);
       const char *week =
         get_string(day_of_week(date.year, date.month, date.day) + 40);
       char date_str[20] = "";
@@ -1477,9 +1477,9 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
         gui_bmp_bitmap_draw(0x3e, gui_screen_x_offset() + weather_x_shift + 0x144,
                 DB_Y(0x1c), 0, 0, 0);
       }
-      struct bp_date date = {0};
+      struct g1_date date = {0};
 
-      init_burial_point_date(get_date(), &date);
+      timestamp_to_date(get_date(), &date);
       const char *week =
         get_string(day_of_week(date.year, date.month, date.day) + 40);
       char date_str[20] = "";
@@ -1657,14 +1657,12 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
   switch (prv->state) {
   case 0:
     G1_LOG_INF("Enter DASHBOARD_INIT_STATUS task....\n");
-    enter_dashboard_burial_point();
     if (event == UI_EVT_EXIT) {
       G1_LOG_INF("dashboard function exit ...\n");
       get_dashboard_state()->dashboard_ts->dashboard_on = 0;
       report_event_to_phone(0x1f);
       gui_screen_clear();
       atomic_clear_bit(&dashboard_head_up_opened, 1);
-      exit_dashboard_burial_point();
       memset(prv, 0, sizeof(*prv));
       return 0;
     }
@@ -1800,7 +1798,6 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
     report_event_to_phone(0x1f);
     gui_screen_fade_out();
     atomic_clear_bit(&dashboard_head_up_opened, 1);
-    exit_dashboard_burial_point();
     memset(prv, 0, sizeof(*prv));
     return 0;
   }

@@ -8,12 +8,12 @@
 
 #define FLASH_SYS_SETTINGS 0x130000
 #define FLASH_USR_SETTINGS 0x134000
-#define FLASH_BURIAL_POINT 0x135000
+#define FLASH_USAGE_STATS  0x135000 /* written by earlier firmware only */
 #define FLASH_SETTING      0x13e000
 #define FLASH_QUICKNOTES   0x403000
 
 #define SYS_SETTINGS_LEN 0x98
-#define BURIAL_POINT_LEN 0x11c
+#define USAGE_STATS_LEN  0x11c
 #define QUICKNOTE_LEN    0x200
 
 #define MAX_RECORD 0x400

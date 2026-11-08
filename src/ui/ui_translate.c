@@ -320,9 +320,9 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
         gui_bmp_dynamic_bitmap_draw(1, X0, Y0 + 0x36, 0, 0, 0, 0);
       }
 
-      struct bp_date date = { 0 };
+      struct g1_date date = { 0 };
 
-      init_burial_point_date(get_date(), &date);
+      timestamp_to_date(get_date(), &date);
       if (trans_ui.minute == date.minute && trans_ui.hour == date.hour) {
         return 0;
       }

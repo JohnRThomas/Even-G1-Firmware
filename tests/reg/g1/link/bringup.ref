@@ -17,7 +17,7 @@ action(B, phone_on(),
        within=8, label="phone_on")
 
 # round 1: the master's requests, then the slave's
-# burial point data: the 286-byte answer does not fit a 251-byte MTU
+# burial point (always an empty record): the 286-byte answer does not fit a 251-byte MTU
 # (tools/simulator/README.md), the vendor image did not answer it
 # either and the app goes on without it; nothing asserted
 action(M, send('3E'))

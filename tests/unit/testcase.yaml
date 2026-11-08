@@ -9,7 +9,6 @@ common:
 tests:
   unit.ahrs: {extra_args: G1_UNIT_SUITE=ahrs}
   unit.audio: {extra_args: G1_UNIT_SUITE=audio}
-  unit.burial: {extra_args: G1_UNIT_SUITE=burial}
   unit.buttons_gpio: {extra_args: G1_UNIT_SUITE=buttons_gpio}
   unit.canvas_position: {extra_args: G1_UNIT_SUITE=canvas_position}
   unit.dashboard: {extra_args: G1_UNIT_SUITE=dashboard}

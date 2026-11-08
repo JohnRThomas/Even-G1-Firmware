@@ -5,7 +5,7 @@
  * inside their fields.
  */
 #include "dash_test.h"
-#include "utils/burial_point.h"
+#include "utils/common_utils.h"
 
 #define TITLE_SIZE 0x41
 #define TIME_SIZE  0x21

@@ -33,7 +33,7 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../ui/ui.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 /* unaligned int64 inside a packed task block */
 
@@ -359,7 +359,6 @@ void check_work_mode(int in_box, int lid_closed, uint8_t report)
     }
     wearing = true;
     if (!in_box) {
-      enter_wear_burial_point();
       goto check_report;
     }
   } else {
@@ -396,7 +395,6 @@ void check_work_mode(int in_box, int lid_closed, uint8_t report)
       }
     }
   }
-  exit_wear_burial_point();
 check_report:
 
   if (report) {

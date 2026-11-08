@@ -1,9 +1,8 @@
 /*
- * Module-private declarations for common_utils.c and burial_point.c
- * (part of the panel_display module).  Reconstructed from the v1.63 app core.
+ * Declarations for common_utils.c.
  */
-#ifndef PANEL_DISPLAY_BURIAL_POINT_H_
-#define PANEL_DISPLAY_BURIAL_POINT_H_
+#ifndef UTILS_COMMON_UTILS_H_
+#define UTILS_COMMON_UTILS_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -12,7 +11,7 @@
 #include <zephyr/toolchain.h>
 #include <glasses_state.h>
 
-#include <g1_date.h> /* struct bp_date, init_burial_point_date() */
+#include <g1_date.h> /* struct g1_date, timestamp_to_date() */
 
 /* common_utils.c */
 const char *get_weekday_name(uint32_t ts);
@@ -29,21 +28,5 @@ uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, 
           const uint8_t *data, int len);
 uint16_t crc16_usb(uint16_t crc, const uint8_t *buf, int len);
 int rle_decode(const uint8_t *src, uint32_t len, uint8_t *dst);
-
-/* burial_point.c */
-int update_burial_point_day_index(void);
-uint8_t get_burial_point_day_index(void);
-void exit_wear_burial_point(void);
-void add_wear_burial_time(int64_t ms);
-void enter_wear_burial_point(void);
-int64_t get_dashboard_sum_time(void);
-void add_dashboard_burial_time(int64_t ms);
-void enter_dashboard_burial_point(void);
-void exit_dashboard_burial_point(void);
-int64_t get_notification_sum_time(void);
-void add_notification_burial_time(int64_t ms);
-void enter_notification_burial_point(void);
-void exit_notification_burial_point(void);
-void burial_point_record_info_init(void);
 
 #endif

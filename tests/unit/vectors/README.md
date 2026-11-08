@@ -220,7 +220,7 @@ dashboard time/mode, text, notification, quick note, navigation start) or 9 (sec
 | `0x3b_raster_config_get` | `display.hex` | `3B` | display height/depth | L:2025_11_12.txt:535 | 4 | |
 | `0x3c_notification_auto_display_get` | `notification.hex` | `3C` | notification auto display | L:2025_11_08.txt:1151 | 4 | |
 | `0x3d_language_en` | `settings.hex` | `3D` | language English | L:2025_11_12.txt:715 | 4 | |
-| `0x3e_burial_point` | `session.hex` | `3E` | usage counters | L:2025_11_12.txt:431 | 4 | |
+| `0x3e_usage_stats` | `session.hex` | `3E` | usage statistics | L:2025_11_12.txt:431 | 4 | |
 | `0x3f_double_tap_get` | `settings.hex` | `3F` | double-tap action get | L:2025_11_08.txt:1183 | 4 | |
 | `0x3f_long_press_get` | `settings.hex` | `3F` | long-press enable get | L:2025_11_08.txt:1186 | 4 | |
 | `0x3f_lum_coefficient_get` | `display.hex` | `3F` | brightness coefficient get | L:2025_11_09.txt:1703 | 9 | |

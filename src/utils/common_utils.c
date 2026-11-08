@@ -10,7 +10,7 @@
 #include <zephyr/kernel.h>
 
 #include "g1_log.h"
-#include "burial_point.h"
+#include "common_utils.h"
 #include "../gui/gui.h"
 #include "../ui/ui.h"
 
@@ -28,7 +28,7 @@ static uint32_t duration_ref_ms[4];     /* 0x2000aa80 */
 static int64_t time_base_uptime;        /* 0x20004fd8 */
 static int64_t time_base;               /* 0x20004fd0 */
 
-int init_burial_point_date(uint32_t timestamp, struct bp_date *date)
+int timestamp_to_date(uint32_t timestamp, struct g1_date *date)
 {
   uint32_t days = timestamp / SECONDS_PER_DAY;
   uint32_t secs = timestamp % SECONDS_PER_DAY;
@@ -70,9 +70,9 @@ int init_burial_point_date(uint32_t timestamp, struct bp_date *date)
 /* weekday name of a UTC timestamp */
 const char *get_weekday_name(uint32_t ts)
 {
-  struct bp_date date = { 0 };
+  struct g1_date date = { 0 };
 
-  init_burial_point_date(ts, &date);
+  timestamp_to_date(ts, &date);
   printk("date: %u: %04d/%02d/%02d-%02d:%02d:%02d\n", ts, date.year, date.month, date.day,
          date.hour, date.minute, date.second);
 

@@ -47,7 +47,7 @@ void cJSON_Delete(cJSON *item);
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "../ui/ui.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 BUILD_ASSERT(sizeof(struct schedule_item) == 0xa4);
 BUILD_ASSERT(sizeof(struct stock_item) == 0x7f2);
@@ -420,7 +420,7 @@ static __attribute__((noclone)) void ble_process_put_req(struct ble_context *ctx
     case DASHBOARD_SUB_TIME_WEATHER: {
       int64_t ms_ts = ((struct put_time_sync *)data)->ms_ts;
       uint32_t sec_ts;
-      struct bp_date date;
+      struct g1_date date;
 
       set_wall_clock_ms(ms_ts);
       sec_ts = ((struct put_time_sync *)data)->sec_ts;
@@ -431,7 +431,7 @@ static __attribute__((noclone)) void ble_process_put_req(struct ble_context *ctx
       globle->dashboard_ts->ts = sec_ts;
       globle->dashboard_ts->ms_ts = ms_ts;
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(sec_ts, &date);
+      timestamp_to_date(sec_ts, &date);
       G1_LOG_INF("date: %u: %04d/%02d/%02d-%02d:%02d:%02d\n", sec_ts, date.year,
            date.month, date.day, date.hour, date.minute, date.second);
       accumulate_elapsed_seconds((uint32_t *)(void *)globle->dashboard_ts, 0, 1);
@@ -3402,18 +3402,18 @@ static void ble_process_get_req(struct ble_context *ctx, struct ble_req_hdr *hdr
     return;
   }
   case BLE_CMD_BURIAL_POINT_GET: {
-    const int buf_len = sizeof(globle->bp) + 2;
+    /*
+     * Usage statistics are not collected.  The phone still asks for the
+     * record, so it gets an empty one of the size it expects: no id, no
+     * totals, no per-day entries.
+     */
+    uint8_t buf[2 + USAGE_STATS_RECORD_SIZE] = { 0 };
 
-    G1_LOG_ERR("BLE_GET_BURIAL_POINT_DATA\n\n");
-    uint8_t buf[buf_len];
-    {
-      memcpy(rx, &get_dashboard_state()->bp,
-             sizeof(globle->bp));
-      buf[0] = hdr->cmd;
-      buf[1] = PKCS7_PACK_DONE;
-      memcpy(&buf[2], rx, sizeof(globle->bp));
-      ctx->write(buf, buf_len);
-    }
+    buf[0] = hdr->cmd;
+    buf[1] = PKCS7_PACK_DONE;
+    buf[2 + USAGE_STATS_VERSION_OFFSET] = USAGE_STATS_VERSION;
+    buf[2 + USAGE_STATS_VALID_OFFSET] = 1;
+    ctx->write(buf, sizeof(buf));
     return;
   }
   case BLE_CMD_HARDWARE_GET:

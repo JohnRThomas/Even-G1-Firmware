@@ -62,7 +62,7 @@ enum ble_cmd {
   BLE_CMD_RASTER_CONFIG_GET = 0x3b,       /* fw "BLE_GET_RASTER_CONFIG"; notes: Hardware Display Get */
   BLE_CMD_NOTIF_AUTO_DISPLAY_GET = 0x3c,
   BLE_CMD_LANGUAGE_SET = 0x3d,            /* handled in the GET range */
-  BLE_CMD_BURIAL_POINT_GET = 0x3e,        /* fw "BLE_GET_BURIAL_POINT_DATA"; notes: Info Buried Point Get */
+  BLE_CMD_BURIAL_POINT_GET = 0x3e,         /* usage statistics: not collected, answered with an empty record */
   BLE_CMD_HARDWARE_GET = 0x3f,            /* sub-commands 5..8 of enum ble_hw_sub */
 
   /* POST (ble_process_post_req) */

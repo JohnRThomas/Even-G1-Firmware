@@ -258,11 +258,9 @@ static void lens_in_use(void *fixture)
   gs->message_stay_time = 30;
   save_usr_settings(gs, 0);
 
-  gs->bp.id = 0x11223344;
-  gs->bp.wear_sum_time = 7200;
-  gs->bp.version = 7;
-  gs->bp.valid = 1;
-  update_burial_point_to_flash(gs);
+  /* usage statistics left by an earlier firmware */
+  put_flash(FLASH_USAGE_STATS, "44 33 22 11  20 1c 00 00  00 00 00 00  00 00 00 00"
+             "  00 00 00 00  07 00 01");
 
   memset(&g1_fake_flash_image[FLASH_QUICKNOTES], 0x00, 4 * QUICKNOTE_LEN);
   for (int slot = 0; slot < 4; slot++) {
@@ -319,11 +317,13 @@ ZTEST(user_data_reset, test_writes_the_default_user_settings)
   zassert_equal(g1_state()->bonded, 0);
 }
 
-ZTEST(user_data_reset, test_erases_the_usage_statistics)
+ZTEST(user_data_reset, test_erases_the_usage_statistics_of_earlier_firmware)
 {
+  expect_flash(FLASH_USAGE_STATS, "44 33 22 11");
+
   reset_user_data(1);
 
-  expect_flash_fill(FLASH_BURIAL_POINT, BURIAL_POINT_LEN, 0xff);
+  expect_flash_fill(FLASH_USAGE_STATS, USAGE_STATS_LEN, 0xff);
 }
 
 ZTEST(user_data_reset, test_keeps_the_factory_record)
@@ -382,15 +382,11 @@ ZTEST(user_data_reset, test_after_a_reboot_the_records_load_as_new)
   reset_user_data(1);
 
   g1_unit_reboot();
-  z_impl_sys_rand32_get_fake.return_val = 0x2468ace0;
   load_usr_setting(g1_state());
-  load_burial_point(g1_state());
 
   zassert_equal(g1_state()->panel.panel_brightness_level, 0x15);
   zassert_equal(g1_state()->message_stay_time, 15);
   zassert_equal(g1_state()->bonded, 0);
-  zassert_equal(g1_state()->bp.id, 0x2468ace0);
-  zassert_equal(g1_state()->bp.wear_sum_time, 0);
   zassert_equal(get_current_language(), 2);
   zassert_equal(get_dashboard_startup_mode(), 0);
 }

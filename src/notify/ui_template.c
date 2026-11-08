@@ -12,7 +12,7 @@
 #include "notify.h"
 #include "../fonts/font_bitmap.h"
 #include "../panel_display/panel.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 void dump_template_gyro_info(void *arg)
 {

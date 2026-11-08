@@ -1,7 +1,7 @@
 /* Timestamps checked against Python's calendar.timegm(). */
 #include "harness.h"
 #include "storage/storage.h" /* crc32() */
-#include "utils/burial_point.h"
+#include "utils/common_utils.h"
 #include "utils/md5.h"
 
 /*
@@ -141,10 +141,10 @@ ZTEST(util, test_rle_decode_ignores_trailing_count_without_value)
 static void expect_date(uint32_t ts, int year, int month, int day, int hour, int minute,
       int second)
 {
-  struct bp_date got;
+  struct g1_date got;
 
   memset(&got, 0xff, sizeof(got));
-  init_burial_point_date(ts, &got);
+  timestamp_to_date(ts, &got);
 
   zassert_true(got.year == year && got.month == month && got.day == day && got.hour == hour &&
            got.minute == minute && got.second == second,

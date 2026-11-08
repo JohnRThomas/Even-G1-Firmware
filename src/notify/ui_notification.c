@@ -18,7 +18,7 @@
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "../ui/ui.h"
-#include "../utils/burial_point.h"
+#include "../utils/common_utils.h"
 
 #define LANGUAGE_FRENCH  5
 #define LANGUAGE_GERMAN  6
@@ -101,7 +101,7 @@ void draw_time(char *buf, uint32_t recv_time)
   BLE_PRINTK("currentTime is %d,recvTime is %d,unReadTime is %d \n", now, recv_time, elapsed);
   lang = get_current_language();
   if (lang == LANGUAGE_GERMAN) {
-    struct bp_date date;
+    struct g1_date date;
 
     if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
       sprintf(buf, "Jetzt");
@@ -111,7 +111,7 @@ void draw_time(char *buf, uint32_t recv_time)
       sprintf(buf, "Vor %d Std.", elapsed / SECONDS_PER_HOUR);
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       sprintf(buf, "%02d:%02d", date.hour, date.minute);
     } else if (elapsed >= SECONDS_PER_DAY && elapsed < 2 * SECONDS_PER_DAY) {
       sprintf(buf, "Gestern");
@@ -119,11 +119,11 @@ void draw_time(char *buf, uint32_t recv_time)
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       sprintf(buf, "%02d/%02d", date.day, date.month);
     }
   } else if (lang == LANGUAGE_FRENCH) {
-    struct bp_date date;
+    struct g1_date date;
 
     if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
       sprintf(buf, "Maintenant");
@@ -133,7 +133,7 @@ void draw_time(char *buf, uint32_t recv_time)
       sprintf(buf, "%d h", elapsed / SECONDS_PER_HOUR);
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
            date.month, date.day, date.hour, date.minute, date.second);
       BLE_PRINTK("time_disp_mode is %d \n",
@@ -157,11 +157,11 @@ void draw_time(char *buf, uint32_t recv_time)
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       sprintf(buf, "%02d/%02d", date.month, date.day);
     }
   } else if (lang == LANGUAGE_SPANISH) {
-    struct bp_date date;
+    struct g1_date date;
 
     if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
       sprintf(buf, "Ahora");
@@ -171,7 +171,7 @@ void draw_time(char *buf, uint32_t recv_time)
       sprintf(buf, "hace %d h", elapsed / SECONDS_PER_HOUR);
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
            date.month, date.day, date.hour, date.minute, date.second);
       BLE_PRINTK("time_disp_mode is %d \n",
@@ -195,11 +195,11 @@ void draw_time(char *buf, uint32_t recv_time)
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       sprintf(buf, "%02d/%02d", date.month, date.day);
     }
   } else if (lang == LANGUAGE_ITALIAN) {
-    struct bp_date date;
+    struct g1_date date;
 
     if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
       sprintf(buf, "Adesso");
@@ -209,7 +209,7 @@ void draw_time(char *buf, uint32_t recv_time)
       sprintf(buf, "%d ore fa", elapsed / SECONDS_PER_HOUR);
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
            date.month, date.day, date.hour, date.minute, date.second);
       BLE_PRINTK("time_disp_mode is %d \n",
@@ -233,11 +233,11 @@ void draw_time(char *buf, uint32_t recv_time)
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       sprintf(buf, "%02d/%02d", date.month, date.day);
     }
   } else {
-    struct bp_date date;
+    struct g1_date date;
 
     if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
       sprintf(buf, "Now");
@@ -247,7 +247,7 @@ void draw_time(char *buf, uint32_t recv_time)
       sprintf(buf, "%dh ago", elapsed / SECONDS_PER_HOUR);
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
            date.month, date.day, date.hour, date.minute, date.second);
       BLE_PRINTK("time_disp_mode is %d \n",
@@ -271,7 +271,7 @@ void draw_time(char *buf, uint32_t recv_time)
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
-      init_burial_point_date(recv_time, &date);
+      timestamp_to_date(recv_time, &date);
       sprintf(buf, "%02d/%02d", date.month, date.day);
     }
   }
@@ -439,7 +439,6 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
       gui_screen_clear();
     }
     msg_busy = 0;
-    exit_notification_burial_point();
     return 0;
   }
   if (event == 0) {
@@ -478,7 +477,6 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
     set_frame_buffer(fb);
     set_showing_notification_on_gui();
     gui_screen_clear();
-    enter_notification_burial_point();
   }
   if (particle_pending) {
     draw_particle_effects(fb, num, msg);

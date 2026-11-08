@@ -1,7 +1,7 @@
 /*
  * Link and session commands: 0x37 uptime, 0x4D MTU / session start, 0x2C device info, 0x33 / 0x34
- * serial numbers, 0x39 running app, 0x22 status, 0x3D language, 0x47 unpair, 0x17 erase DFU, 0x50
- * dashboard lock.
+ * serial numbers, 0x39 running app, 0x22 status, 0x3E usage statistics, 0x3D language, 0x47 unpair,
+ * 0x17 erase DFU, 0x50 dashboard lock.
  */
 #include <app_version.h>
 
@@ -225,6 +225,27 @@ ZTEST(proto_session, test_0x22_length_mismatch_sends_no_status)
   g1_send_hex("22 06 00 0a 01");
 
   expect_no_frame();
+}
+
+/*
+ * Usage statistics are not collected.  The phone still asks, and gets a record of the size it
+ * expects with no id, no totals and no days: only the version (7, at 0x14) and the valid flag
+ * (at 0x16) are set.
+ */
+ZTEST(proto_session, test_0x3e_replies_an_empty_usage_statistics_record)
+{
+  uint8_t want[2 + 0x11c] = {0x3e, 0xc9};
+
+  want[2 + 0x14] = 7;
+  want[2 + 0x16] = 1;
+
+  /* nothing the wearer does reaches the record */
+  g1_state()->dashboard_ts->ts = 1762862400u; /* 2025-11-11 12:00 UTC */
+  g1_clock_advance_ms(10 * 60 * 1000);
+
+  g1_send_vector("0x3e_usage_stats");
+
+  expect_only_frame_bytes(want, sizeof(want));
 }
 
 ZTEST(proto_session, test_0x3d_master_echoes_and_forwards_the_language_to_the_slave)
