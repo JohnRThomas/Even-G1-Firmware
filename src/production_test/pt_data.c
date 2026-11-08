@@ -2,8 +2,8 @@
  * Production-test link layer: selects the transport (NFC mailbox or lpuart),
  * reads one request, runs the PT protocol and writes the response back.
  */
+#include <stdint.h>
 #include <zephyr/device.h>
-#include <zephyr/devicetree.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
@@ -145,17 +145,11 @@ int process_pt_data(void *arg) {
   }
 
   cmd = p[0];
-  if (cmd == 0x1b) {
-    if (p[8]) {
-      erase_audio_buffer();
-    }
+  if (cmd == 0x1b && p[8]) {
+    erase_audio_buffer();
   }
-  if (cmd == 0x13) {
-    if ((p[4] & ~4) == 0) {
-      if (enable_charger()) {
-        ret = -5;
-      }
-    }
+  if (cmd == 0x13 && (p[4] & ~4U) == 0 && enable_charger()) {
+    ret = -5;
   }
   if (cmd == 0x06) {
     if (p[2] == 2) {
@@ -173,19 +167,15 @@ int process_pt_data(void *arg) {
     k_msleep(300);
     sys_reboot(SYS_REBOOT_COLD);
   }
-  if (cmd == 0x3c) {
-    if (p[4] == 0) {
-      G1_LOG_ERR("sys reboot because process_pt_data cmd %d and ACK_SUCC\n", cmd);
-      k_msleep(300);
-      sys_reboot(SYS_REBOOT_COLD);
-    }
+  if (cmd == 0x3c && p[4] == 0) {
+    G1_LOG_ERR("sys reboot because process_pt_data cmd %d and ACK_SUCC\n", cmd);
+    k_msleep(300);
+    sys_reboot(SYS_REBOOT_COLD);
   }
-  if (cmd == 0x01) {
-    if (p[4] == 0) {
-      G1_LOG_ERR("sys reboot because process_pt_data cmd ACK_SUCC\n");
-      k_msleep(300);
-      sys_reboot(SYS_REBOOT_COLD);
-    }
+  if (cmd == 0x01 && p[4] == 0) {
+    G1_LOG_ERR("sys reboot because process_pt_data cmd ACK_SUCC\n");
+    k_msleep(300);
+    sys_reboot(SYS_REBOOT_COLD);
   }
 
   return ret;

@@ -1,12 +1,19 @@
 /*
  * UI page: onboarding (first-use tutorial, driven by the phone app).
  */
+#include <stdint.h>
+#include <string.h>
+#include <zephyr/toolchain.h>
+
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
+#include "../gui/gui.h"
 #include "../panel_display/panel.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
 static uint8_t page_redraw;
@@ -16,7 +23,7 @@ static uint8_t headup_hint_count;             /* repeat counter of the head-up h
 uint8_t onboarding_shown_sub_step;
 
 static int8_t last_action = -1;
-uint8_t onboarding_languages[5] = {2, 6, 5, 7, 14};
+static uint8_t onboarding_languages[5] = {2, 6, 5, 7, 14};
 
 static struct {
   uint8_t timeout_cnt;
@@ -33,14 +40,14 @@ int init_onboarding_info(void) {
 }
 
 void onboarding_request_redraw(void) {
-  if (last_action != get_dashboard_state()->onboarding->action ||
+  if ((int)last_action != (int)get_dashboard_state()->onboarding->action ||
       (get_dashboard_state()->onboarding->action != 5 && get_dashboard_state()->onboarding->action != 0x13 &&
        get_dashboard_state()->onboarding->action != 0x14 && get_dashboard_state()->onboarding->action != 0x15)) {
     anim_drawn = 0;
     step_finished = 0;
   }
   page_redraw = 1;
-  last_action = get_dashboard_state()->onboarding->action;
+  last_action = (int8_t)get_dashboard_state()->onboarding->action;
 }
 
 /* fade the whole frame buffer in (one step per call, see fade_step) */
@@ -49,7 +56,7 @@ void onboarding_request_redraw(void) {
     for (int row = 0; row < 199; row++) {                                                                              \
       for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {                                                               \
         const uint8_t steps[8] = {1, 3, 5, 7, 7, 7, 7, 7};                                                             \
-        uint8_t *line = gs->panel.panel_buffer[row];                                                                   \
+        uint8_t *line = (gs)->panel.panel_buffer[row];                                                                 \
                                                                                                                        \
         if (line[col] != 0) {                                                                                          \
           line[col] &= gui_fade_mask_at(row % 26, steps[fade_step], col);                                              \
@@ -59,10 +66,10 @@ void onboarding_request_redraw(void) {
   } while (0)
 
 #define ONB_REFLASH_FULL()                                                                                             \
-  _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0, \
-                          GUI_SCREEN_WIDTH, 199)
+  reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,  \
+                         GUI_SCREEN_WIDTH, 199)
 
-void onboarding_draw_static_page(int event) {
+void onboarding_draw_static_page(void) {
   struct GlassesState *gs = get_dashboard_state();
 
   if (!page_redraw) {
@@ -114,16 +121,16 @@ void onboarding_draw_static_page(int event) {
           gui_utf_draw(0, get_string(8), 0, X0 + 0x8c, Y0 + 0x37, X0 + 0x240, Y0 + 0x88, 4, 0, 0, NULL, 0);
         } else if (get_dashboard_state()->onboarding->action == 0x15) {
           headup_hint_count = 0;
-          if ((get_dashboard_state()->onboarding->flags & 3) == 1) {
+          if ((get_dashboard_state()->onboarding->flags & 3U) == 1U) {
             report_event_to_phone(0x14);
-            get_dashboard_state()->onboarding->flags |= 2;
+            get_dashboard_state()->onboarding->flags |= 2U;
             get_dashboard_state()->onboarding->action = 0x17;
           }
         }
       } else if (onboarding_shown_sub_step == 2) {
-        if (get_dashboard_state()->onboarding->action == 0x15 && !(get_dashboard_state()->onboarding->flags & 1)) {
+        if (get_dashboard_state()->onboarding->action == 0x15 && !(get_dashboard_state()->onboarding->flags & 1U)) {
           report_event_to_phone(0x13);
-          get_dashboard_state()->onboarding->flags |= 1;
+          get_dashboard_state()->onboarding->flags |= 1U;
         }
         if (step_finished) {
           anim_drawn = 0;
@@ -175,9 +182,9 @@ void onboarding_draw_static_page(int event) {
       if (onboarding_shown_sub_step == 1) {
         if (get_dashboard_state()->onboarding->action == 6) {
           gui_bmp_bitmap_draw(0x38, X0, Y0 + 0x37, 0, 0, 0);
-          if ((get_dashboard_state()->onboarding->flags & 0xc) == 4) {
+          if ((get_dashboard_state()->onboarding->flags & 0xcU) == 4U) {
             report_event_to_phone(0x16);
-            get_dashboard_state()->onboarding->flags |= 8;
+            get_dashboard_state()->onboarding->flags |= 8U;
             get_dashboard_state()->onboarding->action = 5;
           }
         } else if (get_dashboard_state()->onboarding->action == 0x13) {
@@ -185,9 +192,9 @@ void onboarding_draw_static_page(int event) {
         }
       } else if (onboarding_shown_sub_step == 2) {
         if (get_dashboard_state()->onboarding->action == 6) {
-          if (!(get_dashboard_state()->onboarding->flags & 4)) {
+          if (!(get_dashboard_state()->onboarding->flags & 4U)) {
             report_event_to_phone(0x15);
-            get_dashboard_state()->onboarding->flags |= 4;
+            get_dashboard_state()->onboarding->flags |= 4U;
           }
         } else if (get_dashboard_state()->onboarding->action == 0x13 && step_finished) {
           anim_drawn = 0;
@@ -259,7 +266,7 @@ void onboarding_draw_static_page(int event) {
   onboarding_prv.imu_mode = get_dashboard_state()->imu.mode;
 }
 
-void onboarding_draw_animated_page(int event) {
+void onboarding_draw_animated_page(void) {
   uint8_t buf[0x400] = {0};
 
   switch (get_dashboard_state()->onboarding->action) {
@@ -425,9 +432,9 @@ void onboarding_draw_animated_page(int event) {
       if (k_uptime_get() - get_dashboard_state()->onboarding->ts > 2000 || step_finished) {
         if (!anim_drawn) {
           anim_drawn = 1;
-          if (!(get_dashboard_state()->onboarding->flags & 4)) {
+          if (!(get_dashboard_state()->onboarding->flags & 4U)) {
             report_event_to_phone(0x15);
-            get_dashboard_state()->onboarding->flags |= 4;
+            get_dashboard_state()->onboarding->flags |= 4U;
           }
           if (get_dashboard_state()->onboarding->action == 6) {
             gui_bmp_bitmap_draw_ex(0x3c, X0 + 0x212, Y0 + 4, buf, 0x55);
@@ -520,6 +527,7 @@ void onboarding_check_step_finished(void) {
 }
 
 int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
 
   set_frame_buffer(panel->panel_buffer);
@@ -555,7 +563,7 @@ int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event) {
     }
   }
 
-  if (get_dashboard_state()->onboarding->action != last_action ||
+  if ((int)get_dashboard_state()->onboarding->action != (int)last_action ||
       get_dashboard_state()->onboarding->sub_step != onboarding_shown_sub_step) {
     if (get_dashboard_state()->is_master == 1) {
       onboarding_check_step_finished();
@@ -575,8 +583,8 @@ int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event) {
       get_dashboard_state()->esb_down_id = get_dashboard_state()->onboarding->sub_step;
     }
   } else {
-    onboarding_draw_static_page(event);
-    onboarding_draw_animated_page(event);
+    onboarding_draw_static_page();
+    onboarding_draw_animated_page();
   }
   return 0;
 }
@@ -705,7 +713,7 @@ int onboarding_sync_data(const uint8_t *data, uint32_t len) {
       len = 1;
       buf[1] = data[0];
     }
-    if ((unsigned int)sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
+    if (sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
       G1_LOG_ERR("onboarding sync to master failed...\n");
       return -1;
     }

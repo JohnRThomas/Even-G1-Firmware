@@ -1,12 +1,15 @@
 /*
  * nPM1300 charger register helpers and the charging-case (NFC box) status flags.
  */
+#include <stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/mfd/npm1300.h>
 #include <zephyr/drivers/regulator.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/sys/util_macro.h>
 
 #include "g1_log.h"
 #include "sensors_audio.h"
@@ -29,7 +32,7 @@ struct regulator_npm1300_config {
 #define CHGR_OFFSET_VTERM    0x0C
 #define CHGR_OFFSET_CHG_STAT 0x34
 
-uint8_t nfc_box_status[3];
+static uint8_t nfc_box_status[3];
 static uint8_t in_box_last;
 static uint8_t lid_closed_last;
 static uint8_t charging_last;

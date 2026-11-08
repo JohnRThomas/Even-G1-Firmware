@@ -47,7 +47,7 @@ ZTEST(gui, test_utf_draw_family_empty_string_draws_nothing) {
 
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 0);
   zassert_true(gui_test_guard_intact());
-  zassert_equal(_reflash_fb_data_to_lcd_fake.call_count, 0);
+  zassert_equal(reflash_fb_data_to_lcd_fake.call_count, 0);
 }
 
 /* 二 is not in the stand-in font */
@@ -69,13 +69,13 @@ ZTEST(gui, test_utf_draw_while_notification_showing_clears_box_and_refreshes_pan
   draw("Hello, G1!", 40, 20, 300, 60, 1, 0);
   clear_showing_notification_on_gui();
 
-  zassert_equal(_reflash_fb_data_to_lcd_fake.call_count, 1);
-  zassert_equal(_reflash_fb_data_to_lcd_fake.arg0_val, 7);
-  zassert_equal(_reflash_fb_data_to_lcd_fake.arg1_val, 9);
-  zassert_equal(_reflash_fb_data_to_lcd_fake.arg2_val, 40);
-  zassert_equal(_reflash_fb_data_to_lcd_fake.arg3_val, 20);
-  zassert_equal(_reflash_fb_data_to_lcd_fake.arg4_val, 300);
-  zassert_equal(_reflash_fb_data_to_lcd_fake.arg5_val, 60);
+  zassert_equal(reflash_fb_data_to_lcd_fake.call_count, 1);
+  zassert_equal(reflash_fb_data_to_lcd_fake.arg0_val, 7);
+  zassert_equal(reflash_fb_data_to_lcd_fake.arg1_val, 9);
+  zassert_equal(reflash_fb_data_to_lcd_fake.arg2_val, 40);
+  zassert_equal(reflash_fb_data_to_lcd_fake.arg3_val, 20);
+  zassert_equal(reflash_fb_data_to_lcd_fake.arg4_val, 300);
+  zassert_equal(reflash_fb_data_to_lcd_fake.arg5_val, 60);
   /* same pixels: the grey fill is gone */
   gui_expect_golden("utf_draw_ascii", GUI_PBM, 32, 16, 276, 48);
 }
@@ -175,8 +175,8 @@ ZTEST(gui, test_scroll_line_low_origin_replaces_line) {
   zassert_true(gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING, "scroll_line leaves the notification flag set");
   clear_showing_notification_on_gui();
 
-  zassert_equal(_reflash_fb_data_to_lcd_ex_fake.call_count, 9);
-  zassert_mem_equal(_reflash_fb_data_to_lcd_ex_fake.arg6_history, steps, sizeof(steps));
+  zassert_equal(reflash_fb_data_to_lcd_ex_fake.call_count, 9);
+  zassert_mem_equal(reflash_fb_data_to_lcd_ex_fake.arg6_history, steps, sizeof(steps));
   gui_expect_golden("scroll_line_low", GUI_PBM, 32, 8, 276, 100);
 }
 
@@ -191,7 +191,7 @@ ZTEST(gui, test_scroll_line_high_origin_replaces_line) {
   gui_utf_draw_scroll_line(0, "new text", 0, 40, 60, 300, 87, 1, 0);
   clear_showing_notification_on_gui();
 
-  zassert_equal(_reflash_fb_data_to_lcd_ex_fake.call_count, 9);
-  zassert_mem_equal(_reflash_fb_data_to_lcd_ex_fake.arg6_history, steps, sizeof(steps));
+  zassert_equal(reflash_fb_data_to_lcd_ex_fake.call_count, 9);
+  zassert_mem_equal(reflash_fb_data_to_lcd_ex_fake.arg6_history, steps, sizeof(steps));
   gui_expect_golden("scroll_line_high", GUI_PBM, 32, 24, 276, 100);
 }

@@ -6,8 +6,10 @@
 #include "../display/display_thread.h"
 #include "g1_log.h"
 #include "threads.h"
-#include <string.h>
+#include <glasses_state.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
+#include <zephyr/toolchain.h>
 
 #define TASK_RUNNING 2
 #define TASK_PAUSE   3
@@ -16,6 +18,8 @@ static uint8_t saved_auto_brightness;
 uint8_t task_status_lock;
 
 uint8_t is_persist_task_active(struct GlassesState *state, int mode) {
+  ARG_UNUSED(mode);
+
   while (task_status_lock) {
     k_msleep(1);
   }

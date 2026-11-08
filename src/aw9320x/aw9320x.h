@@ -1,5 +1,5 @@
-#ifndef _AW9320X_H_
-#define _AW9320X_H_
+#ifndef AW9320X_H_
+#define AW9320X_H_
 
 #include "aw9320x_reg.h"
 #include "aw_cap_config.h"
@@ -82,7 +82,7 @@ struct aw9320x_func {
 
 #define LEN_BYTE_2         (2)
 #define LEN_BYTE_4         (4)
-#define INIT_OVER_IRQ      (1)
+#define INIT_OVER_IRQ      (1U)
 #define INIT_OVER_IRQ_OK   (1)
 #define INIT_OVER_IRQ_ERR  (0)
 #define SOFT_RST_OK        (1)
@@ -111,7 +111,7 @@ struct aw9320x_func {
 #define AW_FLASH_DEFAULT_VAL (0xffffffff)
 
 #define AW_PROT_STOP_WAIT_IRQ_CYCLES (100)
-#define AW_REG_UPDATA_DIS_MASK       (0x00ffffff)
+#define AW_REG_UPDATA_DIS_MASK       (0x00ffffffU)
 #define AW_AFECFG3_CVMULTUALMOD      (11)
 #define AW_AFECFG3_CVOFF2X           (10)
 #define AW_CH_NUM_MAX                (8)
@@ -131,15 +131,15 @@ struct aw9320x_func {
 #define AW_CPU_RUN                (0x00000000)
 #define AW_RSTNALL                (0x0000003c)
 
-#define REG_IRQSRC_BUTTON_BIT     (10)
-#define REG_IRQSRC_SLIDE_BIT      (9)
-#define REG_IRQSRC_wear_BIT       (8)
-#define REG_IRQSRC_OUT_EAR_BIT    (7)
-#define REG_IRQSRC_PROX_BIT       (1)
-#define REG_IRQSRC_EXIT_PROX_BIT  (2)
-#define REG_IRQSRC_TOUCH_BIT      (3)
-#define REG_IRQSRC_EXIT_TOUCH_BIT (4)
-#define REG_IRQSRC_INIT_BIT       (0)
+#define REG_IRQSRC_BUTTON_BIT     (10U)
+#define REG_IRQSRC_SLIDE_BIT      (9U)
+#define REG_IRQSRC_wear_BIT       (8U)
+#define REG_IRQSRC_OUT_EAR_BIT    (7U)
+#define REG_IRQSRC_PROX_BIT       (1U)
+#define REG_IRQSRC_EXIT_PROX_BIT  (2U)
+#define REG_IRQSRC_TOUCH_BIT      (3U)
+#define REG_IRQSRC_EXIT_TOUCH_BIT (4U)
+#define REG_IRQSRC_INIT_BIT       (0U)
 
 #define REG_SLDDATA1_LONG_PRESS_LEAVE_BIT (29)
 #define REG_SLDDATA1_SUPER_PRESS_BIT      (28)
@@ -156,8 +156,8 @@ struct aw9320x_func {
 
 /********aw9320x_reg_mode_update start********/
 
-#define AW_CHECK_EN_VAL        (0x20222022)
-#define AW_FW_CHECKSUM_EN_ADDR (0x10003FF8)
+#define AW_CHECK_EN_VAL        (0x20222022U)
+#define AW_FW_CHECKSUM_EN_ADDR (0x10003FF8U)
 
 #define AW_BT_CHECK_LEN       (0x7f8)
 #define AW_BT_CHECK_EN_ADDR   (0x07F8)
@@ -203,13 +203,14 @@ struct aw_update_common {
 /*****************aw_type start******************/
 #define AW_ABS(x) (((x) > 0) ? (x) : (-(x)))
 
-#define AW_GET_32_DATA(w, x, y, z) ((unsigned int)(((w) << 24) | ((x) << 16) | ((y) << 8) | (z)))
-#define AW_GET_16_DATA(a, b)       (((uint32_t)(a) << (8)) | ((uint32_t)(b) << (0)))
+#define AW_GET_32_DATA(w, x, y, z)                                                                                     \
+  ((unsigned int)(((uint32_t)(w) << 24U) | ((uint32_t)(x) << 16U) | ((uint32_t)(y) << 8U) | (uint32_t)(z)))
+#define AW_GET_16_DATA(a, b) (((uint32_t)(a) << (8U)) | ((uint32_t)(b) << (0U)))
 
-#define AW_REVERSEBYTERS_U16(value) ((((value) & (0x00FF)) << (8)) | (((value) & (0xFF00)) >> (8)))
+#define AW_REVERSEBYTERS_U16(value) ((((value) & (0x00FFU)) << (8U)) | (((value) & (0xFF00U)) >> (8U)))
 #define AW_REVERSEBYTERS_U32(value)                                                                                    \
-  ((((value) & (0x000000FF)) << (24)) | ((((value) & (0x0000FF00))) << (8)) | (((value) & (0x00FF0000)) >> (8)) |      \
-   (((value) & (0xFF000000)) >> (24)))
+  ((((value) & (0x000000FFU)) << (24U)) | ((((value) & (0x0000FF00U))) << (8U)) |                                      \
+   (((value) & (0x00FF0000U)) >> (8U)) | (((value) & (0xFF000000U)) >> (24U)))
 /*****************aw_type end********************/
 
 /************************************************/
@@ -234,7 +235,7 @@ struct aw_fw_load_info {
 #define AW_WAIT_IRQ_CYCLES       (10)
 #define AW_WAIT_ENTER_SLEEP_MODE (100)
 #define AW_WAIT_ENTER_TR_MODE    (100)
-#define AW_ACK_ADDR              (0x1800)
+#define AW_ACK_ADDR              (0x1800U)
 
 #define TRANSFER_SEQ_LEN      (4)
 #define TRANSFER_DTS_ADDR_LEN (4)

@@ -5,9 +5,12 @@
  *   type 1: 32 px clock digits, type 2: 39 px clock digits, type 3: 26 px ASCII
  *   type 4: icons (id 0x16..0x87), type 5: animations (id 1..12, with frame count)
  */
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "gui.h"
 #include "resource_bitmaps.h"
 
@@ -26,7 +29,7 @@ const uint8_t *font39_lookup(uint16_t code, int *w, int *h) {
 
   for (int i = 0; i < n; i++) {
     if (font39_index[i].code == code) {
-      *w = font39_index[i].width << 1;
+      *w = font39_index[i].width << 1U;
       *h = 39;
       return font39_bitmap + off;
     }
@@ -41,7 +44,7 @@ const uint8_t *font_c_lookup(uint16_t code, int *w, int *h) {
 
   for (int i = 0; i < n; i++) {
     if (font_c_index[i].code == code) {
-      *w = font_c_index[i].width << 1;
+      *w = font_c_index[i].width << 1U;
       *h = 32;
       return font_c_bitmap + off;
     }
@@ -56,7 +59,7 @@ const uint8_t *font_b_lookup(uint16_t code, int *w, int *h) {
 
   for (int i = 0; i < n; i++) {
     if (font_b_index[i].code == code) {
-      *w = font_b_index[i].width << 1;
+      *w = font_b_index[i].width << 1U;
       *h = 26;
       return font_b_bitmap + off;
     }
@@ -101,7 +104,7 @@ static inline bool ext_flash_present(void) {
       return -1;                                                                                                       \
     }                                                                                                                  \
     if (entry[1] != 0xffff) {                                                                                          \
-      idx = (entry[1] << 8) | (entry[1] >> 8);                                                                         \
+      idx = ((uint32_t)entry[1] << 8U) | ((uint32_t)entry[1] >> 8U);                                                   \
       memset(ext_glyph_buf, 0, sizeof(ext_glyph_buf));                                                                 \
       ret = get_dashboard_state()->flash_read(get_dashboard_state(), (glyph_base) + idx * (glyph_size), ext_glyph_buf, \
                                               (glyph_size));                                                           \

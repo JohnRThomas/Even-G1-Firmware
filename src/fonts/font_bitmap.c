@@ -7,10 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 #include "../notify/demo_image.h"
 #include "font_bitmap.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 
 /* glyph index entry in the external flash (0x140000 + (code - 0xa4) * 4) */
 struct cjk_glyph_index {
@@ -32,30 +34,30 @@ static uint16_t unicode_buf[0x400];
 /* decode one 2 or 3 byte UTF-8 sequence into a unicode code point */
 uint16_t utf8_decode_char(const uint8_t *s, int len) {
   uint8_t c = s[0];
-  uint8_t hi, lo;
-  uint8_t top2, top4;
+  uint32_t hi, lo;
+  uint32_t top2, top4;
 
-  if ((c & 0xf0) == 0xe0) {
+  if ((c & 0xf0U) == 0xe0U) {
     if (len < 3) {
       return 0;
     }
-    top2 = s[1] & 0x03;
-    top4 = c & 0x0f;
-    lo = (((s[2] >> 4) & 0x03) << 4) | (top2 << 6) | (s[2] & 0x0f);
-    hi = ((s[1] >> 2) & 0x0f) | (top4 << 4);
-  } else if ((c & 0xe0) == 0xc0) {
+    top2 = s[1] & 0x03U;
+    top4 = c & 0x0fU;
+    lo = ((((uint32_t)s[2] >> 4U) & 0x03U) << 4U) | (top2 << 6U) | (s[2] & 0x0fU);
+    hi = (((uint32_t)s[1] >> 2U) & 0x0fU) | (top4 << 4U);
+  } else if ((c & 0xe0U) == 0xc0U) {
     if (len < 2) {
       printf("length error!\n");
       return 0;
     }
-    top2 = c & 0x03;
-    lo = (s[1] & 0x3f) | (top2 << 6);
-    hi = (c & 0x1f) >> 2;
+    top2 = c & 0x03U;
+    lo = (s[1] & 0x3fU) | (top2 << 6U);
+    hi = (c & 0x1fU) >> 2U;
   } else {
     printf("maybe [%x] not unicode ?\n", c);
     return 0;
   }
-  return lo | (hi << 8);
+  return lo | (hi << 8U);
 }
 
 /* UTF-8 string -> unicode array (ASCII, CR/LF, 2 and 3 byte sequences) */
@@ -73,10 +75,11 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max) {
     if (c == '\r' || c == '\n' || (c >= 0x20 && c < 0x80)) {
       u = c;
       i++;
-    } else if ((c & 0xf0) == 0xe0 && i + 2 < len && (utf8[i + 1] & 0xc0) == 0x80 && (utf8[i + 2] & 0xc0) == 0x80) {
+    } else if ((c & 0xf0U) == 0xe0U && i + 2 < len && ((uint8_t)utf8[i + 1] & 0xc0U) == 0x80U &&
+               ((uint8_t)utf8[i + 2] & 0xc0U) == 0x80U) {
       u = utf8_decode_char((const uint8_t *)&utf8[i], 3);
       i += 3;
-    } else if ((c & 0xe0) == 0xc0 && i + 1 < len && (utf8[i + 1] & 0xc0) == 0x80) {
+    } else if ((c & 0xe0U) == 0xc0U && i + 1 < len && ((uint8_t)utf8[i + 1] & 0xc0U) == 0x80U) {
       u = utf8_decode_char((const uint8_t *)&utf8[i], 2);
       i += 2;
     } else {
@@ -97,7 +100,7 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max) {
 
 uint16_t *utf8_to_unicode_buf(const char *utf8, uint16_t *count) {
   memset(unicode_buf, 0, sizeof(unicode_buf));
-  *count = utf8_to_unicode(utf8, strlen(utf8), unicode_buf, 0x400);
+  *count = utf8_to_unicode(utf8, (int)strlen(utf8), unicode_buf, 0x400);
   return unicode_buf;
 }
 
@@ -125,7 +128,7 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h) {
     if (get_dashboard_state()->flash_read == NULL) {
       bitmap = NULL;
     } else {
-      if (get_dashboard_state()->flash_read(get_dashboard_state(), ((code - 0xa4) << 2) + 0x140000, &idx,
+      if (get_dashboard_state()->flash_read(get_dashboard_state(), ((uint32_t)(code - 0xa4) << 2U) + 0x140000U, &idx,
                                             sizeof(idx))) {
         G1_LOG_ERR("read flash fail\n\n");
         return NULL;

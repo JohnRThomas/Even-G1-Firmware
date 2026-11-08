@@ -1,13 +1,18 @@
 /*
  * External QSPI NOR flash (mx25r6435f) access wrappers.
  */
+#include <stddef.h>
+#include <stdint.h>
+#include <sys/types.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/util_macro.h>
 
 #include "../main.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "sensors_audio.h"
 
 #define EXT_FLASH_MODULE_ON BIT(4)
@@ -29,9 +34,9 @@
 static const struct device *ext_flash_dev;
 static struct k_mutex ext_flash_mutex;
 
-int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size);
-int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len);
-int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len);
+static int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size);
+static int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len);
+static int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len);
 
 int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_flash_erase_t *erase) {
   const struct device *dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
@@ -50,13 +55,13 @@ int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_fla
   return -1;
 }
 
-int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size) {
+static int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size) {
   int ret = 0;
 
   EXT_FLASH_POWER_ON(gs);
   if (ext_flash_dev != NULL) {
     k_mutex_lock(&ext_flash_mutex, K_FOREVER);
-    ret = flash_erase(ext_flash_dev, offset, size);
+    ret = flash_erase(ext_flash_dev, (off_t)offset, size);
     k_mutex_unlock(&ext_flash_mutex);
   }
   EXT_FLASH_POWER_OFF(gs);
@@ -66,13 +71,13 @@ int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size) {
   return ret;
 }
 
-int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len) {
+static int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len) {
   int ret = 0;
 
   EXT_FLASH_POWER_ON(gs);
   if (ext_flash_dev != NULL) {
     k_mutex_lock(&ext_flash_mutex, K_FOREVER);
-    ret = flash_write(ext_flash_dev, offset, data, len);
+    ret = flash_write(ext_flash_dev, (off_t)offset, data, len);
     k_mutex_unlock(&ext_flash_mutex);
   }
   EXT_FLASH_POWER_OFF(gs);
@@ -82,13 +87,13 @@ int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, 
   return ret;
 }
 
-int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len) {
+static int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len) {
   int ret = 0;
 
   EXT_FLASH_POWER_ON(gs);
   if (ext_flash_dev != NULL) {
     k_mutex_lock(&ext_flash_mutex, K_FOREVER);
-    ret = flash_read(ext_flash_dev, offset, data, len);
+    ret = flash_read(ext_flash_dev, (off_t)offset, data, len);
     k_mutex_unlock(&ext_flash_mutex);
   }
   EXT_FLASH_POWER_OFF(gs);

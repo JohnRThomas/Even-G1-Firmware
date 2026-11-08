@@ -58,8 +58,8 @@ DECLARE_FAKE_VOID_FUNC(request_not_disturb_bitmap, uint8_t);
 DECLARE_FAKE_VOID_FUNC(show_not_disturb_bitmap, uint8_t);
 DECLARE_FAKE_VALUE_FUNC(int, onboarding_ble_process, struct GlassesState *,
       const struct ble_req_hdr *, const uint8_t *, uint8_t *);
-DECLARE_FAKE_VALUE_FUNC(int, _reflash_fb_data_to_lcd, uint32_t, uint32_t, int, int, int, int);
-DECLARE_FAKE_VALUE_FUNC(int, _reflash_fb_data_to_lcd_ex, uint32_t, uint32_t, int, int, int, int,
+DECLARE_FAKE_VALUE_FUNC(int, reflash_fb_data_to_lcd, uint32_t, uint32_t, int, int, int, int);
+DECLARE_FAKE_VALUE_FUNC(int, reflash_fb_data_to_lcd_ex, uint32_t, uint32_t, int, int, int, int,
       int);
 DECLARE_FAKE_VOID_FUNC(jbd_clear_cache_sync, uint8_t);
 

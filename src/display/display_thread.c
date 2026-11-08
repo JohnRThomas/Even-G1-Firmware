@@ -4,8 +4,13 @@
  * keeps track of the running UI application (screen id) and calls the
  * matching ui_*_task() handler.
  */
+#include <glasses_state.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 
 #include "../dashboard/dashboard.h"
 #include "../gui/gui.h"
@@ -153,6 +158,8 @@ void display_thread_restore_priority(void) {
 }
 
 static void display_timer_expiry(struct k_timer *timer) {
+  ARG_UNUSED(timer);
+
   display_reflash(NULL, 0);
 }
 

@@ -2,7 +2,10 @@
  * Production-test transport selection: forwards reads/writes to the NFC
  * mailbox (ST25DV) or the lpuart.
  */
+#include <stddef.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 #include "../nfc/st25dv.h"
 #include "production_test.h"

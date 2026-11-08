@@ -15,6 +15,7 @@
  *   - invSqrt uses a pointer cast instead of the union.
  */
 #include <math.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 
 #include "ahrs.h"
@@ -39,9 +40,9 @@ void Mahony_init(struct ahrs *a) {
 float Mahony_invSqrt(float x) {
   float halfx = 0.5f * x;
   float y = x;
-  int32_t i = *(int32_t *)&y;
+  uint32_t i = *(uint32_t *)&y;
 
-  i = 0x5f3759df - (i >> 1);
+  i = 0x5f3759dfU - (i >> 1U);
   y = *(float *)&i;
   y = y * (1.5f - (halfx * y * y));
   y = y * (1.5f - (halfx * y * y));

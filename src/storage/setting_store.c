@@ -4,8 +4,11 @@
  * written by the flash ops thread (SettingStoreHandler).
  */
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "storage.h"
+#include <stdint.h>
 #include <string.h>
+#include <zephyr/device.h>
 #include <zephyr/kernel.h>
 
 #define SETTING_FLASH_ADDR  0x13e000
@@ -35,7 +38,7 @@ int clearSettingStorageQueue(void) {
   int ret = 0;
   int n;
 
-  for (n = k_msgq_num_used_get(&setting_msgq); n > 0; n--) {
+  for (n = (int)k_msgq_num_used_get(&setting_msgq); n > 0; n--) {
     ret = k_msgq_get(&setting_msgq, &msg, K_NO_WAIT);
   }
   return ret;
@@ -185,7 +188,7 @@ uint8_t get_dashboard_startup_mode(void) {
 }
 
 int getSettingStorageQueueNum(void) {
-  return k_msgq_num_used_get(&setting_msgq);
+  return (int)k_msgq_num_used_get(&setting_msgq);
 }
 
 static int getSettingStorageQueueCacheData(struct setting_msg *msg) {

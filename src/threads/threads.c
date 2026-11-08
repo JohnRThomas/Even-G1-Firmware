@@ -20,17 +20,24 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../ui/ui.h"
-#include "../utils/common_utils.h"
+#include "g1_date.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include <nrfx.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/hci_types.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/sys/util_macro.h>
 #include <zephyr/toolchain.h>
 
 #define CHARGER_DEV DEVICE_DT_GET(DT_NODELABEL(pmic_charger))
@@ -38,9 +45,9 @@ uint8_t deferred_text_ack_cmd;   /* 0x0d / 0x0f / 0x4e whose last-packet ack wai
 uint8_t deferred_text_ack_total;
 uint8_t deferred_text_ack_idx;
 uint8_t push_msg_syncing;
-uint8_t display_suspend_received;
+static uint8_t display_suspend_received;
 uint8_t screen_switch_busy;                         /* also used by imu_fusion_thread */
-uint8_t long_press_active;
+static uint8_t long_press_active;
 uint8_t can_enter_low_power;
 static uint8_t is_wearing;                    /* wear detection state (check_work_mode) */
 static uint8_t wear_cnt;
@@ -89,14 +96,14 @@ static uint8_t last_battery = 0xff;
 static uint8_t last_charging = 0xff;
 static uint8_t last_brightness = 0xff;
 
-K_THREAD_STACK_DEFINE(low_speed_stack, 0xc00);
-K_THREAD_STACK_DEFINE(display_dispatch_stack, 0x800);
-K_THREAD_STACK_DEFINE(ble_msg_dispatch_stack, 0x800);
-K_THREAD_STACK_DEFINE(slave_display_stack, 0x600);
-K_THREAD_STACK_DEFINE(touch_key_stack, 0x400);
-K_THREAD_STACK_DEFINE(key_event_stack, 0x400);
-K_THREAD_STACK_DEFINE(msg_sync_stack, 0x400);
-K_THREAD_STACK_DEFINE(nfc_stack, 0xc00);
+static K_THREAD_STACK_DEFINE(low_speed_stack, 0xc00);
+static K_THREAD_STACK_DEFINE(display_dispatch_stack, 0x800);
+static K_THREAD_STACK_DEFINE(ble_msg_dispatch_stack, 0x800);
+static K_THREAD_STACK_DEFINE(slave_display_stack, 0x600);
+static K_THREAD_STACK_DEFINE(touch_key_stack, 0x400);
+static K_THREAD_STACK_DEFINE(key_event_stack, 0x400);
+static K_THREAD_STACK_DEFINE(msg_sync_stack, 0x400);
+static K_THREAD_STACK_DEFINE(nfc_stack, 0xc00);
 
 static struct k_thread low_speed_thread_data;
 static struct k_thread display_dispatch_thread_data;
@@ -110,9 +117,8 @@ static int64_t nfc_deadline;
 static uint64_t last_activity_ms;             /* set by update_activity_time, 5 min low-power window */
 
 static void check_not_disturb_sync(void) {
-  if (get_dashboard_state()->is_master == 1 && get_dashboard_state()->bitmap_info->sync_pending && is_idle()) {
-    sync_not_disturb_bitmap(get_dashboard_state()->bitmap_info->mode);
-  } else if (get_dashboard_state()->is_master == 2 && get_dashboard_state()->bitmap_info->sync_pending) {
+  if ((get_dashboard_state()->is_master == 1 && get_dashboard_state()->bitmap_info->sync_pending && is_idle()) ||
+      (get_dashboard_state()->is_master == 2 && get_dashboard_state()->bitmap_info->sync_pending)) {
     sync_not_disturb_bitmap(get_dashboard_state()->bitmap_info->mode);
   }
 }
@@ -208,6 +214,8 @@ static void unlock_screen_payload_mutex(void) {
 }
 
 static void ble_msg_dispatch_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
 
   G1_LOG_WRN("enter\n");
@@ -232,6 +240,8 @@ static void ble_msg_dispatch_thread(void *p1, void *p2, void *p3) {
 }
 
 static void low_speed_peripheral_dispatch_thread_for_test(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   int dfu_count = 0;
 
@@ -495,31 +505,28 @@ static void check_disp_onboarding(int force) {
     if (get_dashboard_state()->is_master == 1) {
       onboarding_deactivate();
     }
-  } else {
-    if (is_wearing && get_dashboard_state()->task_status->task == 0 && get_dashboard_state()->dashboard_mode == 0 &&
-        get_dashboard_state()->is_master == 1) {
-      if (!is_ble_device_bound() || get_dashboard_state()->onboarding->in_progress) {
-        if (!is_ble_device_bound()) {
-          G1_LOG_WRN("ble device unbound,prepare to show binding tip\n");
-          get_dashboard_state()->onboarding->action = 0;
-        }
-        get_dashboard_state()->onboarding->sub_step = 0;
-        onboarding_shown_sub_step = get_dashboard_state()->onboarding->sub_step;
-        data[0] = get_dashboard_state()->onboarding->action;
-        data[1] = onboarding_shown_sub_step;
-        data[2] = 1;
-        if (onboarding_sync_data(data, 3) == 0) {
-          G1_LOG_ERR("ready to show onboarding...\n");
-          onboarding_request_redraw();
-          get_dashboard_state()->onboarding->active = 1;
-          update_persist_task_status(get_dashboard_state(), 0xe, 2);
-          get_dashboard_state()->onboarding->saved_brightness = get_dashboard_state()->panel.panel_brightness_level;
-          get_dashboard_state()->panel.panel_brightness_level = 42;
-          ts = k_uptime_get();
-          get_dashboard_state()->onboarding->ts = ts;
-          get_dashboard_state()->esb_down_id = get_dashboard_state()->onboarding->sub_step;
-        }
-      }
+  } else if (is_wearing && get_dashboard_state()->task_status->task == 0 &&
+             get_dashboard_state()->dashboard_mode == 0 && get_dashboard_state()->is_master == 1 &&
+             (!is_ble_device_bound() || get_dashboard_state()->onboarding->in_progress)) {
+    if (!is_ble_device_bound()) {
+      G1_LOG_WRN("ble device unbound,prepare to show binding tip\n");
+      get_dashboard_state()->onboarding->action = 0;
+    }
+    get_dashboard_state()->onboarding->sub_step = 0;
+    onboarding_shown_sub_step = get_dashboard_state()->onboarding->sub_step;
+    data[0] = get_dashboard_state()->onboarding->action;
+    data[1] = onboarding_shown_sub_step;
+    data[2] = 1;
+    if (onboarding_sync_data(data, 3) == 0) {
+      G1_LOG_ERR("ready to show onboarding...\n");
+      onboarding_request_redraw();
+      get_dashboard_state()->onboarding->active = 1;
+      update_persist_task_status(get_dashboard_state(), 0xe, 2);
+      get_dashboard_state()->onboarding->saved_brightness = get_dashboard_state()->panel.panel_brightness_level;
+      get_dashboard_state()->panel.panel_brightness_level = 42;
+      ts = k_uptime_get();
+      get_dashboard_state()->onboarding->ts = ts;
+      get_dashboard_state()->esb_down_id = get_dashboard_state()->onboarding->sub_step;
     }
   }
 }
@@ -610,14 +617,14 @@ uint8_t get_glasses_ble_status(void) {
 
   if (ble_conn_hold_count == 15 && connected) {
     if (get_dashboard_state()->is_master == 1) {
-      if (s2->esb_pkt.flags & 1) {
-        s1->sync_flags |= 3;
+      if (s2->esb_pkt.flags & 1U) {
+        s1->sync_flags |= 3U;
       }
     } else {
-      s2->esb_pkt.flags |= 1;
+      s2->esb_pkt.flags |= 1U;
     }
   }
-  return (s1->sync_flags & 3) == 3;
+  return (s1->sync_flags & 3U) == 3;
 }
 
 const struct device *get_charger_device(void) {
@@ -891,7 +898,7 @@ unsigned int sync_to_master(struct GlassesState *state, int cmd, void *data, siz
   }
   esb_tx_busy = 1;
   state->esb_pkt.seq++;
-  state->esb_pkt.cmd = (cmd & 0x3f) | 0x80;
+  state->esb_pkt.cmd = ((uint32_t)cmd & 0x3fU) | 0x80U;
   state->esb_pkt.ver.major = ver->major;
   state->esb_pkt.ver.minor = ver->minor;
   state->esb_pkt.ver.patch = ver->patch;
@@ -970,6 +977,8 @@ static void sync_push_message(void) {
           push_msg_syncing = 0;
         }
         break;
+      default:
+        break;
     }
   } else if (!msg_busy) {
     switch (item->sync_state) {
@@ -986,6 +995,8 @@ static void sync_push_message(void) {
         } else {
           sync_to_master(get_dashboard_state(), 13, (uint8_t *)item + NOTIF_MSG_HALF, NOTIF_MSG_HALF);
         }
+        break;
+      default:
         break;
     }
   }
@@ -1112,6 +1123,8 @@ void exit_temp_task(struct GlassesState *state, int flag) {
 }
 
 static void slave_display_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
 
   state->panel_on = 1;
@@ -1194,10 +1207,9 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
           state->imu.mode = 2;
         }
         change_work_mode(2);
-        if (state->dashboard_mode != 9 || state->dashboard_mode != 10 || state->dashboard_mode != 11 ||
-            state->dashboard_mode != 16 || state->dashboard_mode != 20) {
-          k_sem_give(&state->sem_2);
-        }
+        /* the vendor guards this with "mode != 9 || mode != 10 || mode != 11 || mode != 16 || mode != 20",
+         * which is always true */
+        k_sem_give(&state->sem_2);
         screen_switch_busy = 0;
         break;
       case 3:
@@ -1240,36 +1252,36 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             break;
           case 2: {
             uint8_t v = state->sync_data[1];
-            uint8_t key = v & 0xf;
+            uint8_t key = v & 0xfU;
             uint8_t idx;
 
             if (key == 1 && state->dashboard_mode == 6) {
-              setNotesIndex(v >> 4);
+              setNotesIndex(v >> 4U);
               display_inputEvent(0, 1);
               k_yield();
             } else if (key == 2) {
-              setNotesIndex(v >> 4);
+              setNotesIndex(v >> 4U);
             } else if (key == 3 && state->dashboard_mode == 6) {
-              setStocksIndex(v >> 4);
+              setStocksIndex(v >> 4U);
               display_inputEvent(0, 1);
               k_yield();
             } else if (key == 4) {
-              setStocksIndex(v >> 4);
+              setStocksIndex(v >> 4U);
             } else if (key == 5 && state->dashboard_mode == 6) {
-              setNewsIndex(v >> 4);
+              setNewsIndex(v >> 4U);
               display_inputEvent(0, 1);
               k_yield();
             } else if (key == 6) {
-              setNewsIndex(v >> 4);
+              setNewsIndex(v >> 4U);
             } else if (key == 7 && state->dashboard_mode == 6) {
-              idx = v >> 4;
+              idx = v >> 4U;
               setCalenadrIndex(idx);
               display_inputEvent(0, 1);
               k_yield();
               G1_LOG_ERR("received master send touch si gle click command,timestamp = %d,exec key function %d\n",
                          get_date(), idx);
             } else if (key == 8) {
-              idx = v >> 4;
+              idx = v >> 4U;
               setCalenadrIndex(idx);
               G1_LOG_ERR("received master send calendar index sync commmand ,timestamp = %d,exec index update %d\n",
                          get_date(), idx);
@@ -1393,6 +1405,8 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             }
             k_sem_give(&state->sem_2);
             break;
+          default:
+            break;
         }
         break;
       case 4:
@@ -1441,14 +1455,20 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             k_sem_give(&get_dashboard_state()->sem_2);
             set_cur_message_state();
             break;
+          default:
+            break;
         }
         k_sem_give(&state->sem_2);
+        break;
+      default:
         break;
     }
   }
 }
 
 static void msg_sync_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   uint8_t data[4];
   int64_t now;
@@ -1502,6 +1522,8 @@ static void msg_sync_thread(void *p1, void *p2, void *p3) {
             get_dashboard_state()->dash_buf->type = 0x10;
           }
           break;
+        default:
+          break;
       }
       if (get_dashboard_state()->evenai_buf->sub == 6 && get_dashboard_state()->evenai_buf->action_status < 3) {
         data[0] = 0xe;
@@ -1534,6 +1556,8 @@ static void msg_sync_thread(void *p1, void *p2, void *p3) {
           break;
         case 5:
           sync_to_master(get_dashboard_state(), 0x10, NULL, 0);
+          break;
+        default:
           break;
       }
       if (get_dashboard_state()->evenai_buf->sub == 6) {
@@ -1595,6 +1619,8 @@ void enter_silent_mode(void) {
 }
 
 static void product_test_touch_key_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   uint32_t press_t = 0;
   uint32_t release_t = 0;
@@ -1650,7 +1676,7 @@ static void product_test_touch_key_thread(void *p1, void *p2, void *p3) {
       continue;
     }
     if (get_aging_mode() != 1) {
-      dur = release_t - press_t;
+      dur = (int)(release_t - press_t);
       if (dur > 150000) {
         printk("#############################long press################################\n");
         aw9320x_diff_get(&state->aw_diff);
@@ -1683,6 +1709,8 @@ static void product_test_touch_key_thread(void *p1, void *p2, void *p3) {
           case 10:
             reset_all_usr_data(state, 1);
             break;
+          default:
+            break;
         }
       }
     } else if (get_aging_phase() == 2 && get_dashboard_state()->aging_touch_count < 0xfa) {
@@ -1694,6 +1722,8 @@ static void product_test_touch_key_thread(void *p1, void *p2, void *p3) {
 }
 
 static void display_dispatch_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   int last_attitude = 1;
   int bright_cnt = 0;
@@ -1881,14 +1911,14 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           if (dst->screen_status == 5 || dst->screen_status == 6) {
             if (state->is_master == 2 && state->esb_up_id != state->esb_up_seq &&
                 state->esb_up_snapshot[ESB_SNAPSHOT_SEQ] == state->esb_up_seq) {
-              data = (uint8_t *)state->esb_up_snapshot;
+              data = state->esb_up_snapshot;
             } else {
               data = (uint8_t *)dst;
             }
           } else if (src->screen_status == 5 || src->screen_status == 6) {
             if (state->is_master == 2 && state->esb_down_id != state->esb_down_seq &&
                 state->esb_down_snapshot[ESB_SNAPSHOT_SEQ] == state->esb_down_seq) {
-              data = (uint8_t *)state->esb_down_snapshot;
+              data = state->esb_down_snapshot;
             } else {
               data = (uint8_t *)src;
             }
@@ -1903,7 +1933,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
             if (show_dst) {
               if (state->is_master == 2 && state->esb_up_id != state->esb_up_seq &&
                   state->esb_up_snapshot[ESB_SNAPSHOT_SEQ] == state->esb_up_seq) {
-                data = (uint8_t *)state->esb_up_snapshot;
+                data = state->esb_up_snapshot;
               } else {
                 data = (uint8_t *)dst;
               }
@@ -1913,7 +1943,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
               }
               if (state->is_master == 2 && state->esb_down_id != state->esb_down_seq &&
                   state->esb_down_snapshot[ESB_SNAPSHOT_SEQ] == state->esb_down_seq) {
-                data = (uint8_t *)state->esb_down_snapshot;
+                data = state->esb_down_snapshot;
               } else {
                 data = (uint8_t *)src;
               }
@@ -1950,7 +1980,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           }
           if (state->is_master == 2 && state->esb_up_id != state->esb_up_seq &&
               state->esb_up_seq == state->esb_up_snapshot[ESB_SNAPSHOT_SEQ]) {
-            data = (uint8_t *)state->esb_up_snapshot;
+            data = state->esb_up_snapshot;
             blk->seq = state->esb_up_snapshot[ESB_SNAPSHOT_SEQ];
           } else {
             state->dash_buf->seq = get_dashboard_state()->esb_up_id;
@@ -1968,7 +1998,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           break;
         case 17:
           len = HORIZ_PITCH_CFG_SIZE;
-          data = (uint8_t *)state->horiz_pitch_cfg;
+          data = state->horiz_pitch_cfg;
           break;
         case 18:
           len = sizeof(struct prompt_info);
@@ -1992,6 +2022,8 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           state->sync_data[1] = date_cnt;
           break;
         }
+        default:
+          break;
       }
       if (refresh && data) {
         if (memcmp(state->ui.buf, data, len) == 0 && !changed && state->dashboard_mode == last_ui_screen_id) {
@@ -2069,6 +2101,8 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
         case 0x4e:
           report_event_to_phone(0xf2);
           break;
+        default:
+          break;
       }
       deferred_text_ack_cmd = 0;
     }
@@ -2085,6 +2119,8 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
 static void trigger_key_event(void);
 
 static void key_event_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   uint8_t data[2];
   uint8_t mode;
@@ -2145,17 +2181,17 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
               data[0] = 2;
               data[1] = 1;
               if (mode == 0) {
-                data[1] |= getNotesIndex() << 4;
+                data[1] |= (uint8_t)(getNotesIndex() << 4U);
               } else if (mode == 1) {
                 data[1] = 3;
-                data[1] |= getStocksIndex() << 4;
+                data[1] |= (uint8_t)(getStocksIndex() << 4U);
               } else if (mode == 2) {
                 data[1] = 5;
-                data[1] |= getNewsIndex() << 4;
+                data[1] |= (uint8_t)(getNewsIndex() << 4U);
               } else if (mode == 3) {
                 data[1] = 7;
                 G1_LOG_ERR("master send calendar key single click ,timestamp = %d\n", state->dashboard_ts->ts);
-                data[1] |= getCalenadrIndex() << 4;
+                data[1] |= (uint8_t)(getCalenadrIndex() << 4U);
               }
               if (sync_to_slave(state, 6, data, 2) >= 5000) {
                 G1_LOG_WRN("SYNC TO Slave failed...,don't exec key function.\n");
@@ -2164,10 +2200,10 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
                 k_yield();
               }
             }
-          } else if (state->is_master == 2 && count_messages()) {
-            if ((state->dashboard_mode == 6 && get_dashboard_state()->imu.mode == 2) || state->dashboard_mode == 4) {
-              while (send_msg_key_to_master() < 0) {
-              }
+          } else if (state->is_master == 2 && count_messages() &&
+                     ((state->dashboard_mode == 6 && get_dashboard_state()->imu.mode == 2) ||
+                      state->dashboard_mode == 4)) {
+            while (send_msg_key_to_master() < 0) {
             }
           }
           break;
@@ -2415,6 +2451,8 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
 }
 
 static void touch_key_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   uint32_t now, t1;
   int press_t = 0;
@@ -2453,10 +2491,10 @@ static void touch_key_thread(void *p1, void *p2, void *p3) {
         }
         clicks++;
         aw9320x_wearing = UNKNOWN;
-        press_t = now;
+        press_t = (int)now;
         break;
       case OUT_EAR:
-        release_t = sys_clock_tick_get_32();
+        release_t = (int)sys_clock_tick_get_32();
         aw9320x_wearing = UNKNOWN;
         lp_timeout_handled = 0;
         break;
@@ -2464,14 +2502,14 @@ static void touch_key_thread(void *p1, void *p2, void *p3) {
         break;
     }
     t1 = sys_clock_tick_get_32();
-    since_release = sys_clock_tick_get_32() - release_t;
+    since_release = (int)(sys_clock_tick_get_32() - release_t);
     press_dur = release_t - press_t;
     if (clicks == 0) {
       continue;
     }
     if (clicks == 1 && release_t == 0) {
       /* first press still held: check for a long press */
-      hold = t1 - press_t;
+      hold = (int)(t1 - press_t);
       if (!long_press) {
         aw9320x_diff_get(&state->aw_diff);
         if (state->aw_diff > -20000 && state->aw_diff < 20000) {
@@ -2576,6 +2614,9 @@ static bool nfc_timeout(uint32_t ms) {
 }
 
 static void nfc_related(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p1);
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   uint8_t it_status;
   int retry = 0;
 
@@ -2621,12 +2662,10 @@ static void nfc_related(void *p1, void *p2, void *p3) {
             }
             set_box_status(BOX_IN_BOX, 1);
             retry = 0;
-          } else if (!can_enter_low_power && get_dashboard_state()->work_mode != 8) {
-            if (nfc_timeout(3000)) {
-              set_box_status(BOX_IN_BOX, 0);
-              set_box_status(BOX_LID_CLOSED, 0);
-              can_enter_low_power = 0;
-            }
+          } else if (!can_enter_low_power && get_dashboard_state()->work_mode != 8 && nfc_timeout(3000)) {
+            set_box_status(BOX_IN_BOX, 0);
+            set_box_status(BOX_LID_CLOSED, 0);
+            can_enter_low_power = 0;
           }
         } while (again);
       }
@@ -2663,6 +2702,8 @@ void update_activity_time(void) {
 }
 
 static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   struct bt_conn *conn;
   int8_t sec_retry = 0;
@@ -2717,12 +2758,12 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3) {
       if (state->is_master == 1) {
         runtime_info_sync(state);
         if (connected && (state->esb_pkt.flags & BIT(0))) {
-          state->sync_flags |= 3;
+          state->sync_flags |= 3U;
           ble_conn_hold_count = 15;
         } else if (ble_conn_hold_count) {
           ble_conn_hold_count--;
         } else {
-          state->sync_flags &= ~3;
+          state->sync_flags &= ~3U;
         }
         if (sync_to_slave(state, 0xc, NULL, 0) < 500 && (state->sync_flags & BIT(2))) {
           clear_all_messages();
@@ -2737,7 +2778,7 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3) {
         } else {
           state->esb_pkt.flags &= ~BIT(0);
         }
-        if ((state->sync_flags ^ state->esb_pkt.flags) & BIT(0)) {
+        if ((uint8_t)(state->sync_flags ^ state->esb_pkt.flags) & BIT(0)) {
           state->esb_pkt.data[0]++;
         }
         if (sync_to_master(state, 1, NULL, 0) < 500 && (state->esb_pkt.flags & BIT(2))) {

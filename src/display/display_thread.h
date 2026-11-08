@@ -49,6 +49,7 @@ struct disp_state {
 };
 
 /* display_thread.c */
+extern struct k_msgq display_msgq;
 extern int last_ui_screen_id;      /* screen id of the last ui_task_handler() call */
 int set_display_wait_ms(int ms);
 int ui_task_handler(struct GlassesState *gs, int screen_id, void *ctx, int event);

@@ -5,6 +5,8 @@
  * ESB event bookkeeping/statistics and the main supervision loop.
  */
 #include <esb.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/drivers/timer/nrf_rtc_timer.h>
@@ -31,9 +33,9 @@ static uint32_t esb_rx_cnt;
 static size_t tx_len;
 static struct k_msgq esb_msgq;
 
-int64_t now_ticks;                      /* signed: matches k_uptime_ticks() */
+static int64_t now_ticks;                      /* signed: matches k_uptime_ticks() */
 static uint64_t now_ms;
-uint64_t esb_rx_ms;
+static uint64_t esb_rx_ms;
 static uint64_t last_report_ms;
 
 uint8_t esb_evt_active;
@@ -100,7 +102,7 @@ static int hwid_received(struct net_ctx *ctx, const uint8_t *data, size_t len) {
 }
 
 /* Sends the ESB statistics to the application core; returns 1 if the report was sent. */
-int send_esb_stats(void) {
+static int send_esb_stats(void) {
   uint8_t buf[32] = {0};
   uint8_t retry = 10;
   int sent = 0;
@@ -204,14 +206,12 @@ static void app_esb_event_handler(struct app_esb_evt *evt) {
         break;
       }
       if (net_ctx->role == 2) {
-        if (esb_tx_kind == 1 && esb_tx_state == 2) {
-          if (++rx_repeat > 1) {
-            rx_repeat = 0;
-            esb_tx_state = 0;
-            esb_tx_kind = 0;
-            esb_tx_done = 2;
-            esb_thread_wake();
-          }
+        if (esb_tx_kind == 1 && esb_tx_state == 2 && ++rx_repeat > 1) {
+          rx_repeat = 0;
+          esb_tx_state = 0;
+          esb_tx_kind = 0;
+          esb_tx_done = 2;
+          esb_thread_wake();
         }
       } else if (esb_tx_kind != 0) {
         if (esb_tx_kind == 2) {
@@ -457,12 +457,11 @@ int main(void) {
       if (now_ms - last_report_ms >= 10000) {
         last_report_ms = now_ms;
         send_esb_stats();
-      } else if (((esb_rssi <= 39 && last_rssi > 50) || (esb_rssi > 50 && last_rssi <= 39)) && cnt > 2) {
-        if (send_esb_stats()) {
-          last_report_ms = now_ms;
-          last_rssi = esb_rssi;
-          cnt = 0;
-        }
+      } else if (((esb_rssi <= 39 && last_rssi > 50) || (esb_rssi > 50 && last_rssi <= 39)) && cnt > 2 &&
+                 send_esb_stats()) {
+        last_report_ms = now_ms;
+        last_rssi = esb_rssi;
+        cnt = 0;
       }
     }
     k_msleep(1000);

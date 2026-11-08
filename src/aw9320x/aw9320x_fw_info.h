@@ -1,5 +1,5 @@
-#ifndef _AW9320X_FW_INFO_H_
-#define _AW9320X_FW_INFO_H_
+#ifndef AW9320X_FW_INFO_H_
+#define AW9320X_FW_INFO_H_
 
 /* AW9320x firmware image */
 static const unsigned char fw_para_data[] = {

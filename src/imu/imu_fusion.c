@@ -4,15 +4,22 @@
  * bow-head gesture detection, motion/still detection).
  */
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include <g1_log.h>
 
+#include "../ahrs/ahrs.h"
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
 #include "../main.h"
@@ -20,12 +27,13 @@
 #include "../production_test/production_test.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "glasses_state.h"
 #include "imu_fusion.h"
 
 #define IMU_FUSION_STACK_SIZE 0x700
 #define IMU_FUSION_PRIORITY   (-11)
 
-K_THREAD_STACK_DEFINE(imu_fusion_stack, IMU_FUSION_STACK_SIZE);
+static K_THREAD_STACK_DEFINE(imu_fusion_stack, IMU_FUSION_STACK_SIZE);
 static struct k_thread imu_fusion_thread_data;
 
 static void imu_fusion_thread(void *p1, void *p2, void *p3);
@@ -71,19 +79,18 @@ struct imu_lookup_msg {
   uint8_t status;
 };
 
-void send_dashboard_lock_info(void) {
-  if (atomic_test_bit(&dashboard_lock_requested, 1) && !atomic_test_bit(&dashboard_head_up_opened, 1)) {
-    if (!atomic_test_bit(&dashboard_lock_reported, 1) && atomic_test_bit(&dashboard_lock_requested, 1)) {
-      struct imu_lookup_msg msg = {.cmd = 0x0650, .action = 1, .status = 1};
+static void send_dashboard_lock_info(void) {
+  if (atomic_test_bit(&dashboard_lock_requested, 1) && !atomic_test_bit(&dashboard_head_up_opened, 1) &&
+      !atomic_test_bit(&dashboard_lock_reported, 1) && atomic_test_bit(&dashboard_lock_requested, 1)) {
+    struct imu_lookup_msg msg = {.cmd = 0x0650, .action = 1, .status = 1};
 
-      send_response_data_to_msgqueue(&msg, sizeof(msg));
-      send_response_data_to_ble();
-      atomic_set_bit(&dashboard_lock_reported, 1);
-    }
+    send_response_data_to_msgqueue(&msg, sizeof(msg));
+    send_response_data_to_ble();
+    atomic_set_bit(&dashboard_lock_reported, 1);
   }
 }
 
-int update_head_up_thresholds(struct imu_ctx *c) {
+static int update_head_up_thresholds(struct imu_ctx *c) {
   int offset;
   int scaled;
   int t;
@@ -163,6 +170,8 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode) {
       c->odr.val1 = 0;
       c->odr.val2 = 0;
       break;
+    default:
+      break;
   }
 
   for (retry = 1;;) {
@@ -204,10 +213,12 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode) {
 }
 
 static int imu_fusion_deinit(struct imu_ctx *c) {
+  ARG_UNUSED(c);
   return 0;
 }
 
 static int imu_fusion_get(struct imu_ctx *c) {
+  ARG_UNUSED(c);
   return 0;
 }
 
@@ -328,18 +339,17 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
           }
           if (!get_dashboard_startup_mode()) {
             if (atomic_test_bit(&dashboard_lock_requested, 1)) {
-              if (!atomic_test_bit(&dashboard_head_up_opened, 1)) {
-                if (!atomic_test_bit(&dashboard_lock_reported, 1) && atomic_test_bit(&dashboard_lock_requested, 1)) {
-                  struct imu_lookup_msg msg = {
-                    .cmd = 0x0650,
-                    .action = 1,
-                    .status = 1,
-                  };
+              if (!atomic_test_bit(&dashboard_head_up_opened, 1) && !atomic_test_bit(&dashboard_lock_reported, 1) &&
+                  atomic_test_bit(&dashboard_lock_requested, 1)) {
+                struct imu_lookup_msg msg = {
+                  .cmd = 0x0650,
+                  .action = 1,
+                  .status = 1,
+                };
 
-                  send_response_data_to_msgqueue(&msg, sizeof(msg));
-                  send_response_data_to_ble();
-                  atomic_set_bit(&dashboard_lock_reported, 1);
-                }
+                send_response_data_to_msgqueue(&msg, sizeof(msg));
+                send_response_data_to_ble();
+                atomic_set_bit(&dashboard_lock_reported, 1);
               }
             } else {
               c->mode = 2;
@@ -466,6 +476,8 @@ static void imu_motion_detect(float *angles) {
       memset(imu_motion.sign, 0, sizeof(imu_motion.sign));
       imu_motion.state = 0;
       break;
+    default:
+      break;
   }
 
   memcpy(imu_motion.prev, angles, 3 * sizeof(float));
@@ -481,6 +493,8 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
   uint32_t now;
   int yaw, pitch, roll;
 
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   memset(accel, 0, sizeof(accel));
   memset(gyro, 0, sizeof(gyro));
 
@@ -535,20 +549,20 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
     sensor_channel_get(c->dev, SENSOR_CHAN_ACCEL_XYZ, accel);
     sensor_channel_get(c->dev, SENSOR_CHAN_GYRO_XYZ, gyro);
 
-    ax = sensor_value_to_double(&accel[0]) * 10;
-    ay = sensor_value_to_double(&accel[1]) * 10;
-    az = sensor_value_to_double(&accel[2]) * 10;
-    gx = sensor_value_to_double(&gyro[0]);
-    gy = sensor_value_to_double(&gyro[1]);
-    gz = sensor_value_to_double(&gyro[2]);
+    ax = (float)(sensor_value_to_double(&accel[0]) * 10);
+    ay = (float)(sensor_value_to_double(&accel[1]) * 10);
+    az = (float)(sensor_value_to_double(&accel[2]) * 10);
+    gx = (float)sensor_value_to_double(&gyro[0]);
+    gy = (float)sensor_value_to_double(&gyro[1]);
+    gz = (float)sensor_value_to_double(&gyro[2]);
 
-    gs->accel[0] = ax;
-    gs->accel[1] = ay;
-    gs->accel[2] = az;
+    gs->accel[0] = (int)ax;
+    gs->accel[1] = (int)ay;
+    gs->accel[2] = (int)az;
 
-    gx = gx - 0.0585;
-    gy = gy + 0.0325;
-    gz = gz - 0.01;
+    gx = (float)(gx - 0.0585);
+    gy = (float)(gy + 0.0325);
+    gz = (float)(gz - 0.01);
 
     dt = Mahony_deltatUpdate(&c->fusion);
     Mahony_updateIMU(gx, gy, gz, ax, ay, az, dt, &c->fusion);
@@ -556,9 +570,9 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
     angles[1] = Mahony_getPitch(&c->fusion);
     angles[2] = Mahony_getRoll(&c->fusion);
 
-    pitch = angles[1] * 100;
-    yaw = angles[0] * 100;
-    roll = angles[2] * 100;
+    pitch = (int)(angles[1] * 100);
+    yaw = (int)(angles[0] * 100);
+    roll = (int)(angles[2] * 100);
     imu_pitch_x100 = pitch;
     imu_yaw_x100 = yaw;
     imu_roll_x100 = roll;

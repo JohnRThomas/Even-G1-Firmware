@@ -1,6 +1,7 @@
 /*
  * JBD013VGA panel command API, derived from the JBD reference code.
  */
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>

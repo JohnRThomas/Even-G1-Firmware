@@ -4,8 +4,11 @@
  */
 #include "../dashboard/dashboard.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "storage.h"
+#include <stdint.h>
 #include <string.h>
+#include <zephyr/device.h>
 #include <zephyr/kernel.h>
 
 #define QUICKNOTE_FLASH_ADDR  0x403000
@@ -41,7 +44,7 @@ int clearQuickNoteQueue(void) {
   int ret = 0;
   int n;
 
-  for (n = k_msgq_num_used_get(&quicknote_msgq); n > 0; n--) {
+  for (n = (int)k_msgq_num_used_get(&quicknote_msgq); n > 0; n--) {
     ret = k_msgq_get(&quicknote_msgq, &msg, K_NO_WAIT);
   }
   return ret;
@@ -112,7 +115,7 @@ int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *
 }
 
 int getQuickNoteQueueNum(void) {
-  return k_msgq_num_used_get(&quicknote_msgq);
+  return (int)k_msgq_num_used_get(&quicknote_msgq);
 }
 
 static int getQuickNoteBKPQueueCacheData(struct quicknote_msg *msg) {
@@ -167,12 +170,12 @@ int QuickNoteStoreHandler(void) {
         memcpy(text, get_dashboard_state()->quicknote->notes[index].text, QUICKNOTE_TEXT_LEN);
       } else {
         changed = 0;
-        if (memcmp(title, get_dashboard_state()->quicknote->notes[index].title, QUICKNOTE_TITLE_LEN)) {
+        if (memcmp(title, get_dashboard_state()->quicknote->notes[index].title, QUICKNOTE_TITLE_LEN) != 0) {
           memset(title, 0, QUICKNOTE_TITLE_LEN);
           memcpy(title, get_dashboard_state()->quicknote->notes[index].title, QUICKNOTE_TITLE_LEN);
           changed = 1;
         }
-        if (memcmp(text, get_dashboard_state()->quicknote->notes[index].text, QUICKNOTE_TEXT_LEN)) {
+        if (memcmp(text, get_dashboard_state()->quicknote->notes[index].text, QUICKNOTE_TEXT_LEN) != 0) {
           memset(text, 0, QUICKNOTE_TEXT_LEN);
           memcpy(text, get_dashboard_state()->quicknote->notes[index].text, QUICKNOTE_TEXT_LEN);
           changed = 1;

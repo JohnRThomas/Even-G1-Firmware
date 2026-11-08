@@ -8,10 +8,14 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "storage.h"
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #define FILE_MSG_LEN    200
 #define FILE_MSGQ_DEPTH 30
@@ -36,10 +40,13 @@ static uint32_t crc32_table[256];
 static struct k_thread storage_commit_thread_data;
 
 static struct k_thread flash_ops_thread_data;
-K_THREAD_STACK_DEFINE(storage_commit_stack, 0x1400);
-K_THREAD_STACK_DEFINE(flash_ops_stack, 0x800);
+static K_THREAD_STACK_DEFINE(storage_commit_stack, 0x1400);
+static K_THREAD_STACK_DEFINE(flash_ops_stack, 0x800);
 
 static void flash_ops_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p1);
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   G1_LOG_INF("flash op thread startup ...\n");
   while (1) {
     k_sem_take(&flash_ops_sem, K_FOREVER);
@@ -107,10 +114,10 @@ void crc32_init(void) {
   for (i = 0; i < 256; i++) {
     c = i;
     for (j = 0; j < 8; j++) {
-      if (c & 1) {
-        c = (c >> 1) ^ 0xedb88320;
+      if (c & 1U) {
+        c = (c >> 1U) ^ 0xedb88320U;
       } else {
-        c >>= 1;
+        c >>= 1U;
       }
     }
     crc32_table[i] = c;
@@ -122,7 +129,7 @@ uint32_t crc32(uint32_t crc, const uint8_t *buf, int len) {
 
   crc = ~crc;
   while (buf != end) {
-    crc = crc32_table[(crc ^ *buf++) & 0xff] ^ (crc >> 8);
+    crc = crc32_table[(crc ^ *buf++) & 0xffU] ^ (crc >> 8U);
   }
   return ~crc;
 }
@@ -133,7 +140,9 @@ void try_to_save_file(struct GlassesState *gs) {
   uint8_t len;
   bool end = false;
 
-  dequeue_file(&msg);
+  if (dequeue_file(&msg) != 0) {
+    return;
+  }
   len = msg.len;
   if (len <= 20 && msg.data[0] == 0x0d && msg.data[1] == 0x0e) {
     /* end of file */
@@ -173,12 +182,14 @@ void try_to_save_file(struct GlassesState *gs) {
     file_buf_len -= 0x1000;
   } else if (end) {
     write_font(file_addr, file_buf, file_buf_len);
-    LAST_FILE_CRC = crc32(LAST_FILE_CRC, file_buf, file_buf_len);
+    LAST_FILE_CRC = crc32(LAST_FILE_CRC, file_buf, (int)file_buf_len);
     G1_LOG_ERR("crc cal end crc32_value %08X\n", LAST_FILE_CRC);
   }
 }
 
 static void storage_commit_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct GlassesState *gs = p1;
   bool saved;
   int force_sys = 0;

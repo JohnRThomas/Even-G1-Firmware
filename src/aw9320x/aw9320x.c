@@ -15,6 +15,12 @@
 
 #include "aw9320x.h"
 #include "aw9320x_fw_info.h"
+#include "aw9320x_reg.h"
+#include "aw_cap_config.h"
+#include "aw_type.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define AW9320X_I2C_NAME       "aw9320x_cap"
 #define AW9320X_DRIVER_VERSION "v1.11.0"
@@ -47,14 +53,14 @@ static int32_t i2c_read_seq(uint8_t *addr, uint8_t addr_len, uint8_t *r_data, ui
   return g_aw9320x_func->i2c_func.i2c_r(addr, addr_len, r_data, r_len);
 }
 
-static int8_t aw9320x_i2c_read(uint16_t reg_addr, uint32_t *reg_data) {
+static int32_t aw9320x_i2c_read(uint16_t reg_addr, uint32_t *reg_data) {
   uint8_t cnt = 0;
   int32_t status = 0;
   uint8_t addr_buf[2] = {0};
   uint8_t reg_val[4] = {0};
 
-  addr_buf[0] = (reg_addr >> OFFSET_BIT_8) & 0xff;
-  addr_buf[1] = reg_addr & 0xff;
+  addr_buf[0] = ((uint32_t)reg_addr >> OFFSET_BIT_8) & 0xffU;
+  addr_buf[1] = (uint32_t)reg_addr & 0xffU;
 
   while (cnt < AW9320X_I2C_RETRIES) {
     status = i2c_read_seq(addr_buf, AW_REG_ADDR_LEN, reg_val, AW_REG_DATA_LEN);
@@ -62,44 +68,42 @@ static int8_t aw9320x_i2c_read(uint16_t reg_addr, uint32_t *reg_data) {
       *reg_data = ((uint32_t)reg_val[0] << OFFSET_BIT_24) | ((uint32_t)reg_val[1] << OFFSET_BIT_16) |
                   ((uint32_t)reg_val[2] << OFFSET_BIT_8) | ((uint32_t)reg_val[3]);
       return AW_OK;
-    } else {
-      AWLOGE("error = %d, cnt = %d", status, cnt);
-      AW_DELAY(1);
-      cnt++;
     }
+    AWLOGE("error = %d, cnt = %d", status, cnt);
+    AW_DELAY(1);
+    cnt++;
   }
 
   return -AW_ERR;
 }
 
-static int8_t aw9320x_i2c_write(uint16_t reg_addr, uint32_t reg_data) {
+static int32_t aw9320x_i2c_write(uint16_t reg_addr, uint32_t reg_data) {
   uint8_t cnt = 0;
   int32_t status = 0;
   uint8_t tx_buf[AW_TX_BUF_LEN] = {0};
 
-  tx_buf[0] = (reg_addr >> OFFSET_BIT_8) & 0xff;
-  tx_buf[1] = reg_addr & 0xff;
-  tx_buf[2] = (reg_data >> OFFSET_BIT_24) & 0xff;
-  tx_buf[3] = (reg_data >> OFFSET_BIT_16) & 0xff;
-  tx_buf[4] = (reg_data >> OFFSET_BIT_8) & 0xff;
-  tx_buf[5] = reg_data & 0xff;
+  tx_buf[0] = ((uint32_t)reg_addr >> OFFSET_BIT_8) & 0xffU;
+  tx_buf[1] = (uint32_t)reg_addr & 0xffU;
+  tx_buf[2] = (reg_data >> OFFSET_BIT_24) & 0xffU;
+  tx_buf[3] = (reg_data >> OFFSET_BIT_16) & 0xffU;
+  tx_buf[4] = (reg_data >> OFFSET_BIT_8) & 0xffU;
+  tx_buf[5] = reg_data & 0xffU;
 
   while (cnt < AW9320X_I2C_RETRIES) {
     status = i2c_write_seq(tx_buf, AW_TX_BUF_LEN);
     if (status == AW_OK) {
       return AW_OK;
-    } else {
-      AWLOGE("error = %d, cnt = %d", status, cnt);
-      AW_DELAY(1);
-      cnt++;
     }
+    AWLOGE("error = %d, cnt = %d", status, cnt);
+    AW_DELAY(1);
+    cnt++;
   }
 
   return -AW_ERR;
 }
 
 static int32_t aw9320x_i2c_write_bits(uint16_t reg_addr16, uint32_t mask, uint32_t reg_data32) {
-  uint32_t reg_val;
+  uint32_t reg_val = 0;
 
   aw9320x_i2c_read(reg_addr16, &reg_val);
   reg_val &= mask;
@@ -139,9 +143,11 @@ enum AW9320X_OPERAION_MODE aw9320x_mode_operation_get(void) {
   AWLOGD("data = 0x%x", data);
   if (data == AW_GET_REG_ACTIVE_VAL) {
     return AW9320X_ACTIVE_MODE;
-  } else if (data == AW_GET_REG_SLEEP_VAL) {
+  }
+  if (data == AW_GET_REG_SLEEP_VAL) {
     return AW9320X_SLEEP_MODE;
-  } else if (data == AW_GET_REG_DEEPSLEEP_VAL) {
+  }
+  if (data == AW_GET_REG_DEEPSLEEP_VAL) {
     return AW9320X_DEEPSLEEP_MODE;
   }
 
@@ -150,6 +156,7 @@ enum AW9320X_OPERAION_MODE aw9320x_mode_operation_get(void) {
 
 void aw9320x_diff_get(int32_t *p_diff) {
   aw9320x_i2c_read(REG_DIFF_CH0, (uint32_t *)p_diff);
+  /* NOLINTNEXTLINE(bugprone-signed-bitwise): arithmetic shift, the difference is signed */
   *p_diff = *p_diff >> AW_REMOVE_DECIMAL_BITS;
 }
 
@@ -167,13 +174,9 @@ int32_t aw9320x_read_chipid(void) {
 
   switch (reg_val) {
     case AW93203CSR_CHIP_ID:
-      AWLOGD("AW93203CSR CHIP ID : 0x%x", reg_val);
-      break;
     case AW93205DNR_CHIP_ID:
-      AWLOGD("AW93205DNR CHIP ID : 0x%x", reg_val);
-      break;
     case AW93208CSR_CHIP_ID:
-      AWLOGD("AW93208CSR CHIP ID : 0x%x", reg_val);
+      AWLOGD("AW9320X CHIP ID : 0x%x", reg_val);
       break;
     default:
       AWLOGD("no chipid,need update root and frimware,CHIP ID : 0x%08x", reg_val);
@@ -241,9 +244,8 @@ static int32_t aw9320x_init_irq_handle(void) {
     if ((irq_stat & INIT_OVER_IRQ) == INIT_OVER_IRQ_OK) {
       AWLOGD("init over irq ok cnt: %d", cnt);
       return AW_OK;
-    } else {
-      AWLOGE("init over irq no ok cnt: %d", cnt);
     }
+    AWLOGE("init over irq no ok cnt: %d", cnt);
     AW_DELAY(1);
   } while (cnt--);
 
@@ -263,18 +265,16 @@ static int32_t aw9320x_en_active(void) {
   if (ret != AW_OK) {
     AWLOGE("write REG_CMD err");
     return -AW_ERR;
-  } else {
-    old_mode = AW9320X_ACTIVE_MODE;
-    AWLOGD("addr: 0x%x data: 0x%x", REG_CMD, 1);
   }
+  old_mode = AW9320X_ACTIVE_MODE;
+  AWLOGD("addr: 0x%x data: 0x%x", REG_CMD, 1);
 
   ret = aw9320x_i2c_write(REG_IRQEN, hostirqen);
   if (ret != AW_OK) {
     AWLOGD("addr: 0x%x data: 0x%x", REG_IRQEN, hostirqen);
     return -AW_ERR;
-  } else {
-    AWLOGD("addr: 0x%x data: 0x%x", REG_IRQEN, hostirqen);
   }
+  AWLOGD("addr: 0x%x data: 0x%x", REG_IRQEN, hostirqen);
 
   return AW_OK;
 }
@@ -479,8 +479,7 @@ static int32_t aw9320x_reg_read_val(uint32_t *read_data, uint16_t start_addr) {
   return AW_OK;
 }
 
-static int32_t aw9320x_rd_or_wi_cmp(struct aw_update_common *update_info, const uint8_t *w_bin_offset,
-                                    uint32_t update_data_len) {
+static int32_t aw9320x_rd_or_wi_cmp(struct aw_update_common *update_info, const uint8_t *w_bin_offset) {
   int32_t ret = 0;
   uint32_t i = 0;
   uint32_t r_data = 0;
@@ -652,7 +651,7 @@ int32_t aw9320x_flash_update(struct aw_update_common *update_info) {
   }
 
   // 4.read data check
-  ret = aw9320x_rd_or_wi_cmp(update_info, update_info->w_bin_offset, update_info->update_data_len);
+  ret = aw9320x_rd_or_wi_cmp(update_info, update_info->w_bin_offset);
   if (ret != AW_OK) {
     return -AW_ERR;
   }
@@ -712,7 +711,7 @@ int32_t aw9320x_update_fw_to_flash(void) {
 
 /*********************protocol update frimware start****************** *****/
 
-static uint32_t get_pack_checksum(uint8_t *data, uint16_t length, uint8_t module, uint8_t command) {
+static uint32_t get_pack_checksum(const uint8_t *data, uint16_t length, uint8_t module, uint8_t command) {
   uint32_t i = 0;
   uint32_t check_sum = 0;
 
@@ -748,10 +747,10 @@ static int32_t dri_to_soc_pack_send(uint8_t module, uint8_t command, uint16_t le
 
   // checksum
   checksum = get_pack_checksum(data, length, module, command);
-  prot_pack_w[6] = ((uint32_t)checksum & GET_BITS_31_25) >> OFFSET_BIT_24;
-  prot_pack_w[7] = ((uint32_t)checksum & GET_BITS_24_16) >> OFFSET_BIT_16;
-  prot_pack_w[8] = ((uint32_t)checksum & GET_BITS_15_8) >> OFFSET_BIT_8;
-  prot_pack_w[9] = (uint32_t)checksum & GET_BITS_7_0;
+  prot_pack_w[6] = (checksum & GET_BITS_31_25) >> OFFSET_BIT_24;
+  prot_pack_w[7] = (checksum & GET_BITS_24_16) >> OFFSET_BIT_16;
+  prot_pack_w[8] = (checksum & GET_BITS_15_8) >> OFFSET_BIT_8;
+  prot_pack_w[9] = checksum & GET_BITS_7_0;
 
   // module
   prot_pack_w[10] = module;
@@ -760,8 +759,8 @@ static int32_t dri_to_soc_pack_send(uint8_t module, uint8_t command, uint16_t le
   prot_pack_w[11] = command;
 
   // length
-  prot_pack_w[12] = ((uint16_t)length & 0xff00) >> OFFSET_BIT_8;
-  prot_pack_w[13] = (uint16_t)length & 0x00ff;
+  prot_pack_w[12] = (length & 0xff00U) >> OFFSET_BIT_8;
+  prot_pack_w[13] = length & 0x00ffU;
 
   // value
   if (length != 0 && data != NULL) {
@@ -890,7 +889,7 @@ static int32_t aw9320x_read_ack_irq(void) {
       AWLOGE("read REG_HOSTIRQSRC err");
       return -AW_ERR;
     }
-    if (((irq_stat >> 29) & 0x01) == 1) {
+    if (((irq_stat >> 29U) & 0x01U) == 1) {
       break;
     }
     AW_DELAY(1);
@@ -916,7 +915,7 @@ static int32_t aw9320x_read_init_comp_irq(void) {
       return -AW_ERR;
     }
 
-    if ((irq_stat & 0x01) == INIT_OVER_IRQ_OK) {
+    if ((irq_stat & 0x01U) == INIT_OVER_IRQ_OK) {
       break;
     }
 
@@ -1031,7 +1030,6 @@ static int32_t aw9320x_cycle_write_firmware(const uint8_t *fw_data, uint32_t fir
   uint32_t word_comp_len = 0;
   uint32_t cycle_cnt = 0;
   uint32_t cycle_cnt_last_len = 0;
-  uint32_t send_all_len = 0;
   uint8_t *firmware_info = NULL;
   uint16_t half_cache_len = AW_CACHE_LEN / 16; // max.4058
 
@@ -1042,10 +1040,9 @@ static int32_t aw9320x_cycle_write_firmware(const uint8_t *fw_data, uint32_t fir
 
   cycle_cnt = firmware_len / half_cache_len;
   cycle_cnt_last_len = firmware_len % half_cache_len;
-  send_all_len = firmware_len + value_head_len;
 
   AWLOGD("firmware_len=%dcycle_cnt=%d last_len =%dall_len=%d", firmware_len, cycle_cnt, cycle_cnt_last_len,
-         send_all_len);
+         firmware_len + value_head_len);
 
   for (i = 0; i < cycle_cnt; i++) {
     firmware_info = (uint8_t *)malloc(half_cache_len + value_head_len);
@@ -1058,11 +1055,11 @@ static int32_t aw9320x_cycle_write_firmware(const uint8_t *fw_data, uint32_t fir
     firmware_info[0] = (uint8_t)(seq >> OFFSET_BIT_24);
     firmware_info[1] = (uint8_t)(seq >> OFFSET_BIT_16);
     firmware_info[2] = (uint8_t)(seq >> OFFSET_BIT_8);
-    firmware_info[3] = (uint8_t)(seq);
+    firmware_info[3] = (uint8_t)seq;
     firmware_info[4] = (uint8_t)(flash_addr >> OFFSET_BIT_24);
     firmware_info[5] = (uint8_t)(flash_addr >> OFFSET_BIT_16);
     firmware_info[6] = (uint8_t)(flash_addr >> OFFSET_BIT_8);
-    firmware_info[7] = (uint8_t)(flash_addr);
+    firmware_info[7] = (uint8_t)flash_addr;
 
     memcpy(firmware_info + value_head_len, &(fw_data[start_addr + half_cache_len * i]), half_cache_len);
 
@@ -1090,11 +1087,11 @@ static int32_t aw9320x_cycle_write_firmware(const uint8_t *fw_data, uint32_t fir
     firmware_info[0] = (uint8_t)(seq >> OFFSET_BIT_24);
     firmware_info[1] = (uint8_t)(seq >> OFFSET_BIT_16);
     firmware_info[2] = (uint8_t)(seq >> OFFSET_BIT_8);
-    firmware_info[3] = (uint8_t)(seq);
+    firmware_info[3] = (uint8_t)seq;
     firmware_info[4] = (uint8_t)(flash_addr >> OFFSET_BIT_24);
     firmware_info[5] = (uint8_t)(flash_addr >> OFFSET_BIT_16);
     firmware_info[6] = (uint8_t)(flash_addr >> OFFSET_BIT_8);
-    firmware_info[7] = (uint8_t)(flash_addr);
+    firmware_info[7] = (uint8_t)flash_addr;
 
     memcpy(firmware_info + value_head_len, &(fw_data[start_addr + cycle_cnt * half_cache_len]), cycle_cnt_last_len);
 
@@ -1125,7 +1122,7 @@ err_hand:
   return -AW_ERR;
 }
 
-static int32_t aw9320x_write_firmware_checksum(uint8_t *p_checksum) {
+static int32_t aw9320x_write_firmware_checksum(const uint8_t *p_checksum) {
   uint8_t i = 0;
   uint8_t j = 0;
   uint8_t transfer_value_w[AW_EN_TR_CHECK_VALUE_LEN] = {0};
@@ -1135,15 +1132,15 @@ static int32_t aw9320x_write_firmware_checksum(uint8_t *p_checksum) {
   uint32_t w_checksum = 0;
 
   for (i = 0; i < 4; i++) {
-    transfer_value_w[i] = (uint8_t)(0 >> ((3 - i) * 8));
+    transfer_value_w[i] = (uint8_t)(0U >> ((3U - i) * 8U));
   }
   for (i = 4; i < 8; i++) {
-    transfer_value_w[i] = (uint8_t)(AW_FW_CHECKSUM_EN_ADDR >> ((3 - j) * 8));
+    transfer_value_w[i] = (uint8_t)(AW_FW_CHECKSUM_EN_ADDR >> ((3U - j) * 8U));
     j++;
   }
   j = 0;
   for (i = 8; i < 12; i++) {
-    transfer_value_w[i] = (uint8_t)(AW_CHECK_EN_VAL >> ((3 - j) * 8));
+    transfer_value_w[i] = (uint8_t)(AW_CHECK_EN_VAL >> ((3U - j) * 8U));
     j++;
   }
   j = 0;
@@ -1172,9 +1169,8 @@ static int32_t aw9320x_write_firmware_checksum(uint8_t *p_checksum) {
 
   if ((r_check_en == AW_CHECK_EN_VAL) && (r_checksum == w_checksum)) {
     return AW_OK;
-  } else {
-    return -AW_ERR;
   }
+  return -AW_ERR;
 }
 
 static int32_t aw9320x_get_fw_and_bt_info(const uint8_t *fw_data, uint32_t fw_len, uint8_t *p_fw_check_sum) {
@@ -1210,10 +1206,10 @@ static int32_t aw9320x_get_fw_and_bt_info(const uint8_t *fw_data, uint32_t fw_le
 
   fw_checksum = aw9320x_get_bin_checksum(fw_data, fw_len, AW_FW_CHECK_LEN);
 
-  p_fw_check_sum[0] = (uint8_t)(fw_checksum >> 24);
-  p_fw_check_sum[1] = (uint8_t)(fw_checksum >> 16);
-  p_fw_check_sum[2] = (uint8_t)(fw_checksum >> 8);
-  p_fw_check_sum[3] = (uint8_t)(fw_checksum >> 0);
+  p_fw_check_sum[0] = (uint8_t)(fw_checksum >> 24U);
+  p_fw_check_sum[1] = (uint8_t)(fw_checksum >> 16U);
+  p_fw_check_sum[2] = (uint8_t)(fw_checksum >> 8U);
+  p_fw_check_sum[3] = (uint8_t)(fw_checksum >> 0U);
 
   return AW_OK;
 }
@@ -1228,7 +1224,7 @@ static int32_t aw9320x_flash_erase_sector(void) {
     addr_buf[0] = (uint8_t)(erase_addr >> OFFSET_BIT_24);
     addr_buf[1] = (uint8_t)(erase_addr >> OFFSET_BIT_16);
     addr_buf[2] = (uint8_t)(erase_addr >> OFFSET_BIT_8);
-    addr_buf[3] = (uint8_t)(erase_addr);
+    addr_buf[3] = (uint8_t)erase_addr;
     prot_update_fw_flag = SEND_ERASE_SECTOR_CMD;
     ret = aw9320x_send_once_cmd(FLASH_MODULE, FLASH_ERASE_SECTOR_CMD, addr_buf, sizeof(addr_buf));
     if (ret != AW_OK) {
@@ -1249,7 +1245,7 @@ static int32_t aw9320x_flash_erase_last_sector(void) {
   addr_buf[0] = (uint8_t)(erase_addr >> OFFSET_BIT_24);
   addr_buf[1] = (uint8_t)(erase_addr >> OFFSET_BIT_16);
   addr_buf[2] = (uint8_t)(erase_addr >> OFFSET_BIT_8);
-  addr_buf[3] = (uint8_t)(erase_addr);
+  addr_buf[3] = (uint8_t)erase_addr;
   prot_update_fw_flag = SEND_ERASE_SECTOR_CMD;
   ret = aw9320x_send_once_cmd(FLASH_MODULE, FLASH_ERASE_SECTOR_CMD, addr_buf, sizeof(addr_buf));
   if (ret != AW_OK) {
@@ -1277,7 +1273,7 @@ static int32_t aw9320x_send_online_cmd(void) {
     if (ret != AW_OK) {
       return -AW_ERR;
     }
-    if (((irq_stat >> 29) & 0x01) == 1) {
+    if (((irq_stat >> 29U) & 0x01U) == 1) {
       break;
     }
     AW_DELAY(1);
@@ -1372,7 +1368,7 @@ static int32_t aw9320x_send_all_update_cmd(const uint8_t *fw_data, uint32_t fw_l
     if (ret != AW_OK) {
       return -AW_ERR;
     }
-    if (((data_tmp >> 24) & 0xff) != 0) {
+    if (((data_tmp >> 24U) & 0xffU) != 0) {
       ret = aw9320x_i2c_write(REG_UPDATA_DIS, data_tmp & AW_REG_UPDATA_DIS_MASK);
       if (ret != AW_OK) {
         return -AW_ERR;
@@ -1476,13 +1472,13 @@ void aw9320x_get_irq_stat(void) {
     return;
   }
 
-  if ((irq_stat >> REG_IRQSRC_EXIT_PROX_BIT) & 0x01) {
+  if ((irq_stat >> REG_IRQSRC_EXIT_PROX_BIT) & 0x01U) {
     aw9320x_wearing = OUT_EAR;
   }
-  if ((irq_stat >> REG_IRQSRC_PROX_BIT) & 0x01) {
+  if ((irq_stat >> REG_IRQSRC_PROX_BIT) & 0x01U) {
     aw9320x_wearing = IN_EAR;
   }
-  if ((irq_stat >> REG_IRQSRC_INIT_BIT) & 0x01) {
+  if ((irq_stat >> REG_IRQSRC_INIT_BIT) & 0x01U) {
     aw9320x_para_loaded();
   }
 }
@@ -1520,9 +1516,10 @@ int32_t aw9320x_init(struct aw9320x_func *hw_fun) {
   if (ret == -AW_ERR) {
     AWLOGE("init irq_handle failed");
     return -AW_ERR;
-  } else if (ret == -AW_ERR_IRQ_INIT) {
+  }
+  if (ret == -AW_ERR_IRQ_INIT) {
     AWLOGE("read_init_over_irq, ret=%d", ret);
-    ret = aw9320x_get_err_info();
+    aw9320x_get_err_info();
     load_fw_mode = AW_DIRECT_LOAD;
     AWLOGE("Firmware abnormal reload");
   } else {

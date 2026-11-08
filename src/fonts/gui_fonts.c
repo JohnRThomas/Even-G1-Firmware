@@ -1,6 +1,8 @@
 /*
  * Built-in bitmap fonts (4 bpp, glyph width in bytes = 2 pixels each).
  */
+#include <stdint.h>
+
 #include "../gui/gui.h"
 
 /* 26 px text font (unicode subset) */

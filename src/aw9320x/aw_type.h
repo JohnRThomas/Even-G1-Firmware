@@ -1,5 +1,5 @@
-#ifndef __AW_TYPE_H__
-#define __AW_TYPE_H__
+#ifndef AW_TYPE_H_
+#define AW_TYPE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,19 +14,19 @@ extern "C" {
 #endif
 
 #ifndef OFFSET_BIT_0
-#define OFFSET_BIT_0 (0)
+#define OFFSET_BIT_0 (0U)
 #endif
 
 #ifndef OFFSET_BIT_8
-#define OFFSET_BIT_8 (8)
+#define OFFSET_BIT_8 (8U)
 #endif
 
 #ifndef OFFSET_BIT_16
-#define OFFSET_BIT_16 (16)
+#define OFFSET_BIT_16 (16U)
 #endif
 
 #ifndef OFFSET_BIT_24
-#define OFFSET_BIT_24 (24)
+#define OFFSET_BIT_24 (24U)
 #endif
 
 #ifndef WORD_LEN
@@ -34,19 +34,19 @@ extern "C" {
 #endif
 
 #ifndef GET_BITS_7_0
-#define GET_BITS_7_0 (0x00FF)
+#define GET_BITS_7_0 (0x00FFU)
 #endif
 
 #ifndef GET_BITS_15_8
-#define GET_BITS_15_8 (0xFF00)
+#define GET_BITS_15_8 (0xFF00U)
 #endif
 
 #ifndef GET_BITS_24_16
-#define GET_BITS_24_16 (0x00FF0000)
+#define GET_BITS_24_16 (0x00FF0000U)
 #endif
 
 #ifndef GET_BITS_31_25
-#define GET_BITS_31_25 (0xFF000000)
+#define GET_BITS_31_25 (0xFF000000U)
 #endif
 
 #ifndef AW_BOOL
@@ -89,4 +89,4 @@ typedef unsigned long long AW_U64;
 }
 #endif
 
-#endif  /* __AW_TYPE_H__ */
+#endif  /* AW_TYPE_H_ */

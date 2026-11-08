@@ -38,8 +38,8 @@ DEFINE_FAKE_VOID_FUNC(show_not_disturb_bitmap, uint8_t);
 DEFINE_FAKE_VALUE_FUNC(int, onboarding_ble_process, struct GlassesState *, const struct ble_req_hdr *, const uint8_t *,
                        uint8_t *);
 
-DEFINE_FAKE_VALUE_FUNC(int, _reflash_fb_data_to_lcd, uint32_t, uint32_t, int, int, int, int);
-DEFINE_FAKE_VALUE_FUNC(int, _reflash_fb_data_to_lcd_ex, uint32_t, uint32_t, int, int, int, int, int);
+DEFINE_FAKE_VALUE_FUNC(int, reflash_fb_data_to_lcd, uint32_t, uint32_t, int, int, int, int);
+DEFINE_FAKE_VALUE_FUNC(int, reflash_fb_data_to_lcd_ex, uint32_t, uint32_t, int, int, int, int, int);
 DEFINE_FAKE_VOID_FUNC(jbd_clear_cache_sync, uint8_t);
 
 static uint32_t set_date_default(uint32_t date) {
@@ -83,8 +83,8 @@ static void fakes_display_reset(bool keep_media) {
   RESET_FAKE(show_not_disturb_bitmap);
   RESET_FAKE(onboarding_ble_process);
 
-  RESET_FAKE(_reflash_fb_data_to_lcd);
-  RESET_FAKE(_reflash_fb_data_to_lcd_ex);
+  RESET_FAKE(reflash_fb_data_to_lcd);
+  RESET_FAKE(reflash_fb_data_to_lcd_ex);
   RESET_FAKE(jbd_clear_cache_sync);
 }
 

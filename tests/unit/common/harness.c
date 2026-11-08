@@ -81,9 +81,6 @@ const char *g1_printk_line(int index) {
 }
 
 /* Weak: NULL unless the suite links the defining file. */
-void crc32_init(void);
-int file_init(void);
-int dequeue_file(void *out);
 void ble_proto_test_reset(void);
 
 #pragma weak ble_proto_test_reset
@@ -361,7 +358,7 @@ static void firmware_reset(void) {
       file_init();
       file_queue_ready = true;
     }
-    while (dequeue_file(msg) == 0) {
+    while (dequeue_file((struct file_msg *)msg) == 0) {
     }
   }
 

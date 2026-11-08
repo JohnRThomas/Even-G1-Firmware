@@ -5,18 +5,24 @@
 #include "ancs_attr_max.h" /* <bluetooth/services/ancs_client.h> with a 256-byte attribute limit */
 #include <../subsys/bluetooth/host/conn_internal.h>
 #include <bluetooth/gatt_dm.h>
+#include <bluetooth/services/ancs_client.h>
 #include <bluetooth/services/gattp.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gap.h>
 #include <zephyr/bluetooth/gatt.h>
-#include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/hci_types.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
-#include <zephyr/sys/reboot.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 
 #include "../main.h"
 #include "../notify/notify.h"
@@ -28,6 +34,7 @@
 #include "ble_ancs.h"
 #include "ble_proto.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include <app_version.h>
 #include <g1_date.h>
 
@@ -37,8 +44,8 @@
 #define ATTR_DATA_SIZE 32
 
 /* every buffer ancs_c_init() registers has to fit the ANCS client's limit */
-BUILD_ASSERT(sizeof(((struct notif_msg *)0)->message) <= BT_ANCS_ATTR_DATA_MAX);
-BUILD_ASSERT(sizeof(((struct notif_msg *)0)->display_name) <= BT_ANCS_ATTR_DATA_MAX);
+_Static_assert(sizeof(((struct notif_msg *)0)->message) <= BT_ANCS_ATTR_DATA_MAX, "");
+_Static_assert(sizeof(((struct notif_msg *)0)->display_name) <= BT_ANCS_ATTR_DATA_MAX, "");
 
 #define ANCS_MSGQ_MAX 10
 #define UID_MSGQ_MAX  10
@@ -128,6 +135,7 @@ static void err_code_print(uint8_t err_code_np) {
 }
 
 static void bt_ancs_write_response_handler(struct bt_ancs_client *ancs_c, uint8_t err) {
+  ARG_UNUSED(ancs_c);
   err_code_print(err);
 }
 
@@ -151,6 +159,7 @@ static void discover_gattp(struct bt_conn *conn) {
 }
 
 static void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx) {
+  ARG_UNUSED(conn);
   printk("Updated MTU: TX: %d RX: %d bytes\n", tx, rx);
   if (tx >= 100) {
     k_sem_give(&ancs_ble_ctx->tx_sem);
@@ -161,6 +170,7 @@ static void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx) {
 }
 
 static void bond_deleted(uint8_t id, const bt_addr_le_t *peer) {
+  ARG_UNUSED(id);
   char addr[BT_ADDR_LE_STR_LEN];
 
   bt_addr_le_to_str(peer, addr, sizeof(addr));
@@ -169,6 +179,7 @@ static void bond_deleted(uint8_t id, const bt_addr_le_t *peer) {
 }
 
 static void check_bonded_addr(const struct bt_bond_info *info, void *user_data) {
+  ARG_UNUSED(user_data);
   char addr[BT_ADDR_LE_STR_LEN];
 
   bt_addr_le_to_str(&info->addr, addr, sizeof(addr));
@@ -236,7 +247,7 @@ static void ancs_connected(struct bt_conn *conn, uint8_t err) {
   }
 
   if (!get_pt_test_mode() && !get_dashboard_state()->force_bind &&
-      memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t))) {
+      memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t)) != 0) {
     G1_LOG_ERR("disconnect because invalid mac %s -- type: 0x%x, role:0x%x \n\n", addr, conn->type, conn->role);
     bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
     return;
@@ -258,7 +269,7 @@ static void on_pairing_complete(struct bt_conn *conn, bool bonded) {
   if (get_dashboard_state()->force_bind) {
     get_dashboard_state()->force_bind = 0;
   }
-  if (!get_pt_test_mode() && memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t))) {
+  if (!get_pt_test_mode() && memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t)) != 0) {
     bt_unpair(BT_ID_DEFAULT, &get_dashboard_state()->bonded_addr);
     get_dashboard_state()->bonded = 0;
     get_dashboard_state()->dashboard_cmd = 0;
@@ -302,11 +313,9 @@ static void discover_ancs(struct bt_conn *conn, bool retry) {
   }
 
   /* Check that Service Changed indication is received before discovering ANCS again. */
-  if (retry) {
-    if (!atomic_test_and_clear_bit(&ancs_discovery_flags, SERVICE_CHANGED_INDICATED)) {
-      atomic_clear_bit(&ancs_discovery_flags, DISCOVERY_ANCS_ONGOING);
-      return;
-    }
+  if (retry && !atomic_test_and_clear_bit(&ancs_discovery_flags, SERVICE_CHANGED_INDICATED)) {
+    atomic_clear_bit(&ancs_discovery_flags, DISCOVERY_ANCS_ONGOING);
+    return;
   }
 
   err = bt_gatt_dm_start(conn, BT_UUID_ANCS, &discover_ancs_cb, &ancs_c);
@@ -325,11 +334,13 @@ static void discover_ancs_again(struct bt_conn *conn) {
 }
 
 static void discover_gattp_error_found_cb(struct bt_conn *conn, int err, void *ctx) {
+  ARG_UNUSED(ctx);
   printk("The discovery procedure for GATT Service failed, err %d\n", err);
   discover_ancs_first(conn);
 }
 
 static void discover_ancs_error_found_cb(struct bt_conn *conn, int err, void *ctx) {
+  ARG_UNUSED(ctx);
   printk("The discovery procedure for ANCS failed, err %d\n", err);
   atomic_clear_bit(&ancs_discovery_flags, DISCOVERY_ANCS_ONGOING);
   discover_ancs_again(conn);
@@ -376,6 +387,7 @@ static void discover_ancs_completed_cb(struct bt_gatt_dm *dm, void *ctx) {
 }
 
 static void discover_ancs_not_found_cb(struct bt_conn *conn, void *ctx) {
+  ARG_UNUSED(ctx);
   printk("ANCS could not be found during the discovery\n");
   atomic_clear_bit(&ancs_discovery_flags, DISCOVERY_ANCS_ONGOING);
   discover_ancs_again(conn);
@@ -421,6 +433,7 @@ static void discover_gattp_completed_cb(struct bt_gatt_dm *dm, void *ctx) {
 }
 
 static void discover_gattp_not_found_cb(struct bt_conn *conn, void *ctx) {
+  ARG_UNUSED(ctx);
   printk("GATT Service could not be found during the discovery\n");
   discover_ancs_first(conn);
 }
@@ -452,6 +465,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 };
 
 static void indicate_sc_cb(struct bt_gattp *gattp, const struct bt_gattp_handle_range *handle_range, int err) {
+  ARG_UNUSED(handle_range);
   if (!err) {
     indicate_sc_count++;
     if (indicate_sc_count >= 5) {
@@ -511,6 +525,7 @@ static int enqueue_ancs(struct notif_msg *data) {
   }
 
 static void bt_ancs_data_source_handler(struct bt_ancs_client *ancs_c, const struct bt_ancs_attr_response *response) {
+  ARG_UNUSED(ancs_c);
   struct ble_context *ctx = get_ble_context();
 
   G1_LOG_ERR("bt_ancs_data_source_handler response->command_id %d\n", response->command_id);
@@ -596,6 +611,7 @@ static int enqueue_uid(const struct bt_ancs_evt_notif *notif) {
 
 static void bt_ancs_notification_source_handler(struct bt_ancs_client *ancs_c, int err,
                                                 const struct bt_ancs_evt_notif *notif) {
+  ARG_UNUSED(ancs_c);
   struct ble_context *ctx = get_ble_context();
 
   if (err) {
@@ -720,21 +736,20 @@ static int request_ancs_attr_ext(void) {
                strlen(notif_attr_app_id_latest.attr_data), ctx->notif.app_identifier[0]);
   }
 
-  if (app_id_ready || notif_attr_app_id_latest.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) {
-    if (notif_attr_app_id_latest.attr_len != 0 && notif_attr_app_id_latest.attr_data[0] != '\0') {
-      BLE_PRINTK("Request for %s: retry_time %d\n", notif_attr_app_id_latest.attr_data, retry_time);
-      while (retry_time < 200) {
-        err = bt_ancs_request_app_attr(&ancs_c, notif_attr_app_id_latest.attr_data, notif_attr_app_id_latest.attr_len,
-                                       bt_ancs_write_response_handler);
-        if (!err) {
-          break;
-        }
-        retry_time++;
-        k_sleep(K_MSEC(5));
+  if ((app_id_ready || notif_attr_app_id_latest.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) &&
+      notif_attr_app_id_latest.attr_len != 0 && notif_attr_app_id_latest.attr_data[0] != '\0') {
+    BLE_PRINTK("Request for %s: retry_time %d\n", notif_attr_app_id_latest.attr_data, retry_time);
+    while (retry_time < 200) {
+      err = bt_ancs_request_app_attr(&ancs_c, notif_attr_app_id_latest.attr_data, notif_attr_app_id_latest.attr_len,
+                                     bt_ancs_write_response_handler);
+      if (!err) {
+        break;
       }
-      if (err) {
-        printk("Failed requesting attributes for a given app (err: %d)\n", err);
-      }
+      retry_time++;
+      k_sleep(K_MSEC(5));
+    }
+    if (err) {
+      printk("Failed requesting attributes for a given app (err: %d)\n", err);
     }
   }
 
@@ -888,6 +903,8 @@ static void recv_ble_data(struct ble_context *ctx) {
 }
 
 static void ble_ancs_data_req_thread(void *p1, void *p2, void *p3) {
+  ARG_UNUSED(p2);
+  ARG_UNUSED(p3);
   struct ble_context *ctx = p1;
 
   G1_LOG_INF("enter\n");
@@ -965,23 +982,35 @@ int ancs_main(struct ble_context *ctx) {
   err = ancs_c_init(&ctx->notif);
   if (err) {
     printk("ANCS client init failed (err %d)\n", err);
-  } else if ((err = gattp_init()) != 0) {
-    printk("GATT Service client init failed (err %d)\n", err);
-  } else if ((err = bt_conn_auth_cb_register(&conn_auth_callbacks)) != 0) {
-    printk("Failed to register authorization callbacks\n");
-  } else if ((err = bt_conn_auth_info_cb_register(&conn_auth_info_callbacks)) != 0) {
-    printk("Failed to register authorization info callbacks.\n");
   } else {
-    bt_gatt_cb_register(&gatt_callbacks);
-
-    err = init_nus();
-    if (err) {
-      printk("Failed to init nus.\n");
-    } else if ((err = bt_start()) != 0) {
-      printk("Advertising %s failed to start (err %d)\n", device_name, err);
+    err = gattp_init();
+    if (err != 0) {
+      printk("GATT Service client init failed (err %d)\n", err);
     } else {
-      start_ancs_work_thread(ctx);
-      return 0;
+      err = bt_conn_auth_cb_register(&conn_auth_callbacks);
+      if (err != 0) {
+        printk("Failed to register authorization callbacks\n");
+      } else {
+        err = bt_conn_auth_info_cb_register(&conn_auth_info_callbacks);
+        if (err != 0) {
+          printk("Failed to register authorization info callbacks.\n");
+        } else {
+          bt_gatt_cb_register(&gatt_callbacks);
+
+          err = init_nus();
+          if (err) {
+            printk("Failed to init nus.\n");
+          } else {
+            err = bt_start();
+            if (err != 0) {
+              printk("Advertising %s failed to start (err %d)\n", device_name, err);
+            } else {
+              start_ancs_work_thread(ctx);
+              return 0;
+            }
+          }
+        }
+      }
     }
   }
 

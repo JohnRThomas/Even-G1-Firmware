@@ -1,5 +1,5 @@
 /*
- * Frame buffer helpers. panel_buffer[200] aliases row 0 and [201] current_row. _clean_fb_data()
+ * Frame buffer helpers. panel_buffer[200] aliases row 0 and [201] current_row. clean_fb_data()
  * ends are inclusive.
  */
 #include "panel_support.h"
@@ -40,7 +40,7 @@ ZTEST(panel_fb, test_frame_rows_are_320_bytes_apart) {
 ZTEST(panel_fb, test_clean_clears_inclusive_rows_and_byte_columns) {
   fill_frame(0xff);
 
-  zassert_equal(_clean_fb_data(panel_fb(), 0x00, 20, 5, 41, 7), 11);
+  zassert_equal(clean_fb_data(panel_fb(), 0x00, 20, 5, 41, 7), 11);
 
   for (int row = 4; row <= 8; row++) {
     for (int col = 9; col <= 21; col++) {
@@ -54,7 +54,7 @@ ZTEST(panel_fb, test_clean_clears_inclusive_rows_and_byte_columns) {
 ZTEST(panel_fb, test_clean_widens_odd_pixels_to_whole_bytes) {
   fill_frame(0xff);
 
-  zassert_equal(_clean_fb_data(panel_fb(), 0x00, 21, 5, 40, 5), 11);
+  zassert_equal(clean_fb_data(panel_fb(), 0x00, 21, 5, 40, 5), 11);
 
   zassert_equal(fb_row(5)[9], 0xff);
   zassert_equal(fb_row(5)[10], 0x00);
@@ -65,9 +65,9 @@ ZTEST(panel_fb, test_clean_widens_odd_pixels_to_whole_bytes) {
 ZTEST(panel_fb, test_clean_rejects_inverted_ranges) {
   fill_pattern();
 
-  zassert_equal(_clean_fb_data(panel_fb(), 0x00, 30, 5, 20, 7), -1);
-  zassert_equal(_clean_fb_data(panel_fb(), 0x00, 0, 9, 10, 8), -1);
-  zassert_equal(_clean_fb_data(panel_fb(), 0x00, 0, 250, 10, 300), -1);
+  zassert_equal(clean_fb_data(panel_fb(), 0x00, 30, 5, 20, 7), -1);
+  zassert_equal(clean_fb_data(panel_fb(), 0x00, 0, 9, 10, 8), -1);
+  zassert_equal(clean_fb_data(panel_fb(), 0x00, 0, 250, 10, 300), -1);
 
   zassert_mem_equal(panel_frame(), before_img, FRAME_BYTES);
 }
@@ -78,7 +78,7 @@ ZTEST(panel_fb, test_clean_to_the_right_edge_stays_in_its_rows) {
 
   fill_frame(0xff);
 
-  ret = _clean_fb_data(panel_fb(), 0x00, 600, 10, 640, 20);
+  ret = clean_fb_data(panel_fb(), 0x00, 600, 10, 640, 20);
 
   zassert_equal(fb_row(21)[0], 0xff, "row 21 byte 0 cleared");
   zassert_equal(fb_row(20)[319], 0x00);
@@ -88,7 +88,7 @@ ZTEST(panel_fb, test_clean_to_the_right_edge_stays_in_its_rows) {
 ZTEST(panel_fb, test_clean_past_the_bottom_stays_in_the_frame) {
   fill_frame(0xff);
 
-  zassert_equal(_clean_fb_data(panel_fb(), 0x00, 0, 195, 9, 250), 5);
+  zassert_equal(clean_fb_data(panel_fb(), 0x00, 0, 195, 9, 250), 5);
 
   zassert_equal(fb_row(199)[0], 0x00);
   expect_fill(fb_row(0), 5, 0xff, "row 0");

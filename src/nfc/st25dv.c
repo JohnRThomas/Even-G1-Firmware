@@ -3,6 +3,7 @@
  * and rewritten on top of the eeprom_st25dv device.
  */
 #include <errno.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/device.h>
 
@@ -29,7 +30,7 @@ int st25dv_write_it_pulse(const struct device *dev, uint8_t it_time) {
     return ret;
   }
 
-  reg = (reg & ~0x1f) | (it_time & 0x1f);
+  reg = (reg & ~0x1fU) | (it_time & 0x1fU);
 
   return eeprom_st25dv_write_sys(dev, ST25DV_ITTIME_REG, &reg, 1);
 }
@@ -84,8 +85,8 @@ int st25dv_present_i2c_password(const struct device *dev, const struct st25dv_pa
   /* password, validation code 0x09, password */
   msg[8] = 0x09;
   for (i = 0; i < 4; i++) {
-    msg[i] = msb >> ((3 - i) * 8);
-    msg[i + 4] = lsb >> ((3 - i) * 8);
+    msg[i] = msb >> ((3U - i) * 8U);
+    msg[i + 4] = lsb >> ((3U - i) * 8U);
     msg[i + 9] = msg[i];
     msg[i + 13] = msg[i + 4];
   }

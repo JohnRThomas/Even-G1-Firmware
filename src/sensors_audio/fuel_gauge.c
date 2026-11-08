@@ -2,13 +2,9 @@
  * nPM1300 fuel gauge / charger helpers and charging-box status, derived from
  * the NCS npm1300_fuel_gauge sample (src/fuel_gauge.c).
  */
-#include <stdlib.h>
+#include <stdint.h>
 #include <zephyr/device.h>
-#include <zephyr/devicetree.h>
-#include <zephyr/drivers/mfd/npm1300.h>
-#include <zephyr/drivers/regulator.h>
 #include <zephyr/drivers/sensor.h>
-#include <zephyr/drivers/sensor/npm1300_charger.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
@@ -19,6 +15,7 @@
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "sensors_audio.h"
 
 #define DISPLAY_MODE_ABNORMAL_TEMP 0x0c
@@ -34,7 +31,7 @@ static const struct battery_model battery_model = {
 static uint8_t zero_current_count;
 static bool fuel_gauge_ready;          /* the library was initialised */
 
-int read_sensors(const struct device *charger, float *voltage, float *current, float *temp) {
+static int read_sensors(const struct device *charger, float *voltage, float *current, float *temp) {
   struct sensor_value value;
   int ret;
 
@@ -107,13 +104,10 @@ int fuel_gauge_update(const struct device *charger) {
     return -ENODEV;
   }
 
+  if (pt_comm_busy_get()) {
+    return 0;
+  }
   while (1) {
-    if (pt_comm_busy_get()) {
-      if (soc > 0) {
-        break;
-      }
-      return 0;
-    }
     lock_sensor_mutex();
     ret = read_sensors(charger, &voltage, &current, &temp);
     unlock_sensor_mutex();
@@ -133,6 +127,9 @@ int fuel_gauge_update(const struct device *charger) {
       k_sleep(K_MSEC(5));
     } else {
       return -1;
+    }
+    if (pt_comm_busy_get()) {
+      break;
     }
   }
 
@@ -163,21 +160,21 @@ int fuel_gauge_update(const struct device *charger) {
   } else {
     get_dashboard_state()->battery_soc_flag = 0;
   }
-  get_dashboard_state()->battery_left = new_soc;
-  get_dashboard_state()->battery_voltage = voltage * 100 - 200;
+  get_dashboard_state()->battery_left = (uint8_t)new_soc;
+  get_dashboard_state()->battery_voltage = (uint8_t)(voltage * 100 - 200);
 
   if (current != 0) {
-    get_dashboard_state()->battery_current = (current + 0.128) * 1000.0;
-    get_dashboard_state()->battery_current_ma = current * 1000;
+    get_dashboard_state()->battery_current = (uint8_t)((current + 0.128) * 1000.0);
+    get_dashboard_state()->battery_current_ma = (int8_t)(current * 1000);
     zero_current_count = 0;
   } else if (++zero_current_count > 5) {
     zero_current_count = 0;
-    get_dashboard_state()->battery_current = (current + 0.128) * 1000.0;
-    get_dashboard_state()->battery_current_ma = current * 1000;
+    get_dashboard_state()->battery_current = (uint8_t)((current + 0.128) * 1000.0);
+    get_dashboard_state()->battery_current_ma = (int8_t)(current * 1000);
   }
 
-  get_dashboard_state()->battery_temp = temp;
-  get_dashboard_state()->battery_temp_x100 = temp * 100;
+  get_dashboard_state()->battery_temp = (uint8_t)temp;
+  get_dashboard_state()->battery_temp_x100 = (int16_t)(temp * 100);
 
   if ((temp >= 60 && temp < 120) || (temp >= -50 && temp <= -20)) {
     if (get_dashboard_state()->display_mode != DISPLAY_MODE_ABNORMAL_TEMP) {

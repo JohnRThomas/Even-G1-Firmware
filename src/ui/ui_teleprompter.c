@@ -2,14 +2,22 @@
  * Teleprompter screen task: count down, scrolling text page with elapsed
  * time / progress bar, suspend handling and app-disconnect detection.
  */
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
+#include "../gui/gui.h"
 #include "../panel_display/panel.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "g1_date.h"
+#include "g1_log.h"
+#include "glasses_state.h"
 #include "ui.h"
 
 #define TELEPROMPTER_DISPLAY_IDLE          0
@@ -41,15 +49,16 @@ static int tp_last_hour;
 static int tp_last_min;
 static int tp_last_sec;
 
-struct tpm_thread_prv_data _tpm_thread_prv_data;
+static struct tpm_thread_prv_data tpm_thread_prv;
 
 void teleprompter_state_reset(void) {
-  memset(&_tpm_thread_prv_data, 0, sizeof(_tpm_thread_prv_data));
+  memset(&tpm_thread_prv, 0, sizeof(tpm_thread_prv));
 }
 
 int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) {
+  ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
-  struct tpm_thread_prv_data *tp = &_tpm_thread_prv_data;
+  struct tpm_thread_prv_data *tp = &tpm_thread_prv;
   uint8_t **fb = panel->panel_buffer;
 
   set_frame_buffer(fb);
@@ -96,7 +105,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         tp->work_mode = gs->ui.tp.work_mode;
         tp->countdown = gs->ui.tp.countdown;
         k_mutex_unlock(&screen_payload_mutex);
-        tp->countdown_end = k_uptime_get() + gs->ui.tp.countdown * 1000 - 350;
+        tp->countdown_end = k_uptime_get() + (int64_t)(gs->ui.tp.countdown * 1000) - 350;
         G1_LOG_INF("teleprompter work mode = %d\n", tp->work_mode);
         clear_showing_notification_on_gui();
         for (int i = 0; i < 4; i++) {
@@ -118,8 +127,8 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
               }
             }
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
         k_msleep(150);
@@ -139,8 +148,8 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
           tp->last_sync_ts = k_uptime_get();
           tp->state = TELEPROMPTER_TEXT_DISPLAY;
           tp->start_ts = k_uptime_get();
-          _clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
-                         gui_screen_y_offset() + 0x52);
+          clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
+                        gui_screen_y_offset() + 0x52);
           if (tp->work_mode == 1) {
             gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
           } else if (tp->work_mode == 0) {
@@ -158,20 +167,18 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         if (now < tp->countdown_end) {
           int64_t remain = (tp->countdown_end - now) / 1000;
 
-          if (remain > tp->countdown) {
-            remain = tp->countdown;
-          }
+          remain = MIN(remain, tp->countdown);
           if (remain == 0) {
             G1_LOG_INF("remain time end ,switch text display ...\n");
             tp->start_ts = k_uptime_get();
             tp->last_sync_ts = k_uptime_get();
             tp->state = TELEPROMPTER_TEXT_DISPLAY;
-            _clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
-                           gui_screen_y_offset() + 0x52);
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, gui_screen_x_offset(),
-                                    gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
-                                    gui_screen_y_offset() + 0x52);
+            clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
+                          gui_screen_y_offset() + 0x52);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, gui_screen_x_offset(),
+                                   gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
+                                   gui_screen_y_offset() + 0x52);
             if (tp->work_mode == 1) {
               gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
             } else if (tp->work_mode == 0) {
@@ -193,11 +200,11 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
           tp->start_ts = k_uptime_get();
           tp->state = TELEPROMPTER_TEXT_DISPLAY;
           tp->last_sync_ts = k_uptime_get();
-          _clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x1e,
-                         gui_screen_y_offset() + 0x50);
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x1e,
-                                  gui_screen_y_offset() + 0x50);
+          clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x1e,
+                        gui_screen_y_offset() + 0x50);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x1e,
+                                 gui_screen_y_offset() + 0x50);
           if (tp->work_mode == 1) {
             gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
           } else if (tp->work_mode == 0) {
@@ -271,14 +278,14 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
                                      gui_screen_x_offset() + 0x23c, gui_screen_y_offset() + 0x88, 1, percent, 0);
         if (suspend == 1) {
           if (atomic_test_bit(&gui_flags, 1)) {
-            _clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
-                           gui_screen_y_offset() + 0x52);
+            clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
+                          gui_screen_y_offset() + 0x52);
           }
           if (atomic_test_bit(&gui_flags, 1)) {
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, gui_screen_x_offset(),
-                                    gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
-                                    gui_screen_y_offset() + 0x52);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, gui_screen_x_offset(),
+                                   gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
+                                   gui_screen_y_offset() + 0x52);
           }
           gui_bmp_bitmap_draw(0x1b, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
           tp->suspended = 1;
@@ -288,14 +295,14 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         } else {
           tp->suspended = 0;
           if (atomic_test_bit(&gui_flags, 1)) {
-            _clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
-                           gui_screen_y_offset() + 0x52);
+            clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
+                          gui_screen_y_offset() + 0x52);
           }
           if (atomic_test_bit(&gui_flags, 1)) {
-            _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-                                    get_dashboard_state()->panel.current_column, gui_screen_x_offset(),
-                                    gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
-                                    gui_screen_y_offset() + 0x52);
+            reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
+                                   get_dashboard_state()->panel.current_column, gui_screen_x_offset(),
+                                   gui_screen_y_offset() + 0x36, gui_screen_x_offset() + 0x24,
+                                   gui_screen_y_offset() + 0x52);
           }
           if (tp->work_mode == 1) {
             gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
@@ -310,17 +317,17 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
       }
       tp->display_ms /= 1000;
       if (tp->display_ms < 60) {
-        tp_sec = tp->display_ms % 60;
+        tp_sec = (int)(tp->display_ms % 60);
       } else if (tp->display_ms < 3600) {
-        tp_sec = tp->display_ms % 60;
-        tp_min = tp->display_ms / 60;
+        tp_sec = (int)(tp->display_ms % 60);
+        tp_min = (int)(tp->display_ms / 60);
       } else if (tp->display_ms < 360000) {
         uint32_t rem;
 
-        tp_hour = tp->display_ms / 3600;
+        tp_hour = (int)(tp->display_ms / 3600);
         rem = tp->display_ms % 3600;
-        tp_sec = rem % 60;
-        tp_min = rem / 60;
+        tp_sec = (int)(rem % 60);
+        tp_min = (int)(rem / 60);
       } else {
         tp_hour = 99;
         tp_min = 59;
@@ -430,5 +437,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
 
 /* ui_task_table no-op draw (task) callback of the teleprompter screen (id 9) */
 int draw_template_teleprompter_page(struct jbd_panel_context *panel, void *arg) {
+  ARG_UNUSED(panel);
+  ARG_UNUSED(arg);
   return 0;
 }

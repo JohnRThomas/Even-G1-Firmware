@@ -2,11 +2,11 @@
  * Template gyro page of the page dispatcher (ui_task_table in
  * ui_notification.c): screen id 13, YPR read-out.
  */
-#include <stdio.h>
-#include <stdlib.h>
+#include <glasses_state.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #include "../fonts/font_bitmap.h"
 #include "../panel_display/panel.h"
@@ -32,6 +32,7 @@ int draw_template_gyro_page(struct jbd_panel_context *panel, void *arg) {
   float ypr[3];
   int n;
 
+  ARG_UNUSED(arg);
   codes = utf8_to_unicode_buf("陀螺仪姿态解算:YPR", &count);
   for (int i = 0; i < count; i++) {
     copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12, 36, i * 12 + 6, 0);

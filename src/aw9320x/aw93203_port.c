@@ -2,7 +2,9 @@
  * AW93203 capacitive touch / wear sensor: Zephyr port layer for the Awinic
  * aw9320x driver (I2C, delay and irq hooks) plus the init entry point.
  */
+#include <stdint.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 
@@ -12,13 +14,13 @@
 int aw93203_ready;
 
 /* bus lock flag used by the production-test protocol (fuel_gauge_update, process_pt_data) */
-uint8_t pt_comm_busy;
+static uint8_t pt_comm_busy;
 
 /*
  * I2C spec of the bus, taken from the lsm6dso node on the same bus; the driver
  * addresses the AW93203 with its own AW9320X_I2C_DEV_ADDR and only uses .bus.
  */
-struct i2c_dt_spec aw_i2c_dev = I2C_DT_SPEC_GET(DT_NODELABEL(lsm6dso));
+static struct i2c_dt_spec aw_i2c_dev = I2C_DT_SPEC_GET(DT_NODELABEL(lsm6dso));
 
 static int32_t aw93203_i2c_read(uint8_t *addr, uint8_t addr_len, uint8_t *r_data, uint32_t r_len) {
   if (i2c_write_read(aw_i2c_dev.bus, AW9320X_I2C_DEV_ADDR, addr, addr_len, r_data, r_len)) {
@@ -40,7 +42,7 @@ static void aw93203_irq_init(void (*irq_cb)(void)) {
 }
 
 static void aw93203_delay(uint32_t ms) {
-  k_msleep(ms);
+  k_msleep((int32_t)ms);
 }
 
 static struct aw9320x_func aw9320x_func = {

@@ -211,7 +211,7 @@ static void fade_full_screen(void) {
   memset(gui_test_rows[0], 0xff, GUI_FB_ROWS * GUI_FB_ROW_BYTES);
   fade_refreshes = 0;
   memset(fade_lit, 0, sizeof(fade_lit));
-  _reflash_fb_data_to_lcd_fake.custom_fake = fade_snapshot;
+  reflash_fb_data_to_lcd_fake.custom_fake = fade_snapshot;
   g1_state()->panel.init_done = 1;
   zassert_equal(gui_screen_fade_out(), 0);
 }

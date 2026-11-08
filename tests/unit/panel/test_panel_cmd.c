@@ -178,14 +178,14 @@ ZTEST(panel_cmd, test_draw_needs_an_initialised_panel) {
 ZTEST(panel_flush, test_flush_is_refused_before_panel_init) {
   panel_ctx()->init_done = 0;
 
-  zassert_equal(_reflash_fb_data_to_lcd(0, 0, 0, 0, 640, 199), -1);
+  zassert_equal(reflash_fb_data_to_lcd(0, 0, 0, 0, 640, 199), -1);
 
   zassert_equal(g1_fake_spim.xfers, 0);
 }
 
 ZTEST(panel_flush, test_flush_sends_one_window_per_row_then_syncs) {
   /* address (y << 10) | x */
-  zassert_equal(_reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 300, 12), 0);
+  zassert_equal(reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 300, 12), 0);
 
   zassert_equal(g1_fake_spim.xfers, 4);
   expect_frame_window(0, "02 00 68 84 ff", 10 * JBD_ROW_BYTES + 50, 100);
@@ -195,7 +195,7 @@ ZTEST(panel_flush, test_flush_sends_one_window_per_row_then_syncs) {
 }
 
 ZTEST(panel_flush, test_full_frame_flush_sends_200_rows_of_320_bytes) {
-  zassert_equal(_reflash_fb_data_to_lcd(0, 0, 0, 0, 640, 199), 0);
+  zassert_equal(reflash_fb_data_to_lcd(0, 0, 0, 0, 640, 199), 0);
 
   zassert_equal(g1_fake_spim.xfers, FRAME_ROWS + 1);
   for (int row = 0; row < FRAME_ROWS; row++) {
@@ -214,26 +214,26 @@ ZTEST(panel_flush, test_flush_leaves_the_frame_buffer_as_it_was) {
 
   memcpy(snapshot, start, sizeof(snapshot));
 
-  zassert_equal(_reflash_fb_data_to_lcd(0, 0, 0, 0, 640, 199), 0);
-  zassert_equal(_reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 301, 12), 0);
+  zassert_equal(reflash_fb_data_to_lcd(0, 0, 0, 0, 640, 199), 0);
+  zassert_equal(reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 301, 12), 0);
 
   zassert_mem_equal(start, snapshot, sizeof(snapshot));
 }
 
 ZTEST(panel_flush, test_row_window_ends_with_the_dummy_clocks) {
-  zassert_equal(_reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 300, 10), 0);
+  zassert_equal(reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 300, 10), 0);
 
   zassert_equal(panel_xfer(0)->len, 5 + 100 + 1, "row window of %zu bytes for 100 pixel bytes", panel_xfer(0)->len);
 }
 
 ZTEST(panel_flush, test_flush_stops_at_the_last_frame_row) {
-  zassert_equal(_reflash_fb_data_to_lcd(0, 0, 0, 195, 20, 250), 0);
+  zassert_equal(reflash_fb_data_to_lcd(0, 0, 0, 195, 20, 250), 0);
 
   zassert_equal(g1_fake_spim.xfers, 6, "%d transfers", g1_fake_spim.xfers);
 }
 
 ZTEST(panel_flush, test_flush_ex_reads_rows_shifted_by_offset) {
-  zassert_equal(_reflash_fb_data_to_lcd_ex(0x20, 0x10, 100, 10, 300, 11, 5), 0);
+  zassert_equal(reflash_fb_data_to_lcd_ex(0x20, 0x10, 100, 10, 300, 11, 5), 0);
 
   zassert_equal(g1_fake_spim.xfers, 3);
   expect_frame_window(0, "02 00 68 84 ff", 15 * JBD_ROW_BYTES + 50, 100);
@@ -249,7 +249,7 @@ ZTEST(panel_flush, test_a_failed_row_does_not_stop_the_flush) {
   g1_fake_spim.xfer_error_skip = 1;
   g1_fake_spim.xfer_error_count = 1;
 
-  (void)_reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 300, 12);
+  (void)reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 300, 12);
 
   zassert_equal(g1_fake_spim.xfers, 4);
   zassert_equal(panel_xfer(1)->result, NRFX_ERROR_BUSY);

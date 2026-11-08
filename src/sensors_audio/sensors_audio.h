@@ -65,6 +65,7 @@ int dmic_stream_start(void);
 int erase_audio_buffer(void);
 
 /* audio_stream.c */
+extern struct k_msgq audio_stream_msgq;
 int clearAudioMessageQueue(void);
 int sendAudioStram2Cache(void *data);
 uint32_t getAudioMessageQueueNum(void);

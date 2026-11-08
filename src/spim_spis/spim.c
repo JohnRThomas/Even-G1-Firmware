@@ -1,10 +1,13 @@
 /*
  * SPI master (nrfx SPIM3 / SPIM4) used by the display panel.
  */
+#include <hal/nrf_spim.h>
 #include <nrfx_spim.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/__assert.h>
 
 #include "spim.h"
 #include <g1_log.h>

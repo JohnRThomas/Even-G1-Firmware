@@ -9,11 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #include "../gui/gui.h"
 #include "../ui/ui.h"
 #include "common_utils.h"
+#include "g1_date.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 
 #define IS_LEAP_YEAR(y) (((y) % 4 == 0 && (y) % 100 != 0) || (y) % 400 == 0)
 
@@ -128,6 +132,7 @@ int format_float_2dp(float val, char *buf) {
 }
 
 void dump_ancs(const char *tag, struct notif_msg *n) {
+  ARG_UNUSED(tag);
   BLE_PRINTK("app_identifier:(%s)\n", n->app_identifier);
   BLE_PRINTK("message:(%s)\n", n->message);
   BLE_PRINTK("uid :(%d)\n", n->uid);
@@ -136,7 +141,7 @@ void dump_ancs(const char *tag, struct notif_msg *n) {
 void dump_hex(const char *tag, const uint8_t *data, int len) {
   printk("dump_hex(%s):", tag);
   for (int i = 0; i < len; i++) {
-    if ((i & 7) == 0) {
+    if (((uint32_t)i & 7U) == 0) {
       printk("\n");
     }
     printk("0x%02x,", data[i]);
@@ -181,7 +186,7 @@ void init_boot_seconds(void) {
 }
 
 int get_boot_seconds(void) {
-  int s = k_uptime_get() / 1000 - boot_uptime_s;
+  int s = (int)(k_uptime_get() / 1000 - boot_uptime_s);
 
   G1_LOG_INF("[csh_debug] bootSeconds is %d\n", s);
 
@@ -195,9 +200,9 @@ int uint32_to_little_endian(uint8_t *buf, uint32_t val) {
   }
 
   buf[0] = val;
-  buf[1] = val >> 8;
-  buf[2] = val >> 16;
-  buf[3] = val >> 24;
+  buf[1] = val >> 8U;
+  buf[2] = val >> 16U;
+  buf[3] = val >> 24U;
 
   return 1;
 }
@@ -221,19 +226,19 @@ uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, 
     if (refin) {
       r = 0;
       for (j = 7; j >= 0; j--) {
-        if (b & 1) {
-          r |= 1 << j;
+        if (b & 1U) {
+          r |= 1U << (uint32_t)j;
         }
-        b >>= 1;
+        b >>= 1U;
       }
       b = r;
     }
-    crc ^= b << 8;
+    crc ^= (uint32_t)b << 8U;
     for (j = 0; j < 8; j++) {
-      if (crc & 0x8000) {
-        crc = (crc << 1) ^ poly;
+      if (crc & 0x8000U) {
+        crc = (uint32_t)(crc << 1U) ^ poly;
       } else {
-        crc <<= 1;
+        crc <<= 1U;
       }
     }
   }
@@ -241,10 +246,10 @@ uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, 
   if (refout) {
     out = 0;
     for (j = 15; j >= 0; j--) {
-      if (crc & 1) {
-        out |= 1 << j;
+      if (crc & 1U) {
+        out |= 1U << (uint32_t)j;
       }
-      crc >>= 1;
+      crc >>= 1U;
     }
     crc = out;
   }

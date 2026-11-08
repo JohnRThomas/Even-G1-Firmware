@@ -85,6 +85,7 @@ struct app_setting {
 };
 
 /* flash_settings.c */
+void local_store_delete(const char *key);
 int local_store_write(const char *key, const void *val, size_t len);
 void sett_init(struct local_store *st);
 int flash_settings_read(uint32_t addr, void *buf, size_t len);
@@ -115,12 +116,18 @@ int load_settings_from_flash(struct GlassesState *gs);
 extern uint8_t sys_settings_dirty;
 extern struct k_sem flash_ops_sem;
 extern uint32_t LAST_FILE_CRC;
+struct file_msg;
+int file_init(void);
 int enqueue_file(const void *data, size_t len);
+int dequeue_file(struct file_msg *out);
+void crc32_init(void);
 uint32_t crc32(uint32_t crc, const uint8_t *buf, int len);
+void try_to_save_file(struct GlassesState *gs);
 void storage_commit_request(int cmd, uint8_t sys_dirty);
 void start_flash_storage_threads(struct GlassesState *gs);
 
 /* setting_store.c */
+extern struct k_msgq setting_msgq;
 extern struct app_setting CURRENT_LANGUAGE;
 int clearSettingStorageQueue(void);
 int upgradeAppLanguageInfoToFlash(uint8_t language);
@@ -137,6 +144,7 @@ int getSettingStorageQueueNum(void);
 int SettingStoreHandler(void);
 
 /* quicknote_store.c */
+extern struct k_msgq quicknote_msgq;
 int clearQuickNoteQueue(void);
 int upgradeQuickNoteDataToFlash(int index);
 int deleteQuickNoteData(int index);

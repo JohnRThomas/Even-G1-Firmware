@@ -26,9 +26,9 @@ size_t esb_tx_buf_len_get(void);
 void esb_tx_buf_clear(void);
 
 int esb_rx_msgq_init(void);
-int esb_rx_msgq_get(uint8_t *buf);
+int esb_rx_msgq_get(uint8_t *data);
 
 /* Reports the ESB link state to the application core. */
-void ipc_send_esb_status(uint8_t state);
+void ipc_send_esb_status(uint8_t val);
 
 #endif /* NET_MAIN_H_ */

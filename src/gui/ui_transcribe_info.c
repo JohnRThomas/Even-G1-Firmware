@@ -1,11 +1,16 @@
 /*
  * UI page: transcribe information (clock, animated icon, transcribed text).
  */
+#include <glasses_state.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/toolchain.h>
 
 #include "../panel_display/panel.h"
 #include "../sensors_audio/sensors_audio.h"
+#include "g1_date.h"
+#include "g1_log.h"
 #include "gui.h"
 
 static struct {
@@ -26,15 +31,15 @@ static int transcribe_info_reflash(uint8_t **fb, int force) {
   if (gs->ui.gui.show_clock == 1) {
     gui_clock_draw(get_date(), gui_screen_x_offset(), gui_screen_y_offset() + 2, gui_screen_x_offset() + 80,
                    gui_screen_y_offset() + 29, 3, get_dashboard_state()->dashboard_ts->time_disp_mode != 1);
-    if (gs->ui.gui.page_flags & 1) {
+    if (gs->ui.gui.page_flags & 1U) {
       gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0, 0);
     } else {
       gui_dynamic_bitmap_reset();
-      _clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 58, gui_screen_x_offset() + 20,
-                     gui_screen_y_offset() + 84);
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                              gui_screen_x_offset(), gui_screen_y_offset() + 58, gui_screen_x_offset() + 20,
-                              gui_screen_y_offset() + 84);
+      clean_fb_data(fb, 0, gui_screen_x_offset(), gui_screen_y_offset() + 58, gui_screen_x_offset() + 20,
+                    gui_screen_y_offset() + 84);
+      reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                             gui_screen_x_offset(), gui_screen_y_offset() + 58, gui_screen_x_offset() + 20,
+                             gui_screen_y_offset() + 84);
     }
   }
   if (transcribe_ui.state == 0 || force == 1) {
@@ -46,6 +51,7 @@ static int transcribe_info_reflash(uint8_t **fb, int force) {
 }
 
 int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
+  ARG_UNUSED(arg);
   get_dashboard_state();
   set_frame_buffer(ctx->panel_buffer);
   set_showing_notification_on_gui();
@@ -75,8 +81,8 @@ int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event)
               }
             }
           }
-          _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                                  0, 0, GUI_SCREEN_WIDTH, 199);
+          reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
         transcribe_ui.state = 1;

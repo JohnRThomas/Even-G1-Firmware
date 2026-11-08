@@ -2,16 +2,19 @@
  * Notification store: messages received from the phone (ANCS / NCS),
  * g_arrMsgContent bookkeeping and the BLE notification commands.
  */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/toolchain.h>
 
 #include "../ble/ble_proto.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
+#include "g1_date.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include "notify.h"
 #include "whitelist.h"
 
@@ -49,9 +52,9 @@ static struct notif_msg push_msg_copy;
 
 uint8_t g_msg_num_push;
 uint8_t g_curShowMsgIdx;
-uint8_t msg_show_state;
+static uint8_t msg_show_state;
 
-int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id, const char *name) {
+static int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id, const char *name) {
   uint8_t pkt[21] = {0};
   char json[320];
   uint16_t len;
@@ -116,8 +119,9 @@ void send_whilelist_app_info_wrapper(struct notif_msg *msg) {
   send_notifi_app_white_list_app(&get_dashboard_state()->ble_context, msg->app_identifier, msg->display_name);
 }
 
-int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, uint8_t *src, uint8_t *hdr, uint8_t *arg,
-                                   uint8_t *out, uint32_t len) {
+int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, const uint8_t *src, uint8_t *hdr,
+                                   const uint8_t *arg, uint8_t *out, uint32_t len) {
+  ARG_UNUSED(len);
   struct notif_msg *msg;
 
   if (state == NULL || data == NULL || src == NULL || hdr == NULL || arg == NULL || out == NULL) {
@@ -161,7 +165,7 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, ui
   return 5;
 }
 
-void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data) {
+void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, uint8_t *data) {
   uint8_t resp[128];
   uint8_t *tx;
   struct notif_msg *msg;
@@ -232,14 +236,14 @@ void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, 
   ctx->write(rsp, 0x14);
 }
 
-void normal_g_arrMsgContent(void) {
+static void normal_g_arrMsgContent(void) {
   for (int i = 0; i < MSG_NORMAL_NUM; i++) {
     BLE_PRINTK("normal g_arrMsgContent[%d].uidTail is %d %d recvTime %d\n", i, g_arrMsgContent[i].uid,
                g_arrMsgContent[i].start_show_time, g_arrMsgContent[i].recv_time);
   }
 }
 
-void push_g_arrMsgContent(void) {
+static void push_g_arrMsgContent(void) {
   for (int i = MSG_NORMAL_NUM; i < MSG_TOTAL_NUM; i++) {
     BLE_PRINTK("PUSH: g_arrMsgContent[%d].uidTail is %d push %d \n", i, g_arrMsgContent[i].uid,
                g_arrMsgContent[i].recv_time);
@@ -313,7 +317,7 @@ void clear_all_messages(void) {
   msg_array_busy = 0;
 }
 
-uint8_t find_last_read_message(void) {
+static uint8_t find_last_read_message(void) {
   int i;
 
   for (i = MSG_NORMAL_NUM - 1; i >= 0; i--) {
@@ -414,7 +418,7 @@ void clear_timeout_message(int force) {
   msg_array_busy = 0;
 }
 
-int message_uid_exists(uint32_t num, uint32_t uid) {
+static int message_uid_exists(uint8_t num, uint32_t uid) {
   for (uint8_t i = 0; i < num; i++) {
     if (g_arrMsgContent[i].app_identifier[0] && g_arrMsgContent[i].uid == uid) {
       return 1;
@@ -464,7 +468,7 @@ void confirm_message(uint32_t uid) {
     if (count) {
       bool found = false;
 
-      for (i = 0; i < count; i++) {
+      for (i = 0; i < (uint8_t)count; i++) {
         if (g_arrMsgContent[i].uid == pending->uid || found) {
           memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1], sizeof(struct notif_msg));
           found = true;
@@ -476,7 +480,7 @@ void confirm_message(uint32_t uid) {
       }
     }
   } else if (pending->action == 1 && count) {
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < (uint8_t)count; i++) {
       if (g_arrMsgContent[i].uid == pending->uid) {
         memcpy(&g_arrMsgContent[i], pending, sizeof(struct notif_msg));
         break;
@@ -515,13 +519,11 @@ drop_head:
       if (unread != 0xff) {
         set_msg_timeout_flag();
       }
-    } else if (is_in_box() != 1) {
-      if (get_dashboard_state()->dashboard_mode == 0 ||
-          (get_dashboard_state()->message_mode && get_dashboard_state()->dashboard_mode == 6)) {
-        if (cur_message_show_state() != 1) {
-          msg_show_state = 1;
-        }
-      }
+    } else if (is_in_box() != 1 &&
+               (get_dashboard_state()->dashboard_mode == 0 ||
+                (get_dashboard_state()->message_mode && get_dashboard_state()->dashboard_mode == 6)) &&
+               cur_message_show_state() != 1) {
+      msg_show_state = 1;
     }
   }
   if (!msg_busy) {
@@ -683,7 +685,7 @@ uint8_t cur_message_show_state(void) {
   return ret;
 }
 
-uint8_t latest_message_show_state(void) {
+static uint8_t latest_message_show_state(void) {
   uint8_t ret = 0;
 
   if (g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time != 0) {

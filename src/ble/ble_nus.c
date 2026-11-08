@@ -3,12 +3,17 @@
 #include "ble_ancs.h"
 #include "ble_proto.h"
 #include "g1_log.h"
+#include "glasses_state.h"
 #include <bluetooth/services/nus.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
 
 K_MSGQ_DEFINE(nus_data_msgq, sizeof(struct bt_data_msg), BT_DATA_MSGQ_MAX, 4);
 static struct ble_context *ble_ctx;
@@ -27,11 +32,9 @@ static int ble_write_thread(const uint8_t *data, uint16_t len) {
   bool connected = get_current_conn();
   int err;
 
-  if (!get_pt_test_mode()) {
-    if (!connected || get_dashboard_state()->ble_context.security_pending ||
-        k_sem_count_get(&get_dashboard_state()->ble_context.tx_sem) == 0) {
-      return -1;
-    }
+  if (!get_pt_test_mode() && (!connected || get_dashboard_state()->ble_context.security_pending ||
+                              k_sem_count_get(&get_dashboard_state()->ble_context.tx_sem) == 0)) {
+    return -1;
   }
   k_mutex_lock(&nus_mutex, K_FOREVER);
   err = bt_nus_send(NULL, data, len);
