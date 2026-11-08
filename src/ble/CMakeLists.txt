@@ -5,6 +5,5 @@ target_sources(app PRIVATE
   ble_ancs.c
   ble_proto.c
   smp_bt.c
-  hci_cmd_timeout.c
   bt_conn_security.c
 )

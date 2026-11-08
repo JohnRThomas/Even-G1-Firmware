@@ -17,7 +17,6 @@
 #include "threads.h"
 #include "../aw9320x/aw9320x.h"
 #include "../ble/ble_ancs.h"
-#include "../ble/hci_cmd_timeout.h"
 #include "../button/button.h"
 #include "../dashboard/dashboard.h"
 #include "../display/display_thread.h"
@@ -2870,10 +2869,12 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3)
   for (;;) {
     cnt++;
     if (cnt % 5 == 0) {
-      if (get_dashboard_state()->work_mode != 1) {
-        err = hci_cmd_send_timeout(BT_HCI_OP_READ_LOCAL_VERSION_INFO, 2000);
+      /* bt_enable() discards commands queued before it, so the controller is
+       * only pinged once the host has finished enabling */
+      if (get_dashboard_state()->work_mode != 1 && bt_is_ready()) {
+        err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_LOCAL_VERSION_INFO, NULL, NULL);
         if (err) {
-          if (++hci_fail_cnt > 2 || err == -ETIMEDOUT) {
+          if (++hci_fail_cnt > 2) {
             hci_fail_cnt = 0;
             G1_LOG_ERR("watch dog reset becase bt hci cmd send sync failed\n");
             system_reboot_delayed();
