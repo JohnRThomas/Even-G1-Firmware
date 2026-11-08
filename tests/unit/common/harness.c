@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <zephyr/fff.h>
+#include <app_version.h>
 
 #include "harness.h"
 #include "ble/ble_proto.h"
@@ -203,10 +204,10 @@ static void ble_context_setup(struct ble_context *ctx)
   ctx->tx_buf = block_alloc(BLE_TX_BUF_SIZE);
 }
 
-/* as role_init(): version 1.6.6 and the BIT(2) flag on the side's own record */
+/* as role_init(): the VERSION file's version and the BIT(2) flag on the side's own record */
 static void set_role(struct GlassesState *state, int role)
 {
-  static const struct fw_ver version = {1, 6, 6};
+  static const struct fw_ver version = {APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_PATCHLEVEL};
   bool master = role == G1_ROLE_MASTER;
 
   state->is_master = role;

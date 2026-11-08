@@ -8,8 +8,8 @@ action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6
 wait(6.7)
 action(B, phone_on(),
        recv(B, "4D C9"),
-       recv(M, "2C 66 .. .. F9 80 19 01 06 06 01 06 06"),
-       recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 06"),
+       recv(M, "2C 66 .. .. F9 80 19 01 06 07 01 06 07"),
+       recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 07"),
        # BLE paired
        recv(B, "F5 11"),
        # dashboard

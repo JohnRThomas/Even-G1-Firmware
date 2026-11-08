@@ -5,8 +5,8 @@
 at(12)
 action(B, phone_on(hb=0),
        recv(B, "4D C9"),
-       recv(M, "2C 66 .. .. F9 80 19 01 06 06 01 06 06"),
-       recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 06"),
+       recv(M, "2C 66 .. .. F9 80 19 01 06 07 01 06 07"),
+       recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 07"),
        # BLE paired
        recv(B, "F5 11"),
        within=8, label="phone_on")
