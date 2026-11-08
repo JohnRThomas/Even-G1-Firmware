@@ -13,11 +13,11 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/hci.h>
 #include <nrfx.h>
-#include <vendor_drivers.h>	/* bt_hci_cmd_send_sync_timeout() on a stock tree */
 #include "g1_log.h"
 #include "threads.h"
 #include "../aw9320x/aw9320x.h"
 #include "../ble/ble_ancs.h"
+#include "../ble/hci_cmd_timeout.h"
 #include "../button/button.h"
 #include "../dashboard/dashboard.h"
 #include "../display/display_thread.h"
@@ -2894,8 +2894,7 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3)
 		cnt++;
 		if (cnt % 5 == 0) {
 			if (get_dashboard_state()->work_mode != 1) {
-				err = bt_hci_cmd_send_sync_timeout(BT_HCI_OP_READ_LOCAL_VERSION_INFO, NULL, NULL,
-								   2000, false);
+				err = hci_cmd_send_timeout(BT_HCI_OP_READ_LOCAL_VERSION_INFO, 2000);
 				if (err) {
 					if (++hci_fail_cnt > 2 || err == -ETIMEDOUT) {
 						hci_fail_cnt = 0;

@@ -1272,13 +1272,13 @@ static struct GlassesState *init_context(void)
 		k_timer_start(&periodic_timer, K_SECONDS(60), K_SECONDS(60));
 		power_for_imu_and_mic();
 		s->imu.dev = DEVICE_DT_GET(DT_NODELABEL(lsm6dso));
-		lsm6dso_init(DEVICE_DT_GET(DT_NODELABEL(lsm6dso)));
+		lsm6dso_power_on_init(DEVICE_DT_GET(DT_NODELABEL(lsm6dso)));
 		register_imu_funsion_context(&s->imu);
 		register_opt3007_context(&s->opt3007_context);
 	} else if (s->is_master == 2) {
 		power_for_imu_and_mic();
 		s->imu.dev = DEVICE_DT_GET(DT_NODELABEL(lsm6dso));
-		lsm6dso_init(DEVICE_DT_GET(DT_NODELABEL(lsm6dso)));
+		lsm6dso_power_on_init(DEVICE_DT_GET(DT_NODELABEL(lsm6dso)));
 	}
 	register_jdb_panel_context(&s->panel);
 	nfc_init();
