@@ -14,7 +14,7 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
 #include <bluetooth/gatt_dm.h>
-#include <bluetooth/services/ancs_client.h>
+#include "ancs_attr_max.h" /* <bluetooth/services/ancs_client.h> with a 256-byte attribute limit */
 #include <bluetooth/services/gattp.h>
 #include <zephyr/settings/settings.h>
 #include <../subsys/bluetooth/host/conn_internal.h>
@@ -36,6 +36,10 @@
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 #define ATTR_DATA_SIZE 32
+
+/* every buffer ancs_c_init() registers has to fit the ANCS client's limit */
+BUILD_ASSERT(sizeof(((struct notif_msg *)0)->message) <= BT_ANCS_ATTR_DATA_MAX);
+BUILD_ASSERT(sizeof(((struct notif_msg *)0)->display_name) <= BT_ANCS_ATTR_DATA_MAX);
 
 #define ANCS_MSGQ_MAX 10
 #define UID_MSGQ_MAX 10
