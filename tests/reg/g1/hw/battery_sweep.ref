@@ -46,18 +46,22 @@ action(M, [NPM + "BatteryVoltageMilliVolts 3500", 2.5, send('2C 01'), send('23 7
 action(M, [NPM + "BatteryVoltageMilliVolts 3400", 2.5, send('2C 01'), send('23 76')],
        recv(M, "2C 66 .. .. 8B 80 19"), recv(M, "'B:.., V:339, A:0, T:25'"))
 
-# a charge current (the PMIC reads 48 mA for 50) and a discharge current, at 3.4 V
+# a discharge current (the PMIC reads 48 mA for 50) and a charge current, at 3.4 V. The model scales a charge
+# current by the charger's 40 mA setting; the nPM1300 driver of NCS 2.6.0 takes the full scale as 1.25 times that
+# setting (NCS 2.5.1: as the setting), so it reads the model's -40 mA as -49 mA
 # 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
 action(M, [NPM + "BatteryCurrentMilliAmps 50", 2.5, send('2C 01'), send('23 76')],
        recv(M, "2C 66 .. .. 8B B0 19"), recv(M, "'B:.., V:339, A:48, T:25'"))
 # 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
 action(M, [NPM + "BatteryCurrentMilliAmps -40", 2.5, send('2C 01'), send('23 76')],
-       recv(M, "2C 66 .. .. 8B 58 19"), recv(M, "'B:.., V:339, A:-40, T:25'"))
+       recv(M, "2C 66 .. .. 8B 4F 19"), recv(M, "'B:.., V:339, A:-49, T:25'"))
 
 # over the whole run
 never("fatal")
 never("boot", after=1)
-link_up()
+# the phone connects at 6 s and a lens reports the link in its first sensor-loop round after 10 s of uptime
+# (check_work_mode(), a round every 1 to 1.4 s): up to 5.5 s after the connection
+link_up(within=6)
 # the bring-up events after the bind: worn, charging state (within 7 s on a clean link, 15 s when the master's
 # sync retries slow its sensor loop)
 after("phone_on", recv(B, "F5 06"), recv(B, "F5 09 00"), within=15)

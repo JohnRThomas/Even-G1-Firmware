@@ -1,0 +1,8 @@
+# ESB raises its event interrupt on SWI0 (IRQ 26), which is also the default MPSL
+# low-priority interrupt on the nRF5340 network core.  ESB and the Bluetooth
+# controller share the radio through MPSL timeslots here, so MPSL is moved to
+# SWI3 (IRQ 29).  The option has no prompt, hence the default here and not in prj.conf.
+config MPSL_LOW_PRIO_IRQN
+	default 29
+
+source "Kconfig.zephyr"

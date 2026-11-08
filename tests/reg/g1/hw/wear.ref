@@ -7,10 +7,13 @@ action(B, phone_on(), recv(B, "4D C9"), recv(B, "F5 11"), within=8, label="phone
 action(B, send('27 01'), recv(B, "27 C9"))
 action(B, send('3A'), recv(B, "3A C9 01"))
 # Taken off: not worn on both lenses; 0x2B reports display mode 0x0A, wear event 07.
+# A lens says so up to 4.5 s after the signal drops: its network core reads the signal once a second and reports
+# the third low reading in a row (up to 3 s), and its application core looks at the report on its next round (one
+# about every 1.3 s).
 wait(3.5)
-action(B, "sysbus.radio RssiSample 30", recv(B, "F5 07"))
+action(B, "sysbus.radio RssiSample 30", recv(B, "F5 07"), within=5)
 action(B, send('2B'), recv(B, "2B 69 0A 07"))
-# Put on again: worn on both lenses; 0x2B reports wear event 06.
+# Put on again: worn on both lenses; 0x2B reports wear event 06. The first high reading is reported: up to 2.5 s.
 wait(1.5)
 action(B, "sysbus.radio RssiSample 60", recv(B, "F5 06"))
 action(B, send('2B'), recv(B, "2B 69 0A 06"))

@@ -14,8 +14,7 @@ at(16.5)
 action(B, TAP)
 at(18.5)
 check(S, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
-# queried here, asserted at the end (the known failure)
-check(M, "sysbus.twim1.npm1300 WatchdogResetCount")
+check(M, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
 check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
 # only the master runs the IMU
 check(S, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="False")
@@ -31,13 +30,10 @@ check(S, "sysbus.twim2.touch EventsArmed", equals="True")
 # the taps at 15 s and 16.5 s
 check(S, "sysbus.twim2.touch PressesDelivered", equals="0x00000002")
 at(19)
-never("fatal", lens=S)
-never("boot", after=1, lens=S)
+# the master survives its dead touch controller
+never("fatal")
+never("boot", after=1)
 # no phone: no event leaves the glasses
 quiet(B, "F5")
 # nothing redrawn once the dashboard is up: it stays up, a tap without a phone changes nothing
 never("frame ", after=("dashboard", 0))
-# the master must survive its dead touch controller
-known_failure("the master resets itself when its touch controller NAKs at boot (HCI poll timeout -> system_reboot_delayed)",
-              together(never("fatal", lens=M), never("boot", after=1, lens=M),
-                       state("sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000", lens=M)))

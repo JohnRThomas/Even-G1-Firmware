@@ -24,11 +24,11 @@ action(M, [NFC + "RfEnableMailbox", "sysbus.saadc SetAnalogInput 3 600000", NFC 
          NPM + "VbusConnected true", NPM + "BatteryCurrentMilliAmps -40"])
 
 # the case says lid open, 55 % and charging: the firmware reports "in the case" on its next sensor-loop pass and
-# answers the case with its own battery info (pt 0x13 reply: 53 % at 3.9 V); the other three events follow one
-# per pass (about a second each)
+# answers the case with its own battery info (pt 0x13 reply: 53 % at 3.9 V, charging at 49 mA); the other three
+# events follow one per pass (about a second each)
 wait(6)
 action(M, case(0xB7, 7), recv(M, "F5 08"), within=2, label="case_open")
-check(M, "sysbus.twim1.st25dv RfReadMailboxMessage", equals="13-01-02-06-00-17-70-35-01-27-00")
+check(M, "sysbus.twim1.st25dv RfReadMailboxMessage", equals="13-01-02-06-00-17-70-35-01-31-0A")
 wait(0.7)
 action(M, case(0xB7, 7))
 action(M, case(0xB7, 7))
@@ -36,9 +36,9 @@ wait(3)
 action(M, case(0xB7, 7))
 # 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
 action(M, [send('2C 01'), send('23 76')],
-       # 0x58: -40 mA
-       recv(M, "2C 66 .. .. BD 58 19"),
-       recv(M, "'B:.., V:389, A:-40, T:25'"))
+       # 0x4F: -49 mA, as the nPM1300 driver of NCS 2.6.0 reads the model's -40 mA (hw/battery_sweep)
+       recv(M, "2C 66 .. .. BD 4F 19"),
+       recv(M, "'B:.., V:389, A:-49, T:25'"))
 check(M, "sysbus.twim1.npm1300 ChargingEnabled", equals="True")
 # charging
 check(M, "sysbus.twim1.npm1300 ChargerStatus", equals="0x09")
@@ -48,7 +48,7 @@ action(M, case(0xB7, 7))
 action(M, case(55, 6), recv(M, "F5 0B"), within=2, label="lid_closed")
 action(M, case(55, 6))
 wait(4.5)
-check(M, "sysbus.twim1.st25dv RfReadMailboxMessage", equals="13-01-02-06-00-17-70-35-01-27-00")
+check(M, "sysbus.twim1.st25dv RfReadMailboxMessage", equals="13-01-02-06-00-17-70-35-01-31-0A")
 action(M, case(55, 6))
 action(M, case(55, 6))
 
