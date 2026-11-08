@@ -69,7 +69,7 @@ int init_burial_point_date(uint32_t timestamp, struct bp_date *date)
 /* weekday name of a UTC timestamp */
 const char *get_weekday_name(uint32_t ts)
 {
-	struct bp_date date = { 0 };
+	struct bp_date date = {0};
 
 	init_burial_point_date(ts, &date);
 	printk("date: %u: %04d/%02d/%02d-%02d:%02d:%02d\n", ts, date.year, date.month, date.day,
@@ -83,7 +83,7 @@ int format_float_2dp(float val, char *buf)
 {
 	int v = (int)(val * 100);
 	uint32_t a = abs(v);
-	char tmp[12] = { 0 };
+	char tmp[12] = {0};
 	char *p = buf;
 	int mode;
 	int n = 0;
@@ -213,7 +213,7 @@ int uint32_to_little_endian(uint8_t *buf, uint32_t val)
 
 /* generic CRC-16 (init, poly, xorout, reflect in / out) */
 uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, bool refout,
-		      const uint8_t *data, int len)
+		       const uint8_t *data, int len)
 {
 	uint16_t out;
 	uint8_t b, r;

@@ -28,11 +28,11 @@
 #define SPI_DEEP_POWER_DOWN      0xb9
 #define SPI_WR_BUFFER            0x02
 
-#define JBD_PANEL_DEVICE_ID      0x4010
+#define JBD_PANEL_DEVICE_ID 0x4010
 
-#define PANEL_WIDTH              640
-#define PANEL_FB_STRIDE          (PANEL_WIDTH / 2)          /* 4 bpp */
-#define PANEL_FB_SIZE            (PANEL_FB_ROWS * PANEL_FB_STRIDE)
+#define PANEL_WIDTH     640
+#define PANEL_FB_STRIDE (PANEL_WIDTH / 2)          /* 4 bpp */
+#define PANEL_FB_SIZE   (PANEL_FB_ROWS * PANEL_FB_STRIDE)
 
 #define LP_JBD_BIT BIT(8)
 
@@ -56,10 +56,10 @@ void copy_frame_buffer_rows(uint8_t **fb, int dst_x, int dst_y, int src_x, int s
 /* jbd_panel_flush.c */
 extern uint32_t JDB_PANEL_ID;
 extern struct k_mutex lcd_mutex;
-int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start,
-			    int x_end, int y_end);
-int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start,
-			       int x_end, int y_end, int offset);
+int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end,
+			    int y_end);
+int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start, int x_end,
+			       int y_end, int offset);
 int jbd_panel_suspend(void);
 int jbd_panel_resume(struct jbd_panel_context *c);
 void lock_lcd_mutex(k_timeout_t timeout);
@@ -73,7 +73,7 @@ void wr_cur_reg(uint8_t param);
 void wr_lum_reg(uint16_t param);
 void clr_cache(uint8_t val);
 void jbd_clear_cache_sync(uint8_t val);
-void display_image(uint32_t row, uint32_t col, uint8_t *buf, int len);
+void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len);
 void panel_rst(void);
 void panel_init(void);
 

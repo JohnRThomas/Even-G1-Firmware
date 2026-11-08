@@ -281,34 +281,32 @@ static void rx_thread(void *p1, void *p2, void *p3)
 
 static void hci_ept_recv(const void *data, size_t len, void *priv)
 {
-	hci_rpmsg_rx((uint8_t *) data, len);
+	hci_rpmsg_rx((uint8_t *)data, len);
 }
 
 static struct ipc_ept_cfg hci_ept_cfg = {
 	.name = "nrf_bt_hci",
-	.cb = {
-		.bound    = hci_ept_bound,
-		.received = hci_ept_recv,
-	},
+	.cb =
+		{
+			.bound = hci_ept_bound,
+			.received = hci_ept_recv,
+		},
 };
 
 int hci_rpmsg_init(void)
 {
 	int err;
-	const struct device *hci_ipc_instance =
-		DEVICE_DT_GET(DT_CHOSEN(zephyr_bt_hci_ipc));
+	const struct device *hci_ipc_instance = DEVICE_DT_GET(DT_CHOSEN(zephyr_bt_hci_ipc));
 
 	/* Enable the raw interface, this will in turn open the HCI driver */
 	bt_enable_raw(&rx_queue);
 
-	k_thread_create(&tx_thread_data, tx_thread_stack,
-			K_THREAD_STACK_SIZEOF(tx_thread_stack), tx_thread,
-			NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
+	k_thread_create(&tx_thread_data, tx_thread_stack, K_THREAD_STACK_SIZEOF(tx_thread_stack),
+			tx_thread, NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
 	k_thread_name_set(&tx_thread_data, "HCI rpmsg TX");
 
-	k_thread_create(&rx_thread_data, rx_thread_stack,
-			K_THREAD_STACK_SIZEOF(rx_thread_stack), rx_thread,
-			NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
+	k_thread_create(&rx_thread_data, rx_thread_stack, K_THREAD_STACK_SIZEOF(rx_thread_stack),
+			rx_thread, NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
 	k_thread_name_set(&rx_thread_data, "HCI rpmsg RX");
 
 	/* Initialize IPC service instance and register endpoint. */
@@ -338,10 +336,8 @@ int hci_rpmsg_get_static_addr(uint8_t *addr)
 		sys_put_le16(NRF_FICR->DEVICEADDR[1], &addrs[0].bdaddr.val[4]);
 		BT_ADDR_SET_STATIC(&addrs[0].bdaddr);
 
-		if ((NRF_FICR->IR[0] != UINT32_MAX) &&
-		    (NRF_FICR->IR[1] != UINT32_MAX) &&
-		    (NRF_FICR->IR[2] != UINT32_MAX) &&
-		    (NRF_FICR->IR[3] != UINT32_MAX)) {
+		if ((NRF_FICR->IR[0] != UINT32_MAX) && (NRF_FICR->IR[1] != UINT32_MAX) &&
+		    (NRF_FICR->IR[2] != UINT32_MAX) && (NRF_FICR->IR[3] != UINT32_MAX)) {
 			sys_put_le32(NRF_FICR->IR[0], &addrs[0].ir[0]);
 			sys_put_le32(NRF_FICR->IR[1], &addrs[0].ir[4]);
 			sys_put_le32(NRF_FICR->IR[2], &addrs[0].ir[8]);
@@ -351,8 +347,8 @@ int hci_rpmsg_get_static_addr(uint8_t *addr)
 		}
 
 		memcpy(addr, addrs[0].bdaddr.val, 6);
-		snprintf(str, sizeof(str), "%02X:%02X:%02X:%02X:%02X:%02X",
-			 addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
+		snprintf(str, sizeof(str), "%02X:%02X:%02X:%02X:%02X:%02X", addr[5], addr[4],
+			 addr[3], addr[2], addr[1], addr[0]);
 		printk("BT addr: %s\n", str);
 		return 1;
 	}

@@ -26,7 +26,8 @@ int store_whitelist(void)
 	uint8_t retry = 3;
 
 	do {
-		ret = write_whitelist_to_flash(WHITELIST_FLASH_ADDR, (const uint8_t *)&g_appWhiteListInfo,
+		ret = write_whitelist_to_flash(WHITELIST_FLASH_ADDR,
+					       (const uint8_t *)&g_appWhiteListInfo,
 					       sizeof(g_appWhiteListInfo));
 		if (ret == 0) {
 			dump_whitelist();
@@ -47,7 +48,8 @@ int load_whitelist(void)
 	memset(&tmp, 0, sizeof(tmp));
 	ret = flash_settings_read(WHITELIST_FLASH_ADDR, &tmp, sizeof(tmp));
 	if (ret) {
-		BLE_PRINTK("[%s-%d] flash_settings_read error,ret is %d \n", __func__, __LINE__, ret);
+		BLE_PRINTK("[%s-%d] flash_settings_read error,ret is %d \n", __func__, __LINE__,
+			   ret);
 		return -1;
 	}
 
@@ -253,7 +255,8 @@ int parse_app_white_list_json(const char *json)
 				BLE_PRINTK("appNameJson is NULL !\n");
 				continue;
 			}
-			memset(g_appWhiteListInfo.list[n].id, 0, sizeof(g_appWhiteListInfo.list[n].id));
+			memset(g_appWhiteListInfo.list[n].id, 0,
+			       sizeof(g_appWhiteListInfo.list[n].id));
 			memset(g_appWhiteListInfo.list[n].name, 0,
 			       sizeof(g_appWhiteListInfo.list[n].name));
 			strncpy(g_appWhiteListInfo.list[n].id, id->valuestring,
@@ -483,8 +486,8 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp)
 	}
 	rem = len % 17;
 	pad = 17 - rem;
-	n = len / 17;		/* full 17-byte chunks */
-	total = n + 1;		/* plus the (possibly empty) last packet */
+	n = len / 17;  /* full 17-byte chunks */
+	total = n + 1;  /* plus the (possibly empty) last packet */
 	rsp[1] = total;
 	src = buf;
 	for (i = 0; i < n; i++) {

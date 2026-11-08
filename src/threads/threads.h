@@ -58,7 +58,8 @@ int watchdog_disable(void);
 
 /* ble_req.c */
 struct ble_req;
-int master_process_put_req(struct GlassesState *state, struct ble_req *head, uint8_t *out, uint32_t len);
+int master_process_put_req(struct GlassesState *state, struct ble_req *head, uint8_t *out,
+			   uint32_t len);
 
 /* system_state.c */
 int trigger_screen_state_change(const char *who, struct GlassesState *state, uint8_t on);

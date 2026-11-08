@@ -35,24 +35,25 @@ int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event)
 		get_dashboard_state()->bitmap_info->deadline = now;
 		switch (dnd_bitmap_mode) {
 		case 0:
-			gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8, gui_screen_y_offset() + 0x3a, 0, 0,
-						    0, 1);
+			gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8,
+						    gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
 			gui_utf_draw(0, get_string(0x25), 0, gui_screen_x_offset() + 0xf4,
-				     gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88,
-				     2, 0, 0, NULL, 0);
+				     gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240,
+				     gui_screen_y_offset() + 0x88, 2, 0, 0, NULL, 0);
 			break;
 		case 2:
-			gui_bmp_bitmap_draw(0x49, gui_screen_x_offset(), gui_screen_y_offset() + 0x3a, 0, 0, 0);
+			gui_bmp_bitmap_draw(0x49, gui_screen_x_offset(),
+					    gui_screen_y_offset() + 0x3a, 0, 0, 0);
 			gui_utf_draw(0, get_string(0x26), 0, gui_screen_x_offset() + 0x58,
-				     gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88,
-				     2, 0, 0, NULL, 0);
+				     gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240,
+				     gui_screen_y_offset() + 0x88, 2, 0, 0, NULL, 0);
 			break;
 		case 1:
-			gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8, gui_screen_y_offset() + 0x3a, 0, 0,
-						    0, 1);
+			gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8,
+						    gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
 			gui_utf_draw(0, get_string(0x27), 0, gui_screen_x_offset() + 0x104,
-				     gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88,
-				     2, 0, 0, NULL, 0);
+				     gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240,
+				     gui_screen_y_offset() + 0x88, 2, 0, 0, NULL, 0);
 			break;
 		default:
 			break;
@@ -62,12 +63,12 @@ int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event)
 	case 1:
 		switch (dnd_bitmap_mode) {
 		case 0:
-			gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8, gui_screen_y_offset() + 0x3a, 0, 0,
-						    0, 1);
+			gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8,
+						    gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
 			break;
 		case 1:
-			gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8, gui_screen_y_offset() + 0x3a, 0, 0,
-						    0, 1);
+			gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8,
+						    gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
 			break;
 		case 2:
 			break;
@@ -107,8 +108,7 @@ int not_disturb_sync_data(const uint8_t *data, uint8_t len)
 			len = 1;
 			buf[1] = data[0];
 		}
-		if ((unsigned int)sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >=
-		    2000) {
+		if (sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
 			G1_LOG_ERR("not_disturb SYNC TO master failed...\n");
 			return -1;
 		}
@@ -147,7 +147,8 @@ int sync_not_disturb_bitmap(uint8_t mode)
 /* request a new do-not-disturb bitmap mode (0..2); synced to the app later */
 void request_not_disturb_bitmap(uint8_t mode)
 {
-	if (mode < 3 && (get_dashboard_state()->bitmap_info->mode != mode || get_dashboard_state()->dashboard_mode != 7)) {
+	if (mode < 3 && (get_dashboard_state()->bitmap_info->mode != mode ||
+			 get_dashboard_state()->dashboard_mode != 7)) {
 		get_dashboard_state()->bitmap_info->mode = mode;
 		get_dashboard_state()->bitmap_info->sync_pending = 1;
 	}

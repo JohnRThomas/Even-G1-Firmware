@@ -21,7 +21,7 @@ struct bt_data_msg {
 
 /* ble_nus.c */
 int enqueue_bt_data(void *data, uint8_t len);
-int dequeue_bt_data(struct bt_data_msg *msg);
+int dequeue_bt_data(struct bt_data_msg *out);
 int init_nus(void);
 struct ble_context *get_ble_context(void);
 void ble_context_init(struct ble_context *ctx);

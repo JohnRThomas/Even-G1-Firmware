@@ -19,17 +19,17 @@
 
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
-#define AUDIO_STREAM_MSG_DATA  200
-#define AUDIO_STREAM_MSGQ_LEN  18
+#define AUDIO_STREAM_MSG_DATA 200
+#define AUDIO_STREAM_MSGQ_LEN 18
 
-#define VOICE_MANAGER_ADDR  0x400000
-#define VOICE_SECTOR_SIZE   0x1000
-#define VOICE_BLOCK_BASE    0x421000
-#define VOICE_BLOCK_SIZE    0x20000
+#define VOICE_MANAGER_ADDR      0x400000
+#define VOICE_SECTOR_SIZE       0x1000
+#define VOICE_BLOCK_BASE        0x421000
+#define VOICE_BLOCK_SIZE        0x20000
 #define VOICE_BLOCK_LAST_SECTOR 0x10000
-#define VOICE_BLOCK_NUM     4
-#define VOICE_BLOCK_ALL     0xff
-#define VOICE_MANAGER_MAGIC 0x5aa5aa5a
+#define VOICE_BLOCK_NUM         4
+#define VOICE_BLOCK_ALL         0xff
+#define VOICE_MANAGER_MAGIC     0x5aa5aa5a
 
 enum audio_stream_cmd {
 	AUDIO_STREAM_START = 1,
@@ -105,13 +105,13 @@ static void delVoiceBlock(uint8_t num)
 	}
 	memset(audio_cache, 0, sizeof(audio_cache));
 	ret = get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR,
-						 audio_cache, VOICE_SECTOR_SIZE);
+						audio_cache, VOICE_SECTOR_SIZE);
 	if (ret) {
 		G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
 		return;
 	}
 	ret = get_dashboard_state()->flash_erase(get_dashboard_state(), VOICE_MANAGER_ADDR,
-						  VOICE_SECTOR_SIZE);
+						 VOICE_SECTOR_SIZE);
 	if (ret) {
 		G1_LOG_INF("Flash erase failed! %d\n\n", ret);
 		return;
@@ -127,7 +127,7 @@ static void delVoiceBlock(uint8_t num)
 		G1_LOG_INF("success delete all voice block \n");
 	}
 	ret = get_dashboard_state()->flash_write(get_dashboard_state(), VOICE_MANAGER_ADDR,
-						  audio_cache, VOICE_SECTOR_SIZE);
+						 audio_cache, VOICE_SECTOR_SIZE);
 	if (ret) {
 		G1_LOG_ERR("Flash write failed! %d\n\n", ret);
 		return;
@@ -269,25 +269,29 @@ int audioStreamFileManagerHandler(void)
 				return 0;
 			}
 			memset(audio_cache, 0, sizeof(audio_cache));
-			ret = get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR,
-								 audio_cache, VOICE_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_read(get_dashboard_state(),
+								VOICE_MANAGER_ADDR, audio_cache,
+								VOICE_SECTOR_SIZE);
 			if (ret) {
-				G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
+				G1_LOG_ERR(" form address [%d] read data failed.\n\n",
+					   VOICE_MANAGER_ADDR);
 				return 0;
 			}
 			if (VOICE_MGR->magic != VOICE_MANAGER_MAGIC) {
 				G1_LOG_INF("filesystem need format,try to format,please wait..\n");
 				memset(audio_cache, 0, sizeof(audio_cache));
-				memcpy(audio_cache, &voice_manager_default, sizeof(voice_manager_default));
+				memcpy(audio_cache, &voice_manager_default,
+				       sizeof(voice_manager_default));
 				ret = get_dashboard_state()->flash_erase(get_dashboard_state(),
-									  VOICE_MANAGER_ADDR, VOICE_SECTOR_SIZE);
+									 VOICE_MANAGER_ADDR,
+									 VOICE_SECTOR_SIZE);
 				if (ret) {
 					G1_LOG_INF("Flash erase failed! %d\n\n", ret);
 					return 0;
 				}
-				ret = get_dashboard_state()->flash_write(get_dashboard_state(),
-									  VOICE_MANAGER_ADDR, audio_cache,
-									  VOICE_SECTOR_SIZE);
+				ret = get_dashboard_state()->flash_write(
+					get_dashboard_state(), VOICE_MANAGER_ADDR, audio_cache,
+					VOICE_SECTOR_SIZE);
 				if (ret) {
 					G1_LOG_ERR("Flash write failed! %d\n\n", ret);
 					return 0;
@@ -302,8 +306,9 @@ int audioStreamFileManagerHandler(void)
 					G1_LOG_INF("find a free voice block(%d)!\r\n\n", i);
 					break;
 				}
-				G1_LOG_INF("voice_block_store_timestamp = %d, voice_stream_block_ts = %d\n",
-					   VOICE_MGR->blocks[i].timestamp, oldest);
+				G1_LOG_INF(
+					"voice_block_store_timestamp = %d, voice_stream_block_ts = %d\n",
+					VOICE_MGR->blocks[i].timestamp, oldest);
 				if (VOICE_MGR->blocks[i].timestamp < oldest &&
 				    (getAudioBlockInUse() == 0 || getAudioBlockInUse() - 1 != i)) {
 					oldest = VOICE_MGR->blocks[i].timestamp;
@@ -311,25 +316,28 @@ int audioStreamFileManagerHandler(void)
 				}
 			}
 			if (i == VOICE_BLOCK_NUM) {
-				G1_LOG_INF("no free voice block,try to use the oldest voice block(%d)!\n", sel);
+				G1_LOG_INF(
+					"no free voice block,try to use the oldest voice block(%d)!\n",
+					sel);
 			} else {
 				sel = i;
 			}
 			audio_block_num = sel;
-			G1_LOG_INF("audio manager start check success,will fill up audio stream to Num%d "
-				   "block\n", sel);
+			G1_LOG_INF(
+				"audio manager start check success,will fill up audio stream to Num%d "
+				"block\n",
+				sel);
 			audio_cache_offset = 0;
 			audio_sector_count = 0;
 			memset(audio_cache, 0, sizeof(audio_cache));
 			audio_record_state = 1;
 			audio_stream_crc = 0;
 			return 0;
-		} else if (msg.cmd == AUDIO_STREAM_STOP) {
+		}
+		if (msg.cmd == AUDIO_STREAM_STOP || msg.cmd == AUDIO_STREAM_DATA) {
 			clearAudioMessageQueue();
 		} else if (msg.cmd == AUDIO_STREAM_DELETE) {
 			delVoiceBlock(msg.data[0]);
-		} else if (msg.cmd == AUDIO_STREAM_DATA) {
-			clearAudioMessageQueue();
 		}
 		return 0;
 	}
@@ -348,9 +356,11 @@ int audioStreamFileManagerHandler(void)
 
 		if (msg.cmd == AUDIO_STREAM_START) {
 			audio_record_state = 0;
-			G1_LOG_ERR("A start command occurred during recording to exit the recording\n");
+			G1_LOG_ERR(
+				"A start command occurred during recording to exit the recording\n");
 			return 0;
-		} else if (msg.cmd == AUDIO_STREAM_DATA) {
+		}
+		if (msg.cmd == AUDIO_STREAM_DATA) {
 			if (audio_cache_offset + msg.len < VOICE_SECTOR_SIZE) {
 				memcpy(&audio_cache[audio_cache_offset], msg.data, msg.len);
 				audio_cache_offset += msg.len;
@@ -359,7 +369,8 @@ int audioStreamFileManagerHandler(void)
 			}
 			memcpy(&audio_cache[audio_cache_offset], msg.data,
 			       VOICE_SECTOR_SIZE - audio_cache_offset);
-			G1_LOG_INF("To complete a sector of data, perform flash write operations\n");
+			G1_LOG_INF(
+				"To complete a sector of data, perform flash write operations\n");
 			if (!device_is_ready(FLASH_DEV)) {
 				G1_LOG_ERR(" [%s] device not ready.\n\n", FLASH_DEV->name);
 				return 0;
@@ -367,11 +378,13 @@ int audioStreamFileManagerHandler(void)
 			addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE +
 			       audio_sector_count * VOICE_SECTOR_SIZE;
 			if (addr > audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE +
-				   VOICE_BLOCK_LAST_SECTOR) {
-				G1_LOG_ERR("the number of recording files exceeds the upper limit, system "
-					   "automatically stops\n");
-				G1_LOG_ERR("Catch touch release is not recognized, start QuickNote exception "
-					   "recovery mechanism\n");
+					   VOICE_BLOCK_LAST_SECTOR) {
+				G1_LOG_ERR(
+					"the number of recording files exceeds the upper limit, system "
+					"automatically stops\n");
+				G1_LOG_ERR(
+					"Catch touch release is not recognized, start QuickNote exception "
+					"recovery mechanism\n");
 				exit_quicknote[0] = 1;
 				exit_quicknote[1] = 0;
 				sync_to_slave(get_dashboard_state(), 6, exit_quicknote,
@@ -380,33 +393,39 @@ int audioStreamFileManagerHandler(void)
 				stop = 1;
 			} else {
 				G1_LOG_INF("wirte addr = 0x%08x\n", addr);
-				ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr,
-									  VOICE_SECTOR_SIZE);
+				ret = get_dashboard_state()->flash_erase(get_dashboard_state(),
+									 addr, VOICE_SECTOR_SIZE);
 				if (ret) {
 					G1_LOG_INF("Flash erase failed! %d\n\n", ret);
 					return 0;
 				}
-				ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, audio_cache,
-									  VOICE_SECTOR_SIZE);
+				ret = get_dashboard_state()->flash_write(get_dashboard_state(),
+									 addr, audio_cache,
+									 VOICE_SECTOR_SIZE);
 				if (ret) {
 					G1_LOG_ERR("Flash write failed! %d\n\n", ret);
 					return 0;
 				}
-				audio_stream_crc = crc32(audio_stream_crc, audio_cache, VOICE_SECTOR_SIZE);
+				audio_stream_crc =
+					crc32(audio_stream_crc, audio_cache, VOICE_SECTOR_SIZE);
 				audio_sector_count++;
-				G1_LOG_INF("wirte 4k voice data to flash,write address = 0x%08x\n", addr);
+				G1_LOG_INF("wirte 4k voice data to flash,write address = 0x%08x\n",
+					   addr);
 				copied = VOICE_SECTOR_SIZE - audio_cache_offset;
 				audio_cache_offset = 0;
 				memset(audio_cache, 0, sizeof(audio_cache));
-				G1_LOG_INF("Copy remain %d byte data into cache memory\n", msg.len - copied);
-				memcpy(&audio_cache[audio_cache_offset], msg.data + copied, msg.len - copied);
+				G1_LOG_INF("Copy remain %d byte data into cache memory\n",
+					   msg.len - copied);
+				memcpy(&audio_cache[audio_cache_offset], msg.data + copied,
+				       msg.len - copied);
 				audio_cache_offset += msg.len - copied;
 				return 0;
 			}
 		}
 		if (msg.cmd == AUDIO_STREAM_STOP || stop) {
 			G1_LOG_INF("received audio stop command,stop audio write process\n");
-			G1_LOG_INF("To complete a sector of data, perform flash write operations\n");
+			G1_LOG_INF(
+				"To complete a sector of data, perform flash write operations\n");
 			if (!device_is_ready(FLASH_DEV)) {
 				G1_LOG_ERR(" [%s] device not ready.\n\n", FLASH_DEV->name);
 				return 0;
@@ -414,13 +433,14 @@ int audioStreamFileManagerHandler(void)
 			addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE +
 			       audio_sector_count * VOICE_SECTOR_SIZE;
 			G1_LOG_INF("wirte addr = 0x%08x\n", addr);
-			ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, VOICE_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr,
+								 VOICE_SECTOR_SIZE);
 			if (ret) {
 				G1_LOG_INF("Flash erase failed! %d\n\n", ret);
 				return 0;
 			}
-			ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, audio_cache,
-								  VOICE_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr,
+								 audio_cache, VOICE_SECTOR_SIZE);
 			if (ret) {
 				G1_LOG_ERR("Flash write failed! %d\n\n", ret);
 				return 0;
@@ -428,14 +448,16 @@ int audioStreamFileManagerHandler(void)
 			audio_stream_crc = crc32(audio_stream_crc, audio_cache, audio_cache_offset);
 
 			memset(audio_cache, 0, sizeof(audio_cache));
-			ret = get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR,
-								 audio_cache, VOICE_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_read(get_dashboard_state(),
+								VOICE_MANAGER_ADDR, audio_cache,
+								VOICE_SECTOR_SIZE);
 			if (ret) {
-				G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
+				G1_LOG_ERR(" form address [%d] read data failed.\n\n",
+					   VOICE_MANAGER_ADDR);
 				return 0;
 			}
-			ret = get_dashboard_state()->flash_erase(get_dashboard_state(), VOICE_MANAGER_ADDR,
-								  VOICE_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_erase(
+				get_dashboard_state(), VOICE_MANAGER_ADDR, VOICE_SECTOR_SIZE);
 			if (ret) {
 				G1_LOG_INF("Flash erase failed! %d\n\n", ret);
 				return 0;
@@ -450,10 +472,12 @@ int audioStreamFileManagerHandler(void)
 				audio_sector_count * VOICE_SECTOR_SIZE + audio_cache_offset;
 			VOICE_MGR->blocks[audio_block_num].timestamp = get_date();
 			VOICE_MGR->blocks[audio_block_num].crc32 = audio_stream_crc;
-			G1_LOG_INF("upgrade Num.%d voice manager block,total write sector num = %d, total write "
-				   "byte = %d ,crc32 = %d\n",
-				   audio_block_num, audio_sector_count,
-				   audio_cache_offset + audio_sector_count * VOICE_SECTOR_SIZE, audio_stream_crc);
+			G1_LOG_INF(
+				"upgrade Num.%d voice manager block,total write sector num = %d, total write "
+				"byte = %d ,crc32 = %d\n",
+				audio_block_num, audio_sector_count,
+				audio_cache_offset + audio_sector_count * VOICE_SECTOR_SIZE,
+				audio_stream_crc);
 
 			if (VOICE_MGR->blocks[audio_block_num].start_addr ==
 			    VOICE_MGR->blocks[audio_block_num].end_addr) {
@@ -463,12 +487,14 @@ int audioStreamFileManagerHandler(void)
 				audio_cache_offset = 0;
 				audio_sector_count = 0;
 				clearAudioMessageQueue();
-				G1_LOG_ERR("The dmic may have a problem. When the size of the recording file is 0, "
-					   "data block 0 is terminated\n");
+				G1_LOG_ERR(
+					"The dmic may have a problem. When the size of the recording file is 0, "
+					"data block 0 is terminated\n");
 				return 0;
 			}
-			ret = get_dashboard_state()->flash_write(get_dashboard_state(), VOICE_MANAGER_ADDR,
-								  audio_cache, VOICE_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_write(get_dashboard_state(),
+								 VOICE_MANAGER_ADDR, audio_cache,
+								 VOICE_SECTOR_SIZE);
 			audio_record_state = 0;
 			audio_block_num = 0;
 			audio_cache_offset = 0;
@@ -481,10 +507,12 @@ int audioStreamFileManagerHandler(void)
 			}
 			G1_LOG_INF("audio manager block upgrade success\n");
 			return 0;
-		} else if (msg.cmd == AUDIO_STREAM_DELETE) {
-			G1_LOG_WRN("A delete command occurred during the recording process. The recording "
-				   "was stopped and the deletion action was performed,Delete num = %d\n",
-				   msg.data[0]);
+		}
+		if (msg.cmd == AUDIO_STREAM_DELETE) {
+			G1_LOG_WRN(
+				"A delete command occurred during the recording process. The recording "
+				"was stopped and the deletion action was performed,Delete num = %d\n",
+				msg.data[0]);
 			delVoiceBlock(msg.data[0]);
 			audio_record_state = 0;
 			return 0;

@@ -234,7 +234,9 @@ int load_usr_setting(struct GlassesState *gs)
 	gs->bonded_addr_raw = s.bonded_addr;
 	gs->imu.wear = s.imu_wear;
 	gs->message_mode = s.message_mode > 1 ? 0 : s.message_mode;
-	gs->message_stay_time = (s.message_stay_time == 0 || s.message_stay_time == 0xff) ? 15 : s.message_stay_time;
+	gs->message_stay_time = (s.message_stay_time == 0 || s.message_stay_time == 0xff)
+					? 15
+					: s.message_stay_time;
 	gs->charge_limit_upper = s.charge_limit_upper;
 	gs->charge_limit_lower = s.charge_limit_lower;
 	test_mode = s.test_mode;

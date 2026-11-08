@@ -25,8 +25,7 @@ static struct {
 	.uart = (const struct device *)1,
 };
 
-#define PT_COMM_DEV()                                                               \
-	(pt_comm.type == PT_COMM_NFC ? pt_comm.nfc : (void *)pt_comm.uart)
+#define PT_COMM_DEV() (pt_comm.type == PT_COMM_NFC ? pt_comm.nfc : (void *)pt_comm.uart)
 
 static uint8_t pt_resp_buf[50];
 static uint8_t pt_req_buf[256];
@@ -83,8 +82,7 @@ int process_pt_data(void *arg)
 	uint8_t cmd;
 	int ret;
 
-	if (pt_comm.type == PT_COMM_NONE ||
-	    (pt_comm.type == PT_COMM_NFC && pt_comm.nfc == NULL) ||
+	if (pt_comm.type == PT_COMM_NONE || (pt_comm.type == PT_COMM_NFC && pt_comm.nfc == NULL) ||
 	    (pt_comm.type == PT_COMM_UART && pt_comm.uart == NULL)) {
 		printk("comm para is error\n");
 		return -1;

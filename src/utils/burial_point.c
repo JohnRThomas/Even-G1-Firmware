@@ -15,7 +15,7 @@
 int update_burial_point_day_index(void)
 {
 	uint32_t ts = get_dashboard_tx_ctx();
-	struct bp_date date = { 0 };
+	struct bp_date date = {0};
 	uint8_t i;
 
 	init_burial_point_date(ts, &date);
@@ -28,9 +28,12 @@ int update_burial_point_day_index(void)
 		get_dashboard_state()->bp.day_index = 0;
 	}
 
-	if (get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].year == date.year &&
-	    get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].month == date.month &&
-	    get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].day == date.day) {
+	if (get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].year ==
+		    date.year &&
+	    get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].month ==
+		    date.month &&
+	    get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].day ==
+		    date.day) {
 		/*
 		 * Both paths return 0; the extra test is kept because the shipped
 		 * code has the block structure it produces (found by the permuter).
@@ -42,7 +45,8 @@ int update_burial_point_day_index(void)
 	}
 
 	for (i = 0; i < 7; i++) {
-		if (get_dashboard_state()->bp.day_index != i && get_dashboard_state()->bp.wear_day[i].year == date.year &&
+		if (get_dashboard_state()->bp.day_index != i &&
+		    get_dashboard_state()->bp.wear_day[i].year == date.year &&
 		    get_dashboard_state()->bp.wear_day[i].month == date.month &&
 		    get_dashboard_state()->bp.wear_day[i].day == date.day) {
 			get_dashboard_state()->bp.day_index = i;
@@ -61,15 +65,21 @@ int update_burial_point_day_index(void)
 	get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].day = date.day;
 	get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].sum_time = 0;
 	get_dashboard_state()->bp.wear_day[get_dashboard_state()->bp.day_index].count = 0;
-	get_dashboard_state()->bp.dashboard_day[get_dashboard_state()->bp.day_index].year = date.year;
-	get_dashboard_state()->bp.dashboard_day[get_dashboard_state()->bp.day_index].month = date.month;
+	get_dashboard_state()->bp.dashboard_day[get_dashboard_state()->bp.day_index].year =
+		date.year;
+	get_dashboard_state()->bp.dashboard_day[get_dashboard_state()->bp.day_index].month =
+		date.month;
 	get_dashboard_state()->bp.dashboard_day[get_dashboard_state()->bp.day_index].day = date.day;
 	get_dashboard_state()->bp.dashboard_day[get_dashboard_state()->bp.day_index].sum_time = 0;
 	get_dashboard_state()->bp.dashboard_day[get_dashboard_state()->bp.day_index].count = 0;
-	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].year = date.year;
-	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].month = date.month;
-	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].day = date.day;
-	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].sum_time = 0;
+	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].year =
+		date.year;
+	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].month =
+		date.month;
+	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].day =
+		date.day;
+	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].sum_time =
+		0;
 	get_dashboard_state()->bp.notification_day[get_dashboard_state()->bp.day_index].count = 0;
 
 	return 0;
@@ -121,7 +131,8 @@ void enter_wear_burial_point(void)
 	get_dashboard_state()->bp.wear_day[idx].count++;
 	get_dashboard_state()->bp.wear_count++;
 
-	G1_LOG_WRN("[enter_wear_burial_point] start_time is %d\n", get_dashboard_state()->bp_wear.start_time);
+	G1_LOG_WRN("[enter_wear_burial_point] start_time is %d\n",
+		   get_dashboard_state()->bp_wear.start_time);
 }
 
 int64_t get_dashboard_sum_time(void)
@@ -180,8 +191,9 @@ void exit_dashboard_burial_point(void)
 		get_dashboard_state()->bp_dashboard.active = 0;
 		t = get_dashboard_sum_time();
 		add_dashboard_burial_time(t);
-		G1_LOG_WRN("[exit_dashboard_burial_point] sum_time is %d ms,dashboard_sum_time is %d s\n",
-			   t, get_dashboard_state()->bp.dashboard_sum_time);
+		G1_LOG_WRN(
+			"[exit_dashboard_burial_point] sum_time is %d ms,dashboard_sum_time is %d s\n",
+			t, get_dashboard_state()->bp.dashboard_sum_time);
 	}
 }
 
@@ -241,8 +253,9 @@ void exit_notification_burial_point(void)
 		get_dashboard_state()->bp_notification.active = 0;
 		t = get_notification_sum_time();
 		add_notification_burial_time(t);
-		G1_LOG_WRN("[exit_notification_burial_point] sum_time is %d ms,notification_sum_time is %d s\n",
-			   t, get_dashboard_state()->bp.notification_sum_time);
+		G1_LOG_WRN(
+			"[exit_notification_burial_point] sum_time is %d ms,notification_sum_time is %d s\n",
+			t, get_dashboard_state()->bp.notification_sum_time);
 	}
 }
 

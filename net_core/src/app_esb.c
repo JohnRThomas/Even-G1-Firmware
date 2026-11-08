@@ -106,9 +106,8 @@ static void esb_thread(void)
 
 static void esb_thread_start(void)
 {
-	k_thread_create(&esb_thread_data, esb_thread_stack, 0x600,
-			(k_thread_entry_t)esb_thread, NULL, NULL, NULL,
-			K_PRIO_COOP(5), 0, K_NO_WAIT);
+	k_thread_create(&esb_thread_data, esb_thread_stack, 0x600, (k_thread_entry_t)esb_thread,
+			NULL, NULL, NULL, K_PRIO_COOP(5), 0, K_NO_WAIT);
 }
 
 void esb_ops_init(struct esb_ops *ops)

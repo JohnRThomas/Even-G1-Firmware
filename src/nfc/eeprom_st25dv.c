@@ -12,7 +12,7 @@
 
 #include "st25dv.h"
 
-#define ST25DV_RETRIES	20
+#define ST25DV_RETRIES 20
 
 static struct k_mutex st25dv_mutex;
 
@@ -75,8 +75,8 @@ int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf,
 	}
 
 	if (ret) {
-		printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n",
-		       config->addr, (uint32_t)offset, ret);
+		printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n", config->addr,
+		       (uint32_t)offset, ret);
 	}
 
 	return ret;
@@ -130,8 +130,8 @@ int eeprom_st25dv_read(const struct device *dev, off_t offset, void *buf, size_t
 	}
 
 	if (ret) {
-		printk("eeprom_st25dv_read addr %04X offset %04X failed %d\r\n",
-		       config->addr, (uint32_t)offset, ret);
+		printk("eeprom_st25dv_read addr %04X offset %04X failed %d\r\n", config->addr,
+		       (uint32_t)offset, ret);
 	}
 
 	return ret;

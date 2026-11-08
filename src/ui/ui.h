@@ -19,13 +19,13 @@
 #include "../gui/gui.h"
 
 /* events passed to the ui_*_task() handlers (display_thread.h) */
-#define UI_EVT_REFRESH     0
-#define UI_EVT_ENTER       1
-#define UI_EVT_EXIT        2
-#define UI_EVT_DELAY_CLOSE 3
-#define UI_EVT_INPUT       4
+#define UI_EVT_REFRESH      0
+#define UI_EVT_ENTER        1
+#define UI_EVT_EXIT         2
+#define UI_EVT_DELAY_CLOSE  3
+#define UI_EVT_INPUT        4
 #define UI_EVT_MASTER_CLOSE 5
-#define UI_EVT_LOW_POWER   6
+#define UI_EVT_LOW_POWER    6
 #define UI_EVT_POWER_RESUME 7
 
 #define LANGUAGE_FRENCH  5
@@ -37,7 +37,8 @@
 #define X0 gui_screen_x_offset()
 #define Y0 gui_screen_y_offset()
 
-/* navigation private data, shared by the navigation task and the navigation_*_display() functions */
+/* navigation private data, shared by the navigation task and the navigation_*_display() functions
+ */
 struct nav_prv_data {
 	uint32_t state;                  /* 0 init, 1 running, 2 abnormal exit, 3 arrived */
 	uint8_t panoramic_shown;
@@ -86,8 +87,8 @@ extern uint8_t nav_overview_decoded;
 extern uint8_t nav_map_bitmaps[2][0x908];   /* navigation bitmaps (overview / arrow) */
 int nav_prv_reset(void);
 void navigation_direction_img_display(int direction);
-void navigation_overview_map_display(struct GlassesState *gs, uint8_t *nav);
-void navigation_panoramic_map_display(struct GlassesState *gs, uint8_t *nav);
+void navigation_overview_map_display(struct GlassesState *gs, const uint8_t *nav);
+void navigation_panoramic_map_display(struct GlassesState *gs, const uint8_t *nav);
 int draw_template_navigation_page(struct jbd_panel_context *panel, void *arg);
 void nav_draw_service_lost(void);
 void nav_draw_route_generating(void);
@@ -99,7 +100,7 @@ void translate_draw_hint_page(int which);
 int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event);
 
 /* ui_onboarding.c */
-extern uint8_t onboarding_shown_sub_step;             /* onboarding sub-step shown (slave_display_thread) */
+extern uint8_t onboarding_shown_sub_step; /* onboarding sub-step shown (slave_display_thread) */
 int init_onboarding_info(void);
 void onboarding_request_redraw(void);
 void onboarding_draw_static_page(int event);

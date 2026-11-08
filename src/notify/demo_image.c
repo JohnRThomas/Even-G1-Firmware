@@ -15,12 +15,12 @@
 #include "../gui/gui.h"
 #include "../panel_display/panel.h"
 
-#define DEMO_IMAGE_FLASH_ADDR  0x180000
-#define DEMO_IMAGE_SIZE        0x3ebe
-#define DEMO_IMAGE_NUM         5
-#define FLASH_IMAGE_ADDR       0x1c0000
-#define LINE_BYTES             320
-#define BMP_READ_BUF_LEN       0x50   /* BMP headers, or one 1 bpp row of a 640 px image */
+#define DEMO_IMAGE_FLASH_ADDR 0x180000
+#define DEMO_IMAGE_SIZE       0x3ebe
+#define DEMO_IMAGE_NUM        5
+#define FLASH_IMAGE_ADDR      0x1c0000
+#define LINE_BYTES            320
+#define BMP_READ_BUF_LEN      0x50   /* BMP headers, or one 1 bpp row of a 640 px image */
 
 uint8_t demo_mode;
 static uint8_t demo_idx;
@@ -91,7 +91,7 @@ void get_demo_image_source_from_flash(void)
 		printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
 	} else {
 		memcpy(&fh, buf, sizeof(fh));
-		if (strncmp(fh.type, "BM", 2)) {
+		if (strncmp(fh.type, "BM", 2) != 0) {
 			printk("File is not BMP format \n");
 		} else {
 			memcpy(&ih, buf + sizeof(fh), sizeof(ih));
@@ -102,10 +102,10 @@ void get_demo_image_source_from_flash(void)
 				printf("Unsupported bit depth - %d\r\n", ih.bit_count);
 			} else {
 				/*
-				 * Convert the picture row by row.  BMP stores the rows bottom-up and
-				 * pads each one to a multiple of 4 bytes (stride); only the first
-				 * (width + 7) / 8 bytes of a row hold pixels.  The panel shows the
-				 * inverse of the file: every byte is inverted before
+				 * Convert the picture row by row.  BMP stores the rows bottom-up
+				 * and pads each one to a multiple of 4 bytes (stride); only the
+				 * first (width + 7) / 8 bytes of a row hold pixels.  The panel
+				 * shows the inverse of the file: every byte is inverted before
 				 * pixelto4bithex_for_flash() expands it, two 1 bpp pixels into one
 				 * 4 bpp panel byte.  line_buf collects one panel row and is copied
 				 * to the frame buffer when the row is complete.
@@ -118,9 +118,11 @@ void get_demo_image_source_from_flash(void)
 					line_x = 0;
 					memset(buf, 0, BMP_READ_BUF_LEN);
 					addr = FLASH_IMAGE_ADDR + off + (height - 1 - y) * stride;
-					ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, bytes);
+					ret = get_dashboard_state()->flash_read(
+						get_dashboard_state(), addr, buf, bytes);
 					if (ret) {
-						printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
+						printk("[%s-%d] read pic from flash failed !\n",
+						       __func__, __LINE__);
 						break;
 					}
 					for (int i = 0; i < bytes; i++) {
@@ -128,7 +130,8 @@ void get_demo_image_source_from_flash(void)
 					}
 					if (line_buf) {
 						line_idx = 0;
-						memcpy(get_dashboard_state()->panel.panel_buffer[y], line_buf, LINE_BYTES);
+						memcpy(get_dashboard_state()->panel.panel_buffer[y],
+						       line_buf, LINE_BYTES);
 					}
 				}
 			}
@@ -189,13 +192,13 @@ void get_demo_image_source(uint32_t idx)
 		idx = 0;
 	}
 	ret = get_dashboard_state()->flash_read(get_dashboard_state(),
-						  idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR,
-						  buf, BMP_READ_BUF_LEN);
+						idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR, buf,
+						BMP_READ_BUF_LEN);
 	if (ret) {
 		printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
 	} else {
 		memcpy(&fh, buf, sizeof(fh));
-		if (strncmp(fh.type, "BM", 2)) {
+		if (strncmp(fh.type, "BM", 2) != 0) {
 			printk("File is not BMP format \n");
 		} else {
 			memcpy(&ih, buf + sizeof(fh), sizeof(ih));
@@ -206,13 +209,13 @@ void get_demo_image_source(uint32_t idx)
 				printf("Unsupported bit depth - %d\r\n", ih.bit_count);
 			} else {
 				/*
-				 * Same conversion as get_demo_image_source_from_flash(), for picture
-				 * idx of the DEMO_IMAGE_NUM demo pictures.  They are stored back to
-				 * back, DEMO_IMAGE_SIZE bytes each, from DEMO_IMAGE_FLASH_ADDR on.
-				 * The rows go through pixelto4bithex(), which also allocates
-				 * line_buf on first use.  An index out of range was reset to the
-				 * first picture above, so the caller always gets a picture on the
-				 * panel.
+				 * Same conversion as get_demo_image_source_from_flash(), for
+				 * picture idx of the DEMO_IMAGE_NUM demo pictures.  They are stored
+				 * back to back, DEMO_IMAGE_SIZE bytes each, from
+				 * DEMO_IMAGE_FLASH_ADDR on. The rows go through pixelto4bithex(),
+				 * which also allocates line_buf on first use.  An index out of
+				 * range was reset to the first picture above, so the caller always
+				 * gets a picture on the panel.
 				 */
 				bytes = (width + 7) / 8;
 				stride = (width + 31) / 32 * 4;
@@ -221,10 +224,13 @@ void get_demo_image_source(uint32_t idx)
 				for (int y = 0; y < height; y++) {
 					line_x = 0;
 					memset(buf, 0, BMP_READ_BUF_LEN);
-					addr = idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR + off + (height - 1 - y) * stride;
-					ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, bytes);
+					addr = idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR + off +
+					       (height - 1 - y) * stride;
+					ret = get_dashboard_state()->flash_read(
+						get_dashboard_state(), addr, buf, bytes);
 					if (ret) {
-						printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
+						printk("[%s-%d] read pic from flash failed !\n",
+						       __func__, __LINE__);
 						break;
 					}
 					for (int i = 0; i < bytes; i++) {
@@ -232,7 +238,8 @@ void get_demo_image_source(uint32_t idx)
 					}
 					if (line_buf) {
 						line_idx = 0;
-						memcpy(get_dashboard_state()->panel.panel_buffer[y], line_buf, LINE_BYTES);
+						memcpy(get_dashboard_state()->panel.panel_buffer[y],
+						       line_buf, LINE_BYTES);
 					}
 				}
 			}
@@ -326,7 +333,8 @@ int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event)
 					mark = demo_mark_right;
 					break;
 				}
-				copy_to_frame_buffer(panel->panel_buffer, mark, w / 2, h, demo_x, demo_y);
+				copy_to_frame_buffer(panel->panel_buffer, mark, w / 2, h, demo_x,
+						     demo_y);
 				_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
 							get_dashboard_state()->panel.current_column,
 							demo_x, demo_y, w + demo_x, h + demo_y);

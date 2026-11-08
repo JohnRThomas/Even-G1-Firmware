@@ -34,42 +34,45 @@
 #define S43 15
 #define S44 21
 
-static unsigned char PADDING[64] = {
-	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+static unsigned char PADDING[64] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				    0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				    0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				    0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 /* F, G, H and I are basic MD5 functions. */
-#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
-#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
+#define F(x, y, z) (((x) & (y)) | ((~(x)) & (z)))
+#define G(x, y, z) (((x) & (z)) | ((y) & (~(z))))
 #define H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | (~z)))
+#define I(x, y, z) ((y) ^ ((x) | (~(z))))
 
 /* ROTATE_LEFT rotates x left n bits. */
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
 
 /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4. */
-#define FF(a, b, c, d, x, s, ac) { \
-	(a) += F((b), (c), (d)) + (x) + (uint32_t)(ac); \
-	(a) = ROTATE_LEFT((a), (s)); \
-	(a) += (b); \
-}
-#define GG(a, b, c, d, x, s, ac) { \
-	(a) += G((b), (c), (d)) + (x) + (uint32_t)(ac); \
-	(a) = ROTATE_LEFT((a), (s)); \
-	(a) += (b); \
-}
-#define HH(a, b, c, d, x, s, ac) { \
-	(a) += H((b), (c), (d)) + (x) + (uint32_t)(ac); \
-	(a) = ROTATE_LEFT((a), (s)); \
-	(a) += (b); \
-}
-#define II(a, b, c, d, x, s, ac) { \
-	(a) += I((b), (c), (d)) + (x) + (uint32_t)(ac); \
-	(a) = ROTATE_LEFT((a), (s)); \
-	(a) += (b); \
-}
+#define FF(a, b, c, d, x, s, ac)                                                                   \
+	{                                                                                          \
+		(a) += F((b), (c), (d)) + (x) + (uint32_t)(ac);                                    \
+		(a) = ROTATE_LEFT((a), (s));                                                       \
+		(a) += (b);                                                                        \
+	}
+#define GG(a, b, c, d, x, s, ac)                                                                   \
+	{                                                                                          \
+		(a) += G((b), (c), (d)) + (x) + (uint32_t)(ac);                                    \
+		(a) = ROTATE_LEFT((a), (s));                                                       \
+		(a) += (b);                                                                        \
+	}
+#define HH(a, b, c, d, x, s, ac)                                                                   \
+	{                                                                                          \
+		(a) += H((b), (c), (d)) + (x) + (uint32_t)(ac);                                    \
+		(a) = ROTATE_LEFT((a), (s));                                                       \
+		(a) += (b);                                                                        \
+	}
+#define II(a, b, c, d, x, s, ac)                                                                   \
+	{                                                                                          \
+		(a) += I((b), (c), (d)) + (x) + (uint32_t)(ac);                                    \
+		(a) = ROTATE_LEFT((a), (s));                                                       \
+		(a) += (b);                                                                        \
+	}
 
 /* Encodes input (uint32_t) into output (unsigned char). len is a multiple of 4. */
 static void Encode(unsigned char *output, const uint32_t *input, unsigned int len)
@@ -198,7 +201,8 @@ void mbedtls_md5_update(mbedtls_md5_context *context, const unsigned char *input
 	partLen = 64 - index;
 
 	/* Update number of bits */
-	if ((context->count[0] += ((uint32_t)inputLen << 3)) < ((uint32_t)inputLen << 3)) {
+	context->count[0] += (uint32_t)inputLen << 3;
+	if (context->count[0] < ((uint32_t)inputLen << 3)) {
 		context->count[1]++;
 	}
 	context->count[1] += ((uint32_t)inputLen >> 29);
@@ -211,6 +215,7 @@ void mbedtls_md5_update(mbedtls_md5_context *context, const unsigned char *input
 		mbedtls_internal_md5_process(context->state, context->buffer);
 
 		for (i = partLen; i + 64 <= inputLen; i += 64) {
+			/* NOLINTNEXTLINE(clang-analyzer-security.ArrayBound): i + 64 <= inputLen */
 			mbedtls_internal_md5_process(context->state, &input[i]);
 		}
 
@@ -218,6 +223,7 @@ void mbedtls_md5_update(mbedtls_md5_context *context, const unsigned char *input
 	}
 
 	/* Buffer remaining input */
+	/* NOLINTNEXTLINE(clang-analyzer-security.ArrayBound): i <= inputLen */
 	memcpy(&context->buffer[index], &input[i], inputLen - i);
 }
 

@@ -82,8 +82,7 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
 		serial_rx_dump(evt, offset);
 		break;
 
-	case UART_RX_BUF_REQUEST:
-	{
+	case UART_RX_BUF_REQUEST: {
 		printk("*************alloc new rx buf*************\n");
 		err = k_mem_slab_alloc(&uart_slab, (void **)&buf, K_NO_WAIT);
 		__ASSERT(err == 0, "Failed to allocate slab");

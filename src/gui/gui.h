@@ -13,10 +13,10 @@
 #include <g1_date.h>
 #include <glasses_state.h>
 
-#define GUI_SCREEN_WIDTH   640
-#define GUI_SCREEN_HEIGHT  200
-#define GUI_FB_ROWS        200          /* 4 bpp, 320 bytes per row */
-#define GUI_FB_ROW_BYTES   320
+#define GUI_SCREEN_WIDTH  640
+#define GUI_SCREEN_HEIGHT 200
+#define GUI_FB_ROWS       200          /* 4 bpp, 320 bytes per row */
+#define GUI_FB_ROW_BYTES  320
 
 typedef int (*gui_effect_cb_t)(int arg, const char *str, int font, int x, int y);
 
@@ -55,7 +55,8 @@ extern atomic_t gui_flags;               /* GUI_FLAG_* */
 #define GUI_FADE_STEPS        8
 #define GUI_FADE_STORED_STEPS (GUI_FADE_STEPS - 2)
 #define GUI_FADE_ROW_BYTES    (GUI_FB_ROW_BYTES / 4)
-extern const uint8_t gui_fade_mask_bits[GUI_FADE_PATTERN_ROWS][GUI_FADE_STORED_STEPS][GUI_FADE_ROW_BYTES];
+extern const uint8_t gui_fade_mask_bits[GUI_FADE_PATTERN_ROWS][GUI_FADE_STORED_STEPS]
+				       [GUI_FADE_ROW_BYTES];
 
 /*
  * Mask for frame-buffer byte col (two 4-bit pixels) of pattern row row
@@ -65,7 +66,7 @@ extern const uint8_t gui_fade_mask_bits[GUI_FADE_PATTERN_ROWS][GUI_FADE_STORED_S
  */
 static ALWAYS_INLINE uint8_t gui_fade_mask_at(unsigned int row, unsigned int step, unsigned int col)
 {
-	static const uint8_t expand[4] = { 0x00, 0x0f, 0xf0, 0xff };
+	static const uint8_t expand[4] = {0x00, 0x0f, 0xf0, 0xff};
 
 	if (step == 0) {
 		return 0x00;
@@ -89,7 +90,8 @@ int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, in
 int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level);
 int gui_text_state_reset(void);
 int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-		 uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
+		 uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
+		 int no_draw);
 int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, int y0, int x1,
 				  int y1, uint32_t max_lines, uint16_t split_code, int effect,
 				  gui_effect_cb_t cb, int no_draw);
@@ -99,9 +101,9 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
 int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, int y0, int x1,
 				   int y1, uint32_t max_lines, uint8_t dark_lines, int effect,
 				   gui_effect_cb_t cb, int no_draw);
-int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
-			uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-			int no_draw);
+int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_t y0, uint32_t x1,
+			uint32_t y1, uint32_t max_lines, uint32_t dark_cnt, int effect,
+			gui_effect_cb_t cb, int no_draw);
 int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
 			     uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
 			     int no_draw);
@@ -116,8 +118,7 @@ int gui_screen_x_offset(void);
 int gui_screen_y_offset(void);
 int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
 			     uint32_t max_lines, uint32_t dark_cnt);
-int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
-		   bool is_24h);
+int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool is_24h);
 int gui_screen_fade_out(void);
 int hide_icon_notification_on_gui(void);
 /* callers pass a 7th argument (0), so the definition takes it too */

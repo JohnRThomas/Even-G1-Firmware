@@ -13,10 +13,10 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
 
-#define FILE_MSG_LEN     200
-#define FILE_MSGQ_DEPTH  30
-#define DEMO_IMAGE_ADDR  0x1c0000
-#define DEMO_IMAGE_END   0x200000
+#define FILE_MSG_LEN    200
+#define FILE_MSGQ_DEPTH 30
+#define DEMO_IMAGE_ADDR 0x1c0000
+#define DEMO_IMAGE_END  0x200000
 
 struct file_msg {
 	uint8_t data[FILE_MSG_LEN];
@@ -136,7 +136,9 @@ void try_to_save_file(struct GlassesState *gs)
 	uint8_t len;
 	bool end = false;
 
-	dequeue_file(&msg);
+	if (dequeue_file(&msg) != 0) {
+		return;
+	}
 	len = msg.len;
 	if (len <= 20 && msg.data[0] == 0x0d && msg.data[1] == 0x0e) {
 		/* end of file */
@@ -199,7 +201,8 @@ static void storage_commit_thread(void *p1, void *p2, void *p3)
 		}
 		switch (gs->dashboard_cmd) {
 		case 1:
-			gs->store.write("brightness_level", &gs->panel.panel_brightness_level, sizeof(uint8_t));
+			gs->store.write("brightness_level", &gs->panel.panel_brightness_level,
+					sizeof(uint8_t));
 			break;
 		case 2:
 			gs->store.write("3dof_enable", &gs->imu.dof3_enable, sizeof(uint8_t));
@@ -208,13 +211,16 @@ static void storage_commit_thread(void *p1, void *p2, void *p3)
 			gs->store.write("display_mode", &gs->display_mode, sizeof(uint8_t));
 			break;
 		case 7:
-			gs->store.write("countdown_ts", gs->countdown_ts, sizeof(struct countdown_ts_context));
+			gs->store.write("countdown_ts", gs->countdown_ts,
+					sizeof(struct countdown_ts_context));
 			break;
 		case 6:
-			gs->store.write("dashboard_ts", gs->dashboard_ts, sizeof(struct dashboard_ts_context));
+			gs->store.write("dashboard_ts", gs->dashboard_ts,
+					sizeof(struct dashboard_ts_context));
 			break;
 		case 8:
-			gs->store.write("user_sched_info", gs->user_sched_info, sizeof(struct user_schedule_context));
+			gs->store.write("user_sched_info", gs->user_sched_info,
+					sizeof(struct user_schedule_context));
 			break;
 		case 0x0b:
 			gs->store.write("wakeup_angle", &gs->imu.level, sizeof(uint8_t));

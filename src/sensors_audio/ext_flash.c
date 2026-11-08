@@ -13,17 +13,17 @@
 #define EXT_FLASH_MODULE_ON BIT(4)
 
 /* power hooks of the flash module (main.c) */
-#define EXT_FLASH_POWER_ON(gs)                                 \
-	do {                                                   \
-		if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) { \
-			ext_flash_power_up();                        \
-		}                                              \
+#define EXT_FLASH_POWER_ON(gs)                                                                     \
+	do {                                                                                       \
+		if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) {                                  \
+			ext_flash_power_up();                                                      \
+		}                                                                                  \
 	} while (0)
-#define EXT_FLASH_POWER_OFF(gs)                                \
-	do {                                                   \
-		if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) { \
-			ext_flash_power_down();                        \
-		}                                              \
+#define EXT_FLASH_POWER_OFF(gs)                                                                    \
+	do {                                                                                       \
+		if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) {                                  \
+			ext_flash_power_down();                                                    \
+		}                                                                                  \
 	} while (0)
 
 static const struct device *ext_flash_dev;

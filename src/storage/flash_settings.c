@@ -41,8 +41,7 @@ int local_store_write(const char *key, const void *val, size_t len)
 	return 0;
 }
 
-static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
-			void *cb_arg)
+static int sett_handler(const char *key, size_t len, settings_read_cb read_cb, void *cb_arg)
 {
 	int rc;
 
@@ -58,7 +57,8 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		if (get_dashboard_state()->dashboard_ts == NULL) {
 			return 0;
 		}
-		rc = read_cb(cb_arg, get_dashboard_state()->dashboard_ts, sizeof(struct dashboard_ts_context));
+		rc = read_cb(cb_arg, get_dashboard_state()->dashboard_ts,
+			     sizeof(struct dashboard_ts_context));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -70,7 +70,8 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		if (get_dashboard_state()->countdown_ts == NULL) {
 			return 0;
 		}
-		rc = read_cb(cb_arg, get_dashboard_state()->countdown_ts, sizeof(struct countdown_ts_context));
+		rc = read_cb(cb_arg, get_dashboard_state()->countdown_ts,
+			     sizeof(struct countdown_ts_context));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -88,12 +89,14 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		return 0;
 	}
 	if (!strcmp(key, "brightness_level")) {
-		rc = read_cb(cb_arg, &get_dashboard_state()->panel.panel_brightness_level, sizeof(uint8_t));
+		rc = read_cb(cb_arg, &get_dashboard_state()->panel.panel_brightness_level,
+			     sizeof(uint8_t));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
 		}
-		G1_LOG_INF("key:%s, val=%d\n", key, get_dashboard_state()->panel.panel_brightness_level);
+		G1_LOG_INF("key:%s, val=%d\n", key,
+			   get_dashboard_state()->panel.panel_brightness_level);
 		return 0;
 	}
 	if (!strcmp(key, "3dof_enable")) {
@@ -127,7 +130,8 @@ static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
 		if (get_dashboard_state()->user_sched_info == NULL) {
 			return 0;
 		}
-		rc = read_cb(cb_arg, get_dashboard_state()->user_sched_info, sizeof(struct user_schedule_context));
+		rc = read_cb(cb_arg, get_dashboard_state()->user_sched_info,
+			     sizeof(struct user_schedule_context));
 		if (rc < 0) {
 			G1_LOG_WRN("Failed to read %s, error: %d\n", key, rc);
 			return rc;
@@ -187,7 +191,8 @@ int flash_settings_read(uint32_t addr, void *buf, size_t len)
 			printk(" [%s] device not ready.\n", FLASH_DEV->name);
 			ret = -1;
 		} else {
-			ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, len);
+			ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf,
+								len);
 			if (ret == 0) {
 				break;
 			}
@@ -218,23 +223,29 @@ int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
 		ret = -1;
 	} else {
 		memset(buf, 0, EXT_FLASH_SECTOR_SIZE);
-		ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
+		ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf,
+							EXT_FLASH_SECTOR_SIZE);
 		if (ret) {
 			printk("Flash read failed! %d\n", ret);
 		} else if (memcmp(data, buf, len) == 0) {
 			printk("write data and read data is same, exit\n");
 		} else {
-			ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr,
+								 EXT_FLASH_SECTOR_SIZE);
 			if (ret) {
 				printk("Flash erase failed! %d\n", ret);
 			} else {
 				memset(buf, 0, EXT_FLASH_SECTOR_SIZE);
 				memcpy(buf, data, len);
-				ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
+				ret = get_dashboard_state()->flash_write(
+					get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
 				if (ret) {
-					printk("Flash write failed! %d addr %08X size %d\n", ret, addr, len);
+					printk("Flash write failed! %d addr %08X size %d\n", ret,
+					       addr, len);
 				} else {
-					ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
+					ret = get_dashboard_state()->flash_read(
+						get_dashboard_state(), addr, buf,
+						EXT_FLASH_SECTOR_SIZE);
 					if (ret) {
 						printk("Flash read failed! %d\n", ret);
 					} else if (memcmp(data, buf, len) == 0) {
@@ -262,8 +273,9 @@ int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size)
 	pages = size / EXT_FLASH_SECTOR_SIZE + 1;
 	last = size - (pages - 1) * EXT_FLASH_SECTOR_SIZE;
 	for (i = 0; i < pages; i++) {
-		ret += flash_settings_write_and_verify(addr + i * EXT_FLASH_SECTOR_SIZE, data + i * EXT_FLASH_SECTOR_SIZE,
-						       i < pages - 1 ? EXT_FLASH_SECTOR_SIZE : last);
+		ret += flash_settings_write_and_verify(
+			addr + i * EXT_FLASH_SECTOR_SIZE, data + i * EXT_FLASH_SECTOR_SIZE,
+			i < pages - 1 ? EXT_FLASH_SECTOR_SIZE : last);
 	}
 	return ret;
 }
@@ -279,24 +291,27 @@ int write_font(uint32_t addr, const void *data, size_t len)
 			printk(" [%s] device not ready.\n", FLASH_DEV->name);
 			ret = -1;
 		} else {
-			ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
+			ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf,
+								EXT_FLASH_SECTOR_SIZE);
 			if (ret) {
 				printk("Flash read font failed! %d\n", ret);
 			} else if (memcmp(data, buf, len) == 0) {
 				printk("write font data and read data is same, exit\n");
 				return 0;
 			} else {
-				ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
+				ret = get_dashboard_state()->flash_erase(
+					get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
 				if (ret) {
 					printk("Flash erase font failed! %d\n", ret);
 				} else {
-					ret = get_dashboard_state()->flash_write(get_dashboard_state(),
-										 addr, data, len);
+					ret = get_dashboard_state()->flash_write(
+						get_dashboard_state(), addr, data, len);
 					if (ret) {
 						printk("Flash write font failed! %d\n", ret);
 					} else {
 						ret = get_dashboard_state()->flash_read(
-							get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
+							get_dashboard_state(), addr, buf,
+							EXT_FLASH_SECTOR_SIZE);
 						if (ret) {
 							printk("Flash read font failed! %d\n", ret);
 						} else if (memcmp(data, buf, len) == 0) {
@@ -325,7 +340,7 @@ int calc_flash_crc(uint16_t *crc, int addr, uint32_t size)
 	int pos;
 	int len;
 	int ret;
-	uint8_t i;
+	int i;
 
 	G1_LOG_INF("join in calc_flash_crc\n\n");
 	if (crc == NULL || size == 0) {

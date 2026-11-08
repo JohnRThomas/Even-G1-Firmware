@@ -18,11 +18,11 @@ void ble_printk(const char *fmt, ...);
 /* ble_printk() when BLE_DEBUG is set, otherwise printk() */
 void g1_printk(const char *fmt, ...) __printf_like(1, 2);
 
-#define G1_LOG(lvl, fmt, ...)                                               \
-	do {                                                                \
-		if (LOG_LEVEL > (lvl)) {                                    \
-			g1_printk("%s(): " fmt, __func__, ##__VA_ARGS__);   \
-		}                                                           \
+#define G1_LOG(lvl, fmt, ...)                                                                      \
+	do {                                                                                       \
+		if (LOG_LEVEL > (lvl)) {                                                           \
+			g1_printk("%s(): " fmt, __func__, ##__VA_ARGS__);                          \
+		}                                                                                  \
 	} while (0)
 
 #define G1_LOG_ERR(fmt, ...) G1_LOG(0, fmt, ##__VA_ARGS__)

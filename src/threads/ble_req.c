@@ -31,9 +31,9 @@ struct ble_req {
 	};
 };
 
-#define BLE_REQ_FW_READ   3
-#define BLE_RESP_OK       0xc9
-#define BLE_RESP_INVALID  0xca
+#define BLE_REQ_FW_READ  3
+#define BLE_RESP_OK      0xc9
+#define BLE_RESP_INVALID 0xca
 
 static int read_fw_pack_from_nor_flash_by_qspi(uint32_t addr, uint8_t *buf, uint32_t len)
 {
@@ -87,7 +87,8 @@ static bool process_fw_read(uint32_t addr, uint32_t total, uint8_t *out)
 {
 	uint32_t n = total - 0x12;
 
-	if (total - 0x13 > 0x800c || read_fw_pack_from_nor_flash_by_qspi(addr, out + 0x12, n) != n) {
+	if (total - 0x13 > 0x800c ||
+	    read_fw_pack_from_nor_flash_by_qspi(addr, out + 0x12, n) != n) {
 		out[0] = 'n';
 		out[1] = 'o';
 		return false;
@@ -101,7 +102,8 @@ static bool process_fw_read(uint32_t addr, uint32_t total, uint8_t *out)
 	return true;
 }
 
-int master_process_put_req(struct GlassesState *state, struct ble_req *head, uint8_t *out, uint32_t len)
+int master_process_put_req(struct GlassesState *state, struct ble_req *head, uint8_t *out,
+			   uint32_t len)
 {
 	uint8_t *data = head->data;
 	uint8_t req;
@@ -125,7 +127,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 
 		switch (req) {
 		case BLE_CMD_BRIGHTNESS_SET:
-			if (state->panel.panel_brightness_level != data[0] || state->opt3007_context.auto_brightness != data[1]) {
+			if (state->panel.panel_brightness_level != data[0] ||
+			    state->opt3007_context.auto_brightness != data[1]) {
 				state->panel.set_brightness_cb(&state->panel, data[0]);
 				state->opt3007_context.auto_brightness = data[1];
 				notify_dashboard(state, head);
@@ -260,8 +263,9 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			if (data[4] != 2) {
 				return 0;
 			}
-			G1_LOG_WRN("ble recv raster_config_info:enable is %d, raster_height_gear is %d, canvas_distance_gear is %d\n",
-				   data[5], data[6], data[7]);
+			G1_LOG_WRN(
+				"ble recv raster_config_info:enable is %d, raster_height_gear is %d, canvas_distance_gear is %d\n",
+				data[5], data[6], data[7]);
 			if (data[5] != 1) {
 				state->raster_height_cfg[0] = 0;
 				return 0;
@@ -277,7 +281,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 		}
 		out[0] = BLE_RESP_OK;
 		return 1;
-	} else if (req >= 0x29 && req <= 0x45) {
+	}
+	if (req >= 0x29 && req <= 0x45) {
 		switch (req) {
 		case BLE_CMD_SILENT_MODE_GET:
 			out[0] = state->display_mode;
@@ -335,7 +340,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 			return get_notification_counts_cmd_response(state, out);
 		case BLE_CMD_TIME_SINCE_BOOT_GET:
 			uint32_to_little_endian(out, get_boot_seconds());
-			out[4] = !state->ble_context.security_pending && k_sem_count_get(&state->ble_context.tx_sem) != 0;
+			out[4] = !state->ble_context.security_pending &&
+				 k_sem_count_get(&state->ble_context.tx_sem) != 0;
 			return 5;
 		default:
 			return 0;
@@ -343,7 +349,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 	} else if (req >= 0x47 && req <= 0x56) {
 		switch (req) {
 		case BLE_CMD_NOTIFICATION_SEND:
-			return post_notification_cmd_response(state, (uint8_t *)head, (uint8_t *)&state->sync,
+			return post_notification_cmd_response(state, (uint8_t *)head,
+							      (uint8_t *)&state->sync,
 							      (uint8_t *)head, data, out, len);
 		case BLE_CMD_SYNC_DISPLAY:
 			v = data[0];

@@ -1,0 +1,29 @@
+---
+BasedOnStyle: LLVM
+ColumnLimit: 100
+IndentWidth: 8
+ContinuationIndentWidth: 8
+ConstructorInitializerIndentWidth: 8
+UseTab: ForContinuationAndIndentation
+BreakBeforeBraces: Linux
+IndentCaseLabels: false
+InsertBraces: true
+# Zephyr headers are order-sensitive.
+SortIncludes: Never
+AlignConsecutiveMacros: AcrossComments
+AlignTrailingComments:
+  Kind: Leave
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BitFieldColonSpacing: After
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+# Keep log and UI strings greppable.
+BreakStringLiterals: false
+AttributeMacros:
+  - __aligned
+  - __packed
+  - __printf_like

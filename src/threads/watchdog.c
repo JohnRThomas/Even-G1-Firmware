@@ -10,7 +10,8 @@
 
 #define WDT_RETRY_COUNT 5
 
-static const struct device *const wdt = DEVICE_DT_GET(DT_NODELABEL(pmic_wdt)); /* nPM1300 watchdog */
+static const struct device *const wdt =
+	DEVICE_DT_GET(DT_NODELABEL(pmic_wdt)); /* nPM1300 watchdog */
 static int wdt_0_channel_id;
 
 int init_watchdog(void)

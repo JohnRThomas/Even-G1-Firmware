@@ -39,7 +39,7 @@ int draw_template_translate_screen(struct jbd_panel_context *panel, void *arg)
 			   "trans_info->translation_type %d\n",
 			   ti->original_type, ti->translation_type);
 	} else {
-		char pair[10] = { 0 };
+		char pair[10] = {0};
 
 		snprintf(pair, sizeof(pair), "%s>%s", trans_lang_name[ti->original_type - 1],
 			 trans_lang_name[ti->translation_type - 1]);
@@ -156,22 +156,24 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 					snprintf(pair, sizeof(pair), "%s>%s",
 						 trans_lang_name[ti->original_type - 1],
 						 trans_lang_name[ti->translation_type - 1]);
-					gui_utf_draw(0, pair, 3, X0, Y0 + 0x6e, X0 + 0x50, Y0 + 0x89, 1,
-						     0, 0, NULL, 0);
+					gui_utf_draw(0, pair, 3, X0, Y0 + 0x6e, X0 + 0x50,
+						     Y0 + 0x89, 1, 0, 0, NULL, 0);
 					trans_ui.original_type = ti->original_type;
 					trans_ui.translation_type = ti->translation_type;
 				}
-				bool is_24h = get_dashboard_state()->dashboard_ts->time_disp_mode != 1;
+				bool is_24h =
+					get_dashboard_state()->dashboard_ts->time_disp_mode != 1;
 
 				gui_clock_draw(get_date(), X0, Y0 + 2, X0 + 0x50, Y0 + 0x1d, 3,
 					       is_24h);
 				for (int row = 0; row < 199; row++) {
 					for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
-						const uint8_t steps[8] = { 1, 3, 5, 7, 7, 7, 7, 7 };
+						const uint8_t steps[8] = {1, 3, 5, 7, 7, 7, 7, 7};
 
 						if (panel->panel_buffer[row][col] != 0) {
 							panel->panel_buffer[row][col] &=
-								gui_fade_mask_at(row % 26, steps[i], col);
+								gui_fade_mask_at(row % 26, steps[i],
+										 col);
 						}
 					}
 				}
@@ -242,14 +244,14 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 				} else {
 					if (trans_ui.original_type != ti->original_type ||
 					    trans_ui.translation_type != ti->translation_type) {
-						char pair[10] = { 0 };
+						char pair[10] = {0};
 
 						snprintf(pair, sizeof(pair), "%s>%s",
 							 trans_lang_name[ti->original_type - 1],
 							 trans_lang_name[ti->translation_type - 1]);
 						G1_LOG_DBG("draw translate type content\n");
-						gui_utf_draw(0, pair, 3, X0, Y0 + 0x6e, X0 + 0x50, Y0 + 0x89, 1,
-							     0, 0, NULL, 0);
+						gui_utf_draw(0, pair, 3, X0, Y0 + 0x6e, X0 + 0x50,
+							     Y0 + 0x89, 1, 0, 0, NULL, 0);
 						trans_ui.original_type = ti->original_type;
 						trans_ui.translation_type = ti->translation_type;
 					}
@@ -261,12 +263,13 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 					/* fade the old text out */
 					for (int step = 5; step >= 4; step--) {
 						for (int row = Y0; row <= Y0 + 0x87; row++) {
-							for (int col = X0 + 0x58; col < (X0 + 0x240) / 2;
-							     col++) {
+							for (int col = X0 + 0x58;
+							     col < (X0 + 0x240) / 2; col++) {
 								if (fb[row][col] != 0) {
 									fb[row][col] &=
-										gui_fade_mask_at(row % 26,
-												step, col);
+										gui_fade_mask_at(
+											row % 26,
+											step, col);
 								}
 							}
 						}
@@ -277,14 +280,16 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 					}
 					_clean_fb_data(fb, 0, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88);
 					if (!trans_ui.suspend_en) {
-						gui_bmp_dynamic_bitmap_draw(1, X0, Y0 + 0x36, 0, 0, 0, 0);
+						gui_bmp_dynamic_bitmap_draw(1, X0, Y0 + 0x36, 0, 0,
+									    0, 0);
 					}
 					clear_showing_notification_on_gui();
 
 					/* and the new one in */
 					for (int i = 2; i < 4; i++) {
-						gui_utf_draw(0, trans_text, 0, X0 + 0x58, Y0, X0 + 0x240,
-							     Y0 + 0x88, 5, 0, 0, NULL, 0);
+						gui_utf_draw(0, trans_text, 0, X0 + 0x58, Y0,
+							     X0 + 0x240, Y0 + 0x88, 5, 0, 0, NULL,
+							     0);
 
 						int x0 = X0 + 0x58;
 						int x1 = X0 + 0x240;
@@ -294,26 +299,26 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 
 						for (int r = 0; r < y1 - y0; r++) {
 							for (int c = 0; c < (x1 - x0) / 2; c++) {
-								const uint8_t steps[8] = { 1, 3, 5, 7,
-											   7, 7, 7, 7 };
+								const uint8_t steps[8] = {
+									1, 3, 5, 7, 7, 7, 7, 7};
 								uint8_t *line = fb[y0 + r] + xs;
 
 								if (line[c] != 0) {
-									line[c] &=
-										gui_fade_mask_at(r % 26,
-												steps[i], c);
+									line[c] &= gui_fade_mask_at(
+										r % 26, steps[i],
+										c);
 								}
 							}
 						}
 						_reflash_fb_data_to_lcd(
 							get_dashboard_state()->panel.current_row,
-							get_dashboard_state()->panel.current_column, x0, y0,
-							x1, y1);
+							get_dashboard_state()->panel.current_column,
+							x0, y0, x1, y1);
 					}
 					set_showing_notification_on_gui();
 				} else {
-					gui_utf_draw(0, trans_text, 0, X0 + 0x58, Y0, X0 + 0x240, Y0 + 0x88, 5,
-						     0, 0, NULL, 0);
+					gui_utf_draw(0, trans_text, 0, X0 + 0x58, Y0, X0 + 0x240,
+						     Y0 + 0x88, 5, 0, 0, NULL, 0);
 				}
 			}
 
@@ -321,7 +326,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event)
 				gui_bmp_dynamic_bitmap_draw(1, X0, Y0 + 0x36, 0, 0, 0, 0);
 			}
 
-			struct bp_date date = { 0 };
+			struct bp_date date = {0};
 
 			init_burial_point_date(get_date(), &date);
 			if (trans_ui.minute == date.minute && trans_ui.hour == date.hour) {

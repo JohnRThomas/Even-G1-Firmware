@@ -56,10 +56,11 @@ static void ipc0_ept_bound(void *priv)
 
 static struct ipc_ept_cfg ipc0_ept_cfg = {
 	.name = "ipc0",
-	.cb = {
-		.bound = ipc0_ept_bound,
-		.received = ipc0_ept_recv,
-	},
+	.cb =
+		{
+			.bound = ipc0_ept_bound,
+			.received = ipc0_ept_recv,
+		},
 };
 
 int serialization_init(void)
@@ -102,8 +103,8 @@ void ipc0_ept_recv(const void *data, size_t len, void *priv)
 	for (i = 0; i < ctx->count; i++) {
 		ep = ctx->receivers[i];
 		if (ep && ep->id == cmd) {
-			ep->recv_cb(CONTAINER_OF(ctx, struct GlassesState, ipc_ctx),
-				    buf + 1, len - 1);
+			ep->recv_cb(CONTAINER_OF(ctx, struct GlassesState, ipc_ctx), buf + 1,
+				    len - 1);
 			return;
 		}
 	}
@@ -134,7 +135,7 @@ int register_ipc_service_recv_callback(struct ipc_ep_cfg *ep)
 		return 0;
 	}
 
-	G1_LOG_ERR("ipc_service_register(%d,%s) %d,total must < %d\n", ep->id, ep->name,
-		   ctx->count, IPC_RECEIVER_MAX);
+	G1_LOG_ERR("ipc_service_register(%d,%s) %d,total must < %d\n", ep->id, ep->name, ctx->count,
+		   IPC_RECEIVER_MAX);
 	return -1;
 }

@@ -21,8 +21,7 @@ void dump_template_gyro_info(void *arg)
 	double pitch = state->ui.ypr.pitch;
 	double roll = state->ui.ypr.roll;
 
-	G1_LOG_INF("screen_id: %d, ypr: %.2f, %.2f, %.2f\n", ((uint8_t *)arg)[1], yaw, pitch,
-		   roll);
+	G1_LOG_INF("screen_id: %d, ypr: %.2f, %.2f, %.2f\n", ((uint8_t *)arg)[1], yaw, pitch, roll);
 }
 
 int draw_template_gyro_page(struct jbd_panel_context *panel, void *arg)
@@ -37,16 +36,16 @@ int draw_template_gyro_page(struct jbd_panel_context *panel, void *arg)
 
 	codes = utf8_to_unicode_buf("陀螺仪姿态解算:YPR", &count);
 	for (int i = 0; i < count; i++) {
-		copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12, 36,
-			     i * 12 + 6, 0);
+		copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12,
+					 36, i * 12 + 6, 0);
 	}
 	state = get_dashboard_state();
 	memcpy(ypr, &state->ui.ypr, sizeof(ypr));
 	for (int k = 0; k < 3; k++) {
 		n = format_float_2dp(ypr[k], buf);
 		for (int i = 0; i < n; i++) {
-			copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(buf[i], 12, 36), 12, 36,
-				     i * 12 + 6, (k + 1) * 30);
+			copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(buf[i], 12, 36),
+						 12, 36, i * 12 + 6, (k + 1) * 30);
 		}
 	}
 	return 0;

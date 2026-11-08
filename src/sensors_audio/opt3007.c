@@ -56,7 +56,7 @@ static uint8_t als_level;
 static int opt3001_reg_read(uint8_t reg, uint16_t *val)
 {
 	uint8_t tx_buf[1];
-	uint8_t value[2] = { 0 };
+	uint8_t value[2] = {0};
 
 	if (!device_is_ready(opt3001_i2c_device.bus)) {
 		G1_LOG_ERR("Bus device is not ready\n");
@@ -73,7 +73,7 @@ static int opt3001_reg_read(uint8_t reg, uint16_t *val)
 
 static int opt3001_reg_write(uint8_t reg, uint16_t val)
 {
-	uint8_t tx_buf[3] = { reg, val >> 8, val & 0xff };
+	uint8_t tx_buf[3] = {reg, val >> 8, val & 0xff};
 	int ret;
 
 	if (!device_is_ready(opt3001_i2c_device.bus)) {

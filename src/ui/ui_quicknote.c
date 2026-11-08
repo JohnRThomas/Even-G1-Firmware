@@ -96,25 +96,28 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 						}
 
 						gui_bmp_bitmap_draw(0x4a, gui_screen_x_offset() + x,
-								    gui_screen_y_offset() + 0x3a, 0, 0, 0);
+								    gui_screen_y_offset() + 0x3a, 0,
+								    0, 0);
 						gui_utf_draw(0, get_string(0x52), 0,
 							     gui_screen_x_offset() + x + 0x2c,
 							     gui_screen_y_offset() + 0x36,
 							     gui_screen_x_offset() + 0x240,
-							     gui_screen_y_offset() + 0x88, 1, 0, 0, NULL, 0);
+							     gui_screen_y_offset() + 0x88, 1, 0, 0,
+							     NULL, 0);
 					}
 				} else {
-					gui_utf_draw_middle(0, get_string(0x44), 0, gui_screen_x_offset(),
-							    gui_screen_y_offset() + 0x36,
-							    gui_screen_x_offset() + 0x240,
-							    gui_screen_y_offset() + 0x51, 1, 0, 0, NULL, 0);
+					gui_utf_draw_middle(
+						0, get_string(0x44), 0, gui_screen_x_offset(),
+						gui_screen_y_offset() + 0x36,
+						gui_screen_x_offset() + 0x240,
+						gui_screen_y_offset() + 0x51, 1, 0, 0, NULL, 0);
 					if (gs->ui.qn.page == 0) {
 						gui_utf_draw_middle(0, get_string(0x45), 0,
 								    gui_screen_x_offset(),
 								    gui_screen_y_offset() + 0x6c,
 								    gui_screen_x_offset() + 0x240,
-								    gui_screen_y_offset() + 0x87, 1, 0, 0,
-								    NULL, 0);
+								    gui_screen_y_offset() + 0x87, 1,
+								    0, 0, NULL, 0);
 					}
 				}
 				for (int row = 0; row < 199; row++) {
@@ -124,13 +127,15 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 
 						if (pix != 0) {
 							panel->panel_buffer[row][col] =
-								pix & gui_fade_mask_at(row % 26, steps[i], col);
+								pix & gui_fade_mask_at(row % 26,
+										       steps[i],
+										       col);
 						}
 					}
 				}
 				_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-							get_dashboard_state()->panel.current_column, 0, 0,
-							GUI_SCREEN_WIDTH, 199);
+							get_dashboard_state()->panel.current_column,
+							0, 0, GUI_SCREEN_WIDTH, 199);
 			}
 			set_showing_notification_on_gui();
 			if (get_dashboard_state()->is_master == 1) {
@@ -138,7 +143,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 					if (dmic_get_stop_state() == 1) {
 						request_dmic_stream_start();
 					}
-				} else if (atomic_get(&audio_stream_recording) != 1 || dmic_get_stop_state() == 1) {
+				} else if (atomic_get(&audio_stream_recording) != 1 ||
+					   dmic_get_stop_state() == 1) {
 					dmic_record_start();
 				}
 			}
@@ -168,7 +174,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 					if (qn->last_status != 8) {
 						qn->last_status = status;
 						_clean_fb_data(panel->panel_buffer, 0,
-							       gui_screen_x_offset() + 0x14, gui_screen_y_offset(),
+							       gui_screen_x_offset() + 0x14,
+							       gui_screen_y_offset(),
 							       gui_screen_x_offset() + 0x240,
 							       gui_screen_y_offset() + 0x88);
 					}
@@ -176,16 +183,19 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 						const char *text = gs->ui.qn.text;
 
 						if (gs->ui.qn.scroll_line == 1) {
-							gui_utf_draw_scroll_line(0, text, 0, gui_screen_x_offset() + 100,
-								     gui_screen_y_offset(),
-								     gui_screen_x_offset() + 0x1dc,
-								     gui_screen_y_offset() + 0x88, 5, 0);
+							gui_utf_draw_scroll_line(
+								0, text, 0,
+								gui_screen_x_offset() + 100,
+								gui_screen_y_offset(),
+								gui_screen_x_offset() + 0x1dc,
+								gui_screen_y_offset() + 0x88, 5, 0);
 						} else {
-							gui_utf_draw(0, text, 0, gui_screen_x_offset() + 100,
+							gui_utf_draw(0, text, 0,
+								     gui_screen_x_offset() + 100,
 								     gui_screen_y_offset(),
 								     gui_screen_x_offset() + 0x1dc,
-								     gui_screen_y_offset() + 0x88, 5, 0, 0, NULL,
-								     0);
+								     gui_screen_y_offset() + 0x88,
+								     5, 0, 0, NULL, 0);
 						}
 					}
 				} else if (status == 10 && quicknote_result_shown == 0) {
@@ -194,10 +204,12 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 					qn->ts = k_uptime_get();
 					switch (gs->ui.qn.mode) {
 					case 1:
-						gui_utf_draw_middle(0, get_string(0x60), 0, gui_screen_x_offset(),
+						gui_utf_draw_middle(0, get_string(0x60), 0,
+								    gui_screen_x_offset(),
 								    gui_screen_y_offset() + 0x36,
 								    gui_screen_x_offset() + 0x240,
-								    gui_screen_y_offset() + 0x88, 3, 0, 0, NULL, 0);
+								    gui_screen_y_offset() + 0x88, 3,
+								    0, 0, NULL, 0);
 						break;
 					case 2: {
 						int x;
@@ -219,12 +231,14 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 						}
 
 						gui_bmp_bitmap_draw(0x4a, gui_screen_x_offset() + x,
-								    gui_screen_y_offset() + 0x3a, 0, 0, 0);
+								    gui_screen_y_offset() + 0x3a, 0,
+								    0, 0);
 						gui_utf_draw(0, get_string(0x52), 0,
 							     gui_screen_x_offset() + x + 0x2c,
 							     gui_screen_y_offset() + 0x36,
 							     gui_screen_x_offset() + 0x240,
-							     gui_screen_y_offset() + 0x88, 1, 0, 0, NULL, 0);
+							     gui_screen_y_offset() + 0x88, 1, 0, 0,
+							     NULL, 0);
 						break;
 					}
 					}
@@ -232,8 +246,9 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 			}
 			if ((event == UI_EVT_ENTER || event == UI_EVT_REFRESH) &&
 			    (gs->ui.qn.status == 7 || gs->ui.qn.status == 8)) {
-				gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0,
-							    0, 0, 0);
+				gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(),
+							    gui_screen_y_offset() + 0x36, 0, 0, 0,
+							    0);
 			}
 		}
 		if (quicknote_result_shown != 0) {
@@ -301,21 +316,24 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event)
 				if (quicknote_result_shown == 0) {
 					G1_LOG_INF("exec quick note exit display...\n");
 					gui_screen_clear();
-					gui_bmp_bitmap_draw(0x3b, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0,
-							    0, 0);
-					gui_utf_draw_middle(0, get_string(0x46), 0, gui_screen_x_offset() + 0x24,
+					gui_bmp_bitmap_draw(0x3b, gui_screen_x_offset(),
+							    gui_screen_y_offset() + 0x36, 0, 0, 0);
+					gui_utf_draw_middle(0, get_string(0x46), 0,
+							    gui_screen_x_offset() + 0x24,
 							    gui_screen_y_offset() + 0x36,
 							    gui_screen_x_offset() + 0x21c,
-							    gui_screen_y_offset() + 0x6c, 2, 0, 0, NULL, 0);
+							    gui_screen_y_offset() + 0x6c, 2, 0, 0,
+							    NULL, 0);
 					quicknote_result_shown = 1;
 				}
 			} else if (quicknote_result_shown == 0) {
-				gui_bmp_dynamic_bitmap_draw(9, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0,
-							    0, 0, 0);
-				gui_utf_draw_darkword_by_lines(0, gs->ui.qn.text, 0,
-							       gui_screen_x_offset() + 100, gui_screen_y_offset(),
-							       gui_screen_x_offset() + 0x1dc,
-							       gui_screen_y_offset() + 0x88, 5, 5, 0, NULL, 0);
+				gui_bmp_dynamic_bitmap_draw(9, gui_screen_x_offset(),
+							    gui_screen_y_offset() + 0x36, 0, 0, 0,
+							    0);
+				gui_utf_draw_darkword_by_lines(
+					0, gs->ui.qn.text, 0, gui_screen_x_offset() + 100,
+					gui_screen_y_offset(), gui_screen_x_offset() + 0x1dc,
+					gui_screen_y_offset() + 0x88, 5, 5, 0, NULL, 0);
 			}
 		}
 		break;
@@ -334,7 +352,8 @@ int day_of_week(int year, int month, int day)
 		year--;
 	}
 	return (day + 2 * month + 3 * (month + 1) / 5 + year + year / 4 - year / 100 + year / 400 +
-		1) % 7;
+		1) %
+	       7;
 }
 
 void draw_countdown_running_status(uint8_t **fb, void *arg, int a, int b, int c)

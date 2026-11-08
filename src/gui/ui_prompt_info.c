@@ -25,12 +25,14 @@ static int prompt_info_reflash(void)
 
 	switch (action) {
 	case 1:
-		gui_utf_draw_middle(0, get_string(0x42), 0, gui_screen_x_offset(), gui_screen_y_offset() + 55,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 3, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, get_string(0x42), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 55, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 136, 3, 0, 0, NULL, 0);
 		break;
 	case 2:
-		gui_utf_draw_middle(0, get_string(0x43), 0, gui_screen_x_offset(), gui_screen_y_offset() + 55,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 3, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, get_string(0x43), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 55, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 136, 3, 0, 0, NULL, 0);
 		break;
 	default:
 		break;
@@ -67,18 +69,20 @@ int ui_prompt_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 				prompt_info_reflash();
 				for (int row = 0; row < 199; row++) {
 					for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
-						const uint8_t steps[8] = { 1, 2, 3, 4, 5, 6, 7, 7 };
+						const uint8_t steps[8] = {1, 2, 3, 4, 5, 6, 7, 7};
 						uint8_t pix = ctx->panel_buffer[row][col];
 
 						if (pix != 0) {
 							ctx->panel_buffer[row][col] =
-								pix & gui_fade_mask_at(row % 26, steps[i], col);
+								pix & gui_fade_mask_at(row % 26,
+										       steps[i],
+										       col);
 						}
 					}
 				}
 				_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-							get_dashboard_state()->panel.current_column, 0, 0,
-							GUI_SCREEN_WIDTH, 199);
+							get_dashboard_state()->panel.current_column,
+							0, 0, GUI_SCREEN_WIDTH, 199);
 			}
 			set_showing_notification_on_gui();
 		} else if (event == 2) {

@@ -126,8 +126,9 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
 		if (get_dashboard_state()->flash_read == NULL) {
 			bitmap = NULL;
 		} else {
-			if (get_dashboard_state()->flash_read(get_dashboard_state(), ((code - 0xa4) << 2) + 0x140000,
-						  &idx, sizeof(idx))) {
+			if (get_dashboard_state()->flash_read(get_dashboard_state(),
+							      ((code - 0xa4) << 2) + 0x140000, &idx,
+							      sizeof(idx))) {
 				G1_LOG_ERR("read flash fail\n\n");
 				return NULL;
 			}
@@ -137,7 +138,8 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
 				addr += 0xcf120;
 			}
 			memset(buf, 0, size);
-			err = get_dashboard_state()->flash_read(get_dashboard_state(), addr + 0x200000, buf, size / 4);
+			err = get_dashboard_state()->flash_read(get_dashboard_state(),
+								addr + 0x200000, buf, size / 4);
 			if (err) {
 				G1_LOG_ERR("read flash fail: %d\n\n", err);
 			}

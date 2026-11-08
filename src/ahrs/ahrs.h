@@ -10,18 +10,18 @@
  * period and anglesComputed moved before the angles.
  */
 struct ahrs {
-	float beta;		/* 0.1 (unused by the Mahony update) */
-	float twoKp;		/* 2 * proportional gain (Kp) */
-	float twoKi;		/* 2 * integral gain (Ki) */
-	float q0, q1, q2, q3;	/* quaternion of sensor frame relative to auxiliary frame */
-	float integralFBx, integralFBy, integralFBz;	/* integral error terms scaled by Ki */
+	float beta;  /* 0.1 (unused by the Mahony update) */
+	float twoKp;  /* 2 * proportional gain (Kp) */
+	float twoKi;  /* 2 * integral gain (Ki) */
+	float q0, q1, q2, q3; /* quaternion of sensor frame relative to auxiliary frame */
+	float integralFBx, integralFBy, integralFBz; /* integral error terms scaled by Ki */
 	char anglesComputed;
-	float roll;		/* rad */
+	float roll;  /* rad */
 	float pitch;
 	float yaw;
-	uint32_t Now;		/* ms */
-	uint32_t lastUpdate;	/* ms */
-	float deltat;		/* s */
+	uint32_t Now;  /* ms */
+	uint32_t lastUpdate; /* ms */
+	float deltat;  /* s */
 };
 
 void Mahony_init(struct ahrs *a);

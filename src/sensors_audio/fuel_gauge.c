@@ -58,7 +58,7 @@ int read_sensors(const struct device *charger, float *voltage, float *current, f
 int fuel_gauge_init(const struct device *charger)
 {
 	struct sensor_value value;
-	struct nrf_fuel_gauge_init_parameters parameters = { .model = &battery_model };
+	struct nrf_fuel_gauge_init_parameters parameters = {.model = &battery_model};
 	int ret;
 
 	ret = read_sensors(charger, &parameters.v0, &parameters.i0, &parameters.t0);
@@ -95,9 +95,9 @@ bool is_old_board(void)
 
 int fuel_gauge_update(const struct device *charger)
 {
-	float voltage;
-	float current;
-	float temp;
+	float voltage = 0;
+	float current = 0;
+	float temp = 0;
 	float soc = 0;
 	float new_soc;
 	int retry = 11;
@@ -124,7 +124,8 @@ int fuel_gauge_update(const struct device *charger)
 
 		delta = k_uptime_get() - fuel_gauge_ref_time;
 		if (delta >= 1000) {
-			soc = nrf_fuel_gauge_process(voltage, current, temp, (float)delta / 1000.f, NULL);
+			soc = nrf_fuel_gauge_process(voltage, current, temp, (float)delta / 1000.f,
+						     NULL);
 			if (current != 0 || --retry == 0 || !(soc < 100) || !(soc > 0)) {
 				break;
 			}

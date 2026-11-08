@@ -48,10 +48,11 @@ static void aw93203_delay(uint32_t ms)
 }
 
 static struct aw9320x_func aw9320x_func = {
-	.i2c_func = {
-		.i2c_r = aw93203_i2c_read,
-		.i2c_w = aw93203_i2c_write,
-	},
+	.i2c_func =
+		{
+			.i2c_r = aw93203_i2c_read,
+			.i2c_w = aw93203_i2c_write,
+		},
 	.irq_init = aw93203_irq_init,
 	.delay = aw93203_delay,
 };

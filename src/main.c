@@ -128,10 +128,10 @@ static void switch_to_dfu_mode(struct k_sem *sem)
 	system_reboot_delayed();
 }
 
-#define ESB_CMD_MASK  0x3f
-#define ESB_DIR_MASK  0xc0
-#define ESB_DIR_UP    0x80
-#define ESB_DIR_DOWN  0x40
+#define ESB_CMD_MASK 0x3f
+#define ESB_DIR_MASK 0xc0
+#define ESB_DIR_UP   0x80
+#define ESB_DIR_DOWN 0x40
 
 static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len)
 {
@@ -149,7 +149,8 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 		return 0;
 	}
 	if (new_data_pkg->package_id != (uint8_t)(data_pkg->package_id + 1)) {
-		G1_LOG(0, "###############loss package new_data_pkg->package_id %d data_pkg->package_id %d\n",
+		G1_LOG(0,
+		       "###############loss package new_data_pkg->package_id %d data_pkg->package_id %d\n",
 		       new_data_pkg->package_id, data_pkg->package_id);
 	}
 
@@ -197,12 +198,14 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 			if ((buf[0] & ESB_DIR_MASK) == ESB_DIR_UP ||
 			    (new_data_pkg->screen_id == 0x10 && GLOBAL_STATE->dash_buf->type >= 6 &&
 			     GLOBAL_STATE->dash_buf->type <= 9)) {
-				if (gs->esb_up_id != data[3] && gs->esb_up_snapshot[ESB_SNAPSHOT_SEQ] != data[3]) {
+				if (gs->esb_up_id != data[3] &&
+				    gs->esb_up_snapshot[ESB_SNAPSHOT_SEQ] != data[3]) {
 					data_pkg->package_id++;
 					G1_LOG(0, "slave recv wrong up package\n");
 					return 0;
 				}
-			} else if (gs->esb_down_id != data[4] && gs->esb_down_snapshot[ESB_SNAPSHOT_SEQ] != data[4]) {
+			} else if (gs->esb_down_id != data[4] &&
+				   gs->esb_down_snapshot[ESB_SNAPSHOT_SEQ] != data[4]) {
 				data_pkg->package_id++;
 				G1_LOG(0, "slave recv wrong down package\n");
 				return 0;
@@ -303,13 +306,14 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 	case 12:
 		if (new_data_pkg->arg[0] == 11) {
 			dist = new_data_pkg->arg[1];
-			G1_LOG(1, "slave rcv canvas_distance_gear:%d,raster_height_gear:%d\n",
-			       dist, new_data_pkg->arg[2]);
+			G1_LOG(1, "slave rcv canvas_distance_gear:%d,raster_height_gear:%d\n", dist,
+			       new_data_pkg->arg[2]);
 			if (dist < 10 && new_data_pkg->arg[2] < 9) {
 				g = GLOBAL_STATE;
 				g->panel.canvas_distance_gear = dist;
 				g->panel.raster_height_offset = new_data_pkg->arg[2];
-				cal_panel_canvas_coord(&g->panel.y_offset, &g->panel.current_column);
+				cal_panel_canvas_coord(&g->panel.y_offset,
+						       &g->panel.current_column);
 			}
 			if (GLOBAL_STATE->dashboard_ts->exit_pending) {
 				GLOBAL_STATE->dashboard_ts->exit_pending = 0;
@@ -499,9 +503,10 @@ int runtime_info_sync(struct GlassesState *gs)
 	ret = global_ipc_service_send(&msg, sizeof(msg));
 	if (first_sync) {
 		first_sync = false;
-		G1_LOG(1, "--role:%d --mode:%d, esb_channel %d --ret:%d esb_master_addr %02X esb_slave_addr %02X\n",
-		       msg.info.role, msg.info.mode, msg.info.esb_channel, ret,
-		       gs->esb_master_addr, gs->esb_slave_addr);
+		G1_LOG(1,
+		       "--role:%d --mode:%d, esb_channel %d --ret:%d esb_master_addr %02X esb_slave_addr %02X\n",
+		       msg.info.role, msg.info.mode, msg.info.esb_channel, ret, gs->esb_master_addr,
+		       gs->esb_slave_addr);
 	}
 	return ret;
 }
@@ -540,7 +545,6 @@ static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, 
 
 	switch (data[0]) {
 	case IPC_MSG_TICK_SYNC:
-		uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
 		if (k_sem_count_get(&gs->ipc_sem) == 0) {
 			k_sem_give(&gs->ipc_sem);
 		}
@@ -561,7 +565,8 @@ static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, 
 		} else {
 			memcpy(gs->slave_mac, &data[1], sizeof(gs->slave_mac));
 		}
-		G1_LOG(1, "cpunet request update macaddr info uptime %lld bt macaddr esb_master_addr %02X esb_slave_addr %02X \n",
+		G1_LOG(1,
+		       "cpunet request update macaddr info uptime %lld bt macaddr esb_master_addr %02X esb_slave_addr %02X \n",
 		       uptime, gs->esb_master_addr, gs->esb_slave_addr);
 		if (k_sem_count_get(&gs->ipc_sem) == 0) {
 			k_sem_give(&gs->ipc_sem);
@@ -586,8 +591,8 @@ static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, 
 		if (!gs->check_mode) {
 			esb_signal = 70;
 		}
-		G1_LOG(1, "IPC_RESP_CPUNET_ESB_PACKAGES %d %d %d %d\n",
-		       esb_tx_count, esb_tx_fail_count, esb_rx_count, esb_signal);
+		G1_LOG(1, "IPC_RESP_CPUNET_ESB_PACKAGES %d %d %d %d\n", esb_tx_count,
+		       esb_tx_fail_count, esb_rx_count, esb_signal);
 		break;
 	case IPC_MSG_SET_MACADDR:
 		memcpy(gs->master_mac, &data[1], sizeof(gs->master_mac));
@@ -675,8 +680,10 @@ void restore_dashboard_ts_from_ncs_mem(void)
 	if (NCS_MEM->notes_index < 4) {
 		notes_index = NCS_MEM->notes_index;
 	}
-	memcpy(gs->dashboard_ts->retained_buf_a, NCS_MEM->retained_buf_a, sizeof(NCS_MEM->retained_buf_a));
-	memcpy(gs->dashboard_ts->retained_buf_b, NCS_MEM->retained_buf_b, sizeof(NCS_MEM->retained_buf_b));
+	memcpy(gs->dashboard_ts->retained_buf_a, NCS_MEM->retained_buf_a,
+	       sizeof(NCS_MEM->retained_buf_a));
+	memcpy(gs->dashboard_ts->retained_buf_b, NCS_MEM->retained_buf_b,
+	       sizeof(NCS_MEM->retained_buf_b));
 }
 
 void set_ncs_mem_notes_index(uint8_t idx)
@@ -1028,7 +1035,8 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 		src = (const struct notif_msg *)&data[1];
 		slot = get_message_by_index(data[0xd]);
 		if (slot && !slot->busy &&
-		    (src->uid != slot->uid || src->recv_time != slot->recv_time || slot->sync_state != 1)) {
+		    (src->uid != slot->uid || src->recv_time != slot->recv_time ||
+		     slot->sync_state != 1)) {
 			memcpy(slot, &data[1], NOTIF_MSG_HALF);
 			slot->sync_state = 1;
 		}
@@ -1354,9 +1362,8 @@ int main(void)
 	G1_LOG(0, "Synchronization using %s driver\n", "mbox");
 	k_timer_start(&rtc_sync_timer, K_MSEC(50), K_MSEC(50));
 	serialization_init();
-	G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n",
-	       FW_VER_MAJOR, FW_VER_MINOR, FW_VER_PATCH,
-	       G1_GIT_COMMIT, G1_BUILD_TIME);
+	G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n", FW_VER_MAJOR,
+	       FW_VER_MINOR, FW_VER_PATCH, G1_GIT_COMMIT, G1_BUILD_TIME);
 
 	s = init_context();
 	component_init(s);

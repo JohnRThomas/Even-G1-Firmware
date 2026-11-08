@@ -58,9 +58,9 @@ static uint16_t response_len;
 
 int start_proxy_thread_handler(void *gs)
 {
-	proxy_tid = k_thread_create(&proxy_thread, proxy_stack, PROXY_STACK_SIZE,
-				    proxy_thread_handler, gs, NULL, NULL, PROXY_PRIORITY, 0,
-				    K_NO_WAIT);
+	proxy_tid =
+		k_thread_create(&proxy_thread, proxy_stack, PROXY_STACK_SIZE, proxy_thread_handler,
+				gs, NULL, NULL, PROXY_PRIORITY, 0, K_NO_WAIT);
 	return proxy_tid == NULL ? -1 : 0;
 }
 
@@ -104,8 +104,9 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 
 				ret = gs->ble_context.write(response_buf, response_len);
 				if (ret < 0) {
-					G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n",
-						   ret);
+					G1_LOG_WRN(
+						"Failed to send data over BLE connection: ret = %d \n",
+						ret);
 				}
 				get_wall_clock_ms(&now_ms);
 				response_pending = 0;
@@ -121,25 +122,30 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 					break;
 				}
 				memset(audio_file_buf, 0, sizeof(audio_file_buf));
-				if (get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR,
-							   audio_file_buf, sizeof(audio_file_buf))) {
+				if (get_dashboard_state()->flash_read(
+					    get_dashboard_state(), VOICE_MANAGER_ADDR,
+					    audio_file_buf, sizeof(audio_file_buf))) {
 					G1_LOG_ERR(" form address [%d] read data failed.\n\n",
 						   VOICE_MANAGER_ADDR);
 					break;
 				}
 				if (VOICE_MGR->magic == VOICE_MANAGER_MAGIC &&
 				    VOICE_MGR->blocks[audio_block_idx].state == 2) {
-					audio_file_start = VOICE_MGR->blocks[audio_block_idx].start_addr;
-					audio_file_end = VOICE_MGR->blocks[audio_block_idx].end_addr;
+					audio_file_start =
+						VOICE_MGR->blocks[audio_block_idx].start_addr;
+					audio_file_end =
+						VOICE_MGR->blocks[audio_block_idx].end_addr;
 				}
 				memset(audio_file_buf, 0, sizeof(audio_file_buf));
-				if (get_dashboard_state()->flash_read(get_dashboard_state(), audio_file_start,
-							   audio_file_buf, AUDIO_CHUNK_SIZE)) {
+				if (get_dashboard_state()->flash_read(
+					    get_dashboard_state(), audio_file_start, audio_file_buf,
+					    AUDIO_CHUNK_SIZE)) {
 					G1_LOG_ERR(" form address [%d] read data failed.\n\n",
 						   VOICE_MANAGER_ADDR);
 					break;
 				}
-				audio_pkt_total = (audio_file_end - audio_file_start) / AUDIO_CHUNK_SIZE;
+				audio_pkt_total =
+					(audio_file_end - audio_file_start) / AUDIO_CHUNK_SIZE;
 				if ((audio_file_end - audio_file_start) % AUDIO_CHUNK_SIZE) {
 					audio_pkt_total++;
 				}
@@ -147,7 +153,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				audio_pkt_seq = 0;
 				audio_pkt_index = 0;
 				audio_file_sent = 0;
-				memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
+				memset(audio_response_packet_buf, 0,
+				       sizeof(audio_response_packet_buf));
 				audio_response_packet_buf[0] = 0x1e;
 				audio_response_packet_buf[2] = 0;
 				audio_response_packet_buf[3] = audio_pkt_seq;
@@ -160,19 +167,23 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				audio_response_packet_buf[8] = audio_pkt_index >> 8;
 				audio_response_packet_buf[9] = audio_block_idx + 1;
 				n = MIN(audio_file_size - audio_file_sent, AUDIO_CHUNK_SIZE);
-				memcpy(&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE], audio_file_buf, n);
+				memcpy(&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE],
+				       audio_file_buf, n);
 				audio_response_packet_buf[1] = n + AUDIO_PKT_HDR_SIZE;
 				retry = AUDIO_RETRY_COUNT;
 				for (;;) {
 					ret = gs->ble_context.write(audio_response_packet_buf,
 								    audio_response_packet_buf[1]);
 					if (ret < 0) {
-						G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n",
-							   ret);
+						G1_LOG_WRN(
+							"Failed to send data over BLE connection: ret = %d \n",
+							ret);
 						if (--retry != 0) {
-							G1_LOG_WRN("retry send audio data first packet\n");
+							G1_LOG_WRN(
+								"retry send audio data first packet\n");
 						} else {
-							G1_LOG_WRN("send audio stream more than retry count,break audio send process....\n");
+							G1_LOG_WRN(
+								"send audio stream more than retry count,break audio send process....\n");
 							break;
 						}
 					} else {
@@ -198,11 +209,14 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 					audio_file_end = 0;
 					audio_file_start = 0;
 					clearAudioBlockInUse();
-					G1_LOG_ERR("app request over size data ,break,last packet timestamp = %d\n",
-						   get_dashboard_state()->dashboard_ts->ts);
+					G1_LOG_ERR(
+						"app request over size data ,break,last packet timestamp = %d\n",
+						get_dashboard_state()->dashboard_ts->ts);
 				} else {
-					memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
-					n = MIN(audio_file_size - audio_file_sent, AUDIO_CHUNK_SIZE);
+					memset(audio_response_packet_buf, 0,
+					       sizeof(audio_response_packet_buf));
+					n = MIN(audio_file_size - audio_file_sent,
+						AUDIO_CHUNK_SIZE);
 					audio_response_packet_buf[0] = 0x1e;
 					audio_response_packet_buf[1] = n + AUDIO_PKT_HDR_SIZE;
 					audio_response_packet_buf[2] = 0;
@@ -216,27 +230,34 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 					audio_response_packet_buf[8] = audio_pkt_index >> 8;
 					audio_response_packet_buf[9] = audio_block_idx + 1;
 					memset(audio_file_buf, 0, sizeof(audio_file_buf));
-					if (get_dashboard_state()->flash_read(get_dashboard_state(),
-								   audio_file_start + audio_file_sent,
-								   audio_file_buf, n)) {
-						G1_LOG_ERR(" form address [%d] read data failed.\n\n",
-							   VOICE_MANAGER_ADDR);
+					if (get_dashboard_state()->flash_read(
+						    get_dashboard_state(),
+						    audio_file_start + audio_file_sent,
+						    audio_file_buf, n)) {
+						G1_LOG_ERR(
+							" form address [%d] read data failed.\n\n",
+							VOICE_MANAGER_ADDR);
 						audio_sending = 0;
 						clearAudioBlockInUse();
 						break;
 					}
-					memcpy(&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE], audio_file_buf, n);
+					memcpy(&audio_response_packet_buf[AUDIO_PKT_HDR_SIZE],
+					       audio_file_buf, n);
 					retry = AUDIO_RETRY_COUNT;
 					for (;;) {
-						ret = gs->ble_context.write(audio_response_packet_buf,
-									    audio_response_packet_buf[1]);
+						ret = gs->ble_context.write(
+							audio_response_packet_buf,
+							audio_response_packet_buf[1]);
 						if (ret < 0) {
-							G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n",
-								   ret);
+							G1_LOG_WRN(
+								"Failed to send data over BLE connection: ret = %d \n",
+								ret);
 							if (--retry != 0) {
-								G1_LOG_WRN("retry send audio data\n");
+								G1_LOG_WRN(
+									"retry send audio data\n");
 							} else {
-								G1_LOG_WRN("send audio stream more than retry count,break audio send process....\n");
+								G1_LOG_WRN(
+									"send audio stream more than retry count,break audio send process....\n");
 								audio_sending = 0;
 								clearAudioBlockInUse();
 								break;
@@ -260,9 +281,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				break;
 			}
 			memset(audio_file_buf, 0, sizeof(audio_file_buf));
-			if (get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR,
-						   audio_file_buf, sizeof(audio_file_buf))) {
-				G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
+			if (get_dashboard_state()->flash_read(get_dashboard_state(),
+							      VOICE_MANAGER_ADDR, audio_file_buf,
+							      sizeof(audio_file_buf))) {
+				G1_LOG_ERR(" form address [%d] read data failed.\n\n",
+					   VOICE_MANAGER_ADDR);
 				break;
 			}
 			memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
@@ -294,7 +317,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			ret = gs->ble_context.write(audio_response_packet_buf,
 						    audio_response_packet_buf[1]);
 			if (ret < 0) {
-				G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n", ret);
+				G1_LOG_WRN("Failed to send data over BLE connection: ret = %d \n",
+					   ret);
 			}
 			break;
 		}
@@ -306,9 +330,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			buf[1] = on;
 
 			for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
-					G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n",
-						   i);
+				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >=
+				    SYNC_TIMEOUT) {
+					G1_LOG_WRN(
+						"SYNC TO Slave failed %d times,don't exec quick note start function.\n",
+						i);
 				} else {
 					display_powerEvent(on);
 					k_yield();
@@ -325,9 +351,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			buf[1] = lang;
 
 			for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
-					G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n",
-						   i);
+				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >=
+				    SYNC_TIMEOUT) {
+					G1_LOG_WRN(
+						"SYNC TO Slave failed %d times,don't exec quick note start function.\n",
+						i);
 				} else {
 					upgradeAppLanguageInfoToFlash(lang);
 					break;
@@ -343,9 +371,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			buf[1] = mode;
 
 			for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
-					G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n",
-						   i);
+				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >=
+				    SYNC_TIMEOUT) {
+					G1_LOG_WRN(
+						"SYNC TO Slave failed %d times,don't exec quick note start function.\n",
+						i);
 				} else {
 					upgradeDashboardStartupModeInfoToFlash(mode);
 					break;
@@ -355,15 +385,18 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 		}
 
 		case PROXY_MSG_DOUBLE_CLICK:
-			if (get_dashboard_state()->double_tap_customize == 4 && get_dashboard_state()->dashboard_mode == 0 &&
+			if (get_dashboard_state()->double_tap_customize == 4 &&
+			    get_dashboard_state()->dashboard_mode == 0 &&
 			    get_dashboard_state()->is_master == 1) {
 				buf[0] = 0x0a;
 				buf[1] = 1;
 
 				for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-					if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
-						G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n",
-							   i);
+					if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >=
+					    SYNC_TIMEOUT) {
+						G1_LOG_WRN(
+							"SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n",
+							i);
 					} else {
 						atomic_or(&dashboard_flags, 2);
 						get_dashboard_state()->double_tap_dashboard_on = 1;
@@ -372,19 +405,23 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 				}
 			}
 			if (get_dashboard_state()->dashboard_mode == 6 &&
-			    (get_dashboard_state()->double_tap_dashboard_on || get_dashboard_state()->dashboard_ts->dashboard_hold) &&
+			    (get_dashboard_state()->double_tap_dashboard_on ||
+			     get_dashboard_state()->dashboard_ts->dashboard_hold) &&
 			    get_dashboard_state()->is_master == 1) {
 				buf[0] = 0x0a;
 				buf[1] = 2;
 
 				for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-					if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
-						G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n",
-							   i);
+					if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >=
+					    SYNC_TIMEOUT) {
+						G1_LOG_WRN(
+							"SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n",
+							i);
 					} else {
 						atomic_or(&dashboard_flags, 2);
 						get_dashboard_state()->double_tap_dashboard_on = 0;
-						get_dashboard_state()->dashboard_ts->dashboard_hold = 0;
+						get_dashboard_state()
+							->dashboard_ts->dashboard_hold = 0;
 						break;
 					}
 				}
@@ -398,9 +435,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			buf[1] = mode;
 
 			for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
-					G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec double_tap_customize\n",
-						   i);
+				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >=
+				    SYNC_TIMEOUT) {
+					G1_LOG_WRN(
+						"SYNC TO Slave failed %d times,don't exec double_tap_customize\n",
+						i);
 				} else {
 					upgradeDoubleTapCustomizeToFlash(mode);
 					break;
@@ -416,9 +455,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
 			buf[1] = mode;
 
 			for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
-					G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec longpress_tap_customize\n",
-						   i);
+				if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >=
+				    SYNC_TIMEOUT) {
+					G1_LOG_WRN(
+						"SYNC TO Slave failed %d times,don't exec longpress_tap_customize\n",
+						i);
 				} else {
 					upgradeLongpressTapCustomizeToFlash(mode);
 					break;

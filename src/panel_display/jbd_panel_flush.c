@@ -12,8 +12,8 @@
 uint32_t JDB_PANEL_ID;
 struct k_mutex lcd_mutex;
 
-int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start,
-			    int x_end, int y_end)
+int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end,
+			    int y_end)
 {
 	uint8_t rx[1] = {0};
 	struct jbd_panel_context *c = get_jdb_panel_context();
@@ -58,8 +58,8 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
 	return 0;
 }
 
-int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start,
-			       int x_end, int y_end, int offset)
+int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start, int x_end,
+			       int y_end, int offset)
 {
 	uint8_t rx[1] = {0};
 	struct jbd_panel_context *c = get_jdb_panel_context();
@@ -76,8 +76,8 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
 		x_end = PANEL_WIDTH;
 	}
 	for (; y_start <= y_end; y_start++) {
-		uint8_t *p = c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE +
-			     x_start / 2 - 5;
+		uint8_t *p =
+			c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE + x_start / 2 - 5;
 		int len = x_end / 2 - x_start / 2 + 5;
 		uint32_t addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
 		uint8_t backup[5];

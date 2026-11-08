@@ -82,8 +82,7 @@ int deleteQuickNoteData(int index)
 	return 0;
 }
 
-int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *text,
-			      int text_len)
+int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *text, int text_len)
 {
 	if (index >= QUICKNOTE_NUM) {
 		G1_LOG_ERR("quicknote upgrade index out of range\n");
@@ -179,21 +178,22 @@ int QuickNoteStoreHandler(void)
 		} else {
 			changed = 0;
 			if (memcmp(title, get_dashboard_state()->quicknote->notes[index].title,
-				   QUICKNOTE_TITLE_LEN)) {
+				   QUICKNOTE_TITLE_LEN) != 0) {
 				memset(title, 0, QUICKNOTE_TITLE_LEN);
 				memcpy(title, get_dashboard_state()->quicknote->notes[index].title,
 				       QUICKNOTE_TITLE_LEN);
 				changed = 1;
 			}
 			if (memcmp(text, get_dashboard_state()->quicknote->notes[index].text,
-				   QUICKNOTE_TEXT_LEN)) {
+				   QUICKNOTE_TEXT_LEN) != 0) {
 				memset(text, 0, QUICKNOTE_TEXT_LEN);
 				memcpy(text, get_dashboard_state()->quicknote->notes[index].text,
 				       QUICKNOTE_TEXT_LEN);
 				changed = 1;
 			}
 			if (changed != 1) {
-				G1_LOG_INF("The current quicknote text is stored the same as in flash and does not need to be updated\n");
+				G1_LOG_INF(
+					"The current quicknote text is stored the same as in flash and does not need to be updated\n");
 				return 0;
 			}
 		}

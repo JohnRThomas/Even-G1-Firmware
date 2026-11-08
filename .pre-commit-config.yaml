@@ -1,0 +1,30 @@
+exclude: ^(src/gui/resource_bitmaps\.h|src/gui/gui_fade_mask\.h|src/fonts/gui_fonts\.c|src/aw9320x/aw9320x_fw_info\.h)$
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v23.1.4
+    hooks:
+      - id: clang-format
+        types_or: [c]
+
+  - repo: local
+    hooks:
+      - id: clang-tidy
+        name: clang-tidy
+        entry: python3 scripts/clang_tidy_hook.py
+        language: python
+        additional_dependencies: [clang-tidy==23.1.4]
+        files: ^(src|net_core/src)/.*\.c$
+        require_serial: true

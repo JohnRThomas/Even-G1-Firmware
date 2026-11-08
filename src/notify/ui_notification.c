@@ -276,7 +276,8 @@ void draw_time(char *buf, uint32_t recv_time)
 	_clean_fb_data(fb, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(),
 		       gui_screen_x_offset() + 512, gui_screen_y_offset() + 27);
 	gui_utf_draw_align_right(0, buf, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(),
-				 gui_screen_x_offset() + 512, gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
+				 gui_screen_x_offset() + 512, gui_screen_y_offset() + 27, 1, 0, 0,
+				 NULL, 0);
 	BLE_PRINTK("gui_getScreenoffset_x=%d,timeDiffBuf is %s \n", gui_screen_x_offset(), buf);
 }
 
@@ -299,38 +300,46 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
 		memset(title, 0, sizeof(title));
 		snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
 		gui_utf_draw_middle(0, title, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 81, 1, 0, 0, NULL, 0);
-		gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
+				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 81, 1, 0,
+				    0, NULL, 0);
+		gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0,
+				    0);
 		memset(body, 0, sizeof(body));
 		snprintf(body, sizeof(body), "%s", msg->title);
 		if (body[0] == 0) {
 			return;
 		}
 		gui_utf_draw_middle(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 81,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 81, 1, 0, 0, NULL, 0);
+				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 81, 1, 0,
+				    0, NULL, 0);
 		return;
 	case 1:
-		gui_bmp_bitmap_draw(0x37, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+		gui_bmp_bitmap_draw(0x37, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0,
+				    0);
 		memset(title, 0, sizeof(title));
 		snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
 		break;
 	case 3:
-		gui_bmp_bitmap_draw(0x3a, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+		gui_bmp_bitmap_draw(0x3a, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0,
+				    0);
 		memset(title, 0, sizeof(title));
 		snprintf(title, sizeof(title), "%s | %s", msg->display_name, msg->subtitle);
 		break;
 	case 4:
-		gui_bmp_bitmap_draw(0x39, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+		gui_bmp_bitmap_draw(0x39, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0,
+				    0);
 		memset(title, 0, sizeof(title));
 		snprintf(title, sizeof(title), "%s", msg->display_name);
 		break;
 	case 0:
-		gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+		gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0,
+				    0);
 		memset(title, 0, sizeof(title));
 		snprintf(title, sizeof(title), "%s", msg->display_name);
 		break;
 	default:
-		gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+		gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0,
+				    0);
 		memset(title, 0, sizeof(title));
 		if (msg->subtitle[0]) {
 			snprintf(title, sizeof(title), "%s | %s", msg->display_name, msg->subtitle);
@@ -340,14 +349,15 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
 		break;
 	}
 	gui_utf_draw_truncate(0, title, 0, gui_screen_x_offset() + 36, gui_screen_y_offset(),
-			      gui_screen_x_offset() + 390, gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
+			      gui_screen_x_offset() + 390, gui_screen_y_offset() + 27, 1, 0, 0,
+			      NULL, 0);
 	BLE_PRINTK("recvTime is %u,curMsg->message %s\n", msg->recv_time, msg->message);
 	draw_time(time_str, msg->recv_time);
 	gui_bmp_bitmap_draw(0x3c, gui_screen_x_offset() + 528, gui_screen_y_offset(), 0, 0, 0);
 	memset(count, 0, sizeof(count));
 	sprintf(count, "%u", unread);
-	gui_utf_draw(0, count, 0, gui_screen_x_offset() + 556, gui_screen_y_offset(), gui_screen_x_offset() + 580,
-		     gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
+	gui_utf_draw(0, count, 0, gui_screen_x_offset() + 556, gui_screen_y_offset(),
+		     gui_screen_x_offset() + 580, gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
 	memset(body, 0, sizeof(body));
 	if (type == 1) {
 		snprintf(body, sizeof(body), "%s", msg->title);
@@ -355,14 +365,16 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
 			return;
 		}
 		gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-				      gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
+				      gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3,
+				      0, 0, NULL, 0);
 	} else if (type == 4) {
 		snprintf(body, sizeof(body), "%s\n%s", msg->title, msg->message);
 		if (body[0] == 0) {
 			return;
 		}
 		gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-				      gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
+				      gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3,
+				      0, 0, NULL, 0);
 	} else {
 		if (msg->title[0] == 0) {
 			snprintf(body, sizeof(body), "%s", msg->message);
@@ -373,7 +385,8 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
 			return;
 		}
 		gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-				      gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
+				      gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3,
+				      0, 0, NULL, 0);
 	}
 }
 
@@ -402,7 +415,8 @@ void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg)
 		}
 		k_sleep(K_MSEC(5));
 		_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-					get_dashboard_state()->panel.current_column, 0, 0, 640, 199);
+					get_dashboard_state()->panel.current_column, 0, 0, 640,
+					199);
 	}
 	set_showing_notification_on_gui();
 }
@@ -442,10 +456,6 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
 	}
 	idx = get_cur_show_msg_idx();
 	num = count_unread_messages();
-	/* note: msg is still NULL here */
-	if (last_idx == idx && last_num == num && msg->uid == last_uid) {
-		return 0;
-	}
 	if (pull_message(&msg) >= MSG_NORMAL_NUM) {
 		BLE_PRINTK("pull message error !\r\n");
 		last_idx = 0xff;

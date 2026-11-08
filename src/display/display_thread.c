@@ -97,29 +97,35 @@ int display_reflash_handler(struct GlassesState *gs, int screen_id, void *ctx, i
 	if (event == DISP_UI_EXIT) {
 		if (screen_id != disp_state.screen_id && disp_state.screen_id != 0) {
 			G1_LOG_ERR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-			G1_LOG_ERR("The wrong screen ID has appeared, and the exception handling is "
-				   "closed,The message ID at startup is %d. The current message ID is%d\n",
-				   disp_state.screen_id, screen_id);
-			G1_LOG_ERR("To perform exception handling, close the previous SCREEN ID = %d UI "
-				   "application first\n",
-				   disp_state.screen_id);
+			G1_LOG_ERR(
+				"The wrong screen ID has appeared, and the exception handling is "
+				"closed,The message ID at startup is %d. The current message ID is%d\n",
+				disp_state.screen_id, screen_id);
+			G1_LOG_ERR(
+				"To perform exception handling, close the previous SCREEN ID = %d UI "
+				"application first\n",
+				disp_state.screen_id);
 			ui_task_handler(gs, screen_id, ctx, DISP_UI_EXIT);
 			return -1;
 		}
 	} else if (event == DISP_UI_ENTER) {
 		if (screen_id != disp_state.screen_id && disp_state.screen_id != 0) {
-			G1_LOG_ERR("------------------------------------------------------------------"
-				   "----------------------\n");
-			G1_LOG_ERR("There is a screen ID error. The previous screen iD was %d, the "
-				   "current screen ID is %d, and the UI process to be performed is %d\n",
-				   disp_state.screen_id, screen_id, DISP_UI_ENTER);
-			G1_LOG_ERR("The UI framework closes the opened UI application first, and the "
-				   "closed application ScreenID is %d\n",
-				   disp_state.screen_id);
+			G1_LOG_ERR(
+				"------------------------------------------------------------------"
+				"----------------------\n");
+			G1_LOG_ERR(
+				"There is a screen ID error. The previous screen iD was %d, the "
+				"current screen ID is %d, and the UI process to be performed is %d\n",
+				disp_state.screen_id, screen_id, DISP_UI_ENTER);
+			G1_LOG_ERR(
+				"The UI framework closes the opened UI application first, and the "
+				"closed application ScreenID is %d\n",
+				disp_state.screen_id);
 			ui_task_handler(gs, disp_state.screen_id, ctx, DISP_UI_EXIT);
-			G1_LOG_ERR("Because ScreenID has changed, close the old screenID application "
-				   "first and update the backup value of screenID to %d\n",
-				   screen_id);
+			G1_LOG_ERR(
+				"Because ScreenID has changed, close the old screenID application "
+				"first and update the backup value of screenID to %d\n",
+				screen_id);
 			disp_state.screen_id = screen_id;
 		}
 	} else if (screen_id != disp_state.screen_id) {
@@ -196,12 +202,14 @@ void display_thread_handler(struct GlassesState *gs)
 				break;
 			}
 			if (msg.type == DISP_MSG_OPEN) {
-				if (gs->sync.screen_id == 16 && get_dashboard_state()->dash_buf->type < 12) {
+				if (gs->sync.screen_id == 16 &&
+				    get_dashboard_state()->dash_buf->type < 12) {
 					jbd_clear_cache_sync(0);
 				}
 				if (msg.len == 0) {
 					disp_state.screen_id = gs->sync.screen_id;
-					display_reflash_handler(gs, gs->sync.screen_id, ctx, DISP_UI_ENTER);
+					display_reflash_handler(gs, gs->sync.screen_id, ctx,
+								DISP_UI_ENTER);
 					disp_state.state = 1;
 				} else if (msg.len == 2) {
 					if (msg.data[0] == 1) {
@@ -210,20 +218,23 @@ void display_thread_handler(struct GlassesState *gs)
 									DISP_UI_ENTER);
 						disp_state.state = 1;
 					} else {
-						G1_LOG_ERR("---screen ID message parampter error!\n");
+						G1_LOG_ERR(
+							"---screen ID message parampter error!\n");
 					}
 				}
 				display_thread_restore_priority();
 			} else if (msg.type == DISP_MSG_CLOSE) {
 				memset(&disp_state, 0, sizeof(disp_state));
 				if (msg.len == 0) {
-					display_reflash_handler(gs, gs->sync.screen_id, ctx, DISP_UI_EXIT);
+					display_reflash_handler(gs, gs->sync.screen_id, ctx,
+								DISP_UI_EXIT);
 				} else if (msg.len == 2) {
 					if (msg.data[0] == 1) {
 						display_reflash_handler(gs, msg.data[1], ctx,
 									DISP_UI_EXIT);
 					} else {
-						G1_LOG_ERR("exit .screen ID message parampter error!\n");
+						G1_LOG_ERR(
+							"exit .screen ID message parampter error!\n");
 						display_reflash_handler(gs, gs->sync.screen_id, ctx,
 									DISP_UI_EXIT);
 					}
@@ -240,10 +251,11 @@ void display_thread_handler(struct GlassesState *gs)
 									DISP_UI_ENTER);
 					} else if (msg.len == 2) {
 						if (msg.data[0] == 1) {
-							display_reflash_handler(gs, msg.data[1], ctx,
-										DISP_UI_ENTER);
+							display_reflash_handler(gs, msg.data[1],
+										ctx, DISP_UI_ENTER);
 						} else {
-							G1_LOG_ERR("screen ID message parampter error!\n");
+							G1_LOG_ERR(
+								"screen ID message parampter error!\n");
 						}
 					}
 					break;
@@ -254,12 +266,14 @@ void display_thread_handler(struct GlassesState *gs)
 									DISP_UI_EXIT);
 					} else if (msg.len == 2) {
 						if (msg.data[0] == 1) {
-							display_reflash_handler(gs, msg.data[1], ctx,
-										DISP_UI_EXIT);
+							display_reflash_handler(gs, msg.data[1],
+										ctx, DISP_UI_EXIT);
 						} else {
-							G1_LOG_ERR("screen ID message parampter error!\n");
-							display_reflash_handler(gs, gs->sync.screen_id, ctx,
-										DISP_UI_EXIT);
+							G1_LOG_ERR(
+								"screen ID message parampter error!\n");
+							display_reflash_handler(gs,
+										gs->sync.screen_id,
+										ctx, DISP_UI_EXIT);
 						}
 					}
 					display_timer_stop();
@@ -271,14 +285,16 @@ void display_thread_handler(struct GlassesState *gs)
 								DISP_UI_DELAY_CLOSE);
 					break;
 				case DISP_MSG_INPUT:
-					display_reflash_handler(gs, gs->sync.screen_id, ctx, DISP_UI_INPUT);
+					display_reflash_handler(gs, gs->sync.screen_id, ctx,
+								DISP_UI_INPUT);
 					break;
 				case DISP_MSG_MASTER_CLOSE:
 					display_reflash_handler(gs, gs->sync.screen_id, ctx,
 								DISP_UI_MASTER_CLOSE);
 					break;
 				case DISP_MSG_POWER_ON:
-					display_reflash_handler(gs, gs->sync.screen_id, ctx, DISP_UI_POWER_ON);
+					display_reflash_handler(gs, gs->sync.screen_id, ctx,
+								DISP_UI_POWER_ON);
 					break;
 				case DISP_MSG_POWER_OFF:
 					display_reflash_handler(gs, gs->sync.screen_id, ctx,
@@ -288,10 +304,12 @@ void display_thread_handler(struct GlassesState *gs)
 					break;
 				}
 			} else if (gs->sync.screen_id != 0) {
-				display_reflash_handler(gs, gs->sync.screen_id, ctx, DISP_UI_REFRESH);
+				display_reflash_handler(gs, gs->sync.screen_id, ctx,
+							DISP_UI_REFRESH);
 			} else if (gs->sync.screen_id == 0) {
-				G1_LOG_ERR("When the UI exit command is not received in IDLE state, the UI "
-					   "exit is performed by itself\n");
+				G1_LOG_ERR(
+					"When the UI exit command is not received in IDLE state, the UI "
+					"exit is performed by itself\n");
 				jbd_clear_cache_sync(0);
 				display_timer_stop();
 				memset(&disp_state, 0, sizeof(disp_state));
@@ -311,10 +329,9 @@ void display_thread_handler(struct GlassesState *gs)
 
 int start_display_thread_handler(struct GlassesState *gs)
 {
-	display_tid = k_thread_create(&display_thread, display_stack,
-				      K_THREAD_STACK_SIZEOF(display_stack),
-				      (k_thread_entry_t)display_thread_handler, gs, NULL, NULL, -14,
-				      0, K_NO_WAIT);
+	display_tid = k_thread_create(
+		&display_thread, display_stack, K_THREAD_STACK_SIZEOF(display_stack),
+		(k_thread_entry_t)display_thread_handler, gs, NULL, NULL, -14, 0, K_NO_WAIT);
 	return 0;
 }
 

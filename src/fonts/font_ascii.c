@@ -19,6 +19,7 @@ const uint8_t *font_ascii_lookup(uint8_t c, int size)
 const uint8_t *font_ascii_get_glyph(uint16_t digit, int w, int h, int arg)
 {
 	if (digit >= 0x20 && digit < 0x80) {
+		/* NOLINTNEXTLINE(performance-no-int-to-ptr) */
 		return (const uint8_t *)((digit - 0x20) * (w * h));
 	}
 	return NULL;

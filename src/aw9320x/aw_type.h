@@ -6,47 +6,47 @@ extern "C" {
 #endif
 
 #ifndef AW_TRUE
-#define AW_TRUE	                (1)
+#define AW_TRUE (1)
 #endif
 
 #ifndef AW_FALSE
-#define AW_FALSE				(0)
+#define AW_FALSE (0)
 #endif
 
 #ifndef OFFSET_BIT_0
-#define OFFSET_BIT_0				(0)
+#define OFFSET_BIT_0 (0)
 #endif
 
 #ifndef OFFSET_BIT_8
-#define OFFSET_BIT_8				(8)
+#define OFFSET_BIT_8 (8)
 #endif
 
 #ifndef OFFSET_BIT_16
-#define OFFSET_BIT_16				(16)
+#define OFFSET_BIT_16 (16)
 #endif
 
 #ifndef OFFSET_BIT_24
-#define OFFSET_BIT_24				(24)
+#define OFFSET_BIT_24 (24)
 #endif
 
 #ifndef WORD_LEN
-#define WORD_LEN				(4)
+#define WORD_LEN (4)
 #endif
 
 #ifndef GET_BITS_7_0
-#define GET_BITS_7_0				(0x00FF)
+#define GET_BITS_7_0 (0x00FF)
 #endif
 
 #ifndef GET_BITS_15_8
-#define GET_BITS_15_8				(0xFF00)
+#define GET_BITS_15_8 (0xFF00)
 #endif
 
 #ifndef GET_BITS_24_16
-#define GET_BITS_24_16				(0x00FF0000)
+#define GET_BITS_24_16 (0x00FF0000)
 #endif
 
 #ifndef GET_BITS_31_25
-#define GET_BITS_31_25				(0xFF000000)
+#define GET_BITS_31_25 (0xFF000000)
 #endif
 
 #ifndef AW_BOOL

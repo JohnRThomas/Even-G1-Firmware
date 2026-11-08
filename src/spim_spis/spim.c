@@ -22,8 +22,8 @@ static void spim_event_handler(nrfx_spim_evt_t const *p_event, void *p_context)
 	}
 }
 
-static int spi_master_trans_data_tx_rx(struct spi_master_ctx *ctx, const uint8_t *tx,
-				       size_t tx_len, uint8_t *rx, size_t rx_len)
+static int spi_master_trans_data_tx_rx(struct spi_master_ctx *ctx, const uint8_t *tx, size_t tx_len,
+				       uint8_t *rx, size_t rx_len)
 {
 	nrfx_spim_xfer_desc_t desc = NRFX_SPIM_XFER_TRX(tx, tx_len, rx, rx_len);
 	nrfx_err_t err;
@@ -75,8 +75,8 @@ static int spi_master_deinit(struct spi_master_ctx *ctx)
 		return 0;
 	}
 
-	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus,
-		   speed, sck, mosi, miso, ss);
+	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus, speed, sck, mosi,
+		   miso, ss);
 	nrfx_spim_uninit(&ctx->spim);
 	G1_LOG_INF("spim(bus=%d): uninit finish\n", ctx->bus);
 	ctx->is_initialized = 0;
@@ -120,8 +120,8 @@ static int spi_master_init(struct spi_master_ctx *ctx)
 		return 0;
 	}
 
-	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus,
-		   ctx->speed_mhz, ctx->sck, ctx->mosi, ctx->miso, ctx->ss);
+	G1_LOG_INF("*SPIM(%d)speed=%dM, sck=%d, mosi=%d, miso=%d, ss=%d\n", bus, ctx->speed_mhz,
+		   ctx->sck, ctx->mosi, ctx->miso, ctx->ss);
 
 	if (ctx->bus == 3) {
 		status = nrfx_spim_init(&ctx->spim, &config, spim_event_handler, ctx);
@@ -133,12 +133,14 @@ static int spi_master_init(struct spi_master_ctx *ctx)
 	if (ctx->bus != 3) {
 		if (!spim4_irq_connected) {
 			spim4_irq_connected = 1;
-			IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_SPIM4), 6, nrfx_spim_4_irq_handler, 0);
+			IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_SPIM4), 6,
+					   nrfx_spim_4_irq_handler, 0);
 		}
 	} else {
 		if (!spim3_irq_connected) {
 			spim3_irq_connected = 1;
-			IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_SPIM3), 6, nrfx_spim_3_irq_handler, 0);
+			IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_SPIM3), 6,
+					   nrfx_spim_3_irq_handler, 0);
 		}
 	}
 

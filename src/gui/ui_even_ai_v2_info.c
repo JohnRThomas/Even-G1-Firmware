@@ -49,8 +49,9 @@ static int even_ai_v2_info_reflash(int force)
 	int x, y;
 
 	if (get_dashboard_state()->head_up_mic_disabled == 1 &&
-	    (gs->ui.gui.ui_action == 2 ? gs->ui.gui.ui_status == 1 :
-	     (gs->ui.gui.ui_action >= 3 && gs->ui.gui.ui_action <= 6 && gs->ui.gui.ui_action != 5))) {
+	    (gs->ui.gui.ui_action == 2 ? gs->ui.gui.ui_status == 1
+				       : (gs->ui.gui.ui_action >= 3 && gs->ui.gui.ui_action <= 6 &&
+					  gs->ui.gui.ui_action != 5))) {
 		dmic_stream_stop();
 	} else if (get_dashboard_state()->is_master == 1 && get_glasses_ble_status() == 1 &&
 		   get_dashboard_state()->evenai_buf->state == 1 && dmic_get_stop_state() == 1) {
@@ -58,7 +59,8 @@ static int even_ai_v2_info_reflash(int force)
 	}
 
 	if (even_ai_v2_ui.last_action != gs->ui.gui.ui_action ||
-	    (gs->ui.gui.ui_action != EVEN_AI_V2_ANSWER && even_ai_v2_ui.last_status != gs->ui.gui.ui_status)) {
+	    (gs->ui.gui.ui_action != EVEN_AI_V2_ANSWER &&
+	     even_ai_v2_ui.last_status != gs->ui.gui.ui_status)) {
 		G1_LOG_WRN("even_ai_v2 action change, id:%d,status:%d, clear screen\n",
 			   gs->ui.gui.ui_action, gs->ui.gui.ui_status);
 		even_ai_v2_ui.last_action = gs->ui.gui.ui_action;
@@ -71,22 +73,27 @@ static int even_ai_v2_info_reflash(int force)
 	switch (gs->ui.gui.ui_action) {
 	case EVEN_AI_V2_ERROR:
 		if (gs->ui.gui.ui_status == 2) {
-			gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0, 0);
+			gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(),
+						    gui_screen_y_offset() + 58, 0, 0, 0, 0);
 		}
 		break;
 	case EVEN_AI_V2_WAKEUP:
-		gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0, 0);
+		gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0,
+					    0, 0, 0);
 		break;
 	case EVEN_AI_V2_LISTEN:
 		if (gs->ui.gui.ui_status == 0) {
-			gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0, 0);
+			gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(),
+						    gui_screen_y_offset() + 58, 0, 0, 0, 0);
 		} else {
-			gui_bmp_dynamic_bitmap_draw(9, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0, 0);
+			gui_bmp_dynamic_bitmap_draw(9, gui_screen_x_offset(),
+						    gui_screen_y_offset() + 58, 0, 0, 0, 0);
 		}
 		break;
 	case EVEN_AI_V2_ANSWER:
 		if (gs->ui.gui.ui_status == 0) {
-			gui_bmp_dynamic_bitmap_draw(4, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0, 0);
+			gui_bmp_dynamic_bitmap_draw(4, gui_screen_x_offset(),
+						    gui_screen_y_offset() + 58, 0, 0, 0, 0);
 		}
 		break;
 	default:
@@ -130,7 +137,8 @@ static int even_ai_v2_info_reflash(int force)
 					    gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
 					    gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
 			gui_utf_draw_middle(0, get_string(0x45), 0, gui_screen_x_offset(),
-					    gui_screen_y_offset() + 108, gui_screen_x_offset() + 576,
+					    gui_screen_y_offset() + 108,
+					    gui_screen_x_offset() + 576,
 					    gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
 		}
 		break;
@@ -138,51 +146,61 @@ static int even_ai_v2_info_reflash(int force)
 	case EVEN_AI_V2_WAKEUP: {
 		uint8_t id;
 
-		gui_utf_draw_middle(0, get_string(0x56), 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, get_string(0x56), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
 		if (gs->ui.gui.ui_status >= 1 && gs->ui.gui.ui_status <= 7) {
 			id = gs->ui.gui.ui_status + 0x57;
 		} else {
 			id = 0x57;
 		}
-		gui_utf_draw_middle(0, get_string(id), 0, gui_screen_x_offset(), gui_screen_y_offset() + 108,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, get_string(id), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 108, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
 		break;
 	}
 	case EVEN_AI_V2_LISTEN:
 		if (gs->ui.gui.ui_status == 0) {
 			if (gs->ui.gui.page_flags == 1) {
-				gui_utf_draw_scroll_line(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88, gui_screen_y_offset(),
-					     gui_screen_x_offset() + 560, gui_screen_y_offset() + 136, 5, 0);
+				gui_utf_draw_scroll_line(
+					0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88,
+					gui_screen_y_offset(), gui_screen_x_offset() + 560,
+					gui_screen_y_offset() + 136, 5, 0);
 			} else {
-				gui_utf_draw(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88, gui_screen_y_offset(),
-					     gui_screen_x_offset() + 560, gui_screen_y_offset() + 136, 5, 0, 0, NULL, 0);
+				gui_utf_draw(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88,
+					     gui_screen_y_offset(), gui_screen_x_offset() + 560,
+					     gui_screen_y_offset() + 136, 5, 0, 0, NULL, 0);
 			}
 		} else {
-			gui_utf_draw_darkword_by_lines(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88,
-						       gui_screen_y_offset(), gui_screen_x_offset() + 560,
-						       gui_screen_y_offset() + 136, 5, 5, 0, NULL, 0);
+			gui_utf_draw_darkword_by_lines(
+				0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88,
+				gui_screen_y_offset(), gui_screen_x_offset() + 560,
+				gui_screen_y_offset() + 136, 5, 5, 0, NULL, 0);
 		}
 		break;
 	case EVEN_AI_V2_ANSWER:
 		if (gs->ui.gui.ui_status == 0) {
 			if (gs->ui.gui.page_flags == 1) {
-				gui_utf_draw_scroll_line(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88, gui_screen_y_offset(),
-					     gui_screen_x_offset() + 560, gui_screen_y_offset() + 136, 5, 0);
+				gui_utf_draw_scroll_line(
+					0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88,
+					gui_screen_y_offset(), gui_screen_x_offset() + 560,
+					gui_screen_y_offset() + 136, 5, 0);
 			} else {
-				gui_utf_draw(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88, gui_screen_y_offset(),
-					     gui_screen_x_offset() + 560, gui_screen_y_offset() + 136, 5, 0, 0, NULL, 0);
+				gui_utf_draw(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88,
+					     gui_screen_y_offset(), gui_screen_x_offset() + 560,
+					     gui_screen_y_offset() + 136, 5, 0, 0, NULL, 0);
 			}
 		} else {
-			gui_area_clear(gui_screen_x_offset(), gui_screen_y_offset() + 58, gui_screen_x_offset() + 40,
-				       gui_screen_y_offset() + 98);
-			gui_utf_draw(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88, gui_screen_y_offset(),
-				     gui_screen_x_offset() + 560, gui_screen_y_offset() + 136, 5, 0, 0, NULL, 0);
+			gui_area_clear(gui_screen_x_offset(), gui_screen_y_offset() + 58,
+				       gui_screen_x_offset() + 40, gui_screen_y_offset() + 98);
+			gui_utf_draw(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + 88,
+				     gui_screen_y_offset(), gui_screen_x_offset() + 560,
+				     gui_screen_y_offset() + 136, 5, 0, 0, NULL, 0);
 			if (gs->ui.gui.dark_cnt <= 100) {
-				gui_verticalLine_process_bar(gui_screen_x_offset() + 572, gui_screen_y_offset(),
-							     gui_screen_x_offset() + 572,
-							     gui_screen_y_offset() + 136, 1, gs->ui.gui.dark_cnt,
-							     0);
+				gui_verticalLine_process_bar(
+					gui_screen_x_offset() + 572, gui_screen_y_offset(),
+					gui_screen_x_offset() + 572, gui_screen_y_offset() + 136, 1,
+					gs->ui.gui.dark_cnt, 0);
 			}
 		}
 		break;
@@ -253,31 +271,34 @@ static int even_ai_v2_info_reflash(int force)
 			gui_bmp_bitmap_draw(0x4b, x + x_off, y + 58, 0, 0, 0);
 			break;
 		case 5:
-			gui_bmp_bitmap_draw(0x4c, gui_screen_x_offset() + 144, gui_screen_y_offset() + 58, 0, 0, 0);
-			gui_horizontal_percentage_bar(gui_screen_x_offset() + 188, gui_screen_y_offset() + 66,
-						      gui_screen_x_offset() + 388, gui_screen_y_offset() + 70, 1, 0,
-						      get_dashboard_state()->esb_arg2 * 100 / 42);
+			gui_bmp_bitmap_draw(0x4c, gui_screen_x_offset() + 144,
+					    gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_horizontal_percentage_bar(
+				gui_screen_x_offset() + 188, gui_screen_y_offset() + 66,
+				gui_screen_x_offset() + 388, gui_screen_y_offset() + 70, 1, 0,
+				get_dashboard_state()->esb_arg2 * 100 / 42);
 			x_off = 144;
 			break;
 		case 6:
-			gui_bmp_bitmap_draw(0x4f, gui_screen_x_offset() + 136, gui_screen_y_offset() + 58, 0, 0, 0);
-			gui_horizontal_percentage_bar(gui_screen_x_offset() + 180, gui_screen_y_offset() + 66,
-						      gui_screen_x_offset() + 396, gui_screen_y_offset() + 70, 5, 4,
-						      (get_dashboard_state()->panel.canvas_distance_gear + 1) * 10);
+			gui_bmp_bitmap_draw(0x4f, gui_screen_x_offset() + 136,
+					    gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_horizontal_percentage_bar(
+				gui_screen_x_offset() + 180, gui_screen_y_offset() + 66,
+				gui_screen_x_offset() + 396, gui_screen_y_offset() + 70, 5, 4,
+				(get_dashboard_state()->panel.canvas_distance_gear + 1) * 10);
 			x_off = 136;
 			break;
 		case 7:
-			gui_bmp_bitmap_draw(0x50, gui_screen_x_offset() + 136, gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_bmp_bitmap_draw(0x50, gui_screen_x_offset() + 136,
+					    gui_screen_y_offset() + 58, 0, 0, 0);
 			gui_horizontal_percentage_bar(
-				gui_screen_x_offset() + 180, gui_screen_y_offset() + 66, gui_screen_x_offset() + 394,
-				gui_screen_y_offset() + 70, 9, 2,
+				gui_screen_x_offset() + 180, gui_screen_y_offset() + 66,
+				gui_screen_x_offset() + 394, gui_screen_y_offset() + 70, 9, 2,
 				(get_dashboard_state()->panel.raster_height_offset + 1) * 100 / 9);
 			x_off = 136;
 			break;
 		case 8:
-			if (lang == 6) {
-				x_off = 196;
-			} else if (lang == 5) {
+			if (lang == 5) {
 				x_off = 160;
 			} else if (lang == 7) {
 				x_off = 164;
@@ -291,9 +312,7 @@ static int even_ai_v2_info_reflash(int force)
 			gui_bmp_bitmap_draw(0x4e, x + x_off, y + 58, 0, 0, 0);
 			break;
 		case 9:
-			if (lang == 6) {
-				x_off = 194;
-			} else if (lang == 5) {
+			if (lang == 5) {
 				x_off = 144;
 			} else if (lang == 7) {
 				x_off = 148;
@@ -439,15 +458,13 @@ static int even_ai_v2_info_reflash(int force)
 			gui_bmp_bitmap_draw(0x51, x + x_off, y + 58, 0, 0, 0);
 			break;
 		case 18:
-			gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-					    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 3, 0, 0, NULL,
-					    0);
+			gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset(),
+					    gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
+					    gui_screen_y_offset() + 136, 3, 0, 0, NULL, 0);
 			break;
 		case 19:
 			if (lang == 6) {
 				x_off = 198;
-			} else if (lang == 5) {
-				x_off = 204;
 			} else if (lang == 7) {
 				x_off = 214;
 			} else if (lang == 14) {
@@ -488,14 +505,17 @@ static int even_ai_v2_info_reflash(int force)
 			break;
 		}
 		if (gs->ui.gui.ui_status >= 5 && gs->ui.gui.ui_status <= 7) {
-			gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset(), gui_screen_y_offset() + 108,
-					    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL,
-					    0);
+			gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset(),
+					    gui_screen_y_offset() + 108,
+					    gui_screen_x_offset() + 576,
+					    gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
 		} else if ((gs->ui.gui.ui_status == 15 && (lang == 5 || lang == 6)) ||
-			   (gs->ui.gui.ui_status == 16 && lang == 5) || (gs->ui.gui.ui_status == 17 && lang == 5) ||
+			   (gs->ui.gui.ui_status == 16 && lang == 5) ||
+			   (gs->ui.gui.ui_status == 17 && lang == 5) ||
 			   (gs->ui.gui.ui_status == 20 &&
 			    (lang == 5 || lang == 6 || lang == 7 || lang == 14))) {
-			gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + x_off + 44,
+			gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0,
+					    gui_screen_x_offset() + x_off + 44,
 					    gui_screen_y_offset() + 54,
 					    gui_screen_x_offset() + x_off + 44 + text_w,
 					    gui_screen_y_offset() + 136, 3, 0, 0, NULL, 0);
@@ -536,17 +556,18 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 				even_ai_v2_info_reflash(1);
 				for (int row = 0; row < 199; row++) {
 					for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
-						const uint8_t steps[8] = { 1, 2, 3, 4, 5, 6, 7, 7 };
+						const uint8_t steps[8] = {1, 2, 3, 4, 5, 6, 7, 7};
 
 						if (ctx->panel_buffer[row][col] != 0) {
 							ctx->panel_buffer[row][col] &=
-								gui_fade_mask_at(row % 26, steps[i], col);
+								gui_fade_mask_at(row % 26, steps[i],
+										 col);
 						}
 					}
 				}
 				_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-							get_dashboard_state()->panel.current_column, 0, 0,
-							GUI_SCREEN_WIDTH, 199);
+							get_dashboard_state()->panel.current_column,
+							0, 0, GUI_SCREEN_WIDTH, 199);
 			}
 			set_showing_notification_on_gui();
 			even_ai_v2_ui.state = 1;

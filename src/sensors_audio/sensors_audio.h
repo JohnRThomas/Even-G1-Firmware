@@ -37,7 +37,10 @@ bool is_old_board(void);
 int fuel_gauge_update(const struct device *charger);
 
 /* charger_box.c */
-enum { BOX_IN_BOX = 0, BOX_LID_CLOSED = 1 }; /* set_box_status() type */
+enum {
+	BOX_IN_BOX = 0,
+	BOX_LID_CLOSED = 1
+}; /* set_box_status() type */
 int change_termination_voltage(void);
 int enable_charger(void);
 int set_charger_status(void);

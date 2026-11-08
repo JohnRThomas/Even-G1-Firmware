@@ -53,30 +53,40 @@ int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg)
 	if (done) {
 		codes = utf8_to_unicode_buf("时间到!", &count);
 		for (int i = 0; i < count; i++) {
-			copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12, 36,
-				     i * 12 + 32, 8);
+			copy_to_frame_buffer_raw(fb,
+						 find_chinese_bitmap_by_unicode(codes[i], 12, 36),
+						 12, 36, i * 12 + 32, 8);
 		}
 	} else {
 		x = 12;
 		if (hours) {
-			copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(hours / 10, 15, 36, 0), 15, 36, 32, 12);
-			copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(hours % 10, 15, 36, 0), 15, 36, 47, 12);
-			copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(10, 15, 36, 0), 15, 36, 62, 12);
+			copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(hours / 10, 15, 36, 0),
+						 15, 36, 32, 12);
+			copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(hours % 10, 15, 36, 0),
+						 15, 36, 47, 12);
+			copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(10, 15, 36, 0), 15, 36,
+						 62, 12);
 			x = 57;
 		}
 		mins = remain / 60;
-		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(mins / 10, 15, 36, 0), 15, 36, x + 20, 12);
-		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(mins % 10, 15, 36, 0), 15, 36, x + 35, 12);
-		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(10, 15, 36, 0), 15, 36, x + 50, 12);
-		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(secs / 10, 15, 36, 0), 15, 36, x + 65, 12);
-		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(secs % 10, 15, 36, 0), 15, 36, x + 80, 12);
+		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(mins / 10, 15, 36, 0), 15, 36,
+					 x + 20, 12);
+		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(mins % 10, 15, 36, 0), 15, 36,
+					 x + 35, 12);
+		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(10, 15, 36, 0), 15, 36, x + 50,
+					 12);
+		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(secs / 10, 15, 36, 0), 15, 36,
+					 x + 65, 12);
+		copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(secs % 10, 15, 36, 0), 15, 36,
+					 x + 80, 12);
 	}
 	if (timer->state >= 2) {
 		copy_to_frame_buffer_raw(fb, get_small_glyph_bitmap(12, 288), 12, 24, 226, 20);
 		codes = utf8_to_unicode_buf("结束中..", &count);
 		x = 244;
 		for (int i = 0; i < count; i++) {
-			copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 32), 12, 32, x, 8);
+			copy_to_frame_buffer_raw(
+				fb, find_chinese_bitmap_by_unicode(codes[i], 12, 32), 12, 32, x, 8);
 			x += 12;
 		}
 	} else {

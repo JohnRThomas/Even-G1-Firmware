@@ -31,8 +31,8 @@
 #define SAMPLE_BIT_WIDTH 16
 #define BYTES_PER_SAMPLE sizeof(int16_t)
 #define READ_TIMEOUT     1000
-#define BLOCK_SIZE(_sample_rate, _number_of_channels) \
-	(BYTES_PER_SAMPLE * (_sample_rate / 10) * _number_of_channels)
+#define BLOCK_SIZE(_sample_rate, _number_of_channels)                                              \
+	(BYTES_PER_SAMPLE * ((_sample_rate) / 10) * (_number_of_channels))
 #define MAX_BLOCK_SIZE BLOCK_SIZE(MAX_SAMPLE_RATE, 1)
 #define BLOCK_COUNT    10
 
@@ -130,8 +130,9 @@ void app_codec_lc3_test(void *pcm, int len)
 	} else {
 		encoder = lc3_setup_encoder(LC3_FRAME_US, LC3_SAMPLE_RATE, 0, enc_mem);
 		for (int i = 0; i < frames; i++) {
-			ret = lc3_encode(encoder, LC3_PCM_FORMAT_S16, (uint8_t *)pcm + i * frame_size, 1,
-					 LC3_FRAME_BYTES, out + i * LC3_FRAME_BYTES);
+			ret = lc3_encode(encoder, LC3_PCM_FORMAT_S16,
+					 (uint8_t *)pcm + i * frame_size, 1, LC3_FRAME_BYTES,
+					 out + i * LC3_FRAME_BYTES);
 			if (ret) {
 				G1_LOG_ERR("lc3_encode did not return zero %d\n", ret);
 				break;
@@ -155,8 +156,9 @@ void app_codec_lc3_test(void *pcm, int len)
 				int64_t ts = 0;
 
 				get_wall_clock_ms(&ts);
-				G1_LOG_INF("send audio stream data to storage thread,timestemp = %lld\n",
-					   ts);
+				G1_LOG_INF(
+					"send audio stream data to storage thread,timestemp = %lld\n",
+					ts);
 				sendAudioStram2Cache(out);
 			} else {
 				enqueue_dmic(out);
@@ -270,34 +272,39 @@ int dmic_stream_start(void)
 					.mem_slab = &dmic_mem_slab,
 				};
 				cfg = (struct dmic_cfg){
-					.io = {
-						.min_pdm_clk_freq = 1000000,
-						.max_pdm_clk_freq = 3500000,
-						.min_pdm_clk_dc = 40,
-						.max_pdm_clk_dc = 60,
-					},
+					.io =
+						{
+							.min_pdm_clk_freq = 1000000,
+							.max_pdm_clk_freq = 3500000,
+							.min_pdm_clk_dc = 40,
+							.max_pdm_clk_dc = 60,
+						},
 					.streams = &stream,
-					.channel = {
-						.req_num_streams = 1,
-					},
+					.channel =
+						{
+							.req_num_streams = 1,
+						},
 				};
 
 				cfg.channel.req_num_chan = 1;
-				cfg.channel.req_chan_map_lo = dmic_build_channel_map(0, 0, PDM_CHAN_LEFT);
+				cfg.channel.req_chan_map_lo =
+					dmic_build_channel_map(0, 0, PDM_CHAN_LEFT);
 				cfg.streams[0].pcm_rate = MAX_SAMPLE_RATE;
-				cfg.streams[0].block_size =
-					BLOCK_SIZE(cfg.streams[0].pcm_rate, cfg.channel.req_num_chan);
+				cfg.streams[0].block_size = BLOCK_SIZE(cfg.streams[0].pcm_rate,
+								       cfg.channel.req_num_chan);
 
 				if (get_pt_test_mode() == 1) {
 					ret = erase_audio_buffer();
 					if (ret < 0) {
-						G1_LOG_ERR("Failed to erase_audio_buffer %d\n", ret);
+						G1_LOG_ERR("Failed to erase_audio_buffer %d\n",
+							   ret);
 					}
 				}
 				if (ret >= 0) {
 					ret = dmic_configure(dmic_dev, &cfg);
 					if (ret < 0) {
-						G1_LOG_ERR("Failed to configure the driver: %d\n", ret);
+						G1_LOG_ERR("Failed to configure the driver: %d\n",
+							   ret);
 					}
 				}
 				if (ret >= 0) {
@@ -315,15 +322,17 @@ int dmic_stream_start(void)
 					while (dmic_stop_state != 1) {
 						ret = do_pdm_transfer(dmic_dev);
 						if (ret < 0) {
-							G1_LOG_ERR("!!!do_pdm_transfer exec failed.\n");
+							G1_LOG_ERR(
+								"!!!do_pdm_transfer exec failed.\n");
 							ret = -1;
 							break;
 						}
-						if (dmic_stop_state == 0 && get_pt_test_mode() == 0 &&
+						if (dmic_stop_state == 0 &&
+						    get_pt_test_mode() == 0 &&
 						    k_msgq_num_used_get(&dmic_msgq) != 0) {
 							if (ble->receiver_thd_is_running != 0 ||
 							    k_sem_count_get(&ble->rx_sem) != 0) {
-								uint8_t cmd[3] = { 0 };
+								uint8_t cmd[3] = {0};
 
 								cmd[0] = 0xf1;
 								cmd[2] = 0xcc;

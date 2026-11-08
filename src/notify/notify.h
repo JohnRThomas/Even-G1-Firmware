@@ -15,10 +15,10 @@
 #include "g1_log.h"
 #include "g1_date.h"
 
-#define MSG_NORMAL_NUM   10   /* g_arrMsgContent[0..9]: shown messages */
-#define MSG_TOTAL_NUM    20   /* g_arrMsgContent[10..19]: push queue */
+#define MSG_NORMAL_NUM 10   /* g_arrMsgContent[0..9]: shown messages */
+#define MSG_TOTAL_NUM  20   /* g_arrMsgContent[10..19]: push queue */
 
-#define PKCS7_PACK_DONE  0xc9
+#define PKCS7_PACK_DONE 0xc9
 
 /* GlassesState->schedule_notif */
 struct schedule_notif {
@@ -30,9 +30,9 @@ struct schedule_notif {
 /* notification.c */
 extern struct notif_msg g_arrMsgContent[MSG_TOTAL_NUM];
 void send_whilelist_app_info_wrapper(struct notif_msg *msg);
-int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, uint8_t *src,
-				   uint8_t *hdr, uint8_t *arg, uint8_t *out, uint32_t len);
-void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data);
+int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, const uint8_t *src,
+				   uint8_t *hdr, const uint8_t *arg, uint8_t *out, uint32_t len);
+void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, uint8_t *data);
 int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *out);
 void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, uint8_t *rsp);
 struct notif_msg *get_push_message_copy(void);

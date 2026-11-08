@@ -364,7 +364,8 @@ int SettingStoreHandler(void)
 			break;
 		}
 		CURRENT_LANGUAGE.startup_mode = rec.startup_mode;
-		G1_LOG_INF("startup mode  infomation  %d store sucess\n", CURRENT_LANGUAGE.startup_mode);
+		G1_LOG_INF("startup mode  infomation  %d store sucess\n",
+			   CURRENT_LANGUAGE.startup_mode);
 		if (CURRENT_LANGUAGE.startup_mode == 0 &&
 		    get_dashboard_state()->double_tap_customize == 4) {
 			upgradeDoubleTapCustomizeToFlash(0);

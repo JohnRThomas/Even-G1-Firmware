@@ -15,9 +15,11 @@ static const char *const strings_english[GUI_STRING_COUNT] = {
 	/*  9 */ "Single Tap Left TouchBar to See Notification",
 	/* 10 */ "Single Tap Left TouchBar to Return",
 	/* 11 */ "Single Tap Right TouchBar to See Next QuickNote",
-	/* 12 */ "Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
+	/* 12 */
+	"Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
 	/* 13 */ "Points for discussion",
-	/* 14 */ "1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
+	/* 14 */
+	"1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
 	/* 15 */ "Head Down to Close Dashboard",
 	/* 16 */ "Head Down to Dismiss the Notification",
 	/* 17 */ "Now that you know how to use HeadUp,\n         let's explore it in Dashboard.",
@@ -32,7 +34,8 @@ static const char *const strings_english[GUI_STRING_COUNT] = {
 	/* 26 */ "WhatsApp",
 	/* 27 */ "mins ago",
 	/* 28 */ "Chris - When are you going to get here? The movie is about to\nstart.",
-	/* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+	/* 29 */
+	"               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
 	/* 30 */ "Single Tap TouchBar to Continue",
 	/* 31 */ "Double Tap TouchBar to Continue",
 	/* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",
@@ -110,7 +113,8 @@ static const char *const strings_chinese[GUI_STRING_COUNT] = {
 
 static const char *const strings_german[GUI_STRING_COUNT] = {
 	/*  0 */ "Deutsch",
-	/*  1 */ "Bereit zum Verbinden? Lege Even G1 in das Etui\nund öffne die Even Realities App.",
+	/*  1 */
+	"Bereit zum Verbinden? Lege Even G1 in das Etui\nund öffne die Even Realities App.",
 	/*  2 */ "Schau geradeaus",
 	/*  3 */ "Tippe auf das Touchpad, um die 0°-Position festzulegen",
 	/*  4 */ "Kalibrierung erfolgreich",
@@ -121,24 +125,29 @@ static const char *const strings_german[GUI_STRING_COUNT] = {
 	/*  9 */ "Tipp auf linke TouchBar zeigt Benachrichtigung",
 	/* 10 */ "Tipp auf linke TouchBar zeigt Zurück",
 	/* 11 */ "Tipp auf rechte TouchBar zeigt nächste Kurznotiz",
-	/* 12 */ "Noah - Wir sind interessiert, mehr über Ihr neuestes Projekt zu\nerfahren. Können wir nächste Woche ein Meeting vereinbaren?",
+	/* 12 */
+	"Noah - Wir sind interessiert, mehr über Ihr neuestes Projekt zu\nerfahren. Können wir nächste Woche ein Meeting vereinbaren?",
 	/* 13 */ "Diskussionspunkte",
-	/* 14 */ "1.Datenrecherche beschleunigen\n2.Erlebnisfluss aktualisieren\n3.Stakeholder neu verknüpfen",
+	/* 14 */
+	"1.Datenrecherche beschleunigen\n2.Erlebnisfluss aktualisieren\n3.Stakeholder neu verknüpfen",
 	/* 15 */ "Kopf nach unten neigen, um zu schließen",
 	/* 16 */ "Kopf senken, um die Benachrichtigung zu schließen",
 	/* 17 */ "Now that you know how to use HeadUp,\n         let's explore it in Dashboard.",
-	/* 18 */ "Sie haben gesehen, wie es funktioniert. Kehren\nSie zu Ihrem Telefon zurück, um fortzufahren.",
+	/* 18 */
+	"Sie haben gesehen, wie es funktioniert. Kehren\nSie zu Ihrem Telefon zurück, um fortzufahren.",
 	/* 19 */ "Kopf hoch, um das Dashboard zu sehen",
 	/* 20 */ "Wed, May 8",
 	/* 21 */ "13:10-14:45",
 	/* 22 */ "F&E-Meeting",
 	/* 23 */ "To-do-Liste",
-	/* 24 */ "1. Teilnahme an\nBranchenkonferenzen.\n2. Technische Probleme beheben\nund lösen.",
+	/* 24 */
+	"1. Teilnahme an\nBranchenkonferenzen.\n2. Technische Probleme beheben\nund lösen.",
 	/* 25 */ "Kopf hoch, um die neue Benachrichtigung zu sehen",
 	/* 26 */ "WhatsApp",
 	/* 27 */ "mins ago",
 	/* 28 */ "Wolfgang - Wann kommst du hierher? Der Film wird gleich\nanfangen.",
-	/* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+	/* 29 */
+	"               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
 	/* 30 */ "Single Tap TouchBar to Continue",
 	/* 31 */ "Doppeltippe die TouchBar",
 	/* 32 */ "      Einrichtung abgeschlossen.\nWillkommen im Even G1-Universum.",
@@ -205,12 +214,14 @@ static const char *const strings_german[GUI_STRING_COUNT] = {
 	/* 93 */ "Versuch zu sagen: „Set Brightness to 50“ (1-100)",
 	/* 94 */ "Versuch zu sagen: „Turn Off Notification“",
 	/* 95 */ "Bluetooth nicht verbunden",
-	/* 96 */ "Ich verstehe deine Anfrage gerade nicht.\nKannst du es bitte noch einmal versuchen?",
+	/* 96 */
+	"Ich verstehe deine Anfrage gerade nicht.\nKannst du es bitte noch einmal versuchen?",
 };
 
 static const char *const strings_spanish[GUI_STRING_COUNT] = {
 	/*  0 */ "Español",
-	/*  1 */ "¿Listo para conectarte? Coloca Even G1 en el estuche\ny abre la aplicación Even Realities.",
+	/*  1 */
+	"¿Listo para conectarte? Coloca Even G1 en el estuche\ny abre la aplicación Even Realities.",
 	/*  2 */ "Mira al frente",
 	/*  3 */ "Toca el TouchBar para establecer la posición 0°",
 	/*  4 */ "Calibración exitosa",
@@ -221,9 +232,11 @@ static const char *const strings_spanish[GUI_STRING_COUNT] = {
 	/*  9 */ "Single Tap Left TouchBar to See Notification",
 	/* 10 */ "Single Tap Left TouchBar to Return",
 	/* 11 */ "Single Tap Right TouchBar to See Next QuickNote",
-	/* 12 */ "Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
+	/* 12 */
+	"Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
 	/* 13 */ "Points for discussion",
-	/* 14 */ "1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
+	/* 14 */
+	"1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
 	/* 15 */ "Head Down to Close Dashboard",
 	/* 16 */ "Head Down to Dismiss the Notification",
 	/* 17 */ "Now that you know how to use HeadUp,\n         let's explore it in Dashboard.",
@@ -238,7 +251,8 @@ static const char *const strings_spanish[GUI_STRING_COUNT] = {
 	/* 26 */ "WhatsApp",
 	/* 27 */ "mins ago",
 	/* 28 */ "Alejandro – ¿Cuándo vas a llegar? La película está a punto de\nempezar.",
-	/* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+	/* 29 */
+	"               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
 	/* 30 */ "Single Tap TouchBar to Continue",
 	/* 31 */ "Double Tap TouchBar to Continue",
 	/* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",
@@ -310,7 +324,8 @@ static const char *const strings_spanish[GUI_STRING_COUNT] = {
 
 static const char *const strings_french[GUI_STRING_COUNT] = {
 	/*  0 */ "Français",
-	/*  1 */ "Prêt à connecter ? Placez le Even G1 dans le boîtier\nde lunettes et ouvrez l'application Even Realities.",
+	/*  1 */
+	"Prêt à connecter ? Placez le Even G1 dans le boîtier\nde lunettes et ouvrez l'application Even Realities.",
 	/*  2 */ "Regardez naturellement vers l'avant",
 	/*  3 */ "Touchez le pavé TouchBar pour définir la position 0°",
 	/*  4 */ "Calibration réussie",
@@ -321,9 +336,11 @@ static const char *const strings_french[GUI_STRING_COUNT] = {
 	/*  9 */ "Single Tap Left TouchBar to See Notification",
 	/* 10 */ "Single Tap Left TouchBar to Return",
 	/* 11 */ "Single Tap Right TouchBar to See Next QuickNote",
-	/* 12 */ "Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
+	/* 12 */
+	"Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
 	/* 13 */ "Points for discussion",
-	/* 14 */ "1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
+	/* 14 */
+	"1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
 	/* 15 */ "Head Down to Close Dashboard",
 	/* 16 */ "Head Down to Dismiss the Notification",
 	/* 17 */ "Now that you know how to use HeadUp,\n         let's explore it in Dashboard.",
@@ -338,7 +355,8 @@ static const char *const strings_french[GUI_STRING_COUNT] = {
 	/* 26 */ "WhatsApp",
 	/* 27 */ "mins ago",
 	/* 28 */ "Louis - Quand est-ce que tu arrives ? Le film est sur le point\nde commencer.",
-	/* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+	/* 29 */
+	"               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
 	/* 30 */ "Single Tap TouchBar to Continue",
 	/* 31 */ "Double Tap TouchBar to Continue",
 	/* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",
@@ -405,12 +423,14 @@ static const char *const strings_french[GUI_STRING_COUNT] = {
 	/* 93 */ "Essayez de dire :  « Set Brightness to 50 » (1-100)",
 	/* 94 */ "Essayez de dire :  « Turn Off Notification »",
 	/* 95 */ "Bluetooth déconnecté",
-	/* 96 */ "Je n'arrive pas à comprendre votre demande.\nouvez-vous réessayer, s'il vous plaît ?",
+	/* 96 */
+	"Je n'arrive pas à comprendre votre demande.\nouvez-vous réessayer, s'il vous plaît ?",
 };
 
 static const char *const strings_italian[GUI_STRING_COUNT] = {
 	/*  0 */ "Italiano",
-	/*  1 */ "Pronto a connetterti? Posiziona Even G1 nella custodia\ne apri l’app Even Realities.",
+	/*  1 */
+	"Pronto a connetterti? Posiziona Even G1 nella custodia\ne apri l’app Even Realities.",
 	/*  2 */ "Guarda avanti naturalmente",
 	/*  3 */ "Tocca il TouchBar per impostare la posizione 0°",
 	/*  4 */ "Calibrazione riuscita",
@@ -421,9 +441,11 @@ static const char *const strings_italian[GUI_STRING_COUNT] = {
 	/*  9 */ "Single Tap Left TouchBar to See Notification",
 	/* 10 */ "Single Tap Left TouchBar to Return",
 	/* 11 */ "Single Tap Right TouchBar to See Next QuickNote",
-	/* 12 */ "Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
+	/* 12 */
+	"Noah - We're interested in learning more about your latest\nproject. Can we schedule a meeting next week?",
 	/* 13 */ "Points for discussion",
-	/* 14 */ "1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
+	/* 14 */
+	"1. Speed up data research.\n2. Update the experience flow.\n3. Remap stakeholder ties.",
 	/* 15 */ "Head Down to Close Dashboard",
 	/* 16 */ "Head Down to Dismiss the Notification",
 	/* 17 */ "Now that you know how to use HeadUp,\n         let's explore it in Dashboard.",
@@ -438,7 +460,8 @@ static const char *const strings_italian[GUI_STRING_COUNT] = {
 	/* 26 */ "WhatsApp",
 	/* 27 */ "mins ago",
 	/* 28 */ "Marco - Quando arrivi? Il film sta per iniziare.",
-	/* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+	/* 29 */
+	"               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
 	/* 30 */ "Single Tap TouchBar to Continue",
 	/* 31 */ "Double Tap TouchBar to Continue",
 	/* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",
@@ -505,7 +528,8 @@ static const char *const strings_italian[GUI_STRING_COUNT] = {
 	/* 93 */ "Prova a dire: \"Set Brightness to 50\" (1-100)",
 	/* 94 */ "Prova a dire: \"Turn Off Notification\"",
 	/* 95 */ "Bluetooth disconnesso",
-	/* 96 */ "Non riesco a capire la tua richiesta.\nPuoi provare a chiedere di nuovo, per favore?",
+	/* 96 */
+	"Non riesco a capire la tua richiesta.\nPuoi provare a chiedere di nuovo, per favore?",
 };
 
 static const char *const strings_japanese[GUI_STRING_COUNT] = {

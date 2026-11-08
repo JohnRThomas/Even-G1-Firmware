@@ -49,7 +49,7 @@ struct ncs_mem {
 
 /* placed at 0x2007fc00 by the linker */
 extern struct ncs_mem ncs_mem;
-#define NCS_MEM (&ncs_mem)
+#define NCS_MEM       (&ncs_mem)
 #define NCS_MEM_MAGIC 0x12345678
 
 /* main.c */

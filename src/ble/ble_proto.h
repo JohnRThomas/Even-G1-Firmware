@@ -21,9 +21,9 @@
 #include "ble_cmd.h"
 
 /* pkcs7 packet reassembly results */
-#define PKCS7_PACK_DONE  0xc9 /* last packet received */
-#define PKCS7_PACK_ERR   0xca
-#define PKCS7_PACK_MORE  0xcb /* more packets follow */
+#define PKCS7_PACK_DONE 0xc9 /* last packet received */
+#define PKCS7_PACK_ERR  0xca
+#define PKCS7_PACK_MORE 0xcb /* more packets follow */
 
 /* Usage-statistics record sent in reply to BLE_CMD_BURIAL_POINT_GET (always empty) */
 #define USAGE_STATS_RECORD_SIZE    0x11c
@@ -35,11 +35,12 @@
 #define DEBUG_MSG_SIZE 200
 #define DEBUG_MSGQ_MAX 20
 
-/* dashboard lock bits (dashboard_lock_reported / dashboard_lock_requested / dashboard_head_up_opened) */
+/* dashboard lock bits (dashboard_lock_reported / dashboard_lock_requested /
+ * dashboard_head_up_opened) */
 #define DASHBOARD_LOCK_BIT 1 /* bit number */
 
-#define BLE_TX_BUF_SIZE 0x2b8
-#define BLE_SMALL_PKT_MAX 20
+#define BLE_TX_BUF_SIZE    0x2b8
+#define BLE_SMALL_PKT_MAX  20
 #define BLE_SMALL_BUF_SIZE (BLE_SMALL_PKT_MAX + 1)
 
 /* request header handed to ble_process_req_dispatch() */
@@ -50,7 +51,7 @@ struct ble_req_hdr {
 };
 
 #define BLE_WORK_THREAD_STACK_SIZE 0x3000
-#define BLE_WORK_THREAD_PRIORITY (-15)
+#define BLE_WORK_THREAD_PRIORITY   (-15)
 
 /* ---- types used by ble_process_put_req() ---- */
 

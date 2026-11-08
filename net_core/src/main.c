@@ -478,7 +478,8 @@ int main(void)
 				last_report_ms = now_ms;
 				send_esb_stats();
 			} else if (((esb_rssi <= 39 && last_rssi > 50) ||
-				    (esb_rssi > 50 && last_rssi <= 39)) && cnt > 2) {
+				    (esb_rssi > 50 && last_rssi <= 39)) &&
+				   cnt > 2) {
 				if (send_esb_stats()) {
 					last_report_ms = now_ms;
 					last_rssi = esb_rssi;

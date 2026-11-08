@@ -35,9 +35,12 @@ void update_brightness_level_for_jdb_panel(uint8_t level, uint16_t *lum, uint8_t
 		int base = get_dashboard_state()->panel.brightness_max * 2 / 9;
 
 		if (base == 0 || get_dashboard_state()->panel.brightness_max <= 5) {
-			*lum = (level * 111 / 6 + 1) * (get_dashboard_state()->panel.brightness_max + 1);
+			*lum = (level * 111 / 6 + 1) *
+			       (get_dashboard_state()->panel.brightness_max + 1);
 		} else {
-			*lum = (base + level * (get_dashboard_state()->panel.brightness_max - base) / 6) * 111;
+			*lum = (base +
+				level * (get_dashboard_state()->panel.brightness_max - base) / 6) *
+			       111;
 		}
 		*cur = 0;
 	} else {

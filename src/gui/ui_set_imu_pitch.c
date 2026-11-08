@@ -30,17 +30,23 @@ static int set_imu_pitch_reflash(void)
 	}
 
 	if (gs->ui.gui.ui_action != 1) {
-		gui_bmp_bitmap_draw(0x87, gui_screen_x_offset() + 82, gui_screen_y_offset() + 101, 0, 0, 0);
-		gui_utf_draw_middle(0, get_string(2), 0, gui_screen_x_offset(), gui_screen_y_offset() + 60,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 87, 1, 0, 0, NULL, 0);
-		gui_utf_draw_middle(0, get_string(3), 0, gui_screen_x_offset(), gui_screen_y_offset() + 113,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 140, 1, 0, 0, NULL, 0);
+		gui_bmp_bitmap_draw(0x87, gui_screen_x_offset() + 82, gui_screen_y_offset() + 101,
+				    0, 0, 0);
+		gui_utf_draw_middle(0, get_string(2), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 60, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 87, 1, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, get_string(3), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 113, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 140, 1, 0, 0, NULL, 0);
 	} else {
-		gui_bmp_bitmap_draw(0x87, gui_screen_x_offset() + 82, gui_screen_y_offset() + 101, 0, 0, 0);
-		gui_utf_draw_middle(0, get_string(4), 0, gui_screen_x_offset(), gui_screen_y_offset() + 60,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 87, 1, 0, 0, NULL, 0);
-		gui_utf_draw_middle(0, get_string(5), 0, gui_screen_x_offset(), gui_screen_y_offset() + 113,
-				    gui_screen_x_offset() + 576, gui_screen_y_offset() + 140, 1, 0, 0, NULL, 0);
+		gui_bmp_bitmap_draw(0x87, gui_screen_x_offset() + 82, gui_screen_y_offset() + 101,
+				    0, 0, 0);
+		gui_utf_draw_middle(0, get_string(4), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 60, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 87, 1, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, get_string(5), 0, gui_screen_x_offset(),
+				    gui_screen_y_offset() + 113, gui_screen_x_offset() + 576,
+				    gui_screen_y_offset() + 140, 1, 0, 0, NULL, 0);
 	}
 	return 0;
 }
@@ -71,18 +77,20 @@ int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, int event)
 				set_imu_pitch_reflash();
 				for (int row = 0; row < 199; row++) {
 					for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
-						const uint8_t steps[8] = { 1, 2, 3, 4, 5, 6, 7, 7 };
+						const uint8_t steps[8] = {1, 2, 3, 4, 5, 6, 7, 7};
 						uint8_t pix = ctx->panel_buffer[row][col];
 
 						if (pix != 0) {
 							ctx->panel_buffer[row][col] =
-								pix & gui_fade_mask_at(row % 26, steps[i], col);
+								pix & gui_fade_mask_at(row % 26,
+										       steps[i],
+										       col);
 						}
 					}
 				}
 				_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-							get_dashboard_state()->panel.current_column, 0, 0,
-							GUI_SCREEN_WIDTH, 199);
+							get_dashboard_state()->panel.current_column,
+							0, 0, GUI_SCREEN_WIDTH, 199);
 			}
 			set_showing_notification_on_gui();
 		} else if (event == 2) {

@@ -24,9 +24,9 @@
 #include "../ui/ui.h"
 #include "../utils/common_utils.h"
 
-#define QUICKNOTE_NUM        4
-#define QUICKNOTE_TITLE_LEN  0x29
-#define QUICKNOTE_TEXT_LEN   0x119
+#define QUICKNOTE_NUM       4
+#define QUICKNOTE_TITLE_LEN 0x29
+#define QUICKNOTE_TEXT_LEN  0x119
 
 uint8_t notes_index;
 uint8_t stocks_index;
@@ -75,19 +75,24 @@ int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int 
 	for (int step = 0; step < 8; step++) {
 		switch (type) {
 		case 1:
-			gui_bmp_bitmap_draw(0x37, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_bmp_bitmap_draw(0x37, gui_screen_x_offset(), gui_screen_y_offset() + 58,
+					    0, 0, 0);
 			break;
 		case 2:
-			gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58,
+					    0, 0, 0);
 			break;
 		case 3:
-			gui_bmp_bitmap_draw(0x3a, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_bmp_bitmap_draw(0x3a, gui_screen_x_offset(), gui_screen_y_offset() + 58,
+					    0, 0, 0);
 			break;
 		case 4:
-			gui_bmp_bitmap_draw(0x39, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_bmp_bitmap_draw(0x39, gui_screen_x_offset(), gui_screen_y_offset() + 58,
+					    0, 0, 0);
 			break;
 		default:
-			gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
+			gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 58,
+					    0, 0, 0);
 			break;
 		}
 		for (int y = 0; y < 199; y++) {
@@ -95,12 +100,14 @@ int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int 
 				uint8_t level[8] = {1, 2, 3, 4, 5, 6, 7, 7};
 
 				if (panel->panel_buffer[y][x]) {
-					panel->panel_buffer[y][x] &= gui_fade_mask_at(y % 26, level[step], x);
+					panel->panel_buffer[y][x] &=
+						gui_fade_mask_at(y % 26, level[step], x);
 				}
 			}
 		}
 		_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-					get_dashboard_state()->panel.current_column, 0, 0, 640, 199);
+					get_dashboard_state()->panel.current_column, 0, 0, 640,
+					199);
 	}
 	set_showing_notification_on_gui();
 	new_msg_entered = 1;
@@ -116,29 +123,35 @@ void dashboard_draw_add_note_hint(void)
 	if (flag == 1) {
 		if (_dashboard_prv_data.language != lang) {
 			_dashboard_prv_data.language = lang;
-			_clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 266,
-				       gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
-			_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-						get_dashboard_state()->panel.current_column,
-						gui_screen_x_offset() + 266, gui_screen_y_offset() + 28,
-						gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+			_clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0,
+				       gui_screen_x_offset() + 266, gui_screen_y_offset() + 28,
+				       gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+			_reflash_fb_data_to_lcd(
+				get_dashboard_state()->panel.current_row,
+				get_dashboard_state()->panel.current_column,
+				gui_screen_x_offset() + 266, gui_screen_y_offset() + 28,
+				gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
 		}
 		str = get_string(0x53);
-		gui_utf_draw_middle(0, str, 0, gui_screen_x_offset() + 266, gui_screen_y_offset() + 40,
-				    gui_screen_x_offset() + 564, gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, str, 0, gui_screen_x_offset() + 266,
+				    gui_screen_y_offset() + 40, gui_screen_x_offset() + 564,
+				    gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
 	} else {
 		if (_dashboard_prv_data.language != lang) {
 			_dashboard_prv_data.language = lang;
-			_clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 266,
-				       gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
-			_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-						get_dashboard_state()->panel.current_column,
-						gui_screen_x_offset() + 266, gui_screen_y_offset() + 28,
-						gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+			_clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0,
+				       gui_screen_x_offset() + 266, gui_screen_y_offset() + 28,
+				       gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+			_reflash_fb_data_to_lcd(
+				get_dashboard_state()->panel.current_row,
+				get_dashboard_state()->panel.current_column,
+				gui_screen_x_offset() + 266, gui_screen_y_offset() + 28,
+				gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
 		}
 		str = get_string(0x53);
-		gui_utf_draw_middle(0, str, 0, gui_screen_x_offset() + 224, gui_screen_y_offset() + 40,
-				    gui_screen_x_offset() + 522, gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
+		gui_utf_draw_middle(0, str, 0, gui_screen_x_offset() + 224,
+				    gui_screen_y_offset() + 40, gui_screen_x_offset() + 522,
+				    gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
 	}
 }
 
@@ -148,15 +161,17 @@ void dashboard_draw_add_note_hint_wide(void)
 
 	if (_dashboard_prv_data.language != lang) {
 		_dashboard_prv_data.language = lang;
-		_clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, gui_screen_x_offset() + 210,
-			       gui_screen_y_offset() + 28, gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
+		_clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0,
+			       gui_screen_x_offset() + 210, gui_screen_y_offset() + 28,
+			       gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
 		_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
 					get_dashboard_state()->panel.current_column,
 					gui_screen_x_offset() + 210, gui_screen_y_offset() + 28,
 					gui_screen_x_offset() + 564, gui_screen_y_offset() + 136);
 	}
-	gui_utf_draw_middle(0, get_string(0x53), 0, gui_screen_x_offset() + 184, gui_screen_y_offset() + 40,
-			    gui_screen_x_offset() + 564, gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
+	gui_utf_draw_middle(0, get_string(0x53), 0, gui_screen_x_offset() + 184,
+			    gui_screen_y_offset() + 40, gui_screen_x_offset() + 564,
+			    gui_screen_y_offset() + 94, 2, 0, 0, NULL, 0);
 }
 
 void init_dashboard_info(void)
@@ -173,16 +188,17 @@ void init_dashboard_info(void)
 		set_wall_clock_ms(get_dashboard_state()->dashboard_ts->ms_ts);
 	}
 	for (uint8_t i = 0; i < QUICKNOTE_NUM; i++) {
-		ret = getQuickNoteDataFromFlash(i, get_dashboard_state()->quicknote->notes[i].title,
-						QUICKNOTE_TITLE_LEN,
-						get_dashboard_state()->quicknote->notes[i].text,
-						QUICKNOTE_TEXT_LEN);
+		ret = getQuickNoteDataFromFlash(
+			i, get_dashboard_state()->quicknote->notes[i].title, QUICKNOTE_TITLE_LEN,
+			get_dashboard_state()->quicknote->notes[i].text, QUICKNOTE_TEXT_LEN);
 		if (ret == -1) {
 			get_dashboard_state()->quicknote->notes[i].valid = 0;
 			G1_LOG_INF("QuickNote %d is invaild,don't export\n", i);
 		} else if (ret == 0) {
 			get_dashboard_state()->quicknote->notes[i].valid = 1;
-			G1_LOG_INF("success export quicknote text from flash,quicknote index = %d\n", i);
+			G1_LOG_INF(
+				"success export quicknote text from flash,quicknote index = %d\n",
+				i);
 		} else {
 			G1_LOG_ERR("!!!! getQuickNoteDataFromFlash return unknown value.\n");
 		}
@@ -367,8 +383,9 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					int temp;
 					int width;
 
-					gui_bmp_bitmap_draw(weather_icon_to_bitmap(db->weather_icon),
-							    DB_X(0xa0), DB_Y(1), 0, 0, 0);
+					gui_bmp_bitmap_draw(
+						weather_icon_to_bitmap(db->weather_icon),
+						DB_X(0xa0), DB_Y(1), 0, 0, 0);
 					state = get_dashboard_state();
 					temp = db->temperature;
 					if (state->dashboard_ts->temp_unit == 0) {
@@ -380,9 +397,11 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 								DB_X(0xf8), DB_Y(0x1c), &width);
 						memset(str, 0, sizeof(str));
 						str[0] = '*';
-						/* unit glyph: '*' = Celsius, '#' = Fahrenheit (drawn in each arm) */
+						/* unit glyph: '*' = Celsius, '#' = Fahrenheit
+						 * (drawn in each arm) */
 						gui_string_draw(3, str, DB_X(0xbc) + width, DB_Y(1),
-								DB_X(0xbc) + width + 0xf, DB_Y(0x1c), NULL);
+								DB_X(0xbc) + width + 0xf,
+								DB_Y(0x1c), NULL);
 					} else {
 						temp = temp * 9 / 5 + 32;
 						memset(str, 0, sizeof(str));
@@ -394,7 +413,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						memset(str, 0, sizeof(str));
 						str[0] = '#';
 						gui_string_draw(3, str, DB_X(0xbc) + width, DB_Y(1),
-								DB_X(0xbc) + width + 0xf, DB_Y(0x1c), NULL);
+								DB_X(0xbc) + width + 0xf,
+								DB_Y(0x1c), NULL);
 					}
 				}
 				gui_bmp_bitmap_draw(0x3c, DB_X(0xa0), DB_Y(0x25), 0, 0, 0);
@@ -436,8 +456,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					s = get_string(0x4a);
 					DB_TEXT(gui_utf_draw, s, 0, 0, 0x6e, 0xf2, 0x89, 1);
 				} else if (ctx->calendar_disp_mode == 3) {
-					DB_TEXT(gui_utf_draw, schedule_items[0].title, 0, 0x1c, 0x51,
-						0xf2, 0x6c, 1);
+					DB_TEXT(gui_utf_draw, schedule_items[0].title, 0, 0x1c,
+						0x51, 0xf2, 0x6c, 1);
 
 					char line[0x58] = "";
 					size_t len;
@@ -572,12 +592,14 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						0x200, 0x1b, 1);
 					DB_TEXT(gui_utf_draw, stock_items[idx].company, 0, 0x10a,
 						0x1b, 0x232, 0x36, 1);
-					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].price,
-						0, 0x1d2, 0x36, 0x232, 0x51, 1);
-					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].price_change,
-						0, 0x1d2, 0x51, 0x232, 0x6c, 1);
-					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].change_rate,
-						0, 0x1d2, 0x6c, 0x232, 0x87, 1);
+					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].price, 0,
+						0x1d2, 0x36, 0x232, 0x51, 1);
+					DB_TEXT(gui_utf_draw_align_right,
+						stock_items[idx].price_change, 0, 0x1d2, 0x51,
+						0x232, 0x6c, 1);
+					DB_TEXT(gui_utf_draw_align_right,
+						stock_items[idx].change_rate, 0, 0x1d2, 0x6c, 0x232,
+						0x87, 1);
 					gui_bitmap_draw(DB_X(0x10a), DB_Y(0x36), DB_X(0x1c2),
 							DB_Y(0x88), stock_items[idx].image, 0xf);
 				}
@@ -670,15 +692,15 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						DB_TEXT(gui_utf_draw, " ", 0, 0x218, 1, 0x23a, 0x1c,
 							1);
 					}
-					gui_utf_draw_dark_light_split(0, news_items[idx].text, 0,
-								      DB_X(0x10a), DB_Y(0x1c),
-								      DB_X(0x238), DB_Y(0x88), 4,
-								      0x200b, 0, NULL, 0);
+					gui_utf_draw_dark_light_split(
+						0, news_items[idx].text, 0, DB_X(0x10a), DB_Y(0x1c),
+						DB_X(0x238), DB_Y(0x88), 4, 0x200b, 0, NULL, 0);
 				}
 			} else if (ctx->pane_mode == 4) {
 				uint8_t mode = db->citywalk_disp_mode;
 
-				if (mode == 0 || (ctx->screen_cleared == 0 && citywalk_canvas_valid == 0)) {
+				if (mode == 0 ||
+				    (ctx->screen_cleared == 0 && citywalk_canvas_valid == 0)) {
 					if (ctx->citywalk_disp_mode != mode) {
 						ctx->citywalk_disp_mode = mode;
 						gui_area_clear(DB_X(0x100), DB_Y(0), DB_X(0x23c),
@@ -703,7 +725,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					   db->citywalk_x <= 0x108 && db->citywalk_y <= 0x68) {
 					if (ctx->screen_cleared) {
 						db->citywalk_state = 0;
-						get_dashboard_state()->dashboard_ts->citywalk_state = 0;
+						get_dashboard_state()
+							->dashboard_ts->citywalk_state = 0;
 					}
 					if (ctx->citywalk_disp_mode != db->citywalk_disp_mode) {
 						ctx->citywalk_disp_mode = db->citywalk_disp_mode;
@@ -712,11 +735,12 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					}
 					gui_bitmap_draw(DB_X(0x10a), DB_Y(0), DB_X(0x232),
 							DB_Y(0x88), citywalk_canvas_bitmap, 2);
-					gui_1bit_bitmap_override(
-						DB_X(0x10a) + db->citywalk_x,
-						DB_Y(0) + db->citywalk_y,
-						DB_X(0x10a) + db->citywalk_x + 0x20,
-						DB_Y(0) + db->citywalk_y + 0x20, citywalk_arrow_full, 0xf);
+					gui_1bit_bitmap_override(DB_X(0x10a) + db->citywalk_x,
+								 DB_Y(0) + db->citywalk_y,
+								 DB_X(0x10a) + db->citywalk_x +
+									 0x20,
+								 DB_Y(0) + db->citywalk_y + 0x20,
+								 citywalk_arrow_full, 0xf);
 				}
 			}
 		} else {
@@ -778,8 +802,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 				memset(buf, 0, sizeof(buf));
 				snprintf(buf, sizeof(buf), "%d/%d", ctx->notes_index + 1, count);
 				idx = ctx->notes_index;
-				DB_TEXT(gui_utf_draw, gs->quicknote->notes[idx].title, 0, 0xfc, 1, 0x1d6,
-					0x1c, 1);
+				DB_TEXT(gui_utf_draw, gs->quicknote->notes[idx].title, 0, 0xfc, 1,
+					0x1d6, 0x1c, 1);
 				if (count != 1) {
 					DB_TEXT(gui_utf_draw, buf, 0, 0x1e4, 1, 0x212, 0x1c, 1);
 				} else {
@@ -845,8 +869,9 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					int temp;
 					int width;
 
-					gui_bmp_bitmap_draw(weather_icon_to_bitmap(db->weather_icon), DB_X(0),
-							    DB_Y(0x6d), 0, 0, 0);
+					gui_bmp_bitmap_draw(
+						weather_icon_to_bitmap(db->weather_icon), DB_X(0),
+						DB_Y(0x6d), 0, 0, 0);
 					state = get_dashboard_state();
 					temp = db->temperature;
 					if (state->dashboard_ts->temp_unit == 0) {
@@ -858,9 +883,10 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 								DB_X(0x58), DB_Y(0x88), &width);
 						memset(str, 0, sizeof(str));
 						str[0] = '*';
-						gui_string_draw(3, str, DB_X(0x1c) + width, DB_Y(0x6d),
-								DB_X(0x1c) + width + 0x4b, DB_Y(0x88),
-								NULL);
+						gui_string_draw(3, str, DB_X(0x1c) + width,
+								DB_Y(0x6d),
+								DB_X(0x1c) + width + 0x4b,
+								DB_Y(0x88), NULL);
 					} else {
 						memset(str, 0, sizeof(str));
 						temp = temp * 9 / 5 + 32;
@@ -871,9 +897,10 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 								DB_X(0x58), DB_Y(0x88), &width);
 						memset(str, 0, sizeof(str));
 						str[0] = '#';
-						gui_string_draw(3, str, DB_X(0x1c) + width, DB_Y(0x6d),
-								DB_X(0x1c) + width + 0x4b, DB_Y(0x88),
-								NULL);
+						gui_string_draw(3, str, DB_X(0x1c) + width,
+								DB_Y(0x6d),
+								DB_X(0x1c) + width + 0x4b,
+								DB_Y(0x88), NULL);
 					}
 				}
 				gui_bmp_bitmap_draw(0x3c, DB_X(0x60), DB_Y(0x6d), 0, 0, 0);
@@ -923,8 +950,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 				memset(buf, 0, sizeof(buf));
 				snprintf(buf, sizeof(buf), "%d/%d", ctx->notes_index + 1, count);
 				idx = ctx->notes_index;
-				DB_TEXT(gui_utf_draw, gs->quicknote->notes[idx].title, 0, 0xd6, 1, 0x22e,
-					0x1c, 1);
+				DB_TEXT(gui_utf_draw, gs->quicknote->notes[idx].title, 0, 0xd6, 1,
+					0x22e, 0x1c, 1);
 				if (count != 1) {
 					DB_TEXT(gui_utf_draw, buf, 0, 0x20e, 1, 0x23a, 0x1c, 1);
 				} else {
@@ -1017,12 +1044,14 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						0x202, 0x1b, 1);
 					DB_TEXT(gui_utf_draw, stock_items[idx].company, 0, 0xba,
 						0x1b, 0x234, 0x36, 1);
-					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].price,
-						0, 0x182, 0x36, 0x234, 0x51, 1);
-					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].price_change,
-						0, 0x182, 0x51, 0x234, 0x6c, 1);
-					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].change_rate,
-						0, 0x182, 0x6c, 0x234, 0x87, 1);
+					DB_TEXT(gui_utf_draw_align_right, stock_items[idx].price, 0,
+						0x182, 0x36, 0x234, 0x51, 1);
+					DB_TEXT(gui_utf_draw_align_right,
+						stock_items[idx].price_change, 0, 0x182, 0x51,
+						0x234, 0x6c, 1);
+					DB_TEXT(gui_utf_draw_align_right,
+						stock_items[idx].change_rate, 0, 0x182, 0x6c, 0x234,
+						0x87, 1);
 					gui_bitmap_draw(DB_X(0xba), DB_Y(0x36), DB_X(0x172),
 							DB_Y(0x88), stock_items[idx].image, 0xf);
 				}
@@ -1117,10 +1146,9 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						DB_TEXT(gui_utf_draw, " ", 0, 0x216, 1, 0x23a, 0x1c,
 							1);
 					}
-					gui_utf_draw_dark_light_split(0, news_items[idx].text, 0,
-								      DB_X(0xba), DB_Y(0x1c),
-								      DB_X(0x236), DB_Y(0x88), 4,
-								      0x200b, 0, NULL, 0);
+					gui_utf_draw_dark_light_split(
+						0, news_items[idx].text, 0, DB_X(0xba), DB_Y(0x1c),
+						DB_X(0x236), DB_Y(0x88), 4, 0x200b, 0, NULL, 0);
 				}
 				return;
 			}
@@ -1177,22 +1205,24 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						schedule_items[ctx->calendar_index * 2].title, 0,
 						0xba, 0x1b, 0x236, 0x36, 1);
 					DB_TEXT(gui_utf_draw,
-						schedule_items[ctx->calendar_index * 2].time, 0, 0xba,
-						0x36, 0x15e, 0x51, 1);
+						schedule_items[ctx->calendar_index * 2].time, 0,
+						0xba, 0x36, 0x15e, 0x51, 1);
 					DB_TEXT(gui_utf_draw_align_right,
 						schedule_items[ctx->calendar_index * 2].location, 0,
 						0x162, 0x36, 0x234, 0x51, 1);
-					if (schedule_items[ctx->calendar_index * 2 + 1].valid != 1) {
+					if (schedule_items[ctx->calendar_index * 2 + 1].valid !=
+					    1) {
 						return;
 					}
 					DB_TEXT(gui_utf_draw,
-						schedule_items[ctx->calendar_index * 2 + 1].title, 0,
-						0xba, 0x51, 0x236, 0x6c, 1);
+						schedule_items[ctx->calendar_index * 2 + 1].title,
+						0, 0xba, 0x51, 0x236, 0x6c, 1);
 					DB_TEXT(gui_utf_draw,
 						schedule_items[ctx->calendar_index * 2 + 1].time, 0,
 						0xba, 0x6c, 0x15e, 0x87, 1);
 					DB_TEXT(gui_utf_draw_align_right,
-						schedule_items[ctx->calendar_index * 2 + 1].location,
+						schedule_items[ctx->calendar_index * 2 + 1]
+							.location,
 						0, 0x162, 0x6c, 0x234, 0x87, 1);
 					return;
 				} else {
@@ -1204,7 +1234,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 			case 4: {
 				uint8_t mode = db->citywalk_disp_mode;
 
-				if (mode == 0 || (ctx->screen_cleared == 0 && citywalk_canvas_valid == 0)) {
+				if (mode == 0 ||
+				    (ctx->screen_cleared == 0 && citywalk_canvas_valid == 0)) {
 					if (ctx->citywalk_disp_mode != mode) {
 						ctx->citywalk_disp_mode = mode;
 						gui_area_clear(DB_X(0xae), DB_Y(0), DB_X(0x23c),
@@ -1229,7 +1260,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					   db->citywalk_x <= 0x158 && db->citywalk_y <= 0x68) {
 					if (ctx->screen_cleared == 1) {
 						db->citywalk_state = 0;
-						get_dashboard_state()->dashboard_ts->citywalk_state = 0;
+						get_dashboard_state()
+							->dashboard_ts->citywalk_state = 0;
 					}
 					if (ctx->citywalk_disp_mode != db->citywalk_disp_mode) {
 						ctx->citywalk_disp_mode = db->citywalk_disp_mode;
@@ -1308,16 +1340,16 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 			memset(buf, 0, sizeof(buf));
 			snprintf(buf, sizeof(buf), "%d/%d", ctx->notes_index + 1, count);
 			idx = ctx->notes_index;
-			DB_TEXT(gui_utf_draw, gs->quicknote->notes[idx].title, 0, 0xd6, 1, 0x22e, 0x1c,
-				1);
+			DB_TEXT(gui_utf_draw, gs->quicknote->notes[idx].title, 0, 0xd6, 1, 0x22e,
+				0x1c, 1);
 			if (count != 1) {
 				DB_TEXT(gui_utf_draw, buf, 0, 0x20e, 1, 0x23a, 0x1c, 1);
 			} else {
 				DB_TEXT(gui_utf_draw, " ", 0, 0x20e, 1, 0x23a, 0x1c, 1);
 			}
-			gui_utf_draw_dark_light_split(0, gs->quicknote->notes[idx].text, 0, DB_X(0xba),
-						      DB_Y(0x1c), DB_X(0x238), DB_Y(0x88), 4,
-						      0x200b, 0, NULL, 0);
+			gui_utf_draw_dark_light_split(0, gs->quicknote->notes[idx].text, 0,
+						      DB_X(0xba), DB_Y(0x1c), DB_X(0x238),
+						      DB_Y(0x88), 4, 0x200b, 0, NULL, 0);
 			return;
 		}
 		switch (ctx->pane_mode) {
@@ -1372,10 +1404,10 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					int temp;
 					int width;
 
-					gui_bmp_bitmap_draw(weather_icon_to_bitmap(db->weather_icon),
-							    gui_screen_x_offset() + weather_x_shift +
-								    0x100,
-							    DB_Y(0x1c), 0, 0, 0);
+					gui_bmp_bitmap_draw(
+						weather_icon_to_bitmap(db->weather_icon),
+						gui_screen_x_offset() + weather_x_shift + 0x100,
+						DB_Y(0x1c), 0, 0, 0);
 					state = get_dashboard_state();
 					temp = db->temperature;
 					if (state->dashboard_ts->temp_unit == 0) {
@@ -1383,19 +1415,22 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						G1_LOG_INF("temperature = %d\n", temp);
 						snprintf(str, sizeof(str), "%d", temp);
 						width = 0;
-						gui_string_draw(
-							3, str,
-							gui_screen_x_offset() + weather_x_shift + 0x11c,
-							DB_Y(0x1c),
-							gui_screen_x_offset() + weather_x_shift + 0x144,
-							DB_Y(0x37), &width);
+						gui_string_draw(3, str,
+								gui_screen_x_offset() +
+									weather_x_shift + 0x11c,
+								DB_Y(0x1c),
+								gui_screen_x_offset() +
+									weather_x_shift + 0x144,
+								DB_Y(0x37), &width);
 						memset(str, 0, sizeof(str));
 						str[0] = '*';
 						gui_string_draw(
 							3, str,
-							gui_screen_x_offset() + weather_x_shift + 0x11c + width,
+							gui_screen_x_offset() + weather_x_shift +
+								0x11c + width,
 							DB_Y(0x1c),
-							gui_screen_x_offset() + weather_x_shift + width + 0x12b,
+							gui_screen_x_offset() + weather_x_shift +
+								width + 0x12b,
 							DB_Y(0x37), NULL);
 					} else {
 						temp = temp * 9 / 5 + 32;
@@ -1403,19 +1438,22 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 						G1_LOG_INF("fahrenheit_temperature = %d\n", temp);
 						snprintf(str, sizeof(str), "%d", temp);
 						width = 0;
-						gui_string_draw(
-							3, str,
-							gui_screen_x_offset() + weather_x_shift + 0x11c,
-							DB_Y(0x1c),
-							gui_screen_x_offset() + weather_x_shift + 0x144,
-							DB_Y(0x37), &width);
+						gui_string_draw(3, str,
+								gui_screen_x_offset() +
+									weather_x_shift + 0x11c,
+								DB_Y(0x1c),
+								gui_screen_x_offset() +
+									weather_x_shift + 0x144,
+								DB_Y(0x37), &width);
 						memset(str, 0, sizeof(str));
 						str[0] = '#';
 						gui_string_draw(
 							3, str,
-							gui_screen_x_offset() + weather_x_shift + 0x11c + width,
+							gui_screen_x_offset() + weather_x_shift +
+								0x11c + width,
 							DB_Y(0x1c),
-							gui_screen_x_offset() + weather_x_shift + width + 0x12b,
+							gui_screen_x_offset() + weather_x_shift +
+								width + 0x12b,
 							DB_Y(0x37), NULL);
 					}
 				}
@@ -1428,10 +1466,10 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 				} else {
 					snprintf(str, sizeof(str), "%d", count);
 				}
-				gui_string_draw(3, str, gui_screen_x_offset() + weather_x_shift + 0x18a,
-						DB_Y(0x1c),
-						gui_screen_x_offset() + weather_x_shift + 0x1a4,
-						DB_Y(0x37), NULL);
+				gui_string_draw(
+					3, str, gui_screen_x_offset() + weather_x_shift + 0x18a,
+					DB_Y(0x1c), gui_screen_x_offset() + weather_x_shift + 0x1a4,
+					DB_Y(0x37), NULL);
 			}
 			struct bp_date date = {0};
 
@@ -1448,9 +1486,9 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 				sprintf(date_str, "%s, %02d/%02d", week, date.day, date.month);
 			}
 			gui_utf_draw_align_right(
-				0, date_str, 3, gui_screen_x_offset() + weather_x_shift + 0x54, DB_Y(0x1c),
-				gui_screen_x_offset() + weather_x_shift + 0xe0, DB_Y(0x37), 1, 0, 0, NULL,
-				0);
+				0, date_str, 3, gui_screen_x_offset() + weather_x_shift + 0x54,
+				DB_Y(0x1c), gui_screen_x_offset() + weather_x_shift + 0xe0,
+				DB_Y(0x37), 1, 0, 0, NULL, 0);
 			db_draw_clock(0xea, 0x4c, 0x180, 0x6d);
 		} else {
 			if (refresh == 1) {
@@ -1466,7 +1504,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 					DB_CLEAN_FB(0, 0x1c, 0x240, 0x37);
 					DB_REFLASH_FB(0, 0x1c, 0x240, 0x37);
 				}
-				gui_bmp_bitmap_draw(0x3e, gui_screen_x_offset() + weather_x_shift + 0x144,
+				gui_bmp_bitmap_draw(0x3e,
+						    gui_screen_x_offset() + weather_x_shift + 0x144,
 						    DB_Y(0x1c), 0, 0, 0);
 			}
 			struct bp_date date = {0};
@@ -1484,9 +1523,9 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
 				sprintf(date_str, "%s, %02d/%02d", week, date.day, date.month);
 			}
 			gui_utf_draw_align_right(
-				0, date_str, 3, gui_screen_x_offset() + weather_x_shift + 0x98, DB_Y(0x1c),
-				gui_screen_x_offset() + weather_x_shift + 0x124, DB_Y(0x37), 1, 0, 0, NULL,
-				0);
+				0, date_str, 3, gui_screen_x_offset() + weather_x_shift + 0x98,
+				DB_Y(0x1c), gui_screen_x_offset() + weather_x_shift + 0x124,
+				DB_Y(0x37), 1, 0, 0, NULL, 0);
 			db_draw_clock(0xea, 0x4c, 0x180, 0x6d);
 		}
 		break;
@@ -1623,18 +1662,18 @@ int sync_dashboard_key_event_to_app(void)
 	return send_response_data_to_ble();
 }
 
-#define SEND_DASHBOARD_LOCK_INFO()                                                    \
-	do {                                                                          \
-		uint8_t lock[6] = {0};                                                \
-		lock[0] = 0x50;                                                       \
-		lock[1] = 0x06;                                                       \
-		lock[4] = 0x01;                                                       \
-		lock[5] = 0x02;                                                       \
-                                                                                      \
-		G1_LOG_INF("send dashboard lock info to app ,status = %d \n", 2);   \
-		send_response_data_to_msgqueue(lock, 6);                              \
-		send_response_data_to_ble();                                          \
-		atomic_or(&dashboard_lock_reported, BIT(1));                                     \
+#define SEND_DASHBOARD_LOCK_INFO()                                                                 \
+	do {                                                                                       \
+		uint8_t lock[6] = {0};                                                             \
+		lock[0] = 0x50;                                                                    \
+		lock[1] = 0x06;                                                                    \
+		lock[4] = 0x01;                                                                    \
+		lock[5] = 0x02;                                                                    \
+                                                                                                   \
+		G1_LOG_INF("send dashboard lock info to app ,status = %d \n", 2);                  \
+		send_response_data_to_msgqueue(lock, 6);                                           \
+		send_response_data_to_ble();                                                       \
+		atomic_or(&dashboard_lock_reported, BIT(1));                                       \
 	} while (0)
 
 int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
@@ -1657,7 +1696,8 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 			memset(prv, 0, sizeof(*prv));
 			return 0;
 		}
-		if (event == UI_EVT_ENTER && get_dashboard_state()->dashboard_ts->dashboard_on == 1 &&
+		if (event == UI_EVT_ENTER &&
+		    get_dashboard_state()->dashboard_ts->dashboard_on == 1 &&
 		    gs->ui.db.dashboard_on == 1) {
 			if (!prv->init_done) {
 				G1_LOG_INF("DASHBOARD INIT .......\n");
@@ -1670,35 +1710,44 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 				prv->calendar_index = calendar_index;
 				prv->init_done = 1;
 				prv->calendar_disp_mode = gs->ui.db.calendar_disp_mode;
-				G1_LOG_INF("quicknote index = %d,stocks index = %d,news index = %d,calendar = %d\n",
-					   notes_index, stocks_index, news_index, calendar_index);
+				G1_LOG_INF(
+					"quicknote index = %d,stocks index = %d,news index = %d,calendar = %d\n",
+					notes_index, stocks_index, news_index, calendar_index);
 				G1_LOG_INF("db_info->schedule_disp_status = %d\n",
 					   gs->ui.db.calendar_disp_mode);
-				G1_LOG_INF("db_info->stocks_disp_mode = %d\n", gs->ui.db.stocks_disp_mode);
-				G1_LOG_INF("db_info->news_disp_mode = %d\n", gs->ui.db.news_disp_mode);
+				G1_LOG_INF("db_info->stocks_disp_mode = %d\n",
+					   gs->ui.db.stocks_disp_mode);
+				G1_LOG_INF("db_info->news_disp_mode = %d\n",
+					   gs->ui.db.news_disp_mode);
 				G1_LOG_INF("db_info->schedule_disp_status = %d\n",
 					   gs->ui.db.calendar_disp_mode);
 				G1_LOG_INF("db_info->citywalk_disp_mode = %d\n",
 					   gs->ui.db.citywalk_disp_mode);
 				clear_showing_notification_on_gui();
-				for (dashboard_fade_step = 0; dashboard_fade_step < 4; dashboard_fade_step++) {
+				for (dashboard_fade_step = 0; dashboard_fade_step < 4;
+				     dashboard_fade_step++) {
 					DashBoard_Reflash(db, get_dashboard_state(), 1,
 							  gs->ui.db.display_mode);
 					for (int row = 0; row < 199; row++) {
 						for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
-							const uint8_t steps[8] = {1, 3, 5, 7, 7, 7, 7, 7};
+							const uint8_t steps[8] = {1, 3, 5, 7,
+										  7, 7, 7, 7};
 							uint8_t pix = panel->panel_buffer[row][col];
 
 							if (pix != 0) {
 								panel->panel_buffer[row][col] =
-									pix & gui_fade_mask_at(row % 26,
-											steps[dashboard_fade_step], col);
+									pix &
+									gui_fade_mask_at(
+										row % 26,
+										steps[dashboard_fade_step],
+										col);
 							}
 						}
 					}
-					_reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-								get_dashboard_state()->panel.current_column, 0, 0,
-								GUI_SCREEN_WIDTH, 199);
+					_reflash_fb_data_to_lcd(
+						get_dashboard_state()->panel.current_row,
+						get_dashboard_state()->panel.current_column, 0, 0,
+						GUI_SCREEN_WIDTH, 199);
 				}
 				set_showing_notification_on_gui();
 				if (get_dashboard_state()->is_master == 1) {
@@ -1713,32 +1762,42 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 						idx = getNotesIndex();
 						val = sync[1] | ((idx << 4) & 0xf0);
 						sync[1] = val;
-						G1_LOG_INF("master sync quicknote index to slave ,index = %d\n", val);
+						G1_LOG_INF(
+							"master sync quicknote index to slave ,index = %d\n",
+							val);
 					} else if (prv->pane_mode == 1) {
 						sync[1] = 0x04;
 						idx = getStocksIndex();
 						val = sync[1] | ((idx << 4) & 0xf0);
 						sync[1] = val;
-						G1_LOG_INF("master sync stocks index to slave,index = %d\n", val);
+						G1_LOG_INF(
+							"master sync stocks index to slave,index = %d\n",
+							val);
 					} else if (prv->pane_mode == 2) {
 						sync[1] = 0x06;
 						idx = getNewsIndex();
 						val = sync[1] | ((idx << 4) & 0xf0);
 						sync[1] = val;
-						G1_LOG_INF("master sync news index to slave,index = %d\n", val);
+						G1_LOG_INF(
+							"master sync news index to slave,index = %d\n",
+							val);
 					} else if (prv->pane_mode == 3) {
 						sync[1] = 0x08;
 						idx = getCalenadrIndex();
 						val = sync[1] | ((idx << 4) & 0xf0);
 						sync[1] = val;
-						G1_LOG_INF("master sync news index to slave,index = %d\n", val);
+						G1_LOG_INF(
+							"master sync news index to slave,index = %d\n",
+							val);
 					}
 					ret = sync_to_slave(get_dashboard_state(), 6, sync, 2);
 					if (ret >= 5000) {
-						G1_LOG_WRN("SYNC TO Slave failed...,don't exec key function.\n");
+						G1_LOG_WRN(
+							"SYNC TO Slave failed...,don't exec key function.\n");
 					} else {
-						G1_LOG_INF("sync to slave return value = %d,exec key function. ts = %d\n",
-							   ret, (uint32_t)get_date());
+						G1_LOG_INF(
+							"sync to slave return value = %d,exec key function. ts = %d\n",
+							ret, (uint32_t)get_date());
 					}
 				}
 				prv->enter_ts = k_uptime_get();
@@ -1749,7 +1808,8 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 			}
 			if (get_dashboard_state()->is_master == 1) {
 				if (get_glasses_ble_status() == 1) {
-					if (dmic_get_stop_state() == 1 && get_dashboard_state()->head_up_mic_disabled == 0) {
+					if (dmic_get_stop_state() == 1 &&
+					    get_dashboard_state()->head_up_mic_disabled == 0) {
 						request_dmic_stream_start();
 					}
 				} else if (dmic_get_stop_state() != 1) {
@@ -1767,13 +1827,15 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 		return 0;
 
 	case 1:
-		if (atomic_test_bit(&dashboard_lock_requested, 1) && !atomic_test_bit(&dashboard_lock_reported, 1)) {
+		if (atomic_test_bit(&dashboard_lock_requested, 1) &&
+		    !atomic_test_bit(&dashboard_lock_reported, 1)) {
 			SEND_DASHBOARD_LOCK_INFO();
 		}
 		if (count_unread_messages() != prv->msg_count) {
 			prv->msg_count = count_unread_messages();
-			G1_LOG_INF("notify message count has changed,send message count to app. unread messgae count = %d\n",
-				   prv->msg_count);
+			G1_LOG_INF(
+				"notify message count has changed,send message count to app. unread messgae count = %d\n",
+				prv->msg_count);
 			send_message_count_to_app();
 		}
 		set_showing_notification_on_gui();
@@ -1799,8 +1861,9 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 		if (event == UI_EVT_INPUT) {
 			uint8_t mode;
 
-			G1_LOG_ERR("received key press event,_dashboard_prv_data.display_mode = %d\n",
-				   prv->display_mode);
+			G1_LOG_ERR(
+				"received key press event,_dashboard_prv_data.display_mode = %d\n",
+				prv->display_mode);
 			mode = prv->pane_mode;
 			G1_LOG_ERR("_CurrentCustomAreaType = %d\n", mode);
 			if (mode == 0) {
@@ -1808,14 +1871,17 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 					notes_index = prv->notes_index =
 						(uint8_t)(prv->notes_index + 1) % prv->notes_count;
 					set_ncs_mem_notes_index(notes_index);
-					G1_LOG_INF("current quicknote index = %d\n", prv->notes_index);
+					G1_LOG_INF("current quicknote index = %d\n",
+						   prv->notes_index);
 				}
 			}
 			if (mode == 1) {
 				if (prv->stocks_count > 1) {
 					stocks_index = prv->stocks_index =
-						(uint8_t)(prv->stocks_index + 1) % prv->stocks_count;
-					G1_LOG_INF("current stocks index = %d\n", prv->stocks_index);
+						(uint8_t)(prv->stocks_index + 1) %
+						prv->stocks_count;
+					G1_LOG_INF("current stocks index = %d\n",
+						   prv->stocks_index);
 				}
 			}
 			if (mode == 2) {
@@ -1828,12 +1894,15 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event)
 			if (mode == 3) {
 				if (prv->calendar_count != 0) {
 					calendar_index = prv->calendar_index =
-						(uint8_t)(prv->calendar_index + 1) % prv->calendar_count;
-					G1_LOG_ERR("current calendar index = %d\n", prv->calendar_index);
+						(uint8_t)(prv->calendar_index + 1) %
+						prv->calendar_count;
+					G1_LOG_ERR("current calendar index = %d\n",
+						   prv->calendar_index);
 				}
 			}
 			if (mode != 4) {
-				DashBoard_Reflash(db, get_dashboard_state(), 4, gs->ui.db.display_mode);
+				DashBoard_Reflash(db, get_dashboard_state(), 4,
+						  gs->ui.db.display_mode);
 				sync_dashboard_key_event_to_app();
 			}
 		}

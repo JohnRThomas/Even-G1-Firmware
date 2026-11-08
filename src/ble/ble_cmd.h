@@ -15,30 +15,30 @@ enum ble_cmd {
 	BLE_CMD_ANTI_SHAKE_SET = 0x02,          /* GET 0x2A reads it back */
 	BLE_CMD_SILENT_MODE_SET = 0x03,
 	BLE_CMD_NOTIFI_WHITELIST_SET = 0x04,
-	BLE_CMD_DEBUG_CONTROL = 0x05,           /* head up/down simulation, LOG_LEVEL, dashboard mode */
+	BLE_CMD_DEBUG_CONTROL = 0x05, /* head up/down simulation, LOG_LEVEL, dashboard mode */
 	BLE_CMD_DASHBOARD_SET = 0x06,
 	BLE_CMD_COUNTDOWN_TIMER = 0x07,
 	BLE_CMD_HEAD_UP_ACTION_SET = 0x08,
 	BLE_CMD_TELEPROMPTER_INFO = 0x09,
 	BLE_CMD_NAVIGATION_INFO = 0x0a,
 	BLE_CMD_HEAD_UP_ANGLE_SET = 0x0b,
-	BLE_CMD_TRANSLATE_SRC_TEXT = 0x0d,      /* translate, source text */
+	BLE_CMD_TRANSLATE_SRC_TEXT = 0x0d, /* translate, source text */
 	BLE_CMD_MICROPHONE_SET = 0x0e,
-	BLE_CMD_TRANSLATE_DST_TEXT = 0x0f,      /* translate, translated text */
+	BLE_CMD_TRANSLATE_DST_TEXT = 0x0f, /* translate, translated text */
 	BLE_CMD_HEAD_UP_CALIBRATION = 0x10,
-	BLE_CMD_NOTIFY_EN = 0x14,               /* ANCS on/off; GET 0x38 reads it back */
+	BLE_CMD_NOTIFY_EN = 0x14, /* ANCS on/off; GET 0x38 reads it back */
 	BLE_CMD_FILE_UPLOAD = 0x15,
-	BLE_CMD_BITMAP_SHOW = 0x16,             /* CRC check of the uploaded file */
-	BLE_CMD_UPGRADE_CONTROL = 0x17,         /* erase DFU */
+	BLE_CMD_BITMAP_SHOW = 0x16, /* CRC check of the uploaded file */
+	BLE_CMD_UPGRADE_CONTROL = 0x17, /* erase DFU */
 	BLE_CMD_BITMAP_HIDE = 0x18,
-	BLE_CMD_TRANSLATE_CONTROL = 0x1c,       /* languages, start/pause */
+	BLE_CMD_TRANSLATE_CONTROL = 0x1c, /* languages, start/pause */
 	BLE_CMD_QUICK_NOTE_CONTROL = 0x1e,
-	BLE_CMD_TUTORIAL_CONTROL = 0x1f,        /* onboarding */
+	BLE_CMD_TUTORIAL_CONTROL = 0x1f, /* onboarding */
 	BLE_CMD_FILE_UPLOAD_COMPLETE = 0x20,
 	BLE_CMD_STATUS = 0x22,
 	BLE_CMD_TELEPROMPTER_SUSPEND = 0x24,
 	BLE_CMD_TELEPROMPTER_POSITION_SET = 0x25,
-	BLE_CMD_HARDWARE_SET = 0x26,            /* sub-commands: enum ble_hw_sub */
+	BLE_CMD_HARDWARE_SET = 0x26, /* sub-commands: enum ble_hw_sub */
 	BLE_CMD_WEAR_DETECTION_SET = 0x27,
 
 	/* GET (ble_process_get_req) */
@@ -59,17 +59,18 @@ enum ble_cmd {
 	BLE_CMD_WEAR_DETECTION_GET = 0x3a,
 	BLE_CMD_RASTER_CONFIG_GET = 0x3b,
 	BLE_CMD_NOTIF_AUTO_DISPLAY_GET = 0x3c,
-	BLE_CMD_LANGUAGE_SET = 0x3d,            /* handled in the GET range */
+	BLE_CMD_LANGUAGE_SET = 0x3d, /* handled in the GET range */
 	BLE_CMD_BURIAL_POINT_GET = 0x3e,
-	BLE_CMD_HARDWARE_GET = 0x3f,            /* sub-commands 5..8 of enum ble_hw_sub */
+	BLE_CMD_HARDWARE_GET = 0x3f, /* sub-commands 5..8 of enum ble_hw_sub */
 
 	/* POST (ble_process_post_req) */
 	BLE_CMD_BT_UNPAIR = 0x47,
-	BLE_CMD_POST_49 = 0x49,                 /* header to master only, no-op */
-	BLE_CMD_SYNC_DISPLAY = 0x4a,            /* flags 2 = ESB sync packet to the slave, 1 = display refresh */
+	BLE_CMD_POST_49 = 0x49, /* header to master only, no-op */
+	BLE_CMD_SYNC_DISPLAY =
+		0x4a, /* flags 2 = ESB sync packet to the slave, 1 = display refresh */
 	BLE_CMD_NOTIFICATION_SEND = 0x4b,
 	BLE_CMD_NOTIFICATION_CLEAR = 0x4c,
-	BLE_CMD_MTU_SET = 0x4d,                 /* marks the app session as established */
+	BLE_CMD_MTU_SET = 0x4d, /* marks the app session as established */
 	BLE_CMD_TEXT_SET = 0x4e,
 	BLE_CMD_NOTIF_AUTO_DISPLAY_SET = 0x4f,
 	BLE_CMD_DASHBOARD_LOCK_SET = 0x50,
@@ -99,12 +100,12 @@ enum ble_dashboard_sub {
 
 /* Hardware Set (0x26) sub-commands, data[4]; Hardware Get (0x3F) reads 5..8 back */
 enum ble_hw_sub {
-	HW_SUB_USER_DATA_RESET = 1,      /* sets user_data_reset_pending */
+	HW_SUB_USER_DATA_RESET = 1, /* sets user_data_reset_pending */
 	HW_SUB_HEIGHT_DEPTH = 2,
 	HW_SUB_GIVE_MIC_TRANSM_SEM = 3,
 	HW_SUB_LUM_GEAR = 4,
 	HW_SUB_DOUBLE_TAP_ACTION = 5,
-	HW_SUB_LUM_COEFFICIENT = 6,      /* calibration mode */
+	HW_SUB_LUM_COEFFICIENT = 6, /* calibration mode */
 	HW_SUB_LONG_PRESS_ENABLE = 7,
 	HW_SUB_MIC_ON_HEAD_UP = 8,
 };

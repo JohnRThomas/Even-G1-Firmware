@@ -24,9 +24,9 @@ struct regulator_npm1300_config {
 #define PMIC_LDO2    DEVICE_DT_GET(DT_NODELABEL(pmic_ldo2))
 #define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
 
-#define CHGR_BASE           0x03
-#define CHGR_OFFSET_EN_SET  0x04
-#define CHGR_OFFSET_VTERM   0x0C
+#define CHGR_BASE            0x03
+#define CHGR_OFFSET_EN_SET   0x04
+#define CHGR_OFFSET_VTERM    0x0C
 #define CHGR_OFFSET_CHG_STAT 0x34
 
 uint8_t nfc_box_status[3];
@@ -59,7 +59,8 @@ int set_charger_status(void)
 	uint8_t status = 0;
 	bool trickle, cc, cv;
 
-	if (mfd_npm1300_reg_read(NPM_MFD(PMIC_LDO2), CHGR_BASE, CHGR_OFFSET_CHG_STAT, &status) < 0) {
+	if (mfd_npm1300_reg_read(NPM_MFD(PMIC_LDO2), CHGR_BASE, CHGR_OFFSET_CHG_STAT, &status) <
+	    0) {
 		printk("Could not get charger status\n");
 		return -1;
 	}

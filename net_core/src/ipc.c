@@ -41,8 +41,8 @@ static int ipc_register(struct ipc_ep *ep)
 		NET_INF("ipc service register(%d,%s) %d,SUCCESS\n", ep->id, ep->name, ops->count);
 		return 0;
 	}
-	NET_ERR("ipc service register(%d,%s) %d,total must < %d\n", ep->id, ep->name,
-		ops->count, IPC_EP_MAX);
+	NET_ERR("ipc service register(%d,%s) %d,total must < %d\n", ep->id, ep->name, ops->count,
+		IPC_EP_MAX);
 	return -1;
 }
 
@@ -68,10 +68,11 @@ static void ipc_ept_bound(void *priv)
 
 static struct ipc_ept_cfg ipc_ept_cfg = {
 	.name = "ipc0",
-	.cb = {
-		.bound    = ipc_ept_bound,
-		.received = ipc_ept_recv,
-	},
+	.cb =
+		{
+			.bound = ipc_ept_bound,
+			.received = ipc_ept_recv,
+		},
 };
 
 int ipc_init(void)

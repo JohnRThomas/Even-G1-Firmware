@@ -22,8 +22,8 @@
 void Mahony_init(struct ahrs *a)
 {
 	a->beta = 0.1f;
-	a->twoKp = 4.0f;	/* 2 * proportional gain (Kp) */
-	a->twoKi = 0.0f;	/* 2 * integral gain (Ki) */
+	a->twoKp = 4.0f; /* 2 * proportional gain (Kp) */
+	a->twoKi = 0.0f; /* 2 * integral gain (Ki) */
 	a->q0 = 1.0f;
 	a->q1 = 0.0f;
 	a->q2 = 0.0f;
@@ -87,11 +87,11 @@ void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az
 			a->integralFBx += a->twoKi * halfex * dt;
 			a->integralFBy += a->twoKi * halfey * dt;
 			a->integralFBz += a->twoKi * halfez * dt;
-			gx += a->integralFBx;	/* apply integral feedback */
+			gx += a->integralFBx; /* apply integral feedback */
 			gy += a->integralFBy;
 			gz += a->integralFBz;
 		} else {
-			a->integralFBx = 0.0f;	/* prevent integral windup */
+			a->integralFBx = 0.0f; /* prevent integral windup */
 			a->integralFBy = 0.0f;
 			a->integralFBz = 0.0f;
 		}
@@ -103,7 +103,7 @@ void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az
 	}
 
 	/* Integrate rate of change of quaternion */
-	gx *= (0.5f * dt);	/* pre-multiply common factors */
+	gx *= (0.5f * dt); /* pre-multiply common factors */
 	gy *= (0.5f * dt);
 	gz *= (0.5f * dt);
 	qa = a->q0;

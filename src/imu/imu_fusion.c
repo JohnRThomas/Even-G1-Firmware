@@ -22,8 +22,8 @@
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 
-#define IMU_FUSION_STACK_SIZE	0x700
-#define IMU_FUSION_PRIORITY	(-11)
+#define IMU_FUSION_STACK_SIZE 0x700
+#define IMU_FUSION_PRIORITY   (-11)
 
 K_THREAD_STACK_DEFINE(imu_fusion_stack, IMU_FUSION_STACK_SIZE);
 static struct k_thread imu_fusion_thread_data;
@@ -34,7 +34,7 @@ static int imu_fusion_init(struct imu_ctx *c);
 /* motion / still detection state */
 struct imu_motion {
 	uint8_t warmed_up;
-	uint8_t state;			/* 0 idle, 1 moving, 2 settled */
+	uint8_t state;   /* 0 idle, 1 moving, 2 settled */
 	uint32_t samples;
 	int move_cnt;
 	int still_cnt;
@@ -44,7 +44,7 @@ struct imu_motion {
 	float accum[3];
 };
 
-static const float imu_motion_thr[3] = { 0.2f, 0.15f, 0.15f };
+static const float imu_motion_thr[3] = {0.2f, 0.15f, 0.15f};
 
 static int imu_last_div = 300;
 static int imu_angle_threshold = 150;
@@ -77,7 +77,7 @@ void send_dashboard_lock_info(void)
 	    !atomic_test_bit(&dashboard_head_up_opened, 1)) {
 		if (!atomic_test_bit(&dashboard_lock_reported, 1) &&
 		    atomic_test_bit(&dashboard_lock_requested, 1)) {
-			struct imu_lookup_msg msg = { .cmd = 0x0650, .action = 1, .status = 1 };
+			struct imu_lookup_msg msg = {.cmd = 0x0650, .action = 1, .status = 1};
 
 			send_response_data_to_msgqueue(&msg, sizeof(msg));
 			send_response_data_to_ble();
@@ -171,13 +171,14 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode)
 	}
 
 	for (retry = 1;;) {
-		ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ,
-				      SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
+		ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY,
+				      &c->odr);
 		if (ret >= 0) {
 			break;
 		}
 		G1_LOG_WRN("c->imu_fusion: Cannot set sampling frequency for accelerometer ret %d "
-			   "retry_time %d.\n\n", ret, retry);
+			   "retry_time %d.\n\n",
+			   ret, retry);
 		if (++retry <= 20) {
 			k_sleep(K_MSEC(5));
 		} else {
@@ -248,8 +249,9 @@ static int imu_fusion_init(struct imu_ctx *c)
 	ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY,
 			      &c->odr);
 	if (ret < 0) {
-		G1_LOG_WRN("c->imu_fusion: Cannot set sampling frequency for accelerometer ret %d.\n\n",
-			   ret);
+		G1_LOG_WRN(
+			"c->imu_fusion: Cannot set sampling frequency for accelerometer ret %d.\n\n",
+			ret);
 		return -3;
 	}
 
@@ -270,8 +272,8 @@ static int imu_fusion_init(struct imu_ctx *c)
 	c->thread_running = 1;
 	update_head_up_thresholds(c);
 
-	k_thread_create(&imu_fusion_thread_data, imu_fusion_stack, IMU_FUSION_STACK_SIZE, imu_fusion_thread, c,
-			NULL, NULL, IMU_FUSION_PRIORITY, 0, K_NO_WAIT);
+	k_thread_create(&imu_fusion_thread_data, imu_fusion_stack, IMU_FUSION_STACK_SIZE,
+			imu_fusion_thread, c, NULL, NULL, IMU_FUSION_PRIORITY, 0, K_NO_WAIT);
 
 	return 0;
 }
@@ -305,7 +307,8 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
 		if (pitch <= c->thr_low && pitch >= c->thr_high) {
 			/* head is up: look up */
 			k_uptime_ticks();
-			if (get_dashboard_state()->suspend_state != 0 && get_dashboard_state()->suspend_state != 1) {
+			if (get_dashboard_state()->suspend_state != 0 &&
+			    get_dashboard_state()->suspend_state != 1) {
 				goto level_check;
 			}
 			imu_trigger_count++;
@@ -319,14 +322,18 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
 				if (sync->screen_id != 0 || pitch < imu_level_pitch) {
 					screen_switch_busy = 1;
 					if (BLE_DEBUG) {
-						ble_printk("look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
-							   sync->screen_id, pitch, c->thr_low, c->level);
+						ble_printk(
+							"look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
+							sync->screen_id, pitch, c->thr_low,
+							c->level);
 					} else {
 						printk("look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
-						       sync->screen_id, pitch, c->thr_low, c->level);
+						       sync->screen_id, pitch, c->thr_low,
+						       c->level);
 					}
 					retry = 101;
-					while (!get_dashboard_state()->message_mode && push_msg_syncing && --retry) {
+					while (!get_dashboard_state()->message_mode &&
+					       push_msg_syncing && --retry) {
 						k_sleep(K_MSEC(10));
 					}
 					report_event_to_phone(2);
@@ -343,24 +350,35 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
 					}
 					if (!get_dashboard_startup_mode()) {
 						if (atomic_test_bit(&dashboard_lock_requested, 1)) {
-							if (!atomic_test_bit(&dashboard_head_up_opened, 1)) {
-								if (!atomic_test_bit(&dashboard_lock_reported, 1) &&
-								    atomic_test_bit(&dashboard_lock_requested, 1)) {
+							if (!atomic_test_bit(
+								    &dashboard_head_up_opened, 1)) {
+								if (!atomic_test_bit(
+									    &dashboard_lock_reported,
+									    1) &&
+								    atomic_test_bit(
+									    &dashboard_lock_requested,
+									    1)) {
 									struct imu_lookup_msg msg = {
 										.cmd = 0x0650,
 										.action = 1,
 										.status = 1,
 									};
 
-									send_response_data_to_msgqueue(&msg, sizeof(msg));
+									send_response_data_to_msgqueue(
+										&msg, sizeof(msg));
 									send_response_data_to_ble();
-									atomic_set_bit(&dashboard_lock_reported, 1);
+									atomic_set_bit(
+										&dashboard_lock_reported,
+										1);
 								}
 							}
 						} else {
 							c->mode = 2;
-							if (!atomic_test_bit(&dashboard_head_up_opened, 1)) {
-								atomic_set_bit(&dashboard_head_up_opened, 1);
+							if (!atomic_test_bit(
+								    &dashboard_head_up_opened, 1)) {
+								atomic_set_bit(
+									&dashboard_head_up_opened,
+									1);
 							}
 						}
 					} else {
@@ -396,11 +414,12 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
 		gs->esb_arg2 = gs->panel.panel_brightness_level;
 		if (sync->screen_id == 1) {
 			sync_to_slave(gs, 8, NULL, 0);
-		} else if ((!gs->message_mode || cur_message_show_state() != 1) && !get_dashboard_startup_mode() &&
-			   !gs->dashboard_ts->dashboard_hold) {
+		} else if ((!gs->message_mode || cur_message_show_state() != 1) &&
+			   !get_dashboard_startup_mode() && !gs->dashboard_ts->dashboard_hold) {
 			sync_to_slave(gs, 1, NULL, 0);
 		}
-		if (!gs->message_mode && !get_dashboard_startup_mode() && !gs->dashboard_ts->dashboard_hold) {
+		if (!gs->message_mode && !get_dashboard_startup_mode() &&
+		    !gs->dashboard_ts->dashboard_hold) {
 			exit_temp_task(gs, 0);
 		}
 		screen_switch_busy = 0;
@@ -493,7 +512,7 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3)
 {
 	struct imu_ctx *c = p1;
 	struct GlassesState *gs;
-	float angles[3] = { 0 };
+	float angles[3] = {0};
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	float ax, ay, az, gx, gy, gz, dt;

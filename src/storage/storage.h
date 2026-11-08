@@ -67,10 +67,10 @@ struct usr_settings {
 	uint8_t reserved[6];
 };
 
-#define SYS_SETTINGS_ADDR   0x130000
-#define USR_SETTINGS_ADDR   0x134000
+#define SYS_SETTINGS_ADDR 0x130000
+#define USR_SETTINGS_ADDR 0x134000
 
-#define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
+#define FLASH_DEV             DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 #define EXT_FLASH_SECTOR_SIZE 4096
 
 /* QuickNote context behind GLOBAL_STATE->quicknote */
@@ -79,7 +79,8 @@ struct usr_settings {
 
 /* setting_store.c record (flash) and CURRENT_LANGUAGE */
 struct app_setting {
-	uint8_t magic;          /* flash record: SETTING_MAGIC; CURRENT_LANGUAGE: language set by the phone */
+	uint8_t magic; /* flash record: SETTING_MAGIC; CURRENT_LANGUAGE: language set by the phone
+			*/
 	uint8_t language;
 	uint8_t startup_mode;
 };
@@ -140,8 +141,7 @@ int SettingStoreHandler(void);
 int clearQuickNoteQueue(void);
 int upgradeQuickNoteDataToFlash(int index);
 int deleteQuickNoteData(int index);
-int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *text,
-			      int text_len);
+int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *text, int text_len);
 int getQuickNoteQueueNum(void);
 int QuickNoteStoreHandler(void);
 

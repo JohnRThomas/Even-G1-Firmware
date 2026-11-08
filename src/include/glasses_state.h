@@ -27,8 +27,8 @@ struct schedule_notif;
 
 /* first byte of every ESB package */
 struct esb_hdr {
-	uint8_t cmd : 6;
-	uint8_t dir : 2;
+	uint8_t cmd: 6;
+	uint8_t dir: 2;
 };
 
 struct msg_status {
@@ -283,8 +283,8 @@ struct notif_msg {
 	uint8_t pos;
 	uint8_t sync_state;                      /* master/slave display sync, 0..4 */
 	uint8_t busy;
-	uint8_t read : 1;                        /* bit 0 */
-	uint8_t state : 7;                       /* bits 1..7 */
+	uint8_t read: 1;                        /* bit 0 */
+	uint8_t state: 7;                       /* bits 1..7 */
 	char app_identifier[32];
 	char display_name[32];
 	char title[32];
@@ -328,8 +328,8 @@ struct ble_context {
 struct spi_master_ctx {
 	int (*init_cb)(struct spi_master_ctx *ctx);
 	int (*deinit_cb)(struct spi_master_ctx *ctx);
-	int (*xfer_cb)(struct spi_master_ctx *ctx, const uint8_t *tx, size_t tx_len,
-		       uint8_t *rx, size_t rx_len);
+	int (*xfer_cb)(struct spi_master_ctx *ctx, const uint8_t *tx, size_t tx_len, uint8_t *rx,
+		       size_t rx_len);
 	nrfx_spim_t spim;
 	uint32_t is_initialized;
 	union {

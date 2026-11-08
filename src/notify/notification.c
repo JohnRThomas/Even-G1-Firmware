@@ -16,15 +16,9 @@
 #include "../threads/threads.h"
 
 static char ios_mail_list[10][32] = {
-	"com.apple.mail",
-	"com.google.Gmail",
-	"com.microsoft.Office.Outlook",
-	"com.yahoo.Aerogram",
-	"ch.protonmail.protonmail",
-	"com.easilydo.mail",
-	"Mailroom.Canary-iOS",
-	"com.fastmail.FastMail",
-	"com.apple.samsung",
+	"com.apple.mail",      "com.google.Gmail",         "com.microsoft.Office.Outlook",
+	"com.yahoo.Aerogram",  "ch.protonmail.protonmail", "com.easilydo.mail",
+	"Mailroom.Canary-iOS", "com.fastmail.FastMail",    "com.apple.samsung",
 };
 static char android_mail_list[10][32] = {
 	"com.google.mail",
@@ -59,8 +53,7 @@ uint8_t g_msg_num_push;
 uint8_t g_curShowMsgIdx;
 uint8_t msg_show_state;
 
-int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id,
-				   const char *name)
+int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id, const char *name)
 {
 	uint8_t pkt[21] = {0};
 	char json[320];
@@ -112,14 +105,10 @@ void send_whilelist_app_info_wrapper(struct notif_msg *msg)
 		return;
 	}
 	const char *special[] = {
-		"com.android.phone_missed",
-		"com.android.phone_incall",
-		"com.apple.mobilephone",
-		"com.apple.mobilephone_missed",
-		"com.apple.MobileSMS",
-		"com.android.even_sms",
-		"com.apple.mobilemail",
-		"com.apple.mobilecal",
+		"com.android.phone_missed",  "com.android.phone_incall",
+		"com.apple.mobilephone",     "com.apple.mobilephone_missed",
+		"com.apple.MobileSMS",       "com.android.even_sms",
+		"com.apple.mobilemail",      "com.apple.mobilecal",
 		"com.android.even_calendar",
 	};
 	uint8_t i;
@@ -131,12 +120,12 @@ void send_whilelist_app_info_wrapper(struct notif_msg *msg)
 			return;
 		}
 	}
-	send_notifi_app_white_list_app(&get_dashboard_state()->ble_context,
-				       msg->app_identifier, msg->display_name);
+	send_notifi_app_white_list_app(&get_dashboard_state()->ble_context, msg->app_identifier,
+				       msg->display_name);
 }
 
-int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, uint8_t *src,
-				   uint8_t *hdr, uint8_t *arg, uint8_t *out, uint32_t len)
+int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, const uint8_t *src,
+				   uint8_t *hdr, const uint8_t *arg, uint8_t *out, uint32_t len)
 {
 	struct notif_msg *msg;
 
@@ -184,7 +173,7 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, ui
 	return 5;
 }
 
-void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data)
+void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, uint8_t *data)
 {
 	uint8_t resp[128];
 	uint8_t *tx;
@@ -424,8 +413,10 @@ void clear_timeout_message(int force)
 			bool expired;
 
 			if (m->read) {
-				expired = force || get_date() > m->start_show_time +
-								      get_dashboard_state()->message_stay_time;
+				expired = force ||
+					  get_date() >
+						  m->start_show_time +
+							  get_dashboard_state()->message_stay_time;
 			} else {
 				expired = recv != 0 && get_date() > m->start_show_time + 5;
 			}
@@ -443,7 +434,8 @@ void clear_timeout_message(int force)
 		} else if (g_arrMsgContent[j].app_identifier[0]) {
 			memcpy(m, &g_arrMsgContent[j], sizeof(struct notif_msg));
 			memset(&g_arrMsgContent[j], 0, sizeof(struct notif_msg));
-			G1_LOG_ERR("######clear_timeout_message copy data from %d to  i %d\n", j, i);
+			G1_LOG_ERR("######clear_timeout_message copy data from %d to  i %d\n", j,
+				   i);
 			i++;
 		} else {
 			offset++;
@@ -455,7 +447,7 @@ void clear_timeout_message(int force)
 
 int message_uid_exists(uint32_t num, uint32_t uid)
 {
-	for (uint8_t i = 0; i < num; i++) {
+	for (uint32_t i = 0; i < num; i++) {
 		if (g_arrMsgContent[i].app_identifier[0] && g_arrMsgContent[i].uid == uid) {
 			return 1;
 		}
@@ -468,7 +460,7 @@ void confirm_message(uint32_t uid)
 	struct notif_msg *pending = &g_arrMsgContent[MSG_NORMAL_NUM];
 	uint8_t action = pending->action;
 	int count;
-	uint8_t i;
+	int i;
 
 	if (pending->app_identifier[0] == 0 || pending->uid != uid || pending->sync_state != 4) {
 		return;
@@ -487,7 +479,8 @@ void confirm_message(uint32_t uid)
 	if (pending->action == 0) {
 		if (count == MSG_NORMAL_NUM) {
 			for (int j = 0; j < MSG_NORMAL_NUM - 1; j++) {
-				memcpy(&g_arrMsgContent[j], &g_arrMsgContent[j + 1], sizeof(struct notif_msg));
+				memcpy(&g_arrMsgContent[j], &g_arrMsgContent[j + 1],
+				       sizeof(struct notif_msg));
 				g_arrMsgContent[j].pos = j;
 			}
 			count = MSG_NORMAL_NUM - 1;
@@ -554,7 +547,8 @@ void confirm_message(uint32_t uid)
 			}
 		} else if (is_in_box() != 1) {
 			if (get_dashboard_state()->dashboard_mode == 0 ||
-			    (get_dashboard_state()->message_mode && get_dashboard_state()->dashboard_mode == 6)) {
+			    (get_dashboard_state()->message_mode &&
+			     get_dashboard_state()->dashboard_mode == 6)) {
 				if (cur_message_show_state() != 1) {
 					msg_show_state = 1;
 				}
@@ -594,10 +588,12 @@ uint8_t push_message(struct notif_msg *msg)
 		msg->sync_state = 0;
 		msg->pos = pos;
 		memcpy(&g_arrMsgContent[pos], msg, sizeof(*msg));
-		G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d action %d\n", pos, msg->uid, msg->start_show_time, msg->action);
+		G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d action %d\n",
+			   pos, msg->uid, msg->start_show_time, msg->action);
 		g_msg_num_push++;
 	} else {
-		G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d\n", MSG_TOTAL_NUM - 1, msg->uid, msg->start_show_time);
+		G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d\n",
+			   MSG_TOTAL_NUM - 1, msg->uid, msg->start_show_time);
 		for (int i = MSG_NORMAL_NUM; i < MSG_TOTAL_NUM - 1; i++) {
 			if (g_arrMsgContent[i].sync_state == 0) {
 				memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1], sizeof(*msg));
@@ -645,8 +641,9 @@ uint8_t pull_message(struct notif_msg **msg)
 		return MSG_NORMAL_NUM;
 	}
 	if (get_dashboard_state()->unread_msg_num > MSG_NORMAL_NUM) {
-		BLE_PRINTK("exception handle, GLOBAL->master_sync_pkg.panel_data_pkg.unread_msg_num is %d \n",
-			   get_dashboard_state()->unread_msg_num);
+		BLE_PRINTK(
+			"exception handle, GLOBAL->master_sync_pkg.panel_data_pkg.unread_msg_num is %d \n",
+			get_dashboard_state()->unread_msg_num);
 		return MSG_NORMAL_NUM;
 	}
 	*msg = &g_arrMsgContent[g_curShowMsgIdx];
@@ -717,7 +714,7 @@ uint8_t cur_message_show_state(void)
 		ret = 0;
 		if (g_arrMsgContent[g_curShowMsgIdx].start_show_time != 0) {
 			if (get_date() > g_arrMsgContent[g_curShowMsgIdx].start_show_time +
-						     get_dashboard_state()->message_stay_time) {
+						 get_dashboard_state()->message_stay_time) {
 				ret = 2;
 			} else {
 				ret = 1;
@@ -735,8 +732,9 @@ uint8_t latest_message_show_state(void)
 	uint8_t ret = 0;
 
 	if (g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time != 0) {
-		if (get_date() > g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time +
-					     get_dashboard_state()->message_stay_time) {
+		if (get_date() >
+		    g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time +
+			    get_dashboard_state()->message_stay_time) {
 			ret = 2;
 		} else {
 			ret = 1;

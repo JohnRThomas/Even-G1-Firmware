@@ -22,11 +22,11 @@ static struct gpio_callback button1_irq_cb;
 static struct gpio_callback button2_irq_cb;
 
 int touch_irq_pending;
-static const struct gpio_dt_spec panel_gpio = { .port = GPIO0, .pin = 24, .dt_flags = 0 };
-static const struct gpio_dt_spec gpio_p0_21 = { .port = GPIO0, .pin = 21, .dt_flags = 0 };
-static const struct gpio_dt_spec gpio_p0_30 = { .port = GPIO0, .pin = 30, .dt_flags = 0 };
+static const struct gpio_dt_spec panel_gpio = {.port = GPIO0, .pin = 24, .dt_flags = 0};
+static const struct gpio_dt_spec gpio_p0_21 = {.port = GPIO0, .pin = 21, .dt_flags = 0};
+static const struct gpio_dt_spec gpio_p0_30 = {.port = GPIO0, .pin = 30, .dt_flags = 0};
 static const struct gpio_dt_spec button_irq2_gpio_spec = GPIO_DT_SPEC_GET(DT_NODELABEL(sw1), gpios);
-static const struct gpio_dt_spec pmic_reset_gpio = { .port = GPIO0, .pin = 23, .dt_flags = 0 };
+static const struct gpio_dt_spec pmic_reset_gpio = {.port = GPIO0, .pin = 23, .dt_flags = 0};
 
 static const struct gpio_dt_spec button_irq_gpio_spec = GPIO_DT_SPEC_GET(DT_NODELABEL(sw0), gpios);
 
@@ -98,11 +98,11 @@ void reset_pmic_off(void)
 
 static void gpio_init(void)
 {
-	const struct gpio_dt_spec id1 = { .port = GPIO0, .pin = 26, .dt_flags = 0 };
-	const struct gpio_dt_spec id2 = { .port = GPIO0, .pin = 25, .dt_flags = 0 };
-	const struct gpio_dt_spec id3 = { .port = GPIO0, .pin = 28, .dt_flags = 0 };
-	const struct gpio_dt_spec id4 = { .port = GPIO0, .pin = 27, .dt_flags = 0 };
-	const struct gpio_dt_spec tmr = { .port = GPIO0, .pin = 19, .dt_flags = 0 };
+	const struct gpio_dt_spec id1 = {.port = GPIO0, .pin = 26, .dt_flags = 0};
+	const struct gpio_dt_spec id2 = {.port = GPIO0, .pin = 25, .dt_flags = 0};
+	const struct gpio_dt_spec id3 = {.port = GPIO0, .pin = 28, .dt_flags = 0};
+	const struct gpio_dt_spec id4 = {.port = GPIO0, .pin = 27, .dt_flags = 0};
+	const struct gpio_dt_spec tmr = {.port = GPIO0, .pin = 19, .dt_flags = 0};
 
 	gpio_pin_configure_dt(&id1, GPIO_INPUT);
 	gpio_pin_configure_dt(&id2, GPIO_INPUT);
@@ -179,7 +179,8 @@ uint8_t button_init(void)
 		if (gpio_add_callback(button_irq_gpio_spec.port, &button1_irq_cb) < 0) {
 			G1_LOG(1, "Unable to configure SW0 GPIO pin!\n\n");
 		} else {
-			gpio_pin_interrupt_configure_dt(&button_irq_gpio_spec, GPIO_INT_EDGE_TO_ACTIVE);
+			gpio_pin_interrupt_configure_dt(&button_irq_gpio_spec,
+							GPIO_INT_EDGE_TO_ACTIVE);
 			G1_LOG(1, "done, pin= %d\n\n", button_irq_gpio_spec.pin);
 		}
 	}

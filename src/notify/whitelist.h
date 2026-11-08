@@ -7,10 +7,10 @@
 #include <zephyr/kernel.h>
 #include <glasses_state.h>
 
-#define WHITELIST_FLASH_ADDR    0x131000
-#define MAX_WHITE_LIST_APP_NUM  100
-#define MAX_WHITE_LIST_BUF_LEN  (sizeof(struct app_whitelist) + 1)
-#define WHITELIST_JSON_BUF_LEN  0x1800
+#define WHITELIST_FLASH_ADDR   0x131000
+#define MAX_WHITE_LIST_APP_NUM 100
+#define MAX_WHITE_LIST_BUF_LEN (sizeof(struct app_whitelist) + 1)
+#define WHITELIST_JSON_BUF_LEN 0x1800
 
 struct app_info {
 	char id[40];
@@ -18,11 +18,11 @@ struct app_info {
 };
 
 struct app_whitelist {
-	uint8_t call_enable : 1;
-	uint8_t msg_enable : 1;
-	uint8_t ios_mail_enable : 1;
-	uint8_t calendar_enable : 1;
-	uint8_t app_enable : 1;
+	uint8_t call_enable: 1;
+	uint8_t msg_enable: 1;
+	uint8_t ios_mail_enable: 1;
+	uint8_t calendar_enable: 1;
+	uint8_t app_enable: 1;
 	uint8_t app_count;
 	struct app_info list[MAX_WHITE_LIST_APP_NUM];
 };
