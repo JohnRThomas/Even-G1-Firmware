@@ -8,6 +8,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/mfd/npm1300.h>
+#include <zephyr/init.h>
 #include <zephyr/sys/reboot.h>
 #include <zephyr/sys/atomic.h>
 #include <hal/nrf_ipc.h>
@@ -388,18 +389,33 @@ int power_for_panel(void)
 	return 0;
 }
 
-int power_for_imu_and_mic(void)
+/* The IMU and microphone supply (LDSW2) has to be on, and the LSM6DSO through its
+ * boot time, before the sensor drivers initialise. */
+#define IMU_MIC_SUPPLY_INIT_PRIORITY 87
+#define LSM6DSO_BOOT_TIME_MS         10
+
+BUILD_ASSERT(CONFIG_REGULATOR_NPM1300_INIT_PRIORITY < IMU_MIC_SUPPLY_INIT_PRIORITY &&
+	     IMU_MIC_SUPPLY_INIT_PRIORITY < CONFIG_SENSOR_INIT_PRIORITY);
+
+static int power_for_imu_and_mic(void)
 {
 	int ret;
 
-	ret = mfd_npm1300_reg_write(NPM_MFD(PMIC_LDO2), 0x08, 0x02, 1);
+	if (!device_is_ready(PMIC_LDO2)) {
+		G1_LOG(0, "ldsw2 not ready.\n");
+		return -ENODEV;
+	}
+	ret = regulator_enable(PMIC_LDO2);
 	if (ret < 0) {
 		G1_LOG(0, "Could not set ldsw2.\n");
-		return 0;
+		return ret;
 	}
 	G1_LOG(0, "enable ldsw2 for imu and mic\n");
+	k_msleep(LSM6DSO_BOOT_TIME_MS);
 	return 0;
 }
+
+SYS_INIT(power_for_imu_and_mic, POST_KERNEL, IMU_MIC_SUPPLY_INIT_PRIORITY);
 
 int power_down_panel(void)
 {
@@ -1264,15 +1280,11 @@ static struct GlassesState *init_context(void)
 	ble_context_init(&s->ble_context);
 	if (s->is_master == 1) {
 		k_timer_start(&periodic_timer, K_SECONDS(60), K_SECONDS(60));
-		power_for_imu_and_mic();
 		s->imu.dev = DEVICE_DT_GET(DT_NODELABEL(lsm6dso));
-		lsm6dso_init(DEVICE_DT_GET(DT_NODELABEL(lsm6dso)));
 		register_imu_funsion_context(&s->imu);
 		register_opt3007_context(&s->opt3007_context);
 	} else if (s->is_master == 2) {
-		power_for_imu_and_mic();
 		s->imu.dev = DEVICE_DT_GET(DT_NODELABEL(lsm6dso));
-		lsm6dso_init(DEVICE_DT_GET(DT_NODELABEL(lsm6dso)));
 	}
 	register_jdb_panel_context(&s->panel);
 	nfc_init();

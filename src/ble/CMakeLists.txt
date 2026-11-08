@@ -5,5 +5,4 @@ target_sources(app PRIVATE
   ble_ancs.c
   ble_proto.c
   smp_bt.c
-  bt_hci_stock.c
 )
