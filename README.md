@@ -6,7 +6,7 @@ Unofficial opensource FW for the Even Realities G1 Smart glasses. This project a
 
 The build is setup to produce a `dfu_application.zip` in the `build`. This is the standard Over The Air image that can be flashed to the glasses over Bluetooth.
 
-Current nRF Connect SDK: 2.5.1
+Current nRF Connect SDK: 2.6.0
 
 ### VSCode
 
