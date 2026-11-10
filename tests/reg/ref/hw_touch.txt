@@ -1,0 +1,80 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  10.162 master frame 3d69dea9fa62
+  10.196 slave  frame 3d69dea9fa62
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.280 master ATT MTU 251
+  12.550 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.550 slave  pairing: started
+  12.670 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.670 master pairing: started
+  13.060 slave  pairing: complete, link encrypted, bonded
+  13.120 slave  tx 2C 01
+  13.120 slave  tx 4D FB
+  13.180 master pairing: complete, link encrypted, bonded
+  13.180 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.210 master tx 2C 01
+  13.210 master tx 4D FB
+  13.210 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.300 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  13.720 master audio
+  13.720 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.810 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.867 slave  frame aa1b7ae4d9c4
+  13.868 master frame aa1b7ae4d9c4
+  14.950 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  15.120 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.460 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.670 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  18.720 master rx 22 08 00 00 02 00 00 01
+  21.770 master audio end
+  21.830 master rx F5 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.870 slave  rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.936 slave  frame 63a497994321
+  21.948 master frame 63a497994321
+  21.980 master rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  23.000 master tx 26 06 00 00 05 04
+  23.030 master rx 26 06 00 00 05 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.000 master audio
+  26.277 master frame aa1b7ae4d9c4
+  26.277 slave  frame aa1b7ae4d9c4
+  26.290 master rx F5 1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.300 slave  rx F5 1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.330 master rx 22 0A 00 00 01 00 00 00 00 01
+  27.970 master rx 22 0A 00 00 01 00 00 00 00 01
+  28.870 master rx F5 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  28.920 master ~audio end
+  29.006 slave  frame 63a497994321
+  29.050 slave  rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  29.056 master frame 63a497994321
+  29.080 master rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  32.050 master rx F5 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  32.841 slave  frame e831e498d89f
+  32.846 master frame e831e498d89f
+  33.865 slave  frame 63a497994321
+  33.899 master frame 63a497994321
+  34.020 master tx 2B
+  34.030 slave  tx 2B
+  34.050 master rx 2B 69 0C 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  34.060 slave  rx 2B 69 0C 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  37.020 master rx F5 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  37.624 master frame 84258d9dcb50
+  37.627 slave  frame 84258d9dcb50
+  37.860 master rx F5 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  38.738 slave  frame 63a497994321
+  38.746 master frame 63a497994321
+  39.020 master tx 2B
+  39.030 slave  tx 2B
+  39.050 master rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  39.060 slave  rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  40.560 slave  rx F5 17 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  41.380 master ~audio
+  43.550 slave  rx F5 18 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  45.970 master audio end

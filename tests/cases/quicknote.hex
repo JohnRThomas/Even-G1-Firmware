@@ -1,0 +1,11 @@
+# Quick Note Control (0x1E)
+# record_info
+1e, 06 00, 16, 01, 01
+# record_download
+1e, 06 00, 1c, 02, 01
+# record_delete
+1e, 06 00, 1d, 04, 01
+# quicknote_add
+1e, 20 00, 11, 03, 01 00, 01 00, 01, 01, 0c, 74 65 73 74 69 6e 67 20 59 6f 75 72, 06 00, 4f 68 20 77 6f 77
+# quicknote_empty_slot1
+1e, 10 00, 0f, 03, 01 00, 01 00, 01, 00, 01, 00, 01 00, 00

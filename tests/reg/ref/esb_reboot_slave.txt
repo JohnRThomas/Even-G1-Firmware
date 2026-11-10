@@ -1,0 +1,62 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  10.162 master frame 3d69dea9fa62
+  10.196 slave  frame 3d69dea9fa62
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.280 master ATT MTU 251
+  12.550 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.550 slave  pairing: started
+  12.670 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.670 master pairing: started
+  13.060 slave  pairing: complete, link encrypted, bonded
+  13.120 slave  tx 2C 01
+  13.120 slave  tx 4D FB
+  13.180 master pairing: complete, link encrypted, bonded
+  13.180 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.210 master tx 2C 01
+  13.210 master tx 4D FB
+  13.210 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.300 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  13.720 master audio
+  13.720 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.810 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.867 slave  frame aa1b7ae4d9c4
+  13.868 master frame aa1b7ae4d9c4
+  14.950 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  15.120 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.460 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.670 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  18.000 slave  tx 23 72
+  18.120 slave  link dropped: the lens was reset
+  18.140 slave  boot app
+  18.150 slave  boot net
+  18.603 slave  frame 63a497994321
+  19.590 slave  connected to F2:65:0B:5B:EB:85
+  19.680 slave  ATT MTU 251
+  19.860 slave  link encrypted with the bond's key
+  20.310 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  20.340 slave  tx 2C 01
+  20.340 slave  tx 4D FB
+  20.400 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  20.400 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.010 master tx 2C 01
+  22.040 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  29.120 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  30.020 slave  tx 2C 01
+  30.050 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  30.410 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  32.010 master tx 2C 01
+  32.050 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  32.860 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  40.050 slave  tx 2C 01
+  40.080 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  42.020 master tx 2C 01
+  42.050 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  49.990 master audio end

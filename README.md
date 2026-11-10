@@ -4,7 +4,7 @@ Unofficial opensource FW for the Even Realities G1 Smart glasses. This project a
 
 ## Building
 
-The build is setup to produce a `dfu_application.zip` in the `build`. This is the standard Over The Air image that can be flashed to the glasses over Bluetooth.
+The build is setup to produce a `dfu_application.zip`. This is the standard Over The Air image that can be flashed to the glasses over Bluetooth.
 
 Current nRF Connect SDK: 2.5.1
 
@@ -39,9 +39,35 @@ A [Renode](https://github.com/renode/renode) based simulator is available at htt
 
 Run `git submodule update --init tools/simulator`.
 
+Linux:
+```sh
+./tools/simulator/setup.sh
+
+```
+
+Windows:
+```sh
+./tools/simulator/setup.bat
+```
 Then follow the directions here: https://github.com/JohnRThomas/Even-G1-Simulator
 
-> TODO: how to run unit and regression tests.
+### Regression Tests
+
+Regression tests are under tests/reg and they utilize the renode simulator. The current tests exercise the G1 ble protocol ripped from the Android APK. Since the current firmware is built to be compatible with the Official G1 app, passing this suite should keep the glasses more or less compatible.
+
+To run the regression tests, first setup the simulator, then:
+```sh
+python3 tests/reg/run.py
+```
+
+### Unit Tests
+
+Unit tests are under tests/unit and they utilize [Zephyr Native Sim](https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html) to mock the hardware and run specific tests on different parts of the firmware. Based of the dependance on native_sim, the unit tests can only be run on Linux and Mac and are not compatible with Windows.
+
+Run:
+```sh
+tests/unit/run.sh
+```
 
 ## Contributing
 

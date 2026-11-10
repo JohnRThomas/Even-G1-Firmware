@@ -1,0 +1,161 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.280 master ATT MTU 251
+  12.550 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.550 slave  pairing: started
+  12.670 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.670 master pairing: started
+  13.060 slave  pairing: complete, link encrypted, bonded
+  13.120 slave  tx 2C 01
+  13.120 slave  tx 4D FB
+  13.180 master pairing: complete, link encrypted, bonded
+  13.180 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.210 master tx 2C 01
+  13.210 master tx 4D FB
+  13.210 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.300 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  13.630 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.720 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  14.860 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  14.910 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.340 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.430 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.010 master tx 3E
+  20.010 slave  tx 37
+  20.070 slave  rx 37 37 .. .. .. .. 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.420 master tx 37
+  20.430 slave  tx 23 74
+  20.450 master rx 37 37 .. .. .. .. 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.460 slave  rx 'net build time: <date>, app build time <date>, ver 1.6.6, JBD DeviceID 4010\n\r' (200 B)
+  20.810 master tx 23 74
+  20.820 slave  tx 39 05 00 02 01
+  20.850 slave  rx 39 05 00 02 01 00
+  20.870 master rx 'net build time: <date>, app build time <date>, ver 1.6.6, JBD DeviceID 4010\n\r' (200 B)
+  21.200 master tx 39 05 00 02 01
+  21.210 slave  tx 39 05 00 04 01
+  21.230 master rx 39 05 00 02 01 00
+  21.270 slave  rx 39 05 00 04 01 00
+  21.620 master tx 39 05 00 04 01
+  21.630 slave  tx 2B
+  21.650 master rx 39 05 00 04 01 00
+  21.660 slave  rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.010 master tx 29
+  22.020 slave  tx 2C 01
+  22.050 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  22.070 master rx 29 65 15 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.400 master tx 2B
+  22.410 slave  tx 26 08 00 00 02 00 03 03
+  22.430 master rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.470 slave  rx 26 06 00 00 02 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.820 master tx 2C 01
+  22.820 slave  tx 06 07 00 08 06 01 01
+  22.850 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  22.850 slave  rx 06 07 00 08 06 00
+  23.210 master tx 3B
+  23.210 slave  tx 06 16 00 09 01 4E F5 14 69 0D 3A DE 79 9A 01 00 00 FF FF 01 01 00
+  23.240 slave  rx 06 16 00 09 01 00
+  23.270 master rx 3B C9 03 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  23.630 master tx 26 08 00 00 02 00 03 03
+  23.660 master rx 26 06 00 00 02 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  24.020 master tx 06 07 00 08 06 01 01
+  24.050 master rx 06 07 00 08 06 00
+  24.410 master tx 06 16 00 09 01 4E F5 14 69 0D 3A DE 79 9A 01 00 00 FF FF 01 01 00
+  24.470 master rx 06 16 00 09 01 00
+  24.830 master tx 22 05 00 0A 01
+  24.860 master rx 22 05 00 0A 01 00 01 00
+  26.030 master tx 29
+  26.030 slave  tx 2B
+  26.060 master rx 29 65 15 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.060 slave  rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.410 master tx 2B
+  26.420 slave  tx 2C 01
+  26.440 master rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.450 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  26.800 master tx 2C 01
+  26.810 slave  tx 06 07 00 0B 06 01 01
+  26.860 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  26.870 slave  rx 06 07 00 0B 06 00
+  27.220 master tx 06 07 00 0B 06 01 01
+  27.230 slave  tx 06 16 00 0C 01 52 F5 14 69 AD 49 DE 79 9A 01 00 00 FF FF 01 01 00
+  27.250 master rx 06 07 00 0B 06 00
+  27.260 slave  rx 06 16 00 0C 01 00
+  27.610 master tx 06 16 00 0C 01 52 F5 14 69 AD 49 DE 79 9A 01 00 00 FF FF 01 01 00
+  27.670 master rx 06 16 00 0C 01 00
+  28.000 master tx 22 05 00 0D 01
+  28.030 master rx 22 05 00 0D 01 00 01 00
+  29.020 master tx 1E 10 00 0F 03 01 00 01 00 01 00 01 00 01 00 00
+  29.020 slave  tx 1E 10 00 0F 03 01 00 01 00 01 00 01 00 01 00 00
+  29.050 master rx 1E 10 00 0F 03 01 00 01 00 00
+  29.050 slave  rx 1E 10 00 0F 03 01 00 01 00 00
+  29.410 master tx 1E 10 00 10 03 01 00 01 00 02 00 01 00 01 00 00
+  29.410 slave  tx 1E 10 00 10 03 01 00 01 00 02 00 01 00 01 00 00
+  29.440 slave  rx 1E 10 00 10 03 01 00 01 00 00
+  29.470 master rx 1E 10 00 10 03 01 00 01 00 00
+  29.800 slave  tx 1E 10 00 11 03 01 00 01 00 03 00 01 00 01 00 00
+  29.830 master tx 1E 10 00 11 03 01 00 01 00 03 00 01 00 01 00 00
+  29.860 master rx 1E 10 00 11 03 01 00 01 00 00
+  29.860 slave  rx 1E 10 00 11 03 01 00 01 00 00
+  30.220 master tx 1E 10 00 12 03 01 00 01 00 04 00 01 00 01 00 00
+  30.220 slave  tx 1E 10 00 12 03 01 00 01 00 04 00 01 00 01 00 00
+  30.250 master rx 1E 10 00 12 03 01 00 01 00 00
+  30.250 slave  rx 1E 10 00 12 03 01 00 01 00 00
+  30.610 master tx 1E 06 00 16 01 01
+  30.670 master rx 1E 06 00 00 01 00
+  31.510 master tx 39 05 00 17 01
+  31.510 slave  tx 39 05 00 17 01
+  31.570 master rx 39 05 00 17 01 00
+  31.570 slave  rx 39 05 00 17 01 00
+  31.930 master tx 32
+  31.930 slave  tx 3A
+  31.960 master rx '2m' (20 B)
+  31.960 slave  rx 3A C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  32.310 master tx 3A
+  32.340 master rx 3A C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  32.700 master tx 2A
+  32.760 master rx 2A 68 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  34.020 master tx 3D 06 00 1A 01 02
+  34.030 slave  tx 3D 06 00 1A 01 02
+  34.050 master rx 3D 06 00 1A 01 02
+  34.060 slave  rx 3D 06 00 1A 01 02
+  34.410 master tx 3D 06 00 1B 01 02
+  34.420 slave  tx 3D 06 00 1B 01 02
+  34.450 slave  rx 3D 06 00 1B 01 02
+  34.470 master rx 3D 06 00 1B 01 02
+  36.000 slave  tx 04 02 00 7B 22 63 61 6C 65 6E 64 61 72 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 63 61 6C 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 6D 73 67 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 69 6F 73 5F 6D 61 69 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 61 70 70 22 3A 7B 22 6C 69 73 74 22 3A 5B 7B 22 69 64 22 3A 22 6E 6F 64 6F 6D 61 69 6E 2E 66 72 65 65 79 6F 75 72 67 61 64 67 65 74 2E 67 61 64 67 65 74 62 22 2C 22 6E 61 6D 65 22 3A 22 47 61 64 67 65 74 62 72 69 64 67 65 22 7D 2C 7B 22 69 64 22 3A 22 63 6F 6D 2E 64 69 73 63
+  36.030 master tx 32
+  36.060 master rx '2m' (20 B)
+  36.060 slave  rx 04 CB
+  36.420 master tx 0B 14 01
+  36.420 slave  tx 04 02 01 6F 72 64 22 2C 22 6E 61 6D 65 22 3A 22 44 69 73 63 6F 72 64 22 7D 2C 7B 22 69 64 22 3A 22 63 6F 6D 2E 67 6F 6F 67 6C 65 2E 61 6E 64 72 6F 69 64 2E 67 6D 22 2C 22 6E 61 6D 65 22 3A 22 47 6D 61 69 6C 22 7D 5D 2C 22 65 6E 61 62 6C 65 22 3A 74 72 75 65 7D 7D
+  36.450 master rx 0B C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  36.720 slave  rx 04 C9
+  36.810 master tx 4F 01 06
+  36.810 slave  tx 3C
+  36.870 master rx 4F C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  36.870 slave  rx 3C C9 00 0F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  37.200 slave  tx 4F 01 06
+  37.230 master tx 26 06 00 00 08 01
+  37.230 slave  rx 4F C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  37.260 master rx 26 06 00 00 08 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  37.620 master tx 08 06 00 00 04 00
+  37.650 master rx 08 06 00 00 04 00
+  38.010 master tx 3F 05
+  38.070 master rx 3F 05 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  38.420 master tx 3F 07
+  38.450 master rx 3F 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  40.000 master ?sysbus.vcentral AttMtu = 0x000000FB
+  40.000 master ?sysbus.vcentral Bonded = True
+  40.000 master ?sysbus.vcentral Connected = True
+  40.000 master ?sysbus.vcentral Encrypted = True
+  40.000 slave  ?sysbus.vcentral AttMtu = 0x000000FB
+  40.000 slave  ?sysbus.vcentral Bonded = True
+  40.000 slave  ?sysbus.vcentral Connected = True
+  40.000 slave  ?sysbus.vcentral Encrypted = True

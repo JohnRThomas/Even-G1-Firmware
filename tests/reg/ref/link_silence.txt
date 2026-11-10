@@ -1,0 +1,48 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.280 master ATT MTU 251
+  12.550 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.550 slave  pairing: started
+  12.670 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.670 master pairing: started
+  13.060 slave  pairing: complete, link encrypted, bonded
+  13.120 slave  tx 2C 02
+  13.120 slave  tx 4D FB
+  13.180 master pairing: complete, link encrypted, bonded
+  13.180 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.210 master tx 2C 01
+  13.210 master tx 4D FB
+  13.210 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.300 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  13.630 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.720 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  14.860 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  14.910 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.340 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.430 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  43.880 master disconnected: the lens closed the link (reason 0x13)
+  45.890 master connected to E9:A4:9E:29:70:D9
+  46.010 master ATT MTU 251
+  46.190 master link encrypted with the bond's key
+  46.610 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  48.010 master tx 4D FB
+  48.070 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  48.370 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  48.870 master ~rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  51.410 master ~rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  63.000 master ?sysbus.vcentral AttMtu = 0x000000FB
+  63.000 master ?sysbus.vcentral Bonded = True
+  63.000 master ?sysbus.vcentral Connected = True
+  63.000 master ?sysbus.vcentral Encrypted = True
+  63.000 slave  ?sysbus.vcentral AttMtu = 0x000000FB
+  63.000 slave  ?sysbus.vcentral Bonded = True
+  63.000 slave  ?sysbus.vcentral Connected = True
+  63.000 slave  ?sysbus.vcentral Encrypted = True

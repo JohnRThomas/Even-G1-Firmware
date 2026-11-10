@@ -1,0 +1,71 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.280 master ATT MTU 251
+  12.550 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.550 slave  pairing: started
+  12.670 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.670 master pairing: started
+  13.060 slave  pairing: complete, link encrypted, bonded
+  13.120 slave  tx 2C 01
+  13.120 slave  tx 4D FB
+  13.180 master pairing: complete, link encrypted, bonded
+  13.180 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.210 master tx 06 07 00 05 06 01 00
+  13.210 master tx 06 16 00 06 01 F0 7E 14 69 80 D9 0F 78 9A 01 00 00 10 14 00 00 00
+  13.210 master tx 2C 01
+  13.210 master tx 4D FB
+  13.210 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.300 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 06 07 00 05 06 00
+  13.330 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  13.360 master rx 06 16 00 06 01 00
+  13.630 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.720 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  14.860 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  14.910 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.310 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.430 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.930 master rx F5 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.110 master audio
+  21.258 slave  frame 4686b2f399fa
+  21.300 slave  rx F5 1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.320 master rx F5 1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.330 master rx 22 0A 00 00 01 00 00 01 00 01
+  21.456 master frame a8b5c8fb599c
+  22.010 master tx 2C 01
+  22.020 slave  tx 2C 01
+  22.050 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  22.070 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  22.850 master rx 22 0A 00 00 01 00 00 01 00 01
+  26.030 master tx 4E 07 01 00 71 00 00 01 01 54 65 78 74 20 73 65 6E 74 20 74 6F 20 74 68 65 20 6D 61 73 74 65 72 20 6C 65 6E 73 20 6F 6E 6C 79 2E
+  26.210 master rx 4E C9 07 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.210 master rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.424 master frame a6224d196114
+  32.020 master tx 2C 01
+  32.020 slave  tx 2C 01
+  32.050 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  32.050 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  33.000 master tx 18
+  33.030 master rx 18 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  33.060 master rx F5 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  33.192 master frame 63a497994321
+  33.453 slave  frame 63a497994321
+  33.520 slave  rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  34.050 master rx F5 1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  34.060 master rx 22 0A 00 00 01 00 00 01 00 01
+  34.161 slave  frame 4686b2f399fa
+  34.210 slave  rx F5 1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  34.402 master frame a8b5c8fb599c
+  35.670 master rx 22 0A 00 00 01 00 00 01 00 01
+  37.020 master tx 4A 02
+  37.050 master rx 4A C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  37.113 slave  frame 735b14cbcb74
+  38.167 slave  frame 4686b2f399fa
+  45.970 master audio end

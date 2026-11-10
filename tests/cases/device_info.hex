@@ -1,0 +1,9 @@
+# Device Info (0x2D, 0x33, 0x34, 0x35)
+# mac_get
+2d
+# glasses_sn_get
+33
+# device_sn_get
+34
+# esb_channel_get
+35

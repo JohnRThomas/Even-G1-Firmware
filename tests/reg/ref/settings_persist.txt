@@ -1,0 +1,181 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  10.162 master frame 3d69dea9fa62
+  10.196 slave  frame 3d69dea9fa62
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.280 master ATT MTU 251
+  12.550 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.550 slave  pairing: started
+  12.670 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.670 master pairing: started
+  13.060 slave  pairing: complete, link encrypted, bonded
+  13.120 slave  tx 2C 01
+  13.120 slave  tx 4D FB
+  13.180 master pairing: complete, link encrypted, bonded
+  13.180 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.210 master tx 2C 01
+  13.210 master tx 4D FB
+  13.210 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.300 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  13.720 master audio
+  13.720 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.810 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.867 slave  frame aa1b7ae4d9c4
+  13.868 master frame aa1b7ae4d9c4
+  14.950 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  15.120 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.460 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.670 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  18.000 slave  tx 29
+  18.030 master tx 29
+  18.060 master rx 29 65 15 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  18.060 slave  rx 29 65 15 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  18.420 master tx 32
+  18.420 slave  tx 32
+  18.450 master rx '2m' (20 B)
+  18.450 slave  rx '2m' (20 B)
+  18.810 master tx 2B
+  18.810 slave  tx 2B
+  18.870 master rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  18.870 slave  rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  19.200 slave  tx 3A
+  19.230 master tx 3A
+  19.230 slave  rx 3A C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  19.260 master rx 3A C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  19.620 master tx 3F 05
+  19.620 slave  tx 3F 05
+  19.650 master rx 3F 05 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  19.650 slave  rx 3F 05 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.010 master tx 3F 07
+  20.010 slave  tx 3F 07
+  20.070 master rx 3F 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.070 slave  rx 3F 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.420 master tx 3F 08
+  20.430 slave  tx 3F 08
+  20.450 master rx 3F 08 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  20.460 slave  rx 3F 08 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.020 master tx 01 10 00
+  21.030 slave  tx 03 0C 00
+  21.050 master rx 01 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.060 slave  rx 03 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.410 master tx 0B 28 01
+  21.420 slave  tx 27 01
+  21.450 slave  rx 27 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.470 master audio end
+  21.470 master rx 0B C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.480 master rx F5 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.597 master frame 63a497994321
+  21.603 slave  frame 63a497994321
+  21.620 master rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.660 slave  rx F5 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  21.800 master tx 03 0C 00
+  21.830 master rx 03 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.220 master tx 27 01
+  22.250 master rx 27 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.610 master tx 26 06 00 20 05 02
+  22.670 master rx 26 06 00 20 05 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.858 master frame e831e498d89f
+  22.884 slave  frame e831e498d89f
+  23.000 master tx 26 06 00 21 07 01
+  23.030 master rx 26 06 00 21 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  23.420 master tx 26 06 00 22 08 01
+  23.450 master rx 26 06 00 22 08 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  23.861 slave  frame 63a497994321
+  23.898 master frame 63a497994321
+  25.010 master tx 29
+  25.010 slave  tx 29
+  25.070 master rx 29 65 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  25.070 slave  rx 29 65 10 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  25.400 slave  tx 32
+  25.430 master tx 32
+  25.430 slave  rx '2m' (20 B)
+  25.460 master rx 32 6D 28 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  25.820 master tx 2B
+  25.820 slave  tx 2B
+  25.850 master rx 2B 69 0C 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  25.850 slave  rx 2B 69 0C 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.200 master tx 3A
+  26.210 slave  tx 3A
+  26.270 master rx 3A C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.270 slave  rx 3A C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.620 master tx 3F 05
+  26.630 slave  tx 3F 05
+  26.650 master rx 3F 05 C9 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.660 slave  rx 3F 05 C9 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  27.010 master tx 3F 07
+  27.020 slave  tx 3F 07
+  27.050 slave  rx 3F 07 C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  27.070 master rx 3F 07 C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  27.400 master tx 3F 08
+  27.410 slave  tx 3F 08
+  27.430 master rx 3F 08 C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  27.470 slave  rx 3F 08 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  36.010 master link dropped: the lens was reset
+  36.010 slave  link dropped: the lens was reset
+  36.030 master boot app
+  36.040 master boot net
+  36.040 slave  boot app
+  36.040 slave  boot net
+  37.370 master connected to E9:A4:9E:29:70:D9
+  37.460 master ATT MTU 251
+  37.460 slave  connected to F2:65:0B:5B:EB:85
+  37.550 slave  ATT MTU 251
+  37.670 master link encrypted with the bond's key
+  37.730 slave  link encrypted with the bond's key
+  38.150 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  38.180 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  38.180 slave  tx 4D FB
+  38.210 master tx 4D FB
+  38.210 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  38.270 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  45.000 master ?sysbus.twim1.npm1300 WatchdogResetCount = 0x00000001
+  45.000 slave  ?sysbus.twim1.npm1300 WatchdogResetCount = 0x00000001
+  46.980 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  46.980 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  48.270 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  48.270 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  50.730 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  50.820 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  52.010 master tx 29
+  52.020 slave  tx 29
+  52.070 master rx 29 65 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  52.080 slave  rx 29 65 10 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  52.400 master tx 32
+  52.410 slave  tx 32
+  52.430 master rx 32 6D 28 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  52.440 slave  rx '2m' (20 B)
+  52.820 master tx 2B
+  52.820 slave  tx 2B
+  52.850 master rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  52.850 slave  rx 2B 69 0A 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  53.210 master tx 3A
+  53.210 slave  tx 3A
+  53.270 master rx 3A C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  53.270 slave  rx 3A C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  53.600 master tx 3F 05
+  53.600 slave  tx 3F 05
+  53.630 master rx 3F 05 C9 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  53.630 slave  rx 3F 05 C9 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  54.020 master tx 3F 07
+  54.020 slave  tx 3F 07
+  54.050 master rx 3F 07 C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  54.050 slave  rx 3F 07 C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  54.410 master tx 3F 08
+  54.410 slave  tx 3F 08
+  54.470 master rx 3F 08 C9 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  54.470 slave  rx 3F 08 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  57.000 master ?sysbus.vcentral AttMtu = 0x000000FB
+  57.000 master ?sysbus.vcentral Bonded = True
+  57.000 master ?sysbus.vcentral Connected = True
+  57.000 master ?sysbus.vcentral Encrypted = True
+  57.000 slave  ?sysbus.vcentral AttMtu = 0x000000FB
+  57.000 slave  ?sysbus.vcentral Bonded = True
+  57.000 slave  ?sysbus.vcentral Connected = True
+  57.000 slave  ?sysbus.vcentral Encrypted = True

@@ -1,0 +1,8 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.334 slave  frame 63a497994321
+   0.360 master frame 63a497994321
+ 174.000 master ?sysbus.twim1.npm1300 WatchdogResetCount = 0x00000000
+ 174.000 slave  ?sysbus.twim1.npm1300 WatchdogResetCount = 0x00000001

@@ -1,0 +1,64 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  10.162 master frame 3d69dea9fa62
+  10.196 slave  frame 3d69dea9fa62
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.247 master frame 63a497994321
+  12.253 slave  frame 63a497994321
+  12.310 master ATT MTU 251
+  12.610 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.610 slave  pairing: started
+  12.700 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.700 master pairing: started
+  13.150 slave  pairing: complete, link encrypted, bonded
+  13.180 slave  tx 2C 01
+  13.180 slave  tx 4D FB
+  13.210 master pairing: complete, link encrypted, bonded
+  13.270 master tx 2C 01
+  13.270 master tx 4D FB
+  13.270 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.270 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.360 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  13.870 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.870 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  15.060 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  15.070 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.010 master tx 07 05 00 00 00 01
+  17.010 slave  tx 07 05 00 00 00 01
+  17.040 slave  rx 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.070 master rx 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.145 master frame ec2c62092c9f
+  17.176 slave  frame ec2c62092c9f
+  17.550 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.670 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  22.010 master tx 2C 01
+  22.020 slave  tx 2C 01
+  22.050 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  22.070 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  22.402 slave  frame a1d54ca83354
+  22.612 master frame a1d54ca83354
+  23.609 master frame 63a497994321
+  26.030 master tx 07 5A 00 00 00 01
+  26.030 slave  tx 07 5A 00 00 00 01
+  26.120 master rx 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.120 slave  rx 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.145 master frame ec2c62092c9f
+  26.195 slave  frame ec2c62092c9f
+  30.010 master tx 07 00 00 00 00 00
+  30.010 slave  tx 07 00 00 00 00 00
+  30.040 slave  rx 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  30.052 master ~frame a1d54ca83354
+  30.058 slave  frame 63a497994321
+  30.070 master rx 07 C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  30.163 master ~frame 63a497994321
+  32.020 master tx 2C 01
+  32.020 slave  tx 2C 01
+  32.050 master rx 2C 66 .. .. F9 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  32.050 slave  rx 2C 66 .. .. F9 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00

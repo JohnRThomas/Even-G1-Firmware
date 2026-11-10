@@ -1,0 +1,24 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.334 slave  frame 63a497994321
+   0.360 master frame 63a497994321
+  10.213 master frame 3d69dea9fa62
+  10.251 slave  frame 3d69dea9fa62
+  15.319 slave  frame 63a497994321
+  15.322 master frame 63a497994321
+  20.500 master ?sysbus.twim1.npm1300 WatchdogResetCount = 0x00000000
+  20.500 master ?sysbus.twim2.lsm6dso AccelerometerEnabled = True
+  20.500 master ?sysbus.twim2.touch CommitWritten = True
+  20.500 master ?sysbus.twim2.touch ConfigWriteCount = 0x0000002D
+  20.500 master ?sysbus.twim2.touch EventsArmed = True
+  20.500 master ?sysbus.twim2.touch MagicWritten = True
+  20.500 master ?sysbus.twim2.touch PressesDelivered = 0x00000000
+  20.500 slave  ?sysbus.twim1.npm1300 WatchdogResetCount = 0x00000000
+  20.500 slave  ?sysbus.twim2.lsm6dso AccelerometerEnabled = False
+  20.500 slave  ?sysbus.twim2.touch CommitWritten = True
+  20.500 slave  ?sysbus.twim2.touch ConfigWriteCount = 0x0000002D
+  20.500 slave  ?sysbus.twim2.touch EventsArmed = True
+  20.500 slave  ?sysbus.twim2.touch MagicWritten = True
+  20.500 slave  ?sysbus.twim2.touch PressesDelivered = 0x00000000

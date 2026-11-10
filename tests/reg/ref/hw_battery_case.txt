@@ -1,0 +1,55 @@
+   0.060 master boot app
+   0.060 slave  boot app
+   0.069 master boot net
+   0.069 slave  boot net
+   0.520 slave  frame 63a497994321
+   0.546 master frame 63a497994321
+  12.070 slave  connected to F2:65:0B:5B:EB:85
+  12.160 slave  ATT MTU 251
+  12.190 master connected to E9:A4:9E:29:70:D9
+  12.280 master ATT MTU 251
+  12.550 slave  Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.550 slave  pairing: started
+  12.670 master Nordic UART Service: write 0x0015, notify 0x0012, notifications on
+  12.670 master pairing: started
+  13.060 slave  pairing: complete, link encrypted, bonded
+  13.120 slave  tx 2C 01
+  13.120 slave  tx 4D FB
+  13.180 master pairing: complete, link encrypted, bonded
+  13.180 slave  rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.210 master tx 2C 01
+  13.210 master tx 4D FB
+  13.210 slave  rx 2C 66 .. .. BD 80 19 00 00 00 01 06 06 00 00 00 00 00 00 00
+  13.300 master rx 4D C9 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  13.330 master rx 2C 66 .. .. BD 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  14.080 master rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  14.170 slave  rx F5 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  15.360 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  15.460 slave  rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  17.970 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  18.060 slave  rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  23.000 master ?sysbus.twim1.npm1300 ChargerStatus = 0x01
+  23.000 master ?sysbus.twim1.npm1300 ChargingEnabled = True
+  26.410 master rx F5 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  26.500 master ?sysbus.twim1.st25dv RfReadMailboxMessage = 13-01-02-06-00-17-70-35-01-27-00
+  27.430 master rx F5 09 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  28.480 master rx F5 0E 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  29.530 master rx F5 0F 37 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  31.030 master tx 23 76
+  31.030 master tx 2C 01
+  31.060 master rx 'B:.., V:389, A:-40, T:25' (200 B)
+  31.060 master rx 2C 66 .. .. BD 58 19 01 06 06 01 06 06 00 00 00 00 00 00 00
+  31.500 master ?sysbus.twim1.npm1300 ChargerStatus = 0x09
+  31.500 master ?sysbus.twim1.npm1300 ChargingEnabled = True
+  33.720 master rx F5 0B 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  35.500 master ?sysbus.twim1.st25dv RfReadMailboxMessage = 13-01-02-06-00-17-70-35-01-27-00
+  38.960 master rx F5 0E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  40.010 master rx F5 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  46.120 master rx F5 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  47.380 master rx F5 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  52.000 master ?sysbus.twim1.npm1300 ChargerStatus = 0x01
+  52.000 master ?sysbus.twim1.npm1300 ChargingEnabled = True
+  53.010 master tx 23 76
+  53.010 master tx 2C 01
+  53.070 master rx 'B:.., V:389, A:0, T:25' (200 B)
+  53.070 master rx 2C 66 .. .. BD 80 19 01 06 06 01 06 06 00 00 00 00 00 00 00
