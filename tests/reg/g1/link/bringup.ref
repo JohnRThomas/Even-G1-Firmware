@@ -1,0 +1,115 @@
+# The phone connects at 12 s and runs the Android app's bring-up on each lens, every request sent once the one before
+# it is answered. Every request must get its answer, and the panels stay blank: the glasses are not worn.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       # the MTU accepted
+       recv(B, "4D C9"),
+       # state and battery
+       recv(B, "2C 66"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state, within 8 s on a good schedule
+       recv(B, "F5 09"),
+       within=8, label="phone_on")
+
+# round 1: the master's requests, then the slave's
+# burial point data: the 286-byte answer does not fit a 251-byte MTU
+# (tools/simulator/README.md), the vendor image did not answer it
+# either and the app goes on without it; nothing asserted
+action(M, send('3E'))
+# uptime
+action(M, send('37'), recv(M, "37 37"))
+# build and version text
+action(M, send('23 74'), recv(M, "'net build time"))
+action(M, send('39 05 00 02 01'), recv(M, "39 05 00 02 01 00"))
+action(M, send('39 05 00 04 01'), recv(M, "39 05 00 04 01 00"))
+# brightness 21, auto
+action(M, send('29'), recv(M, "29 65 15 01"))
+# display mode normal
+action(M, send('2B'), recv(M, "2B 69 0A 06"))
+# state and battery
+action(M, send('2C 01'), recv(M, "2C 66"))
+action(M, send('3B'), recv(M, "3B C9 03 03"))
+# hardware set, sub 2
+action(M, send('26 08 00 00 02 00 03 03'), recv(M, "26 06 00 00 02 C9"))
+# dashboard pane
+action(M, send('06 07 00 08 06 01 01'), recv(M, "06 07 00 08 06 00"))
+# time and weather
+action(M, send('06 16 00 09 01 4E F5 14 69 0D 3A DE 79 9A 01 00 00 FF FF 01 01 00'), recv(M, "06 16 00 09 01 00"))
+# head-up status: nothing unread, no low power
+action(M, send('22 05 00 0A 01'), recv(M, "22 05 00 0A 01 00 01 00"))
+action(S, send('37'), recv(S, "37 37"))
+# debug string "#t": the build time and version, answered as text
+action(S, send('23 74'), recv(S, "'net build time"))
+action(S, send('39 05 00 02 01'), recv(S, "39 05 00 02 01 00"))
+action(S, send('39 05 00 04 01'), recv(S, "39 05 00 04 01 00"))
+action(S, send('2B'), recv(S, "2B 69 0A 06"))
+action(S, send('2C 01'), recv(S, "2C 66"))
+action(S, send('26 08 00 00 02 00 03 03'), recv(S, "26 06 00 00 02 C9"))
+# dashboard layout (sub 6): mode 1, wide pane; pane 1, stocks
+action(S, send('06 07 00 08 06 01 01'), recv(S, "06 07 00 08 06 00"))
+# time and weather (sub 1): 20:59, no weather, 12 h and Fahrenheit
+action(S, send('06 16 00 09 01 4E F5 14 69 0D 3A DE 79 9A 01 00 00 FF FF 01 01 00'), recv(S, "06 16 00 09 01 00"))
+
+# round 2
+action(M, send('29'), recv(M, "29 65 15 01"))
+action(M, send('2B'), recv(M, "2B 69 0A 06"))
+action(M, send('2C 01'), recv(M, "2C 66"))
+# dashboard layout (sub 6): mode 1, wide pane; pane 1, stocks
+action(M, send('06 07 00 0B 06 01 01'), recv(M, "06 07 00 0B 06 00"))
+# time and weather (sub 1): 21:00, no weather, 12 h and Fahrenheit
+action(M, send('06 16 00 0C 01 52 F5 14 69 AD 49 DE 79 9A 01 00 00 FF FF 01 01 00'), recv(M, "06 16 00 0C 01 00"))
+action(M, send('22 05 00 0D 01'), recv(M, "22 05 00 0D 01 00 01 00"))
+action(S, send('2B'), recv(S, "2B 69 0A 06"))
+action(S, send('2C 01'), recv(S, "2C 66"))
+# dashboard layout (sub 6): mode 1, wide pane; pane 1, stocks
+action(S, send('06 07 00 0B 06 01 01'), recv(S, "06 07 00 0B 06 00"))
+# time and weather (sub 1): 21:00, no weather, 12 h and Fahrenheit
+action(S, send('06 16 00 0C 01 52 F5 14 69 AD 49 DE 79 9A 01 00 00 FF FF 01 01 00'), recv(S, "06 16 00 0C 01 00"))
+
+# round 3: the quick note slots, then the settings reads
+action(B, send('1E 10 00 0F 03 01 00 01 00 01 00 01 00 01 00 00'), recv(B, "1E 10 00 0F 03 01 00 01 00 00"))
+action(B, send('1E 10 00 10 03 01 00 01 00 02 00 01 00 01 00 00'), recv(B, "1E 10 00 10 03 01 00 01 00 00"))
+action(B, send('1E 10 00 11 03 01 00 01 00 03 00 01 00 01 00 00'), recv(B, "1E 10 00 11 03 01 00 01 00 00"))
+action(B, send('1E 10 00 12 03 01 00 01 00 04 00 01 00 01 00 00'), recv(B, "1E 10 00 12 03 01 00 01 00 00"))
+action(M, send('1E 06 00 16 01 01'), recv(M, "1E 06 00 00 01 00"))
+action(B, send('39 05 00 17 01'), recv(B, "39 05 00 17 01 00"))
+# head-up angle 0
+action(M, send('32'), recv(M, "32 6D"))
+# wear detection off
+action(B, send('3A'), recv(B, "3A C9 00"))
+action(M, send('2A'), recv(M, "2A 68 01"))
+action(B, send('3D 06 00 1A 01 02'), recv(B, "3D 06 00 1A 01 02"))
+action(B, send('3D 06 00 1B 01 02'), recv(B, "3D 06 00 1B 01 02"))
+
+# round 4: the master's display settings, the slave's notification whitelist
+action(M, send('32'), recv(M, "32 6D"))
+# head-up angle set
+action(M, send('0B 14 01'), recv(M, "0B C9"))
+action(M, send('4F 01 06'), recv(M, "4F C9 01"))
+# hardware set, sub 8
+action(M, send('26 06 00 00 08 01'), recv(M, "26 06 00 00 08 C9"))
+action(M, send('08 06 00 00 04 00'), recv(M, "08 06 00 00 04 00"))
+action(M, send('3F 05'), recv(M, "3F 05 C9 00"))
+action(M, send('3F 07'), recv(M, "3F 07 C9 00"))
+# notification whitelist (Gadgetbridge, Discord, Gmail) in two chunks, chunk 1 (tests/unit/vectors: 0x04_whitelist_chunk1)
+action(S, send('04 02 00 7B 22 63 61 6C 65 6E 64 61 72 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 63 61 6C 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 6D 73 67 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 69 6F 73 5F 6D 61 69 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 61 70 70 22 3A 7B 22 6C 69 73 74 22 3A 5B 7B 22 69 64 22 3A 22 6E 6F 64 6F 6D 61 69 6E 2E 66 72 65 65 79 6F 75 72 67 61 64 67 65 74 2E 67 61 64 67 65 74 62 22 2C 22 6E 61 6D 65 22 3A 22 47 61 64 67 65 74 62 72 69 64 67 65 22 7D 2C 7B 22 69 64 22 3A 22 63 6F 6D 2E 64 69 73 63'), recv(S, "04 CB"))
+# notification whitelist, chunk 2 of 2 (tests/unit/vectors: 0x04_whitelist_chunk2)
+action(S, send('04 02 01 6F 72 64 22 2C 22 6E 61 6D 65 22 3A 22 44 69 73 63 6F 72 64 22 7D 2C 7B 22 69 64 22 3A 22 63 6F 6D 2E 67 6F 6F 67 6C 65 2E 61 6E 64 72 6F 69 64 2E 67 6D 22 2C 22 6E 61 6D 65 22 3A 22 47 6D 61 69 6C 22 7D 5D 2C 22 65 6E 61 62 6C 65 22 3A 74 72 75 65 7D 7D'), recv(S, "04 C9"))
+action(S, send('3C'), recv(S, "3C C9"))
+action(S, send('4F 01 06'), recv(S, "4F C9 01"))
+
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+display(B, blank)
+link_up()

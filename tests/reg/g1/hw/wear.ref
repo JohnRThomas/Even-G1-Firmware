@@ -1,0 +1,34 @@
+# The app switches wear detection on and reads it back, then the glasses are taken off and put on again. They must
+# report each change as an event and in the answer to the state query.
+
+at(12)
+action(B, phone_on(), recv(B, "4D C9"), recv(B, "F5 11"), within=8, label="phone_on")
+# Wear detection on, read back as on.
+action(B, send('27 01'), recv(B, "27 C9"))
+action(B, send('3A'), recv(B, "3A C9 01"))
+# Taken off: not worn on both lenses; 0x2B reports display mode 0x0A, wear event 07.
+wait(3.5)
+action(B, "sysbus.radio RssiSample 30", recv(B, "F5 07"))
+action(B, send('2B'), recv(B, "2B 69 0A 07"))
+# Put on again: worn on both lenses; 0x2B reports wear event 06.
+wait(1.5)
+action(B, "sysbus.radio RssiSample 60", recv(B, "F5 06"))
+action(B, send('2B'), recv(B, "2B 69 0A 06"))
+
+# The links are still up at the end.
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# never worn with the head up: the panels stay blank
+display(B, blank)
+# the charging state, once per lens
+recv(B, "F5 09")
+# Worn is reported exactly twice per lens over the run: once after the phone connects (the rest pose counts
+# as worn), once when put on again.
+recv(B, "F5 06", count=2)

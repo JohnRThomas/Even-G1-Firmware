@@ -1,0 +1,55 @@
+# With the glasses worn and the phone on, the app sends the reboot command to the slave. The slave must reboot, take
+# the phone's reconnection with the bond's key and report the link once it is bound to the master again, with the
+# master not disturbed.
+
+action(B, gesture("don"),
+       # dashboard before any phone: clock unsynced, Bluetooth mark
+       display(B, settles_to("dashboard_unpaired")),
+       within=6)
+
+at(8.7)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "4D C9"),
+       recv(B, "2C 66"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state
+       recv(B, "F5 09"),
+       # the dashboard (worn, phone connected) on both lenses ...
+       display(B, shows("dashboard")),
+       # ... and the master streams the head-up microphone while it is up
+       audio(M),
+       within=8, label="phone_on")
+
+# "#r" reboots the slave: the link drops, both cores boot, the panel is cleared, the phone reconnects with
+# the bond's key
+# debug string "#r": reboot the lens
+action(S, send('23 72'),
+       event(S, "link dropped: the lens was reset"),
+       event(S, "boot app"),
+       event(S, "boot net"),
+       display(S, blank),
+       event(S, "connected to"),
+       event(S, "link encrypted with the bond's key"),
+       event(S, "Nordic UART Service: write"),
+       within=4, label="#r")
+# reported once the slave is bound to the master again
+expect(recv(S, "F5 11"), recv(S, "F5 06"), within=12)
+# the charging state too, once bound (2.5 s after the 0x2C seen);
+action(S, send('2C 01'), recv(S, "2C 66"), recv(S, "F5 09"), within=5)
+                                                                      # the slave's panel stays blank after its reboot (the master does not redraw it)
+
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1, lens=M)
+# one reboot of the slave, no more
+never("boot", after=("#r", 1))
+link_up()

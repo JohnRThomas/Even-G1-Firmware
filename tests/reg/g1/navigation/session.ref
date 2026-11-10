@@ -1,0 +1,101 @@
+# The app runs a navigation session with init, 20 sync packets to the master, the trip status, the overview map and
+# the panoramic map to both lenses, arrival and exit. The glasses must show the matching screen at each step.
+
+# the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
+# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# keep-alive is sent by the lines below
+action(B, gesture("don"))
+action(B, gesture("head_down"))
+at(12)
+action(B, phone_on(hb=0),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # the link event once per lens (link_up times it)
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# init (sub 0): header echoed with status 0
+# navigation init (sub 0) (tests/unit/vectors: 0x0a_init)
+action(B, send('0A 06 00 6D 00 01'), recv(B, "0A 06 00 6D 00 00"), within=1)
+# the 20 sync packets (sub 4) are each echoed by the master (the ones sent during the
+# panoramic transfer are plain sends, counted by the whole-run assert at the end)
+action(M, send('0A 06 00 20 04 01'), recv(M, "0A 06 00 20 04"), within=0.5)
+# trip status (sub 1): header echoed with status 0; "Your route is being generated..." comes up (its arrow
+# icon animates at 1 Hz)
+# navigation trip status (sub 1): 15 min, 5km, "Easy Street", 111m, 0.0km/h (tests/unit/vectors: 0x0a_trip_status)
+action(B, send('0A 2F 00 75 01 03 D3 00 7B 00 31 35 20 6D 69 6E 00 35 6B 6D 00 45 61 73 79 20 53 74 72 65 65 74 20 00 31 31 31 6D 00 30 2E 30 6B 6D 2F 68 00'),
+       recv(B, "0A 2F 00 75 01 00"),
+       # navigation "Your route is being generated..."
+       display(B, shows("nav_route_pending")),
+       within=1)
+action(M, send('0A 06 00 21 04 03'), recv(M, "0A 06 00 21 04"), within=0.5)
+# overview map (sub 2), 50 ms between chunks: the first and the last chunk are acknowledged (the first
+# chunk is its own action: an action's asserts look from the end of its input list on)
+action(B, buf('nav_overview_map', 1),
+       recv(B, "0A C2 00 78 02 03"), within=0.5)
+action(B, [0.05, buf('nav_overview_map', 2)])
+action(B, [0.05, buf('nav_overview_map', 3)],
+       recv(B, "0A B7 00 7A 02 03"), within=1)
+# panoramic map (sub 3), 40 ms between chunks: the first chunk is acknowledged at once, the last when the
+# transfer is complete, and then both lenses show the map
+action(M, send('0A 06 00 22 04 05'), recv(M, "0A 06 00 22 04"), within=0.5)
+action(B, buf('nav_panoramic', 1),
+       recv(B, "0A C3 00 81 03 5A"), within=0.5)
+action(B, [0.04, paced(buf('nav_panoramic', 2, 24), 0.04)])
+action(M, send('0A 06 00 23 04 07'))
+action(B, [0.04, paced(buf('nav_panoramic', 25, 48), 0.04)])
+action(M, send('0A 06 00 24 04 09'))
+action(B, [0.04, paced(buf('nav_panoramic', 49, 72), 0.04)])
+# the 10 s keep-alive is answered with the status
+action(B, send('2C 01'), recv(B, "2C 66"))
+action(M, send('0A 06 00 25 04 0B'))
+action(B, [0.04, paced(buf('nav_panoramic', 73, 90), 0.04)],
+       recv(B, "0A 89 00 DA 03 5A"),
+       # navigation map (Easy Street, 15 min 5km)
+       display(B, settles_to("nav_map")),
+       within=3)
+action(M, send('0A 06 00 26 04 0D'), recv(M, "0A 06 00 26 04"), within=0.5)
+action(M, send('0A 06 00 27 04 0F'), recv(M, "0A 06 00 27 04"), within=0.5)
+action(M, send('0A 06 00 28 04 11'), recv(M, "0A 06 00 28 04"), within=0.5)
+action(M, send('0A 06 00 29 04 13'), recv(M, "0A 06 00 29 04"), within=0.5)
+action(M, send('0A 06 00 2A 04 15'), recv(M, "0A 06 00 2A 04"), within=0.5)
+action(M, send('0A 06 00 2B 04 17'), recv(M, "0A 06 00 2B 04"), within=0.5)
+# arrived (sub 6): header echoed, "Navigation Complete" on both lenses for 5 s, then blank
+# navigation arrived (sub 6): "Navigation Complete" (tests/unit/vectors: 0x0a_arrived)
+action(B, send('0A 1A 00 AE 06 02 4E 61 76 69 67 61 74 69 6F 6E 20 43 6F 6D 70 6C 65 74 65 00'),
+       recv(B, "0A 1A 00 AE 06"),
+       # navigation "Navigation Complete"
+       display(B, settles_to("nav_complete")),
+       within=1)
+action(M, send('0A 06 00 2C 04 19'), recv(M, "0A 06 00 2C 04"), within=0.5)
+action(M, send('0A 06 00 2D 04 1B'), recv(M, "0A 06 00 2D 04"), within=0.5)
+action(M, send('0A 06 00 2E 04 1D'), recv(M, "0A 06 00 2E 04"), within=0.5)
+action(B, send('2C 01'), recv(B, "2C 66"))
+action(M, send('0A 06 00 2F 04 1F'), recv(M, "0A 06 00 2F 04"), within=0.5)
+action(M, send('0A 06 00 30 04 21'), recv(M, "0A 06 00 30 04"), within=0.5)
+wait(6.8)
+expect(display(B, blank), within=1)
+action(M, send('0A 06 00 31 04 23'), recv(M, "0A 06 00 31 04"), within=0.5)
+action(M, send('0A 06 00 32 04 25'), recv(M, "0A 06 00 32 04"), within=0.5)
+action(M, send('0A 06 00 33 04 27'), recv(M, "0A 06 00 33 04"), within=0.5)
+# exit (sub 5): header echoed
+# navigation exit (sub 5) (tests/unit/vectors: 0x0a_exit)
+action(B, send('0A 06 00 B2 05 01'), recv(B, "0A 06 00 B2 05"), within=1)
+action(B, send('2C 01'), recv(B, "2C 66"))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# worn (donned before the phone), reported once
+recv(B, "F5 06")
+# the charging state, reported once
+recv(B, "F5 09")
+# no head up ...
+quiet(B, "F5 02")
+# ... head down ...
+quiet(B, "F5 03")
+# ... dashboard close
+quiet(B, "F5 1F")
+# every sync packet echoed
+recv(M, "0A 06 00 .. 04", count=20)

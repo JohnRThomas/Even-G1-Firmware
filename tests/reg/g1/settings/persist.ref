@@ -1,0 +1,129 @@
+# The app changes the settings, reads them back, reboots both lenses with five taps, reconnects and reads them
+# again. What the user set must still be there after the reboot, except silent mode, which a boot leaves off.
+
+at(5)
+action(B, gesture("don"),
+       # dashboard before any phone: clock unsynced, Bluetooth mark
+       display(B, settles_to("dashboard_unpaired")),
+       within=6)
+
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "4D C9"),
+       recv(B, "2C 66"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state (8 s on a clean link, plus one routine 3 s "sync to slave exceed" stall)
+       recv(B, "F5 09"),
+       # dashboard, once the lenses are bound
+       display(B, shows("dashboard")),
+       # the head-up microphone streams while the dashboard is up
+       audio(M),
+       within=11, label="phone_on")
+
+# the settings as shipped
+# brightness 21, auto
+action(B, send('29'), recv(B, "29 65 15 01"))
+# head-up angle 0
+action(B, send('32'), recv(B, "32 6D"))
+# silent mode off
+action(B, send('2B'), recv(B, "2B 69 0A .."))
+# wear detection off
+action(B, send('3A'), recv(B, "3A C9 00"))
+# double tap action
+action(B, send('3F 05'), recv(B, "3F 05 C9 00"))
+# long press off
+action(B, send('3F 07'), recv(B, "3F 07 C9 00"))
+# head-up microphone off
+action(B, send('3F 08'), recv(B, "3F 08 C9 00"))
+
+# the changes, in the app's order: brightness and the head-up angle on the master, silent mode on the slave
+# first, then on the master, wear detection on both, then the master's double tap action, long press and
+# head-up microphone
+# brightness 16, auto off
+action(M, send('01 10 00'), recv(M, "01 C9"))
+# silent mode on, the slave first (nothing shown: the master drives the panels)
+action(S, send('03 0C 00'), recv(S, "03 C9"))
+action(M, send('0B 28 01'),
+       # head-up angle 40: the head is now below it
+       recv(M, "0B C9"),
+       # head down
+       recv(M, "F5 03"),
+       # dashboard closed ...
+       recv(M, "F5 1F"),
+       # ... on the slave too, panels cleared
+       recv(S, "F5 1F"),
+       display(B, shows("blank")))
+# wear detection on
+action(S, send('27 01'), recv(S, "27 C9"))
+action(M, send('03 0C 00'),
+       # silent mode on, the master
+       recv(M, "03 C9"),
+       # "Silent" toast on both, about a second after
+       display(B, shows("silent_on")))
+action(M, send('27 01'), recv(M, "27 C9"))
+# double tap action 2
+action(M, send('26 06 00 20 05 02'), recv(M, "26 06 00 20 05 C9"))
+# long press on
+action(M, send('26 06 00 21 07 01'), recv(M, "26 06 00 21 07 C9"))
+# head-up microphone on
+action(M, send('26 06 00 22 08 01'), recv(M, "26 06 00 22 08 C9"))
+
+# read back; brightness, double tap action and long press are passed to the slave over ESB
+# brightness 16, auto off
+action(B, send('29'), recv(M, "29 65 10 00"), recv(S, "29 65 10"))
+# angle 40 on the master only
+action(B, send('32'), recv(M, "32 6D 28 01"), recv(S, "32 6D"))
+# silent mode on
+action(B, send('2B'), recv(B, "2B 69 0C .."))
+# wear detection on
+action(B, send('3A'), recv(B, "3A C9 01"))
+action(B, send('3F 05'), recv(B, "3F 05 C9 02"))
+action(B, send('3F 07'), recv(B, "3F 07 C9 01"))
+# set on the master only
+action(B, send('3F 08'), recv(M, "3F 08 C9 01"), recv(S, "3F 08 C9 00"))
+
+# the reboot: five taps, the links drop and come back with the bond's key (the boot's clear leaves the
+# already blank panels as they are)
+wait(3.7)
+action(B, taps(5),
+       event(B, "link dropped: the lens was reset"),
+       event(B, "boot app"),
+       event(B, "boot net"),
+       event(B, "connected to"),
+       event(B, "link encrypted with the bond's key"),
+       event(B, "Nordic UART Service: write"),
+       within=4, label="tap5")
+# the app writes the MTU again on the new link
+action(B, send('4D FB'), recv(B, "4D C9"))
+# paired, wear state and charging state reported once bound again
+expect(recv(B, "F5 11"),
+       # still worn
+       recv(B, "F5 06"),
+       recv(B, "F5 09"),
+       within=18)
+# the reboot is a PMIC watchdog reset
+check(B, NPM + "WatchdogResetCount", equals="0x00000001")
+
+# read again after the reboot
+action(B, send('29'), recv(M, "29 65 10 00"), recv(S, "29 65 10"))
+action(B, send('32'), recv(M, "32 6D 28 01"), recv(S, "32 6D"))
+# silent mode is off after a boot
+action(B, send('2B'), recv(B, "2B 69 0A .."))
+action(B, send('3A'), recv(B, "3A C9 01"))
+action(B, send('3F 05'), recv(B, "3F 05 C9 02"))
+action(B, send('3F 07'), recv(B, "3F 07 C9 01"))
+action(B, send('3F 08'), recv(M, "3F 08 C9 01"), recv(S, "3F 08 C9 00"))
+
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+# one reboot, from the five taps, no more
+never("boot", after=("tap5", 3))
+link_up()

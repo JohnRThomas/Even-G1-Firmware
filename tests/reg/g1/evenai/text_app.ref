@@ -1,0 +1,62 @@
+# With the dashboard up, the app runs the Even AI app flow on both lenses with start, answer text, status, exit and
+# stop. Each lens must acknowledge every packet and show the listening screen from the start to the stop, then go
+# blank and reopen the dashboard.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# put on: both worn, the master head up, the dashboard opens on both lenses and the master streams the mic
+wait(0.4)
+action(B, gesture("don"),
+       recv(B, "F5 06"), recv(M, "F5 02"),
+       # dashboard
+       recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M),
+       within=6)
+
+# start: acknowledged by each lens, each closes its dashboard; the Even AI screen comes up on both lenses and
+# stays (animated) through the answer, status and exit packets
+action(S, send('54 08 00 01 01 01 00 00'), recv(S, "54 07 00 01 01 C9 01"), recv(S, "F5 1F"), within=1)
+action(M, send('54 08 00 01 01 01 00 00'), recv(M, "54 07 00 01 01 C9 01"), recv(M, "F5 1F"),
+       # "Even AI listening... Ask me anything"
+       display(B, shows("evenai_listening")), within=1.5)
+
+# the answer text, the two status packets and the exit, acknowledged by each lens
+wait(1.9)
+# Even AI answer (0x54 sub 3): "Paris is the capital of France." (tests/unit/vectors: 0x54_evenai_text)
+action(S, send('54 2B 00 00 03 01 00 01 00 00 00 64 50 61 72 69 73 20 69 73 20 74 68 65 20 63 61 70 69 74 61 6C 20 6F 66 20 46 72 61 6E 63 65 2E'), recv(S, "54 0A 00 00 03 01 00 01 00 C9"), within=1)
+# Even AI answer (0x54 sub 3): "Paris is the capital of France." (tests/unit/vectors: 0x54_evenai_text)
+action(M, send('54 2B 00 00 03 01 00 01 00 00 00 64 50 61 72 69 73 20 69 73 20 74 68 65 20 63 61 70 69 74 61 6C 20 6F 66 20 46 72 61 6E 63 65 2E'), recv(M, "54 0A 00 00 03 01 00 01 00 C9"), within=1)
+wait(2.9)
+action(S, send('55 06 00 01 05 00'), recv(S, "55 07 00 01 05 C9 00"))
+action(M, send('55 06 00 01 05 00'), recv(M, "55 07 00 01 05 C9 00"))
+wait(2.8)
+action(S, send('55 06 00 02 05 00'), recv(S, "55 07 00 02 05 C9 00"))
+action(M, send('55 06 00 02 05 00'), recv(M, "55 07 00 02 05 C9 00"))
+wait(2.9)
+# Even AI exit (0x56 sub 8) (tests/unit/vectors: 0x56_evenai_exit)
+action(S, send('56 06 00 02 08 00'), recv(S, "56 07 00 02 08 00 00"))
+# Even AI exit (0x56 sub 8) (tests/unit/vectors: 0x56_evenai_exit)
+action(M, send('56 06 00 02 08 00'), recv(M, "56 07 00 02 08 00 00"))
+
+# stop: acknowledged, both lenses blank, then the dashboard reopens on both with the mic again
+wait(3.9)
+action(S, send('54 08 00 03 01 00 00 00'), recv(S, "54 07 00 03 01 C9 00"), within=1)
+# blank
+action(M, send('54 08 00 03 01 00 00 00'), recv(M, "54 07 00 03 01 C9 00"), display(B, blank), within=1)
+# dashboard
+expect(recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M), within=6.5)
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard opened twice per lens
+recv(B, "F5 1E", count=2)
+audio(M)

@@ -1,0 +1,88 @@
+# The app opens the Teleprompter with the text, streams positions to the master, moves it, pauses and resumes, then
+# closes it. The glasses must show the matching screen at each step.
+
+# the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
+# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# keep-alive is sent by the lines below
+action(B, gesture("don"))
+action(B, gesture("head_down"))
+at(12)
+action(B, phone_on(hb=0),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # the link event once per lens (link_up times it)
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# open: the firmware echoes the header with status 0; both lenses show the first page, which scrolls on
+# its own one line a second
+# teleprompter open (sub 1) with the text "Teleprompter test text. Line one. / Line two." (tests/unit/vectors: 0x09_teleprompter_init)
+action(B, send('09 3F 00 00 01 01 00 01 00 03 01 00 54 65 6C 65 70 72 6F 6D 70 74 65 72 20 74 65 73 74 20 74 65 78 74 2E 20 4C 69 6E 65 20 6F 6E 65 2E 0A 4C 69 6E 65 20 74 77 6F 2E 0D 3A DE 79 9A 01 00 00'),
+       recv(B, "09 3F 00 00 01 01 00 01 00 00"),
+       # teleprompter page 1
+       display(B, shows("teleprompter_page1")),
+       within=2.5)
+# position packets go to the master only, each echoed (the next one comes 2 s later: a narrow window)
+action(M, send('25 06 00 11 04 01'), recv(M, "25 06 00 11 04"), within=1)
+# teleprompter, scrolled 1 s
+expect(display(B, shows("teleprompter_scrolled_1s")), within=2)
+action(M, send('25 06 00 12 04 02'), recv(M, "25 06 00 12 04"), within=1)
+wait(3)
+# the 10 s keep-alive is answered with the status
+action(B, send('2C 01'), recv(B, "2C 66"))
+action(M, send('25 06 00 13 04 03'), recv(M, "25 06 00 13 04"), within=1)
+
+# move (sub 2): echoed with status 0, the text jumps to the position
+# teleprompter move to a position (sub 2) (tests/unit/vectors: 0x09_teleprompter_position)
+action(B, send('09 10 00 01 02 32 14 00 95 4D DE 79 9A 01 00 00'),
+       recv(B, "09 10 00 01 02 00"),
+       # teleprompter, moved
+       display(B, shows("teleprompter_moved")),
+       within=1)
+action(M, send('25 06 00 14 04 04'), recv(M, "25 06 00 14 04"), within=1)
+
+# pause: echoed, the pause screen is up and stays (nothing is redrawn until the resume)
+action(M, send('25 06 00 15 04 05'), recv(M, "25 06 00 15 04"), within=1)
+# teleprompter pause (0x24 sub 6) (tests/unit/vectors: 0x24_teleprompter_pause)
+action(B, send('24 12 00 03 06 01 7D 51 DE 79 9A 01 00 00 06 00 00 00'),
+       recv(B, "24 12 00 03 06 01"),
+       # teleprompter paused
+       display(B, settles_to("teleprompter_paused")),
+       within=1.5)
+action(M, send('25 06 00 16 04 06'), recv(M, "25 06 00 16 04"), within=1)
+# still paused 2 s later (a running teleprompter scrolls on within 1 s)
+wait(5.5)
+holds(display(B, settles_to("teleprompter_paused")))
+# resume: echoed, the scrolling goes on from where it stopped
+action(B, send('24 12 00 05 06 00 ED 68 DE 79 9A 01 00 00 0A 00 00 00'),
+       recv(B, "24 12 00 05 06 00"),
+       # teleprompter resumed
+       display(B, shows("teleprompter_resumed")),
+       # teleprompter, scrolled on
+       display(B, shows("teleprompter_scrolled_on")),
+       within=2.5)
+action(M, send('25 06 00 17 04 07'), recv(M, "25 06 00 17 04"), within=1)
+action(B, send('2C 01'), recv(B, "2C 66"))
+action(M, send('25 06 00 18 04 08'), recv(M, "25 06 00 18 04"), within=1)
+
+# exit: echoed; both lenses go blank
+# teleprompter exit (sub 5) (tests/unit/vectors: 0x09_teleprompter_exit)
+action(B, send('09 06 00 02 05 01'),
+       recv(B, "09 06 00 02 05 01"), display(B, blank),
+       within=1)
+action(M, send('25 06 00 19 04 09'), recv(M, "25 06 00 19 04"), within=1)
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# worn (donned at 5 s), reported once
+recv(B, "F5 06")
+# the charging state, reported once
+recv(B, "F5 09")
+# no head up ...
+quiet(B, "F5 02")
+# ... head down ...
+quiet(B, "F5 03")
+# ... dashboard close
+quiet(B, "F5 1F")

@@ -1,0 +1,41 @@
+# Once both lenses are paired the app sends them the unpair command. Each lens must acknowledge, forget the bond and
+# close the link, and the phone reconnects and pairs afresh.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "4D C9"),
+       recv(B, "2C 66"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state, within 8 s on a good schedule
+       recv(B, "F5 09"),
+       within=8, label="phone_on")
+
+action(B, send('47'),
+       recv(B, "47 C9"),
+       event(B, "disconnected: the lens closed the link"),
+       event(B, "connected to"),
+       event(B, "pairing: started"),
+       event(B, "the lens has no key for this phone"),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       within=4, label="unpair")
+# paired again
+action(B, send('4D FB'), recv(B, "4D C9"), recv(B, "F5 11"), within=4)
+# a second charging report after the new pairing comes under some seeds and not others
+after("unpair", ignore("F5 09"), within=12)
+action(B, send('2C 01'), recv(B, "2C 66"))
+
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+never("link dropped")
+display(B, blank)
+link_up()

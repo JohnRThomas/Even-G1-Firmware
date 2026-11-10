@@ -1,0 +1,47 @@
+# A long press on the master starts QuickNote and one on the slave starts Even AI. The master must close the
+# dashboard, record a voice note and send its record to the phone, and the slave must report the press held and
+# released.
+
+# Worn before the phone: the dashboard opens on both lenses.
+at(5)
+# dashboard, unpaired
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
+# whole run below).
+action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+
+# Press on the master: QuickNote starts, the dashboard closes on both lenses and the recording
+# animation runs; no F5 for the press.
+wait(8.5)
+action(M, PRESS, recv(B, "F5 1F"), display(B, changes), quiet(B, "F5 17"), within=1.5)
+# Release: the note's record (0x21) goes to the phone; "New Note Saved" shows on both lenses for 4 s
+# and clears again.
+wait(0.5)
+action(M, RELEASE, recv(M, "21 0F 00 00 01 01 01"), within=2)
+# quicknote saved
+expect(display(B, settles_to("note_saved")), within=8)
+wait(0.4)
+# blank again
+expect(display(B, blank), within=4)
+# Press on the slave: Even AI, held, then released.
+action(S, PRESS, recv(S, "F5 17"), within=2)
+wait(2.3)
+action(S, RELEASE, recv(S, "F5 18"), within=1)
+
+# The links are still up at the end.
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# The dashboard is redrawn with the app's clock when the phone connects; being up, the master streams the mic.
+# dashboard
+after("phone_on", display(B, shows("dashboard")), audio(M, 5), within=8)
+# worn, once per lens
+recv(B, "F5 06")
+# the charging state, once per lens
+recv(B, "F5 09")

@@ -1,0 +1,84 @@
+# With the dashboard up, the app sends the pane layout and then the clock with and without weather, in 24 h and 12 h
+# mode. Both lenses must acknowledge each packet and redraw the dashboard.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# put on: both worn, the master head up, the dashboard opens on both lenses and the master streams the mic (F1)
+# while it is up, which the app ignores
+action(B, gesture("don"),
+       recv(B, "F5 06"), recv(M, "F5 02"),
+       # dashboard, "Loading"
+       recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M),
+       within=6)
+
+# pane mode 0 / 0 (QuickNote hint) and the clock without weather, to the slave then the master; then the
+# master's status request
+# dashboard layout (sub 6): mode 0, clock and pane; pane 0, QuickNote; time and weather (sub 1): 14:35, no weather
+action(S, [send('06 07 00 01 06 00 00'), send('06 16 00 02 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 FF FF 00 00 00')], recv(S, "06 07 00 01 06 00"), recv(S, "06 16 00 02 01 00"))
+# dashboard layout (sub 6): mode 0, clock and pane; pane 0, QuickNote; time and weather (sub 1): 14:35, no weather
+action(M, [send('06 07 00 01 06 00 00'), send('06 16 00 02 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 FF FF 00 00 00')], recv(M, "06 07 00 01 06 00"), recv(M, "06 16 00 02 01 00"),
+       # 14:35 Wed 11/12, no weather, QuickNote
+       display(B, settles_to("dashboard_1435_no_weather")), within=1.5)
+action(M, send('22 05 00 1E 01'), recv(M, "22 05 00 1E 01 00 01 00"))
+
+# the weather variants, one after another
+# time and weather (sub 1): 14:35, weather icon 1, 20 C
+action(S, send('06 16 00 03 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 01 14 00 00 00'), recv(S, "06 16 00 03 01 00"))
+# icon 1 (moon), 20 C
+action(M, send('06 16 00 03 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 01 14 00 00 00'), recv(M, "06 16 00 03 01 00"), display(B, settles_to("dashboard_1435")), within=1.5)
+# time and weather (sub 1): 14:35, weather icon 3, 5 C
+action(S, send('06 16 00 04 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 03 05 00 00 00'), recv(S, "06 16 00 04 01 00"))
+# icon 3 (clouds), 5 C
+action(M, send('06 16 00 04 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 03 05 00 00 00'), recv(M, "06 16 00 04 01 00"), display(B, settles_to("dashboard_1435_icon3_5c")), within=1.5)
+# time and weather (sub 1): 14:35, weather icon 5, 12 C
+action(S, send('06 16 00 05 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 05 0C 00 00 00'), recv(S, "06 16 00 05 01 00"))
+# icon 5, 12 C
+action(M, send('06 16 00 05 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 05 0C 00 00 00'), recv(M, "06 16 00 05 01 00"), display(B, settles_to("dashboard_1435_icon5_12c")), within=1.5)
+# time and weather (sub 1): 14:35, weather icon 7, 25 C
+action(S, send('06 16 00 06 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 07 19 00 00 00'), recv(S, "06 16 00 06 01 00"))
+# icon 7, 25 C
+action(M, send('06 16 00 06 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 07 19 00 00 00'), recv(M, "06 16 00 06 01 00"), display(B, settles_to("dashboard_1435_icon7_25c")), within=1.5)
+# time and weather (sub 1): 14:35, weather icon 10, 31 C
+action(S, send('06 16 00 07 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 0A 1F 00 00 00'), recv(S, "06 16 00 07 01 00"))
+# icon 10, 31 C
+action(M, send('06 16 00 07 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 0A 1F 00 00 00'), recv(M, "06 16 00 07 01 00"), display(B, settles_to("dashboard_1435_icon10_31c")), within=1.5)
+# time and weather (sub 1): 14:35, weather icon 13, 0 C
+action(S, send('06 16 00 08 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 0D 00 00 00 00'), recv(S, "06 16 00 08 01 00"))
+# icon 13, 0 C
+action(M, send('06 16 00 08 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 0D 00 00 00 00'), recv(M, "06 16 00 08 01 00"), display(B, settles_to("dashboard_1435_icon13_0c")), within=1.5)
+# time and weather (sub 1): 14:35, weather icon 16, 38 C
+action(S, send('06 16 00 09 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 10 26 00 00 00'), recv(S, "06 16 00 09 01 00"))
+# icon 16, 38 C
+action(M, send('06 16 00 09 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 10 26 00 00 00'), recv(M, "06 16 00 09 01 00"), display(B, settles_to("dashboard_1435_icon16_38c")), within=1.5)
+# icon/temperature 0xFF: acknowledged, the weather shown stays
+action(S, send('06 16 00 0A 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 FF FF 00 00 00'), recv(S, "06 16 00 0A 01 00"))
+# time and weather (sub 1): 14:35, no weather
+action(M, send('06 16 00 0A 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 FF FF 00 00 00'), recv(M, "06 16 00 0A 01 00"))
+# time and weather (sub 1): 21:05, weather icon 1, 20 C, 12 h and Fahrenheit
+action(S, send('06 16 00 14 01 7C F6 14 69 60 D4 E2 79 9A 01 00 00 01 14 01 01 00'), recv(S, "06 16 00 14 01 00"))
+# 09:05 (21:05 in 12 h), 68 F
+action(M, send('06 16 00 14 01 7C F6 14 69 60 D4 E2 79 9A 01 00 00 01 14 01 01 00'), recv(M, "06 16 00 14 01 00"), display(B, settles_to("dashboard_0905_12h_68f")), within=1.5)
+
+# head down: the master reports it, the dashboard closes on both lenses; head up: it reopens with the last
+# content and the mic streams again
+action(B, gesture("head_down"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank), within=2)
+action(B, gesture("head_up"), recv(M, "F5 02"), recv(B, "F5 1E"), audio(M),
+       # 09:05, 68 F
+       display(B, settles_to("dashboard_0905_12h_68f")), within=2.5)
+
+# over the whole run
+never("fatal")
+# no reboot (the PMIC watchdog under the bad schedule)
+never("boot", after=1)
+link_up()
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard opened twice per lens
+recv(B, "F5 1E", count=2)
+audio(M)

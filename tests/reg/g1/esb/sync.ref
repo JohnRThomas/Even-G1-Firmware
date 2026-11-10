@@ -1,0 +1,63 @@
+# The app sends the dashboard pane, the clock, a text page, exit and a display sync to the master only. The slave
+# must show the dashboard with the master's date and time, and the master acks the text only once the slave has it
+# over ESB.
+
+at(12)
+action(B, phone_on(hb=0),
+       recv(B, "4D C9"),
+       recv(M, "2C 66 .. .. F9 80 19 01 06 06 01 06 06"),
+       recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 06"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+# to the master only
+action(M, [send('06 07 00 05 06 01 00'), send('06 16 00 06 01 F0 7E 14 69 80 D9 0F 78 9A 01 00 00 10 14 00 00 00')],
+       # pane set acked
+       recv(M, "06 07 00 05 06 00"),
+       # clock set acked
+       recv(M, "06 16 00 06 01 00"))
+
+# put on: head up, the dashboard opens on both lenses with the app's clock (Wed 11/12 12:35); the master
+# streams mic audio (0xF1) from the moment its dashboard opens, not what this scenario tests
+action(B, gesture("don"),
+       recv(M, "F5 02"),
+       recv(B, "F5 1E"),
+       # dashboard, app clock, weather 20 C
+       display(M, settles_to("dashboard_clock_master")),
+       # dashboard, app clock, calendar pane
+       display(S, settles_to("dashboard_clock_slave")),
+       within=6)
+# keep-alive
+action(B, send('2C 01'), recv(M, "2C 66 .. .. F9 80 19"), recv(S, "2C 66 .. .. F9 80 19"))
+
+# text to the master: acked once the slave has it, the dashboard closes, the master shows the text and the
+# slave keeps its dashboard
+# text page (0x4E, style 7), to the master only: "Text sent to the master lens only."
+action(M, send('4E 07 01 00 71 00 00 01 01 54 65 78 74 20 73 65 6E 74 20 74 6F 20 74 68 65 20 6D 61 73 74 65 72 20 6C 65 6E 73 20 6F 6E 6C 79 2E'),
+       recv(M, "4E C9 07 01"), recv(M, "F5 1F"),
+       # "Text sent to the master lens only."
+       display(M, settles_to("text_master_only")),
+       display(S, settles_to("dashboard_clock_slave")))
+action(B, send('2C 01'), recv(M, "2C 66 .. .. F9 80 19"), recv(S, "2C 66 .. .. F9 80 19"))
+
+# exit: both panels clear (the exit is reported as F5 00), then the dashboard returns as the head is still up
+action(M, send('18'),
+       recv(M, "18 C9"), recv(M, "F5 00"), display(B, shows("blank")),
+       recv(S, "F5 1F"), recv(B, "F5 1E"),
+       display(M, settles_to("dashboard_clock_master")),
+       display(S, settles_to("dashboard_clock_slave")))
+
+# display sync to the slave: it redraws (the clock alone for a moment, then the dashboard)
+action(M, send('4A 02'),
+       recv(M, "4A C9"),
+       # the clock alone
+       display(S, shows("clock_only_slave")),
+       display(S, settles_to("dashboard_clock_slave")))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# worn, charging state: within 7 s on a clean link
+after("phone_on", recv(B, "F5 06"), recv(B, "F5 09 00"), within=15)
+ignore("audio", lens=M)

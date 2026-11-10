@@ -1,0 +1,41 @@
+# The master's PMIC starts NAKing every I2C transaction at 4 s, after it was set up. The PMIC watchdog power-cycles
+# the master about 30 s later and the slave clears its panel, and nothing else may go wrong.
+
+at(4)
+action(M, NPM + "FaultNak true")
+at(5)
+# The panel's supplies are the PMIC's (BUCK2, LDSW1): a lens that cannot talk to its PMIC cannot switch them on,
+# so its panel stays dark whatever the firmware draws. The other lens shows the dashboard.
+# dashboard (no phone yet: Mon 01/01 00:00)
+action(B, gesture("don"), display(S, settles_to("dashboard_unpaired")), display(M, blank), within=7)
+mark("dashboard")
+# the PMIC watchdog reset, ~30 s after its last feed (33.9 s)
+expect(event(M, "boot app"), event(M, "boot net"), within=30)
+# Blank: the rebooted master clears the slave's panel over ESB. That needs the ESB link to come back up after
+# the reboot.
+# the slave, left without a master, clears its panel (~36.5 s)
+expect(display(S, settles_to("blank")), within=4)
+at(39.5)
+# that one reset
+check(M, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000001")
+check(S, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
+# enabled again after the reboot
+check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
+# only the master runs the IMU
+check(S, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="False")
+# both controllers were set up at the first boot
+include("common/fault_touch")
+# no taps in this test
+check(B, "sysbus.twim2.touch PressesDelivered", equals="0x00000000")
+# queried here, asserted at the end (the known failure)
+check(M, "spim_a.jbd FrameCounter")
+at(40)
+never("fatal")
+never("boot", after=1, lens=S)
+# no phone: no event leaves the glasses
+quiet(B, "F5")
+# the dashboard stays up until the reset
+after("dashboard", quiet(B, "frame "), within=22)
+# the rebooted master clears its panel
+known_failure("component_init() gives up before the panel init when the PMIC does not answer (src/main.c)",
+              state("spim_a.jbd FrameCounter", equals="0x00000003", lens=M))

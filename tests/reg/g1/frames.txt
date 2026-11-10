@@ -1,0 +1,127 @@
+# Frames: name sha12 (the first 12 hex digits of the panel content's SHA-1, as in trace.txt), for the
+# screens a test names in settles_to() and shows(). "blank", a dark panel, is built in (engine/trace.py).
+# frames/NAME.png is the picture of a name, to look at and to hold a failing run's picture against; it is taken
+# from a run with tests/reg/frames.py, and the engine's unit tests check that it is the content named here.
+
+# dashboard
+dashboard_unpaired          3d69dea9fa62   # dashboard before any phone: Mon 01/01 00:00, Bluetooth mark, QuickNote hint
+dashboard_unpaired_lowbatt  4faf6ab09bbe   # the same with the empty-battery mark
+dashboard                   aa1b7ae4d9c4   # dashboard once the phone is connected: bell 0, calendar "Loading", QuickNote
+dashboard_quicknote         bd2e645a0d91   # dashboard with a quick note
+dashboard_1msg              f23858c03f78   # dashboard with one unread message
+
+# dashboard: clock and weather (mode 0, clock and pane, with the QuickNote pane)
+dashboard_1435              93d0a0c437d1   # app clock 14:35 with weather
+dashboard_1435_no_weather   2164ce5a41e1   # 14:35 Wed 11/12, no weather, QuickNote
+dashboard_1435_icon3_5c     7d0ebf42ad12   # 14:35, weather icon 3 (clouds), 5 C
+dashboard_1435_icon5_12c    de21fc173c63   # 14:35, weather icon 5, 12 C
+dashboard_1435_icon7_25c    e5380ba2dc52   # 14:35, weather icon 7, 25 C
+dashboard_1435_icon10_31c   ba0546057802   # 14:35, weather icon 10, 31 C
+dashboard_1435_icon13_0c    7b14c9855605   # 14:35, weather icon 13, 0 C
+dashboard_1435_icon16_38c   bb53d4bfae25   # 14:35, weather icon 16, 38 C
+dashboard_0905_12h_68f      b02f5a0756db   # 09:05 (21:05 in 12 h mode), 68 F (weather icon 1, 20 C in Fahrenheit)
+
+# dashboard: pane layouts (mode 0 clock and pane, mode 1 wide pane, mode 2 clock only), at 14:35, moon, 20 C
+dashboard_mode0_pane_empty  1f9beda92e52   # mode 0, empty pane: the calendar pane without a list, and pane 5
+dashboard_mode1_quicknote   418f0ccdfea1   # mode 1, pane 0: QuickNote hint, weather under the clock
+dashboard_mode1_pane_empty  9a5d098b57ae   # mode 1, pane 5: empty
+dashboard_mode2_clock_only  24f8fad795d7   # mode 2: the clock alone, centred
+
+# dashboard: clock sync between the lenses (ESB)
+dashboard_clock_master      a8b5c8fb599c   # master: app clock Wed 11/12 12:35, weather 20 C
+dashboard_clock_slave       4686b2f399fa   # slave: app clock Wed 11/12 12:35, synced over ESB
+clock_only_slave            735b14cbcb74   # slave: the clock alone during a 0x4A sync
+
+# calendar pane of the dashboard, at 14:35 (mode 1, the wide pane, unless the name says mode0)
+calendar_loading            b4c894e6bbee   # calendar "Loading": no list sent yet
+calendar_1of1_team_meeting  f5d6c9412f41   # Calendar 1/1: Team meeting 15:00-16:00 Room 4
+calendar_1of3_team_dentist  172938d87243   # Calendar 1/3: Team meeting, Dentist (first page of five events)
+calendar_2of3_anna_gym      793a3903e709   # Calendar 2/3: Call Anna, Gym
+calendar_3of3_book_club     db64c08fb945   # Calendar 3/3: Book club
+calendar_mode0_team_meeting b48e317d15aa   # mode 0: the next event under the clock, "Team meeting 15:00-16:00 Room 4"
+calendar_mode0_no_event     43f9c0d5a078   # mode 0: "No Upcoming Event" (empty list)
+
+# stocks pane of the dashboard, at 14:35 (mode 1, the wide pane, unless the name says mode0)
+stocks_loading              30a2f01c3c6b   # stocks "Loading": no stock sent yet
+stocks_gme_1of1             3a914615c592   # GME.XNYS 1/1, GameStop Corp, chart, 21.36 -0.09 -0.42%
+stocks_gme_1of2             37cc25739e68   # GME.XNYS 1/2: the same stock once a second one (AAPL) is there
+stocks_aapl_2of2            50b446479583   # AAPL.XNAS 2/2, Apple Inc, 270.10 +1.25 +0.46%
+stocks_mode0_loading        282863a19cb6   # mode 0: stocks pane "Loading"
+stocks_mode0_aapl_2of2      7d1f9034a37e   # mode 0: AAPL.XNAS 2/2 in the right pane
+
+# news pane of the dashboard, at 14:35 (mode 1, the wide pane, unless the name says mode0)
+news_loading                60214ee52b19   # news "Loading": no item sent yet
+news_cbs_only               7675f23444a1   # one item: CBS News, "Sunny afternoon with a light wind from the west, ..."
+news_cbs_1of2               312c63078ad1   # CBS News 1/2: the same item once a second one (BBC) is there
+news_bbc_2of2               5bbf542fd9af   # BBC 2/2: "Second headline..."
+news_mode0_loading          7a9f9254cfb2   # mode 0: news pane "Loading"
+news_mode0_bbc_2of2         6a445b85dccb   # mode 0: BBC 2/2 in the right pane
+news_mode0_cbs_1of2         e233ab45bff5   # mode 0: CBS News 1/2
+
+# map pane of the dashboard, at 14:35 (mode 1, the wide pane, unless the name says mode0)
+map_loading                 041e4108ce75   # map "Loading": no map sent yet (with or without the canvas header)
+map_noise_icon_172_52       610a2d7bafa4   # the noise map (packets/canvas_map) with the icon at (172, 52)
+map_noise_icon_64_16        dac1e7c5a661   # the map with the icon at (64, 16), sent after the one at (172, 52)
+map_mode0_loading           9ec9e26046ed   # mode 0: map pane "Loading"
+
+# notification
+unread_mark                 0ca1eacde4f0   # blank panel with only the unread-message mark
+notif_popup_on              d61b8340688c   # notification popup (auto display on)
+notif_waiting               129beddf28d6   # waiting notification shown on head up
+
+# silent mode
+silent_on                   e831e498d89f   # moon mark + "Silent", about 1 s on both panels
+silent_off                  84258d9dcb50   # "Activated" after silent mode off (03 0A 00)
+
+# text and image
+text_master_only            a6224d196114   # "Text sent to the master lens only."
+text_style7                 5bbcdb116beb   # 0x4E text page, style 7
+bitmap_576x136              1ec2d1fd176a   # the uploaded test bitmap
+
+# evenai
+evenai_listening            ac8552b11f3e   # "Even AI listening... Ask me anything"
+evenai_answer_page2         ba0ee46b2221   # "Even AI answer, page two of two." with the scroll bar (0x4E style 4)
+evenai_manual_page1         32c7949406a6   # "Manual scroll, page one of two." (0x4E style 5, manual scroll)
+evenai_manual_page2         a9a1f0f8b2c5   # "Manual scroll, page two of two." (0x4E style 5, manual scroll)
+evenai_nonetwork            d2143e2aafb2   # "Even AI is unable to connect to the network"
+
+# teleprompter, text "Teleprompter test text. Line one. / Line two."; in the order of the session, and named by
+# their place in it where the test does not say what the frame shows
+teleprompter_page1          211085a89475   # the first page, right after the open
+teleprompter_scrolled_1s    77608a554de0   # a frame seen within 2 s of the first position packet: scrolled 1 s
+teleprompter_moved          2f15721f1da2   # the frame after the move to a position (0x09 sub 2): the text has jumped
+teleprompter_paused         d93560258dd4   # the pause screen, up until the resume
+teleprompter_resumed        3b6c19ff0b5d   # the frame seen first after the resume
+teleprompter_scrolled_on    799f18d8b5a3   # the frame after that: scrolled on from where it stopped
+
+# countdown
+countdown_hourglass         ec2c62092c9f   # the hourglass, while a countdown timer runs
+countdown_bell              a1d54ca83354   # the bell, when the countdown has run out
+
+# quicknote
+quicknote_prompt            065deac577f5   # "Please set a destination first."
+note_saved                  c99b904bc62d   # "New Note Saved" after a long press on the master
+
+# navigation
+nav_route_pending           315a2961e878   # "Your route is being generated..." (its arrow icon animates at 1 Hz)
+nav_map                     c5148423d016   # the map after the panoramic map transfer (Easy Street, 15 min 5km)
+nav_complete                8ebaf8905fae   # "Navigation Complete" (arrived)
+
+# translate
+translate_header            8e643837778b   # "KR>EN"
+translate_hello             4ce18d76e5e1   # "Hello."
+
+# transcribe
+transcribe_hello            e75cb051feed   # transcript "Hello from the transcription test"
+transcribe_chunks           24161db8a428   # transcript, both chunks: "The first chunk of a longer transcription ..."
+
+# onboarding
+onboarding_1                f70524c9724f   # page 1/6: "Welcome. Even G1 is connected."
+onboarding_2                1e038eab0c14   # page 2/6: "Follow the instructions on your phone."
+onboarding_3                0b32492f7185   # page 3/6: "Let's get started." (animated: one of its states)
+onboarding_5                5ecfa6898663   # page 5/6: "Follow the instructions on your phone."
+onboarding_6                82ce192720ec   # page 6/6: "Setup complete."
+
+# calibration (head-up angle)
+calibration_look            fd036a941076   # calibration screen after the start: look ahead
+calibration_captured        c1062a829284   # calibration screen after the capture: captured

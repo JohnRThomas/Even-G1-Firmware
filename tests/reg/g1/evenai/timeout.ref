@@ -1,0 +1,48 @@
+# As evenai/session, but the app never answers the long press on the left lens. The glasses must wait about 18 s
+# after the release, then both lenses go blank and the dashboard reopens on both.
+
+# the mic model plays a 1 kHz tone
+action(B, PDM + "ConfigureSine 8000 1000")
+
+# the dashboard before the phone, then with it; the mic streams from the connection
+# dashboard, no phone
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # dashboard with the phone
+       display(B, settles_to("dashboard")), audio(M),
+       within=5, label="phone_on")
+
+# the long press: held, the dashboard closes on both lenses, released
+at(15)
+action(S, PRESS, recv(S, "F5 17"), recv(B, "F5 1F"), within=2)
+at(17.2)
+action(S, RELEASE, recv(S, "F5 18"), within=1, label="release")
+
+# no answer from the app: the session times out about 18 s after the release, both lenses blank and the
+# dashboard reopens on both
+# blank, then
+expect(display(B, shows("blank")),
+       # dashboard
+       recv(B, "F5 1E"), display(B, settles_to("dashboard")), within=20)
+# and not before its time: no dashboard is reported open in the first 16 s after the release
+after("release", quiet(B, "F5 1E"), within=16)
+wait(2.2)
+
+# over the whole run
+never("fatal")
+# no reboot (the PMIC watchdog under the bad schedule)
+never("boot", after=1)
+link_up()
+# worn, reported once per lens on connecting
+recv(B, "F5 06")
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard reported open once per lens (after the timeout)
+recv(B, "F5 1E")
+# the mic streams from the connection to the end of the run
+after("phone_on", audio(M, 25), within=5)

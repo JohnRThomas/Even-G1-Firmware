@@ -1,0 +1,73 @@
+# With the glasses worn, the app sends the master debug control commands for simulated head down and up, screen ids
+# and log levels, with the running-app query after each. A real head down and up in the middle closes and reopens
+# the dashboard.
+
+# worn before the phone (the unpaired dashboard comes up, not asserted); the phone connects at 12 s
+action(B, gesture("don"))
+# worn and connected: the dashboard opens on both lenses and the master streams the mic while it is up
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       # the app's first status request
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # the link event once per lens (link_up times it)
+       recv(B, "F5 11"),
+       # dashboard
+       display(B, settles_to("dashboard")),
+       audio(M),
+       within=8, label="phone_on")
+
+# #2@0 / #2@1 are turned into 05 01 00 / 05 01 01 by the firmware and acknowledged as such; the running
+# app is 6 (the dashboard) throughout, except right after screen id 11 was set
+# debug string "#2@0": the head up/down simulation, value 0
+action(M, send('23 32 40 30'), recv(M, "05 C9"), within=1)
+action(M, send('39 05 00 20 01'), recv(M, "39 05 00 20 01 06"), within=1)
+# debug string "#2@1": the head up/down simulation, value 1
+action(M, send('23 32 40 31'), recv(M, "05 C9"), within=1)
+action(M, send('39 05 00 21 01'), recv(M, "39 05 00 21 01 06"), within=1)
+
+# head down: reported, the dashboard closes on both; head up: reported, it opens again with its status
+wait(8.8)
+action(B, gesture("head_down"),
+       recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank),
+       within=3)
+action(B, gesture("head_up"),
+       recv(M, "F5 02"), recv(B, "F5 1E"),
+       recv(M, "22 0A 00 00 01", count=at_least(1)),
+       # dashboard
+       display(B, settles_to("dashboard")),
+       audio(M),
+       within=3, label="head_up")
+
+# every 0x05 is acknowledged (the next one can follow 1 s later)
+wait(4.6)
+action(M, send('05 01 00'), recv(M, "05 C9"), within=0.8)
+action(M, send('39 05 00 22 01'), recv(M, "39 05 00 22 01 06"), within=1)
+action(M, send('05 01 01'), recv(M, "05 C9"), within=0.8)
+wait(4.3)
+action(M, send('39 05 00 23 01'), recv(M, "39 05 00 23 01 06"), within=1)
+# screen id 11 (05 03 0B): the master reports the dashboard closed and the running app is 11
+action(M, send('05 03 0B'), recv(M, "05 C9"), recv(M, "F5 1F"), within=0.8)
+action(M, send('39 05 00 24 01'), recv(M, "39 05 00 24 01 0B"), within=0.5)
+# screen id 6: the master's panel blanks (the slave keeps the dashboard)
+action(M, send('05 03 06'), recv(M, "05 C9"), display(M, blank), within=0.5)
+action(M, send('39 05 00 25 01'), recv(M, "39 05 00 25 01 06"), within=1)
+# log level 3 and 2
+action(M, send('05 02 03'), recv(M, "05 C9"), within=0.5)
+action(M, send('39 05 00 26 01'), recv(M, "39 05 00 26 01 06"), within=0.5)
+action(M, send('05 02 02'), recv(M, "05 C9"), within=0.5)
+action(M, send('39 05 00 27 01'), recv(M, "39 05 00 27 01 06"), within=1)
+wait(5.4)
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# worn (donned at 5 s), reported once
+recv(B, "F5 06")
+# the charging state, reported once
+recv(B, "F5 09")
+# the mic streams to the head down
+after("phone_on", audio(M, 8), within=8)
+# ... and from the head up to the end of the run
+after("head_up", audio(M, 15), within=3)

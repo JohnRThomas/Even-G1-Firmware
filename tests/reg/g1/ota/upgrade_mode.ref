@@ -1,0 +1,44 @@
+# With the glasses worn and the phone on without heartbeats, the app sends the upgrade control command to both
+# lenses. The firmware must ack, close the dashboard and not drop the silent phone, which leaves and reconnects with
+# the bond's key.
+
+at(5)
+# unpaired dashboard
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+
+action(B, phone_on(hb=0),
+       recv(B, "4D C9"),
+       recv(M, "2C 66 .. .. F9 80 19 01 06 06 01 06 06"),
+       recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 06"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # dashboard
+       display(B, settles_to("dashboard")),
+       within=8, label="phone_on")
+
+# upgrade mode: acked, the dashboard closes on both lenses
+at(20)
+# enter upgrade mode (tests/unit/vectors: 0x17_upgrade_mode)
+action(B, send('17'),
+       recv(B, "17 C9"), recv(B, "F5 1F"), display(B, settles_to("blank")))
+# the phone stays silent for 36 s and is not dropped; it closes the link itself at 56 s
+expect(quiet(B, "disconnected"), within=35.5)
+action(M, PHONE_OFF, event(M, "disconnected: the phone closed the link"), within=1)
+
+# the phone comes back: encrypted with the bond, MTU exchanged, the master reports the link again
+at(58.9)
+action(M, PHONE_ON, event(M, "link encrypted with the bond's key"), within=1)
+action(M, send('4D FB'), recv(M, "4D C9"), recv(M, "F5 11"))
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# worn, charging state: within 7 s on a clean link
+after("phone_on", recv(B, "F5 06"), recv(B, "F5 09 00"), within=15)
+# the master streams mic audio (0xF1) while its dashboard is up; not what this scenario tests
+ignore("audio", lens=M)

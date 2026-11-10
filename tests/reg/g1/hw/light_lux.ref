@@ -1,0 +1,55 @@
+# The ambient light sensor is at 0 and then 300 lux while the app sets and reads the brightness. The glasses must
+# send the brightness event when the panel level follows the light, and the debug query answers the lux base.
+
+# dark from power-up
+action(M, OPT + "Lux 0")
+# Worn before the phone: the dashboard opens on both lenses.
+# dashboard, unpaired
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
+# whole run below).
+wait(6.7)
+action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+
+# Dark: #i answers base 0; brightness 30, auto off: acknowledged and read back.
+# debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
+action(M, send('23 69'), recv(M, "'base: 0'"))
+action(M, send('01 1E 00'), recv(M, "01 C9"))
+action(M, send('29'), recv(M, "29 65 1E 00"))
+# 300 lux: the panel level is reported (F5 12, level 0x1E) within 1..2 s; #i answers base 3840.
+wait(9.5)
+action(M, OPT + "Lux 300", recv(M, "F5 12 1E"), within=3)
+# debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
+action(M, send('23 69'), recv(M, "'base: 3840'"))
+# Brightness 4: acknowledged, reported, read back.
+action(M, send('01 04 00'), recv(M, "01 C9"), recv(M, "F5 12 04"), within=2)
+action(M, send('29'), recv(M, "29 65 04 00"))
+# Level: head down, the dashboard closes; #i then answers base 80000 (the sensor has settled);
+# 81 deg right after: head up, the dashboard opens.
+wait(1.4)
+action(B, pose(LEVEL), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
+wait(1.1)
+# debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
+action(M, send('23 69'), recv(M, "'base: 80000'"))
+action(B, pose(UP81),
+       recv(M, "F5 02"), recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
+       # dashboard
+       display(B, settles_to("dashboard")))
+# Dark again; brightness 20 acknowledged, no brightness event (the sensor reads nothing); #i base 0.
+action(M, OPT + "Lux 0")
+action(M, send('01 14 00'), recv(M, "01 C9"), quiet(M, "F5 12"), within=2)
+# debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
+action(M, send('23 69'), recv(M, "'base: 0'"))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# The dashboard is up (the don gesture) when the phone connects: redrawn with the app's clock, and the
+# master streams the mic while it is up (until the level pose).
+# dashboard
+after("phone_on", display(B, shows("dashboard")), audio(M, 5), within=8)
+# worn, once per lens
+recv(B, "F5 06")
+# the charging state, once per lens
+recv(B, "F5 09")

@@ -1,0 +1,57 @@
+# With the dashboard up, a long press on the left lens starts Even AI and the app sends the answer, the status and
+# the exit. The glasses must report the press, keep the mic stream running as the recording, then go blank and
+# reopen the dashboard 5 s later.
+
+# the mic model plays a 1 kHz tone
+action(B, PDM + "ConfigureSine 8000 1000")
+
+# the dashboard before the phone, then with it; the mic streams from the connection
+# dashboard, no phone
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # dashboard with the phone
+       display(B, settles_to("dashboard")), audio(M),
+       within=5, label="phone_on")
+
+# the long press on the left lens: held, the dashboard closes on both lenses, released
+at(17)
+action(S, PRESS, recv(S, "F5 17"), recv(B, "F5 1F"), within=2)
+action(S, RELEASE, recv(S, "F5 18"), within=1)
+
+# the answer, the status and the exit are acknowledged by both lenses, echoing the header
+# Even AI answer (0x54 sub 3): "Paris is the capital of France."
+action(S, send('54 2B 00 10 03 01 00 01 00 00 00 64 50 61 72 69 73 20 69 73 20 74 68 65 20 63 61 70 69 74 61 6C 20 6F 66 20 46 72 61 6E 63 65 2E'), recv(S, "54 0A 00 10 03 01 00 01 00 C9"))
+# Even AI answer (0x54 sub 3): "Paris is the capital of France."
+action(M, send('54 2B 00 10 03 01 00 01 00 00 00 64 50 61 72 69 73 20 69 73 20 74 68 65 20 63 61 70 69 74 61 6C 20 6F 66 20 46 72 61 6E 63 65 2E'), recv(M, "54 0A 00 10 03 01 00 01 00 C9"))
+action(S, send('55 06 00 11 05 00'), recv(S, "55 07 00 11 05 C9 00"))
+action(M, send('55 06 00 11 05 00'), recv(M, "55 07 00 11 05 C9 00"))
+action(S, send('56 06 00 12 08 00'), recv(S, "56 07 00 12 08 00 00"))
+action(M, send('56 06 00 12 08 00'), recv(M, "56 07 00 12 08 00 00"))
+
+# 0x54 sub 1 mode 2: acknowledged, both lenses blank, then the dashboard reopens on both with the mic again
+at(30)
+action(S, send('54 08 00 13 01 02 00 00'), recv(S, "54 07 00 13 01 C9 02"))
+# blank
+action(M, send('54 08 00 13 01 02 00 00'), recv(M, "54 07 00 13 01 C9 02"), display(B, blank), within=1)
+# dashboard
+expect(recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M), within=7)
+
+# over the whole run
+never("fatal")
+# no reboot (the PMIC watchdog under the bad schedule)
+never("boot", after=1)
+link_up()
+# worn, reported once per lens on connecting
+recv(B, "F5 06")
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard reported open once per lens (after the exit)
+recv(B, "F5 1E")
+# the mic streams from the connection through the long press and the Even AI session until the 0x54 exit at
+# 30 s: one stream of 15-16 s (it never pauses for a second), asserted over the whole run
+after("phone_on", audio(M, 14), within=5)

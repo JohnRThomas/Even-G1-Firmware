@@ -1,0 +1,27 @@
+# Both lenses power up with no phone and are not worn. About 2 s later the firmware must have set up the display
+# controller, the touch controller, the IMU and the PMIC.
+# 2 s after power-on the set-up is over; what the models saw of it is read then
+wait(2)
+# the panel is cleared and stays blank
+holds(display(B, blank))
+# the three pixel windows of the clear
+check(B, "spim_a.jbd FrameCounter", equals="0x00000003")
+check(B, "spim_a.jbd GetJournal", contains="02 known pixel-window x=0 y=0 bytes=61440 (+1 nibble) | 02 known pixel-window x=0 y=192 bytes=61440 (+1 nibble) | 02 known pixel-window x=0 y=384 bytes=30720 (+1 nibble)")
+# the touch controller's register init
+check(B, "sysbus.twim2.touch ConfigWriteCount", equals="0x0000002D")
+check(B, "sysbus.twim2.touch CommitWritten", equals="True")
+check(B, "sysbus.twim2.touch MagicWritten", equals="True")
+check(B, "sysbus.twim2.touch EventsArmed", equals="True")
+# the master watches the head pose
+check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
+# the slave's IMU stays off
+check(S, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="False")
+check(B, "sysbus.twim2.lsm6dso GyroscopeEnabled", equals="False")
+check(B, "sysbus.twim1.npm1300 LdswEnabled 1", equals="False")
+check(B, "sysbus.twim1.npm1300 LdswEnabled 2", equals="True")
+check(B, "sysbus.twim1.npm1300 BuckEnabled 1", equals="True")
+check(B, "sysbus.twim1.npm1300 BuckEnabled 2", equals="False")
+check(B, "sysbus.twim1.npm1300 ChargingEnabled", equals="True")
+check(B, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
+never("fatal")
+never("boot", after=1)

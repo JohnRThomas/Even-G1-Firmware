@@ -1,0 +1,85 @@
+# The app sets the clock and the calendar pane and sends calendar lists with one, five and no events, paged through
+# with taps on the master. The glasses must show each, and head down closes the dashboard and head up reopens it.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# put on: both worn, the master head up, the dashboard opens on both lenses and the master streams the mic (F1)
+# while it is up, which the app ignores
+action(B, gesture("don"),
+       recv(B, "F5 06"), recv(M, "F5 02"),
+       # dashboard, "Loading"
+       recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M),
+       within=6)
+
+# the clock and the calendar pane in mode 1
+# time and weather (sub 1): 14:35, weather icon 1, 20 C; dashboard layout (sub 6): mode 1, wide pane; pane 3, calendar
+action(S, [send('06 16 00 01 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 01 14 00 00 00'), send('06 07 00 02 06 01 03')], recv(S, "06 16 00 01 01 00"), recv(S, "06 07 00 02 06 00"))
+# time and weather (sub 1): 14:35, weather icon 1, 20 C; dashboard layout (sub 6): mode 1, wide pane; pane 3, calendar
+action(M, [send('06 16 00 01 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 01 14 00 00 00'), send('06 07 00 02 06 01 03')], recv(M, "06 16 00 01 01 00"), recv(M, "06 07 00 02 06 00"),
+       # mode 1, calendar Loading
+       display(B, settles_to("calendar_loading")), within=1.5)
+
+# one event (one chunk, acknowledged with its header echoed), then five
+# calendar (sub 3), 1 event: Team meeting
+action(S, send('06 30 00 03 03 01 00 01 00 01 03 03 01 01 0C 54 65 61 6D 20 6D 65 65 74 69 6E 67 02 0B 31 35 3A 30 30 2D 31 36 3A 30 30 03 06 52 6F 6F 6D 20 34'), recv(S, "06 30 00 03 03 01 00 01 00 00"))
+# calendar (sub 3), 1 event: Team meeting
+action(M, send('06 30 00 03 03 01 00 01 00 01 03 03 01 01 0C 54 65 61 6D 20 6D 65 65 74 69 6E 67 02 0B 31 35 3A 30 30 2D 31 36 3A 30 30 03 06 52 6F 6F 6D 20 34'), recv(M, "06 30 00 03 03 01 00 01 00 00"),
+       # Calendar 1/1: Team meeting 15:00-16:00 Room 4
+       display(B, settles_to("calendar_1of1_team_meeting")), within=1.5)
+# calendar (sub 3), 5 events: Team meeting, Dentist, Call Anna, Gym, Book club
+action(S, send('06 AE 00 04 03 01 00 01 00 01 03 03 05 01 0C 54 65 61 6D 20 6D 65 65 74 69 6E 67 02 0B 31 35 3A 30 30 2D 31 36 3A 30 30 03 06 52 6F 6F 6D 20 34 01 07 44 65 6E 74 69 73 74 02 0B 31 37 3A 33 30 2D 31 38 3A 30 30 03 0A 4D 61 69 6E 20 53 74 20 31 32 01 09 43 61 6C 6C 20 41 6E 6E 61 02 0B 31 39 3A 30 30 2D 31 39 3A 31 35 03 05 50 68 6F 6E 65 01 03 47 79 6D 02 0B 32 30 3A 30 30 2D 32 31 3A 30 30 03 08 44 6F 77 6E 74 6F 77 6E 01 09 42 6F 6F 6B 20 63 6C 75 62 02 0B 32 31 3A 33 30 2D 32 32 3A 33 30 03 07 4C 69 62 72 61 72 79'), recv(S, "06 AE 00 04 03 01 00 01 00 00"))
+# calendar (sub 3), 5 events: Team meeting, Dentist, Call Anna, Gym, Book club
+action(M, send('06 AE 00 04 03 01 00 01 00 01 03 03 05 01 0C 54 65 61 6D 20 6D 65 65 74 69 6E 67 02 0B 31 35 3A 30 30 2D 31 36 3A 30 30 03 06 52 6F 6F 6D 20 34 01 07 44 65 6E 74 69 73 74 02 0B 31 37 3A 33 30 2D 31 38 3A 30 30 03 0A 4D 61 69 6E 20 53 74 20 31 32 01 09 43 61 6C 6C 20 41 6E 6E 61 02 0B 31 39 3A 30 30 2D 31 39 3A 31 35 03 05 50 68 6F 6E 65 01 03 47 79 6D 02 0B 32 30 3A 30 30 2D 32 31 3A 30 30 03 08 44 6F 77 6E 74 6F 77 6E 01 09 42 6F 6F 6B 20 63 6C 75 62 02 0B 32 31 3A 33 30 2D 32 32 3A 33 30 03 07 4C 69 62 72 61 72 79'), recv(M, "06 AE 00 04 03 01 00 01 00 00"),
+       # Calendar 1/3: Team meeting, Dentist
+       display(B, settles_to("calendar_1of3_team_dentist")), within=1.5)
+
+# taps page through the list: 2/3, 3/3, 1/3 again; the master reports mode 1, pane 3 and the page
+# Calendar 2/3: Call Anna, Gym
+action(M, TAP, recv(M, "22 08 00 00 02 01 03 02"), display(B, settles_to("calendar_2of3_anna_gym")), within=1.5)
+# Calendar 3/3: Book club
+action(M, TAP, recv(M, "22 08 00 00 02 01 03 03"), display(B, settles_to("calendar_3of3_book_club")), within=1.5)
+# Calendar 1/3 again
+action(M, TAP, recv(M, "22 08 00 00 02 01 03 01"), display(B, settles_to("calendar_1of3_team_dentist")), within=1.5)
+
+# mode 0 with the calendar pane: the next event under the clock
+# dashboard layout (sub 6): mode 0, clock and pane; pane 3, calendar
+action(S, send('06 07 00 05 06 00 03'), recv(S, "06 07 00 05 06 00"))
+# 14:35 with "Team meeting 15:00-16:00 Room 4"
+action(M, send('06 07 00 05 06 00 03'), recv(M, "06 07 00 05 06 00"), display(B, settles_to("calendar_mode0_team_meeting")), within=1.5)
+
+# the debug schedule trigger is answered with 4E 4E on each lens
+action(S, send('58 06 00 28 01 00'), recv(S, "4E 4E"))
+action(M, send('58 06 00 28 01 00'), recv(M, "4E 4E"))
+
+# no events: "No Upcoming Event"
+# calendar (sub 3), no events
+action(S, send('06 0C 00 06 03 01 00 01 00 00 03 02'), recv(S, "06 0C 00 06 03 01 00 01 00 00"))
+# 14:35, No Upcoming Event
+action(M, send('06 0C 00 06 03 01 00 01 00 00 03 02'), recv(M, "06 0C 00 06 03 01 00 01 00 00"), display(B, settles_to("calendar_mode0_no_event")))
+
+# the dashboard lock on the master
+action(M, send('50 06 00 29 01 01'), recv(M, "50 06 00 00 01 02"))
+
+# head down: the master reports it, the dashboard closes on both lenses; head up: it reopens with the last
+# content and the mic streams again
+action(B, gesture("head_down"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank), within=2)
+action(B, gesture("head_up"), recv(M, "F5 02"), recv(B, "F5 1E"), audio(M),
+       # No Upcoming Event
+       display(B, settles_to("calendar_mode0_no_event")), within=2.5)
+
+# over the whole run
+never("fatal")
+# no reboot (the PMIC watchdog under the bad schedule)
+never("boot", after=1)
+link_up()
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard opened twice per lens
+recv(B, "F5 1E", count=2)
+audio(M)

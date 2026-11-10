@@ -1,0 +1,49 @@
+# With the phone connected and the dashboard open, the app sends one page of text to each lens. It must show on both
+# lenses until the app closes it and the dashboard comes back.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# put on: both lenses report worn, the master head up, and the dashboard opens on both lenses; the master
+# streams the mic (F1 packets) while the dashboard is up, which the app ignores
+action(B, gesture("don"),
+       recv(B, "F5 06"), recv(M, "F5 02"),
+       recv(B, "F5 1E"),
+       # dashboard: clock, "Loading", QuickNote hint
+       display(B, settles_to("dashboard")),
+       audio(M),
+       within=6)
+
+# each lens acknowledges its single text chunk (index 0 of 1) and reports its dashboard closed; the page shows
+# on both lenses once the master has it
+# text page (0x4E, style 7): "Hello from the G1 test vectors. One page, style 7." (tests/unit/vectors: 0x4e_text_style7)
+action(S, send('4E 00 01 00 71 00 00 01 01 48 65 6C 6C 6F 20 66 72 6F 6D 20 74 68 65 20 47 31 20 74 65 73 74 20 76 65 63 74 6F 72 73 2E 20 4F 6E 65 20 70 61 67 65 2C 20 73 74 79 6C 65 20 37 2E'),
+       recv(S, "4E C9 00 01"), recv(S, "F5 1F"))
+# text page (0x4E, style 7): "Hello from the G1 test vectors. One page, style 7." (tests/unit/vectors: 0x4e_text_style7)
+action(M, send('4E 00 01 00 71 00 00 01 01 48 65 6C 6C 6F 20 66 72 6F 6D 20 74 68 65 20 47 31 20 74 65 73 74 20 76 65 63 74 6F 72 73 2E 20 4F 6E 65 20 70 61 67 65 2C 20 73 74 79 6C 65 20 37 2E'),
+       recv(M, "4E C9 00 01"), recv(M, "F5 1F"),
+       # text page "Hello from the G1 test vectors..."
+       display(B, settles_to("text_style7")))
+
+# 0x18 closes the text on each lens; the master reports the task ended (F5 00) and the dashboard reopens on both
+wait(9.2)
+action(S, send('18'), recv(S, "18 C9"))
+action(M, send('18'),
+       recv(M, "18 C9"), recv(M, "F5 00"),
+       # dashboard
+       recv(B, "F5 1E"), display(B, settles_to("dashboard")))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+# the charging state, reported once per lens
+recv(B, "F5 09")
+link_up()
+# the dashboard opened twice per lens
+recv(B, "F5 1E", count=2)
+audio(M)

@@ -1,0 +1,18 @@
+# The master's IMU starts NAKing every I2C transaction once the dashboard is up. The firmware no longer sees the
+# glasses as worn and turns the panels off, and it must not crash or reset.
+
+# dashboard (no phone yet: Mon 01/01 00:00)
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=7)
+# the dashboard stayed up until the fault
+holds(display(B, settles_to("dashboard_unpaired")))
+# blank: the IMU is gone, the panels are cleared
+action(M, IMU + "FaultNak true", display(B, settles_to("blank")), within=2)
+mark("cleared")
+include("common/fault")
+include("common/fault_touch")
+check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
+# no taps in this test
+check(B, "sysbus.twim2.touch PressesDelivered", equals="0x00000000")
+wait(2.1)
+# and nothing is drawn again
+never("frame ", after=("cleared", 0))

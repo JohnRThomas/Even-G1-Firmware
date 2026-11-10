@@ -1,0 +1,29 @@
+# The phone switches on at 12 s, pairs with both lenses and sends the app's first two packets, with the glasses not
+# worn. Both lenses must bond and answer, and the panels stay blank.
+at(12)
+action(B, phone_on(),
+       event(B, "connected to"),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       # the state/battery answer to 0x2C
+       recv(B, "2C 66"),
+       # the MTU accepted
+       recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state, within 8 s on a good schedule
+       recv(B, "F5 09"),
+       within=8, label="phone_on")
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+display(B, blank)
+link_up()
+# charging state reported on connect, whatever the schedule
+after("phone_on", recv(B, "F5 09"), within=20)

@@ -1,0 +1,60 @@
+# A 5 s countdown timer runs out, then a 90 s timer is started and cancelled. Each lens must show the bell at the
+# run-out and both must go blank after the cancel.
+
+# the session: the head down follows the don at once and takes its place, so the head is level and no dashboard
+# is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C keep-alive (every 10 s in
+# the app) is sent twice below
+action(B, gesture("don"))
+action(B, gesture("head_down"))
+at(12)
+action(B, phone_on(hb=0),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # the link event once per lens (link_up times it)
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# 5 s timer: acknowledged, the hourglass is up on both lenses
+action(B, send('07 05 00 00 00 01'),
+       recv(B, "07 C9"),
+       # countdown hourglass
+       display(B, settles_to("countdown_hourglass")),
+       within=1)
+wait(4.8)
+# the app's keep-alive, about 5 s after the timer's start, is answered with the status
+action(B, send('2C 01'), recv(B, "2C 66"))
+# when it runs out the bell shows: the slave keeps it for 3.6 s; the master shows it between 60 ms and 1 s
+# (the recording held it for 1 s) and blanks: the master's bell is asserted as seen (shows), not as staying
+# countdown over (bell)
+expect(display(S, settles_to("countdown_bell")),
+       display(M, shows("countdown_bell")),
+       within=3)
+
+# 90 s timer: acknowledged, the hourglass again
+wait(1.7)
+action(B, send('07 5A 00 00 00 01'),
+       recv(B, "07 C9"),
+       # countdown hourglass
+       display(B, settles_to("countdown_hourglass")),
+       within=1)
+
+# cancel: acknowledged, both lenses blank (the master after flashing the bell)
+action(B, send('07 00 00 00 00 00'),
+       recv(B, "07 C9"), display(B, blank),
+       within=2)
+action(B, send('2C 01'), recv(B, "2C 66"))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# worn, reported once
+recv(B, "F5 06")
+# the charging state, reported once
+recv(B, "F5 09")
+# no head up ...
+quiet(B, "F5 02")
+# ... head down ...
+quiet(B, "F5 03")
+# ... dashboard close
+quiet(B, "F5 1F")

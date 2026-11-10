@@ -1,0 +1,22 @@
+# The master's IMU NAKs every I2C transaction from power-on. The master cannot tell that the glasses are worn, so
+# the panels stay off, while everything else keeps running and both touch bars work.
+
+# from power-up, before the firmware boots
+action(M, IMU + "FaultNak true")
+wait(1.3)
+# no wear detection: no dashboard
+action(B, gesture("don"), quiet(B, "frame "), within=7)
+# a tap on each lens
+action(B, TAP)
+action(B, TAP)
+wait(3.3)
+include("common/fault")
+include("common/fault_touch")
+# the IMU could not be set up
+check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="False")
+# the two taps on each lens
+check(B, "sysbus.twim2.touch PressesDelivered", equals="0x00000002")
+# the panels stay off: nothing drawn after the power-on clear
+never("frame ", after=1)
+# still off at the end
+display(B, blank)

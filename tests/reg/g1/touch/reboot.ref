@@ -1,0 +1,55 @@
+# The app sets the double-tap action to 1 and reads it back, then five taps on the master reset it on purpose. The
+# phone must reconnect with the bond's key and the setting must survive the reboot.
+
+# Worn before the phone: the dashboard opens on both lenses.
+# dashboard, unpaired
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
+# whole run below).
+at(12)
+action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+
+# The double-tap action: 0 at first, set to 1, read back as 1 on both lenses.
+action(B, send('3F 05'), recv(B, "3F 05 C9 00"))
+action(M, send('26 06 00 00 05 01'), recv(M, "26 06 00 00 05 C9"))
+action(B, send('3F 05'), recv(B, "3F 05 C9 01"))
+
+# Five taps: the master reboots within 3 s, the phone reconnects to it with the bond's key; the slave loses
+# it and closes the dashboard.
+at(22)
+action(M, taps(5),
+       event(M, "boot app"), event(M, "boot net"),
+       event(M, "link encrypted with the bond's key"),
+       recv(S, "F5 1F"), display(S, blank),
+       within=5, label="tap5")
+# The phone sets the MTU again on the rebooted master (0x4D); it reports the link, worn and the charging
+# state again within 15 s (asserted over the whole run below: the read-back at 34 s comes first).
+action(M, send('4D FB'), recv(M, "4D C9"), within=2, label="mtu")
+
+# The setting survived the reboot; the master's PMIC counted the reset, the slave's did not.
+at(34)
+action(B, send('3F 05'), recv(B, "3F 05 C9 01"))
+check(M, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000001")
+check(S, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
+
+# over the whole run
+never("fatal")
+# the slave stays up
+never("boot", after=1, lens=S)
+# the master too, until the five taps
+after(1, quiet(M, "boot"), within=21)
+# and never again after the reboot
+never("boot", after=("tap5", 3), lens=M)
+link_up()
+# The dashboard is redrawn with the app's clock when the phone connects and, being up, streams the mic (mic
+# on head up is the default) until the reset.
+# dashboard
+after("phone_on", display(B, shows("dashboard")), audio(M, 5), within=8)
+after("mtu", recv(M, "F5 11"), recv(M, "F5 06"), recv(M, "F5 09"), within=15)
+# The slave reports the link, worn and its charging state once; the master twice (before and after the reset).
+recv(S, "F5 11")
+recv(S, "F5 06")
+recv(S, "F5 09")
+recv(M, "F5 11", count=2)
+recv(M, "F5 06", count=2)
+recv(M, "F5 09", count=2)

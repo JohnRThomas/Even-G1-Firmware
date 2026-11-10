@@ -1,0 +1,18 @@
+# The master's battery sits at 3500 mV from power-on and the glasses are put on with no phone. The dashboard must
+# carry the empty-battery icon.
+
+# from power-up
+action(M, NPM + "BatteryVoltageMilliVolts 3500")
+
+action(B, gesture("don"),
+       # unpaired dashboard with the low-battery icon
+       display(B, settles_to("dashboard_unpaired_lowbatt")),
+       display(B, same_on_both),
+       within=6)
+# still up 10 s later
+wait(10)
+holds(display(B, settles_to("dashboard_unpaired_lowbatt")))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)

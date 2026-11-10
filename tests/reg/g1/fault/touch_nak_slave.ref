@@ -1,0 +1,28 @@
+# The slave's touch controller NAKs every I2C transaction from power-on. The slave must run on without its touch
+# bar, the master's still works and the dashboard comes up when the glasses are donned.
+
+# from power-up, before the firmware boots
+action(S, TOUCH + "FaultNak true")
+# dashboard (no phone yet: Mon 01/01 00:00)
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=7)
+mark("dashboard")
+# a tap on each lens
+action(B, TAP)
+wait(11.2)
+action(B, TAP)
+wait(0.3)
+include("common/fault")
+check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
+# The slave's touch controller takes nothing: unconfigured, its taps are dropped by the model.
+check(S, "sysbus.twim2.touch ConfigWriteCount", equals="0x00000000")
+check(S, "sysbus.twim2.touch EventsArmed", equals="False")
+check(S, "sysbus.twim2.touch PressesDelivered", equals="0x00000000")
+# The master's touch bar works as usual.
+check(M, "sysbus.twim2.touch ConfigWriteCount", equals="0x0000002D")
+check(M, "sysbus.twim2.touch CommitWritten", equals="True")
+check(M, "sysbus.twim2.touch MagicWritten", equals="True")
+check(M, "sysbus.twim2.touch EventsArmed", equals="True")
+# the two taps
+check(M, "sysbus.twim2.touch PressesDelivered", equals="0x00000002")
+# nothing redrawn once the dashboard is up: it stays up, a tap without a phone changes nothing
+never("frame ", after=("dashboard", 0))

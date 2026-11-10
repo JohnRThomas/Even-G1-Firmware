@@ -1,0 +1,25 @@
+# The master's touch controller starts NAKing every I2C transaction after it was set up and after the first tap, and
+# two more taps follow. The master must keep running with a dead touch bar while the slave's keeps working.
+
+# dashboard (no phone yet: Mon 01/01 00:00)
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=7)
+mark("dashboard")
+# a tap on each lens, the master's controller still answering
+action(B, TAP)
+wait(2.2)
+action(M, TOUCH + "FaultNak true")
+# two more: the master's are lost
+action(B, TAP)
+wait(2.5)
+action(B, TAP)
+wait(2.5)
+include("common/fault")
+# both controllers were set up at boot
+include("common/fault_touch")
+check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
+# only the first tap got through
+check(M, "sysbus.twim2.touch PressesDelivered", equals="0x00000001")
+# all three taps
+check(S, "sysbus.twim2.touch PressesDelivered", equals="0x00000003")
+# nothing redrawn once the dashboard is up: it stays up, a tap without a phone changes nothing
+never("frame ", after=("dashboard", 0))

@@ -1,0 +1,49 @@
+# The master's phone writes the heartbeat every 10 s and the slave's phone sends the keep-alive command every 10 s
+# instead. Both links must stay up for the 70 s after they are paired.
+
+at(12)
+mark("phone_on")
+# the master's phone keeps the app's 10 s heartbeat ...
+action(M, phone_on())
+# ... the slave's has none
+action(S, phone_on(hb=0))
+expect(event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"),
+       recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state, within 8 s on a good schedule
+       recv(B, "F5 09"),
+       within=8)
+
+# the slave's phone's 0x2C every 10 s, in place of a heartbeat: each one answered
+wait(10)
+action(S, send('2C 01'), recv(S, "2C 66"))
+wait(10)
+action(S, send('2C 01'), recv(S, "2C 66"))
+wait(10)
+action(S, send('2C 01'), recv(S, "2C 66"))
+wait(10)
+action(S, send('2C 01'), recv(S, "2C 66"))
+wait(10)
+action(S, send('2C 01'), recv(S, "2C 66"))
+wait(10)
+action(S, send('2C 01'), recv(S, "2C 66"))
+
+# 10 s after the last one both links are still there
+wait(10)
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run: the master's heartbeat (0x25) is invisible in the trace (the phone logs it at Debug
+# level and swallows the echo), so the assert is the absence of a drop
+never("fatal")
+never("boot", after=1)
+never("disconnected")
+never("link dropped")
+display(B, blank)
+link_up()

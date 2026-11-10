@@ -1,0 +1,15 @@
+# Both lenses power up with no phone and are put on at once. Each must come up clean and show the dashboard with the
+# unsynced clock, which then stays up.
+action(B, gesture("don"),
+       # dashboard, clock unsynced (Mon 01/01 00:00), Bluetooth mark
+       display(B, settles_to("dashboard_unpaired")),
+       display(B, same_on_both),
+       within=6)
+# 20 s with the dashboard up: nothing closes it (no phone, the head is not lowered)
+wait(20)
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+# and it stays up (no phone, nothing closes it)
+display(B, settles_to("dashboard_unpaired"))

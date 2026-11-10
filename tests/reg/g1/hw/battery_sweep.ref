@@ -1,0 +1,63 @@
+# The master's battery voltage steps from 4200 to 3400 mV, and after each step the app reads the battery through
+# device info and the debug voltage query. Both must report the voltage, current and temperature of the gauge.
+
+# from power-up: the slave's battery at 3.9 V
+action(S, NPM + "BatteryVoltageMilliVolts 3900")
+
+at(6)
+action(B, phone_on(),
+       recv(B, "4D C9"),
+       # 4.5 V default, 25 C, both lenses' versions
+       recv(M, "2C 66 .. .. F9 80 19 01 06 06 01 06 06"),
+       # 3.9 V, the slave knows only its own version
+       recv(S, "2C 66 .. .. BD 80 19 00 00 00 01 06 06"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=6, label="phone_on")
+
+# each step: the voltage, 2.5 s for the gauge to read it, then the app's 0x2C and "#v"
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 4200", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. DB 80 19"), recv(M, "'B:.., V:419, A:0, T:25'"))
+# the slave's second 0x2C: still 3.9 V
+action(S, send('2C 01'), recv(S, "2C 66 .. .. BD 80 19 00 00 00 01 06 06"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 4100", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. D1 80 19"), recv(M, "'B:.., V:409, A:0, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 4000", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. C7 80 19"), recv(M, "'B:.., V:399, A:0, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 3900", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. BD 80 19"), recv(M, "'B:.., V:389, A:0, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 3800", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. B3 80 19"), recv(M, "'B:.., V:379, A:0, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 3700", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. A9 80 19"), recv(M, "'B:.., V:369, A:0, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 3600", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. 9F 80 19"), recv(M, "'B:.., V:359, A:0, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 3500", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. 95 80 19"), recv(M, "'B:.., V:349, A:0, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryVoltageMilliVolts 3400", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. 8B 80 19"), recv(M, "'B:.., V:339, A:0, T:25'"))
+
+# a charge current (the PMIC reads 48 mA for 50) and a discharge current, at 3.4 V
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryCurrentMilliAmps 50", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. 8B B0 19"), recv(M, "'B:.., V:339, A:48, T:25'"))
+# 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
+action(M, [NPM + "BatteryCurrentMilliAmps -40", 2.5, send('2C 01'), send('23 76')],
+       recv(M, "2C 66 .. .. 8B 58 19"), recv(M, "'B:.., V:339, A:-40, T:25'"))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# the bring-up events after the bind: worn, charging state (within 7 s on a clean link, 15 s when the master's
+# sync retries slow its sensor loop)
+after("phone_on", recv(B, "F5 06"), recv(B, "F5 09 00"), within=15)

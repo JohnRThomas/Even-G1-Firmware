@@ -1,0 +1,41 @@
+# With the glasses not worn, the app sends a test notification, reads the notification count and then clears the
+# bonds with the debug command. The lens must drop the link, and the phone reconnects and pairs afresh so the link
+# is up again.
+
+# the first connection: both lenses report the link; worn (the IMU rests in the worn pose) and the charging
+# state follow, the latter once more on the new link (not always on both lenses)
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       recv(B, "F5 11"),
+       within=5)
+
+# the test notification is pushed to the phone as 0x4B chunks by both lenses
+at(20)
+# debug string "#1@title@msg": a test notification, title "title", message "msg"
+action(B, send('23 31 40 74 69 74 6C 65 40 6D 73 67'), recv(B, "4B CA 0B", count=at_least(1)), within=1)
+# read the unread notification count (tests/unit/vectors: 0x36_notification_count_get)
+action(B, send('36'), recv(B, "36 C9"), within=1)
+
+# #c: the firmware turns it into 0x47 (unpair), acknowledges it and closes the link
+# debug string "#c": unpair
+action(B, send('23 63'), recv(B, "47 C9"), event(B, "disconnected"), within=1)
+# the phone reconnects without a key (bond forgotten), pairs again and gets the link event again; the MTU
+# request queued at 25 s goes out once the new link is up
+action(B, send('4D FB'),
+       sequence(event(B, "connected"), event(B, "the lens has no key"), event(B, "pairing: complete")),
+       recv(B, "4D C9"),
+       recv(B, "F5 11"),
+       within=5)
+action(B, send('2C 01'), recv(B, "2C 66"))
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+recv(B, "F5 06")
+recv(B, "F5 09", count=at_least(1))

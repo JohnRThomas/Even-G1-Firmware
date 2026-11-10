@@ -1,0 +1,59 @@
+# At 20 s the master's phone closes the link and the slave's phone switches its Bluetooth off, then both come back.
+# Both links must return encrypted with the bond's key, without pairing again.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "4D C9"),
+       recv(B, "2C 66"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state, within 8 s on a good schedule
+       recv(B, "F5 09"),
+       within=8, label="phone_on")
+
+at(20)
+action(S, PHONE_OFF)
+action(M, [PH + "Disconnect", send('4D FB')],
+       event(M, "disconnected: the phone closed the link"),
+       event(S, "disconnected: the phone closed the link"),
+       event(M, "connected to"),
+       event(M, "link encrypted with the bond's key"),
+       event(M, "Nordic UART Service: write"),
+       recv(M, "4D C9"),
+       # paired again
+       recv(M, "F5 11"),
+       within=4, label="Disconnect")
+# charging state reported again on the new link
+after("Disconnect", recv(M, "F5 09"), within=7)
+
+at(21)
+action(S, [PHONE_ON, send('4D FB')],
+       event(S, "connected to"),
+       event(S, "link encrypted with the bond's key"),
+       event(S, "Nordic UART Service: write"),
+       recv(S, "4D C9"),
+       # paired again
+       recv(S, "F5 11"),
+       within=4, label="phone_on_again")
+after("phone_on_again", recv(S, "F5 09"), within=6)
+
+at(30)
+action(B, send('2C 01'), recv(B, "2C 66"))
+
+at(35)
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+never("link dropped")
+# the bond survives: no new pairing on reconnect
+never("pairing: started", after=15)
+display(B, blank)
+link_up()

@@ -1,0 +1,73 @@
+# The worn glasses are tapped on each lens, double tapped, moved head up and down and triple tapped twice for silent
+# mode on and off. They must send the app the event for each, with the display mode read back after the triple taps
+# and the link state at the end.
+
+# Worn before the phone: the dashboard opens on both lenses.
+at(5)
+# dashboard, unpaired
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
+# whole run below).
+action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+
+# A tap on the master with the dashboard up: the status report; a tap on the slave: nothing to the phone.
+at(20)
+action(M, TAP, recv(M, "22 08 00 00 02"))
+action(S, TAP, quiet(B, "F5"), quiet(M, "22 08"))
+# Double tap on the master: reported, the dashboard closes on both lenses.
+action(M, taps(2), recv(M, "F5 00"), recv(B, "F5 1F"), display(B, blank))
+# Head up at 30: the played gesture dips first (head down) and then rises: head up, the dashboard opens with
+# the head-up status and the mic stream.
+action(B, gesture("head_up"),
+       recv(M, "F5 03"), recv(M, "F5 02"), recv(B, "F5 1E"),
+       recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M, during=True),
+       # dashboard
+       display(B, settles_to("dashboard")),
+       within=3.5)
+# Head down at 34: the dashboard closes. Head up at 38: it opens again.
+action(B, gesture("head_down"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
+action(B, gesture("head_up"),
+       recv(M, "F5 02"), recv(B, "F5 1E"),
+       recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M, during=True),
+       # dashboard
+       display(B, settles_to("dashboard")),
+       within=3.5)
+# Triple tap on the master with the dashboard up: silent mode on (F5 04), the dashboard closes (the slave
+# reports the close as a double tap), the silent-mode animation, then blank; 0x2B reads display mode 0x0C.
+action(M, taps(3),
+       recv(M, "F5 04"), recv(S, "F5 00"), recv(B, "F5 1F"),
+       # silent mode on
+       display(B, shows("silent_on")),
+       display(B, blank),
+       within=4)
+action(B, send('2B'), recv(B, "2B 69 0C"))
+# Triple tap again: silent mode off (F5 05), its animation, head up is detected again (F5 02) and the dashboard
+# opens; 0x2B reads display mode 0x0A.
+action(M, taps(3),
+       recv(M, "F5 05"),
+       # silent mode off
+       display(B, shows("silent_off")),
+       recv(M, "F5 02"), recv(B, "F5 1E"),
+       recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
+       # dashboard
+       display(B, settles_to("dashboard")),
+       within=4.5)
+action(B, send('2B'), recv(B, "2B 69 0A"))
+
+# The links are still up at the end.
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# The dashboard is redrawn with the app's clock when the phone connects; being up, the master streams the mic.
+# dashboard
+after("phone_on", display(B, shows("dashboard")), audio(M, 5), within=8)
+# worn, once per lens
+recv(B, "F5 06")
+# the charging state, once per lens
+recv(B, "F5 09")

@@ -1,0 +1,6 @@
+# Shared by the hw_fault tests where neither a touch controller nor the PMIC is the faulty part. The firmware must
+# have set up the touch controller of both lenses at boot and armed the press and release events.
+check(B, "sysbus.twim2.touch ConfigWriteCount", equals="0x0000002D")
+check(B, "sysbus.twim2.touch CommitWritten", equals="True")
+check(B, "sysbus.twim2.touch MagicWritten", equals="True")
+check(B, "sysbus.twim2.touch EventsArmed", equals="True")

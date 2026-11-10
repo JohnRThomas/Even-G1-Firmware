@@ -1,0 +1,56 @@
+# With the glasses worn, the app runs the head-up angle calibration: start, capture, set, clear and subcommand 5.
+
+# Worn before the phone: the dashboard opens on both lenses.
+# dashboard, unpaired
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
+# whole run below).
+at(12)
+action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+
+# Level at 15: head down, the dashboard closes.
+at(15)
+action(B, pose(LEVEL), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
+# Calibration start at 19: acknowledged, the calibration screen on both lenses.
+# head-up angle calibration: start (tests/unit/vectors: 0x10_calibration_start)
+action(B, send('10 07 00 0C 02 01 00'),
+       recv(B, "10 06 00 0C 02 C9"),
+       # calibration: look ahead
+       display(B, settles_to("calibration_look")),
+       quiet(B, "F5 1F"))
+# Capture at 23: acknowledged, the captured screen; the level pose now counts as head up, and stays so.
+# head-up angle calibration: capture the current angle (tests/unit/vectors: 0x10_calibration_capture)
+action(B, send('10 07 00 03 02 01 01'),
+       recv(B, "10 06 00 03 02 C9"),
+       # calibration: captured
+       display(B, shows("calibration_captured")),
+       recv(M, "F5 02"), quiet(M, "F5 03"))
+# Set at 26: acknowledged, the screen clears (the slave reports its close as a dashboard close) and the
+# dashboard opens (head up with the new angle).
+# head-up angle calibration: set (tests/unit/vectors: 0x10_calibration_set)
+action(B, send('10 07 00 02 02 00 00'),
+       recv(B, "10 06 00 02 02 C9"),
+       # blank
+       display(B, shows("blank")),
+       recv(S, "F5 1F"), recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
+       # dashboard
+       display(B, settles_to("dashboard")))
+# Clear at 29: acknowledged, back to the factory angle: head down, the dashboard closes.
+# head-up angle calibration: clear, back to the factory angle (tests/unit/vectors: 0x10_calibration_clear)
+action(B, send('10 05 00 01 01'),
+       recv(B, "10 06 00 01 01 C9"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
+# Sub 5 at 31: acknowledged.
+action(B, send('10 05 00 05 01'), recv(B, "10 06 00 05 01 C9"))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# The dashboard is up (the don gesture) when the phone connects: redrawn with the app's clock, and the
+# master streams the mic while it is up (until the level pose at 15).
+# dashboard
+after("phone_on", display(B, shows("dashboard")), audio(M), within=8)
+# worn, once per lens
+recv(B, "F5 06")
+# the charging state, once per lens
+recv(B, "F5 09")

@@ -1,0 +1,79 @@
+# The app starts a Transcribe session with the mic on, streams transcript chunks and status, then steps the control
+# state down to closed. The glasses must show the matching screen at each step and answer status sent after the
+# close with errors.
+
+# the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
+# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# keep-alive is sent by the lines below
+action(B, gesture("don"))
+action(B, gesture("head_down"))
+at(12)
+action(B, phone_on(hb=0),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # the link event once per lens (link_up times it)
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# start (sub 1 state 1): header echoed, status C9 and the state
+action(B, send('52 06 00 40 01 01'), recv(B, "52 07 00 40 01 C9 01"), within=0.5)
+# mic on: acknowledged, the master streams audio until the mic is switched off
+# mic on (tests/unit/vectors: 0x0e_mic_on)
+action(M, send('0E 01'), recv(M, "0E C9 01"), audio(M), within=1, label="mic_on")
+
+# transcript chunks (sub 2): header echoed up to the chunk index, then C9; the text shows on both lenses
+# transcript (0x52 sub 2) in one chunk: "Hello from the transcription test"
+action(B, send('52 2D 00 41 02 01 00 01 00 00 00 00 48 65 6C 6C 6F 20 66 72 6F 6D 20 74 68 65 20 74 72 61 6E 73 63 72 69 70 74 69 6F 6E 20 74 65 73 74'),
+       recv(B, "52 0A 00 41 02 01 00 01 00 C9"),
+       # transcript "Hello from the transcription test"
+       display(B, shows("transcribe_hello")),
+       within=2)
+action(B, send('53 06 00 42 03 01'), recv(B, "53 07 00 42 03 C9 01"), within=1)
+# the 10 s keep-alive is answered with the status
+action(B, send('2C 01'), recv(B, "2C 66"))
+# transcript chunk 1 of 2: "The first chunk of a longer transcription carries this sentence, "
+action(B, send('52 4D 00 43 02 02 00 01 00 00 00 00 54 68 65 20 66 69 72 73 74 20 63 68 75 6E 6B 20 6F 66 20 61 20 6C 6F 6E 67 65 72 20 74 72 61 6E 73 63 72 69 70 74 69 6F 6E 20 63 61 72 72 69 65 73 20 74 68 69 73 20 73 65 6E 74 65 6E 63 65 2C 20'),
+       recv(B, "52 0A 00 43 02 02 00 01 00 C9"), within=0.5)
+wait(7.7)
+# transcript chunk 2 of 2: "and the second chunk finishes it."
+action(B, send('52 2D 00 44 02 02 00 02 00 00 00 00 61 6E 64 20 74 68 65 20 73 65 63 6F 6E 64 20 63 68 75 6E 6B 20 66 69 6E 69 73 68 65 73 20 69 74 2E'),
+       recv(B, "52 0A 00 44 02 02 00 02 00 C9"),
+       # transcript, both chunks
+       display(B, shows("transcribe_chunks")),
+       within=1.5)
+action(B, send('53 06 00 45 03 02'), recv(B, "53 07 00 45 03 C9 02"), within=1)
+action(B, send('52 06 00 46 03 2A'), recv(B, "52 07 00 46 03 C9 2A"), within=1)
+
+# state 3: acknowledged, the transcript stays up
+action(B, send('52 06 00 47 01 03'),
+       recv(B, "52 07 00 47 01 C9 03"),
+       # transcript, both chunks: it may have been up already, and it is what stays
+       display(B, settles_to("transcribe_chunks")),
+       within=2)
+# state 4: acknowledged, the master streams the mic again briefly
+wait(2.5)
+action(B, send('52 06 00 48 01 04'), recv(B, "52 07 00 48 01 C9 04"), audio(M, 1), within=2)
+# state 0: acknowledged, both lenses blank
+action(B, send('52 06 00 49 01 00'), recv(B, "52 07 00 49 01 C9 00"), display(B, blank), within=1)
+
+# after the session: status and control are refused with CA
+action(B, send('2C 01'), recv(B, "2C 66"))
+action(B, send('53 06 00 4A 03 03'), recv(B, "53 07 00 4A 03 CA 03"), within=1)
+action(B, send('52 06 00 4B 03 2B'), recv(B, "52 07 00 4B 03 CA 2B"), within=1)
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# worn (donned at 5 s), reported once
+recv(B, "F5 06")
+# the charging state, reported once
+recv(B, "F5 09")
+# no head up ...
+quiet(B, "F5 02")
+# ... head down ...
+quiet(B, "F5 03")
+# ... dashboard close
+quiet(B, "F5 1F")
+# the first stream lasts to the mic off
+after("mic_on", audio(M, 8), within=1)

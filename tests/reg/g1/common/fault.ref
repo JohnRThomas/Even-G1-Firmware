@@ -1,0 +1,10 @@
+# Shared end-of-run checks of the hw_fault tests, where one peripheral is faulty, the glasses are donned and tapped
+# and no phone is connected. Both lenses must keep running with no fatal, no reset and nothing sent to the app.
+never("fatal")
+never("boot", after=1)
+# no phone: no event leaves the glasses
+quiet(B, "F5")
+# the PMIC watchdog never reset a lens
+check(B, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
+# only the master runs the IMU (update_imu_mode() returns early on the slave)
+check(S, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="False")

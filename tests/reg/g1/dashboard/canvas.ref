@@ -1,0 +1,72 @@
+# The app sets the clock and the map pane, then sends the canvas header, a map in 36 chunks and an icon placed on
+# the map twice. Both lenses must acknowledge every chunk and draw the map and each icon.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# put on: both worn, the master head up, the dashboard opens on both lenses and the master streams the mic (F1)
+# while it is up, which the app ignores
+# at(14)
+action(B, gesture("don"),
+       recv(B, "F5 06"), recv(M, "F5 02"),
+       # dashboard, "Loading"
+       recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M),
+       within=6)
+
+# 21 s: the clock, the map pane in mode 1 and the canvas header
+# at(21)
+# time and weather (sub 1): 14:35, weather icon 1, 20 C; dashboard layout (sub 6): mode 1, wide pane; pane 4, map
+action(S, [send('06 16 00 01 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 01 14 00 00 00'), send('06 07 00 02 06 01 04'), send('06 0C 00 03 07 01 00 01 00 01 04 00')],
+       recv(S, "06 16 00 01 01 00"), recv(S, "06 07 00 02 06 00"), recv(S, "06 0C 00 03 07 01 00 01 00 00"))
+# time and weather (sub 1): 14:35, weather icon 1, 20 C; dashboard layout (sub 6): mode 1, wide pane; pane 4, map
+action(M, [send('06 16 00 01 01 14 9B 14 69 20 C6 7D 78 9A 01 00 00 01 14 00 00 00'), send('06 07 00 02 06 01 04'), send('06 0C 00 03 07 01 00 01 00 01 04 00')],
+       recv(M, "06 16 00 01 01 00"), recv(M, "06 07 00 02 06 00"), recv(M, "06 0C 00 03 07 01 00 01 00 00"),
+       # mode 1, map Loading
+       display(B, settles_to("map_loading")), within=1.5)
+
+# the map: the 36 chunks go to each lens in one burst, each acknowledged with its header echoed, the first and
+# the last in order
+# at(23)
+action(S, buf('canvas_map', 1, 36),
+       recv(S, "06 .. 00 .. 07 24 00", count=36),
+       sequence(recv(S, "06 .. 00 .. 07 24 00 01 00 00"), recv(S, "06 .. 00 .. 07 24 00 24 00 00")), within=3.5)
+action(M, buf('canvas_map', 1, 36),
+       recv(M, "06 .. 00 .. 07 24 00", count=36),
+       sequence(recv(M, "06 .. 00 .. 07 24 00 01 00 00"), recv(M, "06 .. 00 .. 07 24 00 24 00 00")), within=3.5)
+
+# the icons: each acknowledged, each drawn
+# at(28)
+# canvas icon (sub 7) at (172, 52)
+action(S, send('06 90 00 32 07 01 00 01 00 01 04 03 AC 00 34 00 BD 49 24 95 49 1F 60 15 6D 3E D4 A3 D7 29 C6 4D 53 5A E5 55 9F 60 4C 46 84 BC 64 0C 9B 3D C4 CA AC 05 7D E1 B6 98 02 C2 DA 52 F7 F9 C6 D6 C5 F9 54 BD C1 0B FC CD 9F 6F 29 84 11 F9 ED 9C 20 76 20 9A E2 9F 9E 3A C6 17 76 F3 80 04 E8 ED 04 8A 4B E5 BD 6A 8A 7C FE B6 FF 0B 83 C5 EE F1 99 1F 19 2D 73 68 CE F5 33 40 D6 CB C6 0D 18 A5 75 2E 8B 36 44 10 05 38 28 C4 1F EE 72 A7 AB 3D B5 DF'), recv(S, "06 90 00 32 07 01 00 01 00 00"))
+# the noise map with the icon at (172, 52)
+action(M, send('06 90 00 32 07 01 00 01 00 01 04 03 AC 00 34 00 BD 49 24 95 49 1F 60 15 6D 3E D4 A3 D7 29 C6 4D 53 5A E5 55 9F 60 4C 46 84 BC 64 0C 9B 3D C4 CA AC 05 7D E1 B6 98 02 C2 DA 52 F7 F9 C6 D6 C5 F9 54 BD C1 0B FC CD 9F 6F 29 84 11 F9 ED 9C 20 76 20 9A E2 9F 9E 3A C6 17 76 F3 80 04 E8 ED 04 8A 4B E5 BD 6A 8A 7C FE B6 FF 0B 83 C5 EE F1 99 1F 19 2D 73 68 CE F5 33 40 D6 CB C6 0D 18 A5 75 2E 8B 36 44 10 05 38 28 C4 1F EE 72 A7 AB 3D B5 DF'), recv(M, "06 90 00 32 07 01 00 01 00 00"), display(B, settles_to("map_noise_icon_172_52")), within=1.5)
+# at(31)
+# canvas icon (sub 7) at (64, 16)
+action(S, send('06 90 00 33 07 01 00 01 00 01 04 03 40 00 10 00 BD 49 24 95 49 1F 60 15 6D 3E D4 A3 D7 29 C6 4D 53 5A E5 55 9F 60 4C 46 84 BC 64 0C 9B 3D C4 CA AC 05 7D E1 B6 98 02 C2 DA 52 F7 F9 C6 D6 C5 F9 54 BD C1 0B FC CD 9F 6F 29 84 11 F9 ED 9C 20 76 20 9A E2 9F 9E 3A C6 17 76 F3 80 04 E8 ED 04 8A 4B E5 BD 6A 8A 7C FE B6 FF 0B 83 C5 EE F1 99 1F 19 2D 73 68 CE F5 33 40 D6 CB C6 0D 18 A5 75 2E 8B 36 44 10 05 38 28 C4 1F EE 72 A7 AB 3D B5 DF'), recv(S, "06 90 00 33 07 01 00 01 00 00"))
+# the icon at (64, 16)
+action(M, send('06 90 00 33 07 01 00 01 00 01 04 03 40 00 10 00 BD 49 24 95 49 1F 60 15 6D 3E D4 A3 D7 29 C6 4D 53 5A E5 55 9F 60 4C 46 84 BC 64 0C 9B 3D C4 CA AC 05 7D E1 B6 98 02 C2 DA 52 F7 F9 C6 D6 C5 F9 54 BD C1 0B FC CD 9F 6F 29 84 11 F9 ED 9C 20 76 20 9A E2 9F 9E 3A C6 17 76 F3 80 04 E8 ED 04 8A 4B E5 BD 6A 8A 7C FE B6 FF 0B 83 C5 EE F1 99 1F 19 2D 73 68 CE F5 33 40 D6 CB C6 0D 18 A5 75 2E 8B 36 44 10 05 38 28 C4 1F EE 72 A7 AB 3D B5 DF'), recv(M, "06 90 00 33 07 01 00 01 00 00"), display(B, settles_to("map_noise_icon_64_16")), within=1.5)
+
+# head down: the master reports it, the dashboard closes on both lenses; head up: it reopens with the last
+# content and the mic streams again
+wait(.5)
+action(B, gesture("head_down"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank), within=2)
+wait(.5)
+action(B, gesture("head_up"), recv(M, "F5 02"), recv(B, "F5 1E"), audio(M),
+       # the map with the icon at (64, 16)
+       display(B, settles_to("map_noise_icon_64_16")), within=2.5)
+# at(40)
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+link_up()
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard opened twice per lens
+recv(B, "F5 1E", count=2)
+audio(M)

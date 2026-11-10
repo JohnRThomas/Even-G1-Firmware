@@ -1,0 +1,50 @@
+# Neither phone writes anything after the first packets. The master must drop its Android phone after 30 s of
+# silence and take its reconnection with the bond's key, while the slave never drops its iPhone for silence.
+
+at(12)
+mark("phone_on")
+# an Android phone without a heartbeat ...
+action(M, phone_on(hb=0))
+# ... and an iPhone without one
+action(S, phone_on(os=2, hb=0))
+expect(event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "4D C9"),
+       recv(B, "2C 66"),
+       # BLE paired
+       recv(B, "F5 11"),
+       # wear state reported on connect
+       recv(B, "F5 06"),
+       # charging state, within 8 s on a good schedule
+       recv(B, "F5 09"),
+       within=8)
+
+# 30 s after the 0x2C/0x4D at ~13.2 s (checked every second) the lens closes the Android link; the phone
+# comes back at the next advertisement with the bond's key
+at(42)
+expect(event(M, "disconnected: the lens closed the link"),
+       event(M, "connected to"),
+       event(M, "link encrypted with the bond's key"),
+       event(M, "Nordic UART Service: write"),
+       within=6)
+action(M, send('4D FB'), recv(M, "4D C9"))
+# paired again: reported when the link is back, and
+after(42, recv(M, "F5 11", count=at_least(1)), within=12)
+                                                                # again when the app writes the MTU
+at(54.8)
+check(B, "sysbus.vcentral Connected", equals="True")
+check(B, "sysbus.vcentral Encrypted", equals="True")
+check(B, "sysbus.vcentral Bonded", equals="True")
+check(B, "sysbus.vcentral AttMtu", equals="0x000000FB")
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+never("link dropped")
+# the iOS link is kept
+never("disconnected", lens=S)
+# nothing dropped for 30 s after the last packet
+after("phone_on", quiet(B, "disconnected"), within=30)
+display(B, blank)
+link_up()
+# the charging state may be reported again on the master after the reconnect (seen under some seeds)
+after(42, ignore("F5 09", lens=M), within=13)

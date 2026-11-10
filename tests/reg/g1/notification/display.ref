@@ -1,0 +1,78 @@
+# The app whitelists one app and sends notifications with auto display on, then off, and one from an app not in the
+# whitelist. The glasses must pop the first up on both lenses, show only a chat icon for the second until head up,
+# and not show the third.
+
+at(12)
+action(B, phone_on(),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# put on (the app's settings follow at once, so the dashboard is waited for below): the whitelist (one chunk)
+# and auto display on, on each lens
+mark("don")
+action(B, gesture("don"))
+# notification whitelist: Chat
+action(S, send('04 01 00 7B 22 63 61 6C 65 6E 64 61 72 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 63 61 6C 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 6D 73 67 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 69 6F 73 5F 6D 61 69 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 61 70 70 22 3A 7B 22 6C 69 73 74 22 3A 5B 7B 22 69 64 22 3A 22 63 6F 6D 2E 65 78 61 6D 70 6C 65 2E 63 68 61 74 22 2C 22 6E 61 6D 65 22 3A 22 43 68 61 74 22 7D 5D 2C 22 65 6E 61 62 6C 65 22 3A 74 72 75 65 7D 7D'), recv(S, "04 C9"))
+wait(0.7)
+action(S, send('4F 01 06'), recv(S, "4F C9 01"))
+action(M, send('4F 01 06'), recv(M, "4F C9 01"))
+
+# both worn, the master head up, the dashboard opens on both lenses within 6 s of the don and the master streams
+# the mic while it is up
+# dashboard
+expect(recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M), within=5)
+after("don", recv(B, "F5 06"), recv(M, "F5 02"), within=6)
+
+# head down: the master reports it and the dashboard closes on both lenses
+action(B, gesture("head_down"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank), within=2)
+
+# the first notification: partial then complete ack; it pops up on both lenses and then is gone again
+# notification 11 from Chat in two chunks: "Auto display on", "This one pops up while you look down."
+action(S, [send('4B 00 02 00 7B 22 6E 63 73 5F 6E 6F 74 69 66 69 63 61 74 69 6F 6E 22 3A 7B 22 6D 73 67 5F 69 64 22 3A 31 31 2C 22 61 63 74 69 6F 6E 22 3A 30 2C 22 61 70 70 5F 69 64 65 6E 74 69 66 69 65 72 22 3A 22 63 6F 6D 2E 65 78 61 6D 70 6C 65 2E 63 68 61 74 22 2C 22 74 69 74 6C 65 22 3A 22 41 75 74 6F 20 64 69 73 70 6C 61 79 20 6F 6E 22 2C 22 73 75 62 74 69 74 6C 65 22 3A 22 22 2C 22 6D 65 73 73 61 67 65 22 3A 22 54 68 69 73 20 6F 6E 65 20 70 6F 70 73 20 75 70 20 77 68 69 6C 65 20 79 6F 75 20 6C 6F 6F 6B 20 64 6F 77 6E 2E 22 2C 22 74 69 6D 65 5F'), send('4B 00 02 01 73 22 3A 31 37 36 32 38 39 39 39 35 39 2C 22 64 61 74 65 22 3A 22 32 30 32 35 2D 31 31 2D 31 31 20 32 32 3A 32 35 3A 35 39 22 2C 22 64 69 73 70 6C 61 79 5F 6E 61 6D 65 22 3A 22 43 68 61 74 22 7D 7D')],
+       # "Chat / Now / Auto display on - This one pops up..."
+       sequence(recv(S, "4B CB"), recv(S, "4B C9")), display(B, settles_to("notif_popup_on")), within=3.5)
+wait(5.8)
+# blank again
+expect(display(B, blank), within=1.5)
+
+# auto display off on each lens, read back on the slave
+wait(2.8)
+action(S, send('4F 00 0F'), recv(S, "4F C9 00"))
+action(M, send('4F 00 0F'), recv(M, "4F C9 00"))
+wait(0.9)
+action(S, send('3C'), recv(S, "3C C9 00 0F"))
+
+# the second notification: acknowledged, only the chat icon shows
+wait(1.9)
+# notification 12 from Chat in two chunks: "Auto display off", "This one waits on the dashboard."
+action(S, [send('4B 00 02 00 7B 22 6E 63 73 5F 6E 6F 74 69 66 69 63 61 74 69 6F 6E 22 3A 7B 22 6D 73 67 5F 69 64 22 3A 31 32 2C 22 61 63 74 69 6F 6E 22 3A 30 2C 22 61 70 70 5F 69 64 65 6E 74 69 66 69 65 72 22 3A 22 63 6F 6D 2E 65 78 61 6D 70 6C 65 2E 63 68 61 74 22 2C 22 74 69 74 6C 65 22 3A 22 41 75 74 6F 20 64 69 73 70 6C 61 79 20 6F 66 66 22 2C 22 73 75 62 74 69 74 6C 65 22 3A 22 22 2C 22 6D 65 73 73 61 67 65 22 3A 22 54 68 69 73 20 6F 6E 65 20 77 61 69 74 73 20 6F 6E 20 74 68 65 20 64 61 73 68 62 6F 61 72 64 2E 22 2C 22 74 69 6D 65 5F 73 22 3A 31'), send('4B 00 02 01 37 36 32 38 39 39 39 35 39 2C 22 64 61 74 65 22 3A 22 32 30 32 35 2D 31 31 2D 31 31 20 32 32 3A 32 35 3A 35 39 22 2C 22 64 69 73 70 6C 61 79 5F 6E 61 6D 65 22 3A 22 43 68 61 74 22 7D 7D')],
+       # chat icon, bottom left
+       sequence(recv(S, "4B CB"), recv(S, "4B C9")), display(B, settles_to("unread_mark")), within=3.5)
+
+# head up: the waiting notification is shown on both lenses instead of the dashboard (no F5 1E)
+wait(7)
+action(B, gesture("head_up"), recv(M, "F5 02"), quiet(B, "F5 1E"),
+       # "Chat / Now / Auto display off - This one waits..."
+       display(B, settles_to("notif_waiting")), within=2.5)
+
+# a notification from an app not in the whitelist: acknowledged, not shown; the slave asks the app to add it
+# notification 13 from com.example.unknown (not in the whitelist) in two chunks: "Unknown app", "Not in the whitelist."
+action(S, [send('4B 00 02 00 7B 22 6E 63 73 5F 6E 6F 74 69 66 69 63 61 74 69 6F 6E 22 3A 7B 22 6D 73 67 5F 69 64 22 3A 31 33 2C 22 61 63 74 69 6F 6E 22 3A 30 2C 22 61 70 70 5F 69 64 65 6E 74 69 66 69 65 72 22 3A 22 63 6F 6D 2E 65 78 61 6D 70 6C 65 2E 75 6E 6B 6E 6F 77 6E 22 2C 22 74 69 74 6C 65 22 3A 22 55 6E 6B 6E 6F 77 6E 20 61 70 70 22 2C 22 73 75 62 74 69 74 6C 65 22 3A 22 22 2C 22 6D 65 73 73 61 67 65 22 3A 22 4E 6F 74 20 69 6E 20 74 68 65 20 77 68 69 74 65 6C 69 73 74 2E 22 2C 22 74 69 6D 65 5F 73 22 3A 31 37 36 32 38 39 39 39 35 39 2C 22 64 61'), send('4B 00 02 01 74 65 22 3A 22 32 30 32 35 2D 31 31 2D 31 31 20 32 32 3A 32 35 3A 35 39 22 2C 22 64 69 73 70 6C 61 79 5F 6E 61 6D 65 22 3A 22 55 6E 6B 6E 6F 77 6E 22 7D 7D')],
+       sequence(recv(S, "4B CB"), recv(S, "4B C9")), recv(S, "F6 06", count=6), quiet(B, "frame "), within=3.5)
+
+# the master's status: no message pending, worn
+action(M, send('22 05 00 01 01'), recv(M, "22 05 00 01 01 00 01 00"))
+
+# over the whole run
+never("fatal")
+# no reboot (the PMIC watchdog under the bad schedule)
+never("boot", after=1)
+link_up()
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard opened once per lens
+recv(B, "F5 1E")
+audio(M)

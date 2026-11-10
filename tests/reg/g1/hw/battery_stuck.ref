@@ -1,0 +1,16 @@
+# The slave's battery gauge never moves from power-on while the master's does. After 120 s without a change the
+# slave must stop feeding the PMIC watchdog and reboot once, and the master never.
+
+# from power-up
+action(S, NPM + "BatteryVoltageMilliVolts 3400")
+
+# the slave's reboot lands at about 150 s: the PMIC power-cycles it once its watchdog goes unfed (Renode prints
+# the virtual time in ks past 100 s, so the boot is timed to 10 s)
+at(120)
+expect(event(S, "boot app"), event(S, "boot net"), within=54)
+check(S, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000001")
+check(M, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
+
+# over the whole run
+never("fatal")
+never("boot", after=1, lens=M)

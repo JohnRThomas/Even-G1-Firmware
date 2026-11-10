@@ -1,0 +1,49 @@
+# With the dashboard closed and the phone connected, the app uploads a bitmap to each lens and ends it with the CRC.
+# The glasses must echo the CRC and show the bitmap on both lenses until the app hides it, then blank both panels.
+
+# the dashboard without a phone (clock, Bluetooth icon), closed again by the head down gesture
+# dashboard, no phone
+at(5)
+action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
+action(B, gesture("head_down"), display(B, blank), within=1.5)
+
+# on connecting (no heartbeats: the app's 2C 01 keep-alive every 10 s instead): the bind; worn and the charging
+# state are reported once per lens (asserted over the whole run), no dashboard events (it is closed)
+action(B, phone_on(hb=0),
+       event(B, "pairing: complete, link encrypted, bonded"),
+       recv(B, "2C 66"), recv(B, "4D C9"),
+       # BLE paired
+       recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# the upload: the 51 in-order 0x15 packets of packets/bitmap.hex (194 bytes of the file a packet, the
+# 4-byte flash address in the first) to both lenses every 0.1 s, not answered; 0x20 and 0x16 are, 0x16
+# echoing the CRC
+action(B, paced(buf('bitmap', 1, 51), 0.1))
+# the keep-alive
+action(B, send('2C 01'), recv(B, "2C 66"))
+action(B, send('20 0D 0E'), recv(B, "20 C9"))
+wait(0.7)
+# the uploaded bitmap
+action(B, send('16 48 DD 59 D3'), recv(B, "16 48 DD 59 D3 C9"), display(B, settles_to("bitmap_576x136")))
+
+# 0x18 hides it
+action(B, send('18'), recv(B, "18 C9"), recv(M, "F5 00"), display(B, blank))
+# the keep-alive
+action(B, send('2C 01'), recv(B, "2C 66"))
+
+# over the whole run
+never("fatal")
+never("boot", after=1)
+# in-order upload packets are not answered
+never("15")
+link_up()
+# worn, reported once per lens on connecting
+recv(B, "F5 06")
+# the charging state, reported once per lens
+recv(B, "F5 09")
+# the dashboard was closed before the phone: no close reported
+quiet(B, "F5 1F")
+# no head up/down reports
+quiet(M, "F5 02")
+quiet(M, "F5 03")
