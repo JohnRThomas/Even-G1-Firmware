@@ -1,0 +1,6 @@
+tests:
+  unit.pkcs7:
+    platform_allow: native_sim
+    integration_platforms:
+      - native_sim
+    tags: unit

@@ -1,0 +1,130 @@
+# Unit tests on PRs and pushes to main; regression nightly and on request. Not yet run on GitHub.
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+env:
+  NRFUTIL_URL: https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+
+jobs:
+  unit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: NCS version the firmware pins
+        id: ncs
+        run: |
+          ver=$(sed -n 's/^[[:space:]]*set(REQIURED_NCS_VERSION[[:space:]]\{1,\}\([0-9.]*\)).*/\1/p' CMakeLists.txt | head -n 1)
+          test -n "$ver"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+      - name: Host compiler for 32-bit native_sim
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
+
+      - name: Cache the NCS tree and toolchain bundle
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ncs
+          key: ncs-${{ steps.ncs.outputs.version }}-${{ runner.os }}
+
+      - name: Install the NCS toolchain bundle and tree
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --output nrfutil "$NRFUTIL_URL"
+          chmod +x nrfutil
+          ./nrfutil install toolchain-manager
+          ./nrfutil toolchain-manager install --ncs-version v${{ steps.ncs.outputs.version }}
+          ./nrfutil toolchain-manager launch --ncs-version v${{ steps.ncs.outputs.version }} -- \
+            west init -m https://github.com/nrfconnect/sdk-nrf --mr v${{ steps.ncs.outputs.version }} ~/ncs/v${{ steps.ncs.outputs.version }}
+          cd ~/ncs/v${{ steps.ncs.outputs.version }}
+          "$GITHUB_WORKSPACE/nrfutil" toolchain-manager launch --ncs-version v${{ steps.ncs.outputs.version }} -- \
+            west update --narrow -o=--depth=1
+
+      - name: Unit tests
+        run: tests/unit/run.sh --coverage
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-results
+          path: |
+            build_unit/twister_report.xml
+            build_unit/twister.json
+            build_unit/coverage/summary.txt
+
+  regression:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: NCS version the firmware pins
+        id: ncs
+        run: |
+          ver=$(sed -n 's/^[[:space:]]*set(REQIURED_NCS_VERSION[[:space:]]\{1,\}\([0-9.]*\)).*/\1/p' CMakeLists.txt | head -n 1)
+          test -n "$ver"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the NCS tree and toolchain bundle
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ncs
+          key: ncs-${{ steps.ncs.outputs.version }}-${{ runner.os }}
+
+      - name: nrfutil
+        run: |
+          curl --fail --location --output nrfutil "$NRFUTIL_URL"
+          chmod +x nrfutil
+          ./nrfutil install toolchain-manager
+
+      - name: Install the NCS toolchain bundle and tree
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          ./nrfutil toolchain-manager install --ncs-version v${{ steps.ncs.outputs.version }}
+          ./nrfutil toolchain-manager launch --ncs-version v${{ steps.ncs.outputs.version }} -- \
+            west init -m https://github.com/nrfconnect/sdk-nrf --mr v${{ steps.ncs.outputs.version }} ~/ncs/v${{ steps.ncs.outputs.version }}
+          cd ~/ncs/v${{ steps.ncs.outputs.version }}
+          "$GITHUB_WORKSPACE/nrfutil" toolchain-manager launch --ncs-version v${{ steps.ncs.outputs.version }} -- \
+            west update --narrow -o=--depth=1
+
+      - name: Build the firmware
+        env:
+          ZEPHYR_BASE: /home/runner/ncs/v${{ steps.ncs.outputs.version }}/zephyr
+        run: |
+          ./nrfutil toolchain-manager launch --ncs-version v${{ steps.ncs.outputs.version }} -- \
+            west build -b nrf5340dk_nrf5340_cpuapp
+          ls dfu_application_*.zip
+
+      - name: Cache Renode
+        id: renode
+        uses: actions/cache@v4
+        with:
+          path: tools/simulator/.renode
+          key: renode-${{ hashFiles('tools/simulator/setup.sh') }}
+
+      - name: Install Renode
+        if: steps.renode.outputs.cache-hit != 'true'
+        run: tools/simulator/setup.sh
+
+      # P0 set only.
+      - name: Regression scenarios
+        run: python3 tests/reg/run.py -k boot,hw_init,pair,link,app_bringup,dashboard -j 2
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-results
+          path: dfu_application_*.zip

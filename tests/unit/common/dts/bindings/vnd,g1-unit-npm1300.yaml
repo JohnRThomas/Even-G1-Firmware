@@ -1,0 +1,9 @@
+description: |
+  Unit tests only. Stand-in for the nPM1300 PMIC node (nordic,npm1300) on an emulated
+  I2C bus. tests/unit/common/emul/devices.c defines a stub device for it; it has no
+  emulator, the firmware's mfd_npm1300_* calls go to common/emul/fake_npm1300.c, which
+  records them.
+
+compatible: "vnd,g1-unit-npm1300"
+
+include: i2c-device.yaml

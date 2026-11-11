@@ -1,0 +1,18 @@
+description: |
+  Unit tests only. Stand-in for the nPM1300 regulators node (nordic,npm1300-regulator).
+  tests/unit/common/emul/devices.c defines a device for this node and one for each child
+  (BUCK1, BUCK2, LDO1, LDO2); a child's config starts like the private
+  struct regulator_npm1300_config of drivers/regulator/regulator_npm1300.c (common
+  config, then mfd = the parent PMIC device), which the firmware reads directly
+  (opt3007.c, charger_box.c and main.c take the MFD device from it).
+
+compatible: "vnd,g1-unit-npm1300-regulator"
+
+child-binding:
+  description: one regulator output (BUCK1, BUCK2, LDO1, LDO2)
+  include:
+    - name: regulator.yaml
+      property-allowlist:
+        - regulator-min-microvolt
+        - regulator-max-microvolt
+        - regulator-init-microvolt

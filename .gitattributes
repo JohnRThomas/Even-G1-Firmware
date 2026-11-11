@@ -1,0 +1,3 @@
+# Golden images: never line-ending converted (Git for Windows defaults to autocrlf).
+*.pbm binary
+*.pgm binary

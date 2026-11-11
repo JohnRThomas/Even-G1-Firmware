@@ -1,0 +1,14 @@
+description: |
+  Unit tests only (driver substrate). The external QSPI NOR flash of the lens as a RAM
+  flash driver, tests/unit/common/emul/nor_flash.c: Zephyr flash API with the argument
+  rules of the nRF QSPI NOR driver (writes at 4-byte aligned addresses, 1..4 bytes or a
+  multiple of 4; erases of whole 4 KiB sectors), NOR programming (bits only cleared),
+  4 KiB pages, erase value 0xff.
+
+compatible: "vnd,g1-unit-nor-flash"
+
+properties:
+  size:
+    type: int
+    required: true
+    description: capacity in bytes, a multiple of 4096

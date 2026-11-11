@@ -1,0 +1,8 @@
+/* Driverless ipc0; the test defines its device. */
+
+/ {
+	ipc0: ipc0 {
+		compatible = "vnd,g1-unit-ipc";
+		status = "okay";
+	};
+};

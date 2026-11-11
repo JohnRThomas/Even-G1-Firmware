@@ -1,0 +1,17 @@
+description: |
+  Unit tests only (driver substrate, common/boards/native_sim_drivers.overlay). Stand-in
+  for the nPM1300 charger node (nordic,npm1300-charger, label pmic_charger) as a fake
+  sensor driver, tests/unit/common/emul/fake_charger.c: the channels the firmware reads
+  (SENSOR_CHAN_GAUGE_VOLTAGE / _TEMP / _AVG_CURRENT / _DESIRED_CHARGING_CURRENT and the
+  nPM1300 status / error channels) return what the test scripted, latched at
+  sensor_sample_fetch() like the real driver. Test API: common/emul/fake_charger.h.
+
+compatible: "vnd,g1-unit-charger"
+
+properties:
+  current-microamp:
+    type: int
+    required: true
+    description: |
+      charge current, reported on SENSOR_CHAN_GAUGE_DESIRED_CHARGING_CURRENT as the
+      real driver does (40000 on the lens, boards/nrf5340dk_nrf5340_cpuapp.overlay)

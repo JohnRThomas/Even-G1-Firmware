@@ -1,0 +1,11 @@
+description: |
+  Unit tests only (driver substrate, common/boards/native_sim_drivers.overlay). An I2C
+  chip that the firmware talks to with raw i2c_* transfers (no Zephyr driver), on a
+  zephyr,i2c-emul-controller bus. tests/unit/common/emul/devices.c gives every enabled
+  node a stub device (the emulated bus needs a device for each child); the chip's
+  emulator in common/emul/<chip>_emul.c binds to the node by its label with
+  EMUL_DT_DEFINE(DT_NODELABEL(<label>), ...) and answers at the node's reg address.
+
+compatible: "vnd,g1-unit-i2c-chip"
+
+include: i2c-device.yaml

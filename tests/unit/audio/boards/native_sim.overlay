@@ -1,0 +1,24 @@
+/* g1_unit_intc stands in for the NVIC. */
+
+/ {
+	g1_unit_intc: g1-unit-intc {
+		compatible = "vnd,g1-unit-intc";
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
+
+	pdm0_default: pdm0_default {
+	};
+
+	pdm0: pdm@26000 {
+		compatible = "nordic,nrf-pdm";
+		reg = <0x26000 0x1000>;
+		interrupt-parent = <&g1_unit_intc>;
+		interrupts = <20 1>;
+		status = "okay";
+		pinctrl-0 = <&pdm0_default>;
+		pinctrl-names = "default";
+		clock-source = "PCLK32M";
+		queue-size = <10>;
+	};
+};

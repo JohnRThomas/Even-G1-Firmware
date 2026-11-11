@@ -1,0 +1,9 @@
+description: |
+  Unit tests only. A devicetree node whose label the firmware passes to DEVICE_DT_GET
+  (for example mx25r64 in src/storage/storage.h) but whose driver is not part of the
+  suite. tests/unit/common/harness.c defines a device without API for every enabled
+  node with this compatible, so the firmware compiles and device_is_ready() is true.
+  A suite that wants a real driver behind the label deletes this node in its own
+  boards/native_sim.overlay and puts the label on the emulated device instead.
+
+compatible: "vnd,g1-unit-fake-device"
