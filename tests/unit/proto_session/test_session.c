@@ -87,8 +87,7 @@ ZTEST(proto_session, test_0x2c_sub_byte_sets_the_phone_type)
   }
 }
 
-/* Defect: data[1] is read without a length check, so a lone 2C takes a stale byte. */
-ZTEST_EXPECT_FAIL(proto_session, test_0x2c_without_sub_byte_leaves_the_phone_type_unchanged);
+/* A lone 2C has no sub byte; byte 1 of the rx buffer is stale. */
 ZTEST(proto_session, test_0x2c_without_sub_byte_leaves_the_phone_type_unchanged)
 {
   g1_send_hex("3f 02"); /* leaves 02 at byte 1 of the rx buffer */
@@ -140,8 +139,7 @@ ZTEST(proto_session, test_0x2c_slave_reply_has_no_master_version_and_its_own_ver
   expect_only_frame_bytes(want, sizeof(want));
 }
 
-/* Defect: the second battery reads 100 whenever the own battery is above 96. */
-ZTEST_EXPECT_FAIL(proto_session, test_0x2c_other_battery_is_not_replaced_by_a_full_own_battery);
+/* The other battery is scaled from its own level, not from the own battery. */
 ZTEST(proto_session, test_0x2c_other_battery_is_not_replaced_by_a_full_own_battery)
 {
   const uint8_t *frame;
@@ -191,7 +189,7 @@ ZTEST(proto_session, test_0x33_reports_the_lens_serial_number_from_the_settings)
 
 /* Reply: the 5-byte request, then 00 when idle, else the running screen (dashboard_mode). */
 #define RUNNING_APP_TEST(name, idle, request, reply)                                               \
-  ZTEST(proto_session, name)                                                                 \
+  ZTEST(proto_session, test_##name)                                                          \
   {                                                                                          \
     is_idle_fake.return_val = (idle);                                                  \
     g1_state()->dashboard_mode = 6;                                                    \
@@ -199,12 +197,12 @@ ZTEST(proto_session, test_0x33_reports_the_lens_serial_number_from_the_settings)
     expect_only_frame(reply);                                                          \
   }
 
-RUNNING_APP_TEST(test_0x39_running_app_echoes_request_plus_zero_when_idle, true, "39 05 00 02 01",
+RUNNING_APP_TEST(0x39_running_app_echoes_request_plus_zero_when_idle, true, "39 05 00 02 01",
      "39 05 00 02 01 00")
-RUNNING_APP_TEST(test_0x39_running_app_reports_the_running_screen, false, "39 05 00 4a 01",
+RUNNING_APP_TEST(0x39_running_app_reports_the_running_screen, false, "39 05 00 4a 01",
      "39 05 00 4a 01 06")
 /* length field 6, packet 5 */
-RUNNING_APP_TEST(test_0x39_length_mismatch_replies_ff, true, "39 06 00 02 01", "39 06 00 02 01 ff")
+RUNNING_APP_TEST(0x39_length_mismatch_replies_ff, true, "39 06 00 02 01", "39 06 00 02 01 ff")
 
 /* Reply: echo, unread count, note index + 1, low-power flag. */
 ZTEST(proto_session, test_0x22_status_reports_unread_count_note_index_and_low_power)
@@ -288,12 +286,10 @@ ZTEST(proto_session, test_0x3d_length_mismatch_is_dropped)
   zassert_equal(CURRENT_LANGUAGE.magic, 0);
 }
 
-/* Defect, skipped (stack overflow): data_len bytes are copied into a 21-byte reply. */
+/* The reply echoes the request in 21 bytes; a longer request is dropped. */
 ZTEST(proto_session, test_0x3d_long_packet_does_not_overflow_the_reply)
 {
   uint8_t pkt[30] = {0x3d, 30, 0x00, 0x1a, 0x01, 0x02};
-
-  ztest_test_skip();
 
   g1_send(pkt, sizeof(pkt));
   zassert_true(g1_frame_count() <= 1);
@@ -373,7 +369,7 @@ ZTEST(proto_session, test_0x50_repeat_while_locked_does_not_extend_the_lock)
 
 /* 50 <len16> <seq> <action, 01 = lock> 01 that must not lock; the handler never replies */
 #define NO_LOCK_TEST(name, role, request)                                                          \
-  ZTEST(proto_session, name)                                                                 \
+  ZTEST(proto_session, test_##name)                                                          \
   {                                                                                          \
     g1_unit_set_role(role);                                                            \
     g1_send_hex(request);                                                              \
@@ -381,7 +377,7 @@ ZTEST(proto_session, test_0x50_repeat_while_locked_does_not_extend_the_lock)
     zassert_false(atomic_test_bit(&dashboard_lock_requested, DASHBOARD_LOCK_BIT));     \
   }
 
-NO_LOCK_TEST(test_0x50_slave_ignores_the_lock, G1_ROLE_SLAVE, "50 06 00 00 01 01")
-NO_LOCK_TEST(test_0x50_other_action_does_not_lock, G1_ROLE_MASTER, "50 06 00 00 02 01")
+NO_LOCK_TEST(0x50_slave_ignores_the_lock, G1_ROLE_SLAVE, "50 06 00 00 01 01")
+NO_LOCK_TEST(0x50_other_action_does_not_lock, G1_ROLE_MASTER, "50 06 00 00 02 01")
 /* length field 7, packet 6 */
-NO_LOCK_TEST(test_0x50_length_mismatch_does_not_lock, G1_ROLE_MASTER, "50 07 00 00 01 01")
+NO_LOCK_TEST(0x50_length_mismatch_does_not_lock, G1_ROLE_MASTER, "50 07 00 00 01 01")

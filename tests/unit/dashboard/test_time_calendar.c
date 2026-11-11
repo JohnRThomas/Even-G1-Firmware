@@ -310,8 +310,6 @@ ZTEST(dashboard, test_0x06_calendar_ninth_event_keeps_the_stored_schedule)
   zassert_equal(dts()->sched_num, 1);
 }
 
-/* DEFECT: an oversized list gets no reply, though the app retries unanswered packets. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_calendar_ninth_event_gets_an_error_reply);
 ZTEST(dashboard, test_0x06_calendar_ninth_event_gets_an_error_reply)
 {
   send_calendar_single(0x12, put_same_events(9, "N", "t", ""));
@@ -402,9 +400,6 @@ ZTEST(dashboard, test_0x06_calendar_chunked_strings_one_below_the_field_sizes_ar
   assert_longest_strings();
 }
 
-/* DEFECT: the chunked path copies up to the full field size, leaving no NUL. */
-ZTEST_EXPECT_FAIL(dashboard,
-      test_0x06_calendar_chunked_strings_of_the_field_sizes_are_cut_and_terminated);
 ZTEST(dashboard, test_0x06_calendar_chunked_strings_of_the_field_sizes_are_cut_and_terminated)
 {
   struct schedule_item *item = &schedule_items[0];

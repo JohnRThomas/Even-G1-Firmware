@@ -95,11 +95,7 @@ ZTEST(features, test_0x07_debug_string_5_starts_a_countdown)
   expect_only_frame_padded("07 c9", 20);
 }
 
-/*
- * DEFECT: bytes 1..5 are read without a length check, so a short packet takes stale bytes from
- * small_buf.
- */
-ZTEST_EXPECT_FAIL(features, test_0x07_packet_shorter_than_6_bytes_is_refused);
+/* small_buf still holds an earlier packet; none of its bytes may be taken for the countdown */
 ZTEST(features, test_0x07_packet_shorter_than_6_bytes_is_refused)
 {
   static const uint8_t earlier[] = {0x50, 0x06, 0x00, 0x00, 0x01, 0x01};

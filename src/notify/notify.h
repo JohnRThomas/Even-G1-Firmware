@@ -48,6 +48,7 @@ int cJSON_GetArraySize(const cJSON *array);
 cJSON *cJSON_GetArrayItem(const cJSON *array, int index);
 cJSON *cJSON_GetObjectItem(const cJSON *const object, const char *const string);
 cJSON_bool cJSON_IsArray(const cJSON *const item);
+cJSON_bool cJSON_IsString(const cJSON *const item);
 cJSON *cJSON_CreateObject(void);
 cJSON *cJSON_CreateArray(void);
 cJSON *cJSON_CreateString(const char *string);
@@ -110,7 +111,7 @@ uint8_t parse_message_type(int idx);
 void app_list_init(void);
 
 /* ncs_notification.c */
-void parse_ncs_notification(char *json, struct notif_msg *msg);
+int parse_ncs_notification(char *json, struct notif_msg *msg);
 
 /* ui_notification.c */
 int panel_related(struct jbd_panel_context *panel, int idx, void *arg);

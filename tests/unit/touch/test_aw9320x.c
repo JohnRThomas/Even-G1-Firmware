@@ -278,8 +278,6 @@ ZTEST(touch, test_mode_get_unknown_work_state_is_an_error)
   zassert_equal(aw9320x_mode_operation_get(), AW9320X_MODE_ERR);
 }
 
-/* DEFECT: the WST read result is ignored; a silent chip reads as deep sleep. */
-ZTEST_EXPECT_FAIL(touch, test_mode_get_on_a_nak_is_an_error);
 ZTEST(touch, test_mode_get_on_a_nak_is_an_error)
 {
   init_ok();
@@ -363,8 +361,6 @@ static int heap_blocks(void)
   return count;
 }
 
-/* DEFECT: the answer buffer leaks on a mismatch. */
-ZTEST_EXPECT_FAIL(touch, test_pack_parse_failure_frees_its_buffer);
 ZTEST(touch, test_pack_parse_failure_frees_its_buffer)
 {
   int before;

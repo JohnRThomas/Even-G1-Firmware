@@ -172,8 +172,6 @@ ZTEST(notifications, test_0x4b_three_chunks_reply_cb_cb_c9_and_queue_the_message
   expect_str(msg->date, "2025-06-10 18:43:37");
 }
 
-/* DEFECT: only chunk 0's header is kept; the mixed message is queued and acked C9. */
-ZTEST_EXPECT_FAIL(notifications, test_0x4b_chunk_count_changing_mid_message_is_refused);
 ZTEST(notifications, test_0x4b_chunk_count_changing_mid_message_is_refused)
 {
   const char *json = ncs_json(77, 0, "com.discord", "Ping", "hello", "Discord");
@@ -188,8 +186,6 @@ ZTEST(notifications, test_0x4b_chunk_count_changing_mid_message_is_refused)
   expect_4b_reply(0xca);
 }
 
-/* DEFECT: a failed parse still queues the buffer; its empty app id passes the whitelist. */
-ZTEST_EXPECT_FAIL(notifications, test_0x4b_message_that_is_not_json_queues_nothing);
 ZTEST(notifications, test_0x4b_message_that_is_not_json_queues_nothing)
 {
   send_ncs("{\"ncs_notification\":{\"msg_id\":5,\"action\":0,", NCS_CHUNK_JSON);
@@ -199,8 +195,6 @@ ZTEST(notifications, test_0x4b_message_that_is_not_json_queues_nothing)
           g_msg_num_push - PUSH_FIRST);
 }
 
-/* DEFECT: the reply is C9 whatever the parse gave. */
-ZTEST_EXPECT_FAIL(notifications, test_0x4b_message_that_is_not_json_is_answered_ca);
 ZTEST(notifications, test_0x4b_message_that_is_not_json_is_answered_ca)
 {
   send_ncs("{\"ncs_notification\":{\"msg_id\":5,\"action\":0,", NCS_CHUNK_JSON);

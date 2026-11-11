@@ -1139,7 +1139,8 @@ void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
           ctx->calendar_last_index = ctx->calendar_index;
           gui_area_clear(DB_X(0x20e), DB_Y(2), DB_X(0x234),
                    DB_Y(0x1d));
-          gui_area_clear(DB_X(0xb8), DB_Y(0x3b), DB_X(0x23e),
+          /* up to 0x23c like the other panes: 0x23e is the pane border (bitmap 0x5a) */
+          gui_area_clear(DB_X(0xb8), DB_Y(0x3b), DB_X(0x23c),
                    DB_Y(0x88));
         }
         count = 0;

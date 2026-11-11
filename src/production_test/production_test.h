@@ -47,6 +47,7 @@ K_THREAD_STACK_DECLARE(mic_transm_thread_stack, 1024);
 extern struct k_sem mic_transm_sem;             /* mic_transm_thread trigger */
 int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp,
       uint8_t *resp_len, void *arg);
+int pt_resp_checksum(uint8_t **resp, uint8_t *resp_len);
 int64_t set_pt_deadline(void);                   /* pt_timeout_ms = uptime + 10 s */
 void mic_transm_thread(void *p1, void *p2, void *p3);
 void start_mic_transm_thread(void);

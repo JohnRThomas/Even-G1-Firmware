@@ -176,8 +176,7 @@ ZTEST(gui, test_darkword_by_lines_dims_first_lines)
   gui_expect_golden("darkword_by_lines", GUI_PGM, 32, 16, 176, 100);
 }
 
-/* Defect: a glyph is dimmed before it wraps, so line 2 starts dim. */
-ZTEST_EXPECT_FAIL(gui, test_darkword_by_lines_wrapped_line_starts_bright);
+/* a glyph that wraps is dimmed by the line it lands on, so line 2 starts bright */
 ZTEST(gui, test_darkword_by_lines_wrapped_line_starts_bright)
 {
   int max = 0;

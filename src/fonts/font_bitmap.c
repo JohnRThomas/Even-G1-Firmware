@@ -80,13 +80,15 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max)
     } else if (c >= 0x20 && c < 0x80) {
       u = c;
       i++;
-    } else if ((c & 0xf0) == 0xe0) {
+    } else if ((c & 0xf0) == 0xe0 && i + 2 < len && (utf8[i + 1] & 0xc0) == 0x80 &&
+         (utf8[i + 2] & 0xc0) == 0x80) {
       u = utf8_decode_char((const uint8_t *)&utf8[i], 3);
       i += 3;
-    } else if ((c & 0xe0) == 0xc0) {
+    } else if ((c & 0xe0) == 0xc0 && i + 1 < len && (utf8[i + 1] & 0xc0) == 0x80) {
       u = utf8_decode_char((const uint8_t *)&utf8[i], 2);
       i += 2;
     } else {
+      /* stray continuation byte, or a lead byte without its continuation bytes */
       i++;
       continue;
     }
@@ -126,7 +128,10 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
   int err;
 
   if ((unsigned int)(code - 0x20) < 0x60) {
-    ret = font_ascii_lookup(code, size);
+    if (size > sizeof(cjk_glyph_buf)) {
+      return NULL;
+    }
+    ret = font_ascii_lookup(code, w, h, cjk_glyph_buf);
   } else {
     if (get_dashboard_state()->flash_read == NULL) {
       bitmap = NULL;
@@ -147,7 +152,7 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
         G1_LOG_ERR("read flash fail: %d\n\n", err);
       }
     }
-    expand_1bpp_to_4bpp(bitmap, size, cjk_glyph_buf);
+    expand_1bpp_to_4bpp(bitmap, size / 4, cjk_glyph_buf);
     ret = cjk_glyph_buf;
   }
   return ret;

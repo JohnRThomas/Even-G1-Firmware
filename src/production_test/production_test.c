@@ -76,6 +76,8 @@ static uint8_t aging_mode;             /* aging mode */
 static uint8_t aging_thread_started;             /* aging thread started */
 static uint8_t charger_retry_fail_count;
 static bool battery_full_flag;
+/* high-field polls without charge current that make status 4 */
+#define BATTERY_NO_CHARGE_POLLS 40
 static uint8_t battery_high_v_count;
 static uint8_t battery_full_count;
 static uint8_t mic_chunk_buf[MIC_DATA_CHUNK];
@@ -1223,8 +1225,13 @@ int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   p[3] = 6;
   p[4] = 0;
   voltage = nfc_get_field_mv();
-  if (voltage > 5499 && get_dashboard_state()->battery_current_ma >= 0 && battery_full_flag == 0) {
-    if (battery_high_v_count < 5) {
+  /*
+   * Polls at a high field without charge current. From BATTERY_NO_CHARGE_POLLS on the count
+   * holds while the case keeps any field up, so status 4 lasts through its step down.
+   */
+  if (get_dashboard_state()->battery_current_ma >= 0 && battery_full_flag == 0 &&
+      (voltage > 5499 || (voltage != 0 && battery_high_v_count >= BATTERY_NO_CHARGE_POLLS))) {
+    if (battery_high_v_count < BATTERY_NO_CHARGE_POLLS) {
       battery_high_v_count++;
     }
   } else {
@@ -1255,7 +1262,8 @@ int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   } else {
     battery_full_count = 0;
   }
-  if (p[4] == 0 && voltage - 1 < 7799 && battery_full_flag == 0 && battery_high_v_count > 39 &&
+  if (p[4] == 0 && voltage - 1 < 7799 && battery_full_flag == 0 &&
+      battery_high_v_count >= BATTERY_NO_CHARGE_POLLS &&
       get_dashboard_state()->battery_current_ma >= 0) {
     p[4] = 4;
   }
@@ -1270,13 +1278,11 @@ int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   } else {
     p[8] = 0;
   }
-  if (voltage - 1 < 4999 && get_dashboard_state()->battery_current_ma >= 0 && battery_full_flag == 0) {
-    if (battery_high_v_count > 39 && get_dashboard_state()->battery_current_ma >= 0) {
-      p[9] = 100;
-      p[4] = 4;
-    }
-  } else {
-    p[9] = abs(get_dashboard_state()->battery_current_ma);
+  p[9] = abs(get_dashboard_state()->battery_current_ma);
+  /* the no-charge marker goes with status 4 only: it never replaces status 1 (full) or 2 (too hot) */
+  if (p[4] == 4 && voltage - 1 < 4999 && get_dashboard_state()->battery_current_ma >= 0 &&
+      battery_full_flag == 0 && battery_high_v_count >= BATTERY_NO_CHARGE_POLLS) {
+    p[9] = 100;
   }
   *resp_len = 10;
 
@@ -1495,18 +1501,20 @@ int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t 
 
   for (i = 0; i < ARRAY_SIZE(pt_cmd_table); i++) {
     if (pt_cmd_table[i].cmd == req[0] && pt_cmd_table[i].handler != NULL) {
-      pt_cmd_table[i].handler(req, req_len, resp, resp_len, arg);
+      ret = pt_cmd_table[i].handler(req, req_len, resp, resp_len, arg);
       break;
     }
   }
-  if (i == ARRAY_SIZE(pt_cmd_table)) {
+  /* unknown command: status 2; refused by its handler: status 1 */
+  if (i == ARRAY_SIZE(pt_cmd_table) || ret != 0) {
     p = *resp;
     p[0] = req[0];
     p[1] = 1;
     p[2] = 3;
     p[3] = 1;
-    p[4] = 2;
+    p[4] = ret != 0 ? 1 : 2;
     *resp_len = 5;
+    ret = 0;
   }
 
   if (type == PT_COMM_NFC) {

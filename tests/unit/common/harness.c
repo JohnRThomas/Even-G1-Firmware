@@ -1,4 +1,6 @@
+#include <errno.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <zephyr/fff.h>
@@ -269,13 +271,46 @@ static void state_build(void)
 
   memset(&state->bonded_addr, 0xff, sizeof(state->bonded_addr));
 
+  state->spi.is_initialized = 0;
+  state->spi.pins[0] = 4;
+  state->spi.pins[1] = 8;
+  state->spi.pins[2] = 9;
+  state->spi.pins[3] = 10;
+  state->spi.ss = 11;
+  state->spi.speed_mhz = 0x20;
+
+  state->master_fw_ver.major = APP_VERSION_MAJOR;
+  state->master_fw_ver.minor = APP_VERSION_MINOR;
+  state->master_fw_ver.patch = APP_PATCHLEVEL;
+  state->sync.flags |= BIT(2);
+
   ble_context_setup(&state->ble_context);
+
+  state->user_data_reset_pending = 0;
+  state->panel.brightness_max = state->panel.lum_gear;
+  state->mic_nocompress = 0;
 }
 
 void g1_unit_set_role(int role)
 {
+  struct GlassesState *state = &state_storage;
   zassert_true(role == G1_ROLE_MASTER || role == G1_ROLE_SLAVE, "role %d", role);
-  set_role(GLOBAL_STATE, role);
+  memset(&state->master_fw_ver, 0, sizeof(state->master_fw_ver));
+  memset(&state->fw_ver, 0, sizeof(state->fw_ver));
+  state->sync.flags &= ~BIT(2);
+  state->esb_pkt.flags &= ~BIT(2);
+  state->is_master = role;
+  if (role == G1_ROLE_MASTER) {
+    state->master_fw_ver.major = APP_VERSION_MAJOR;
+    state->master_fw_ver.minor = APP_VERSION_MINOR;
+    state->master_fw_ver.patch = APP_PATCHLEVEL;
+    state->sync.flags |= BIT(2);
+  } else {
+    state->fw_ver.major = APP_VERSION_MAJOR;
+    state->fw_ver.minor = APP_VERSION_MINOR;
+    state->fw_ver.patch = APP_PATCHLEVEL;
+    state->esb_pkt.flags |= BIT(2);
+  }
 }
 
 #define G1_RESET_HOOKS_MAX 32

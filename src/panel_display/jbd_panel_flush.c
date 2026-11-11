@@ -30,7 +30,7 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
     return -1;
   }
   if (y_end >= PANEL_FB_ROWS) {
-    y_end = PANEL_FB_ROWS;
+    y_end = PANEL_FB_ROWS - 1;
   }
   if (x_end >= PANEL_WIDTH) {
     x_end = PANEL_WIDTH;
@@ -40,7 +40,6 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
     int len = x_end / 2 - x_start / 2 + 5;
     uint8_t backup[5];
     volatile uint32_t addr;
-    uint8_t tail;
 
     memcpy(backup, (uint8_t *)p, sizeof(backup));
     addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
@@ -49,15 +48,14 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
     p[2] = (addr >> 8) & 0xff;
     p[3] = addr & 0xff;
     p[4] = 0xff;
-    tail = p[len];
-    p[len] = 0;
+    /* the dummy clocks: the byte behind the window, as it is in the frame buffer, since the
+     * panel takes in its first pixel */
     k_mutex_lock(&lcd_mutex, K_FOREVER);
-    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len, rx, 1);
+    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len + 1, rx, 1);
     k_mutex_unlock(&lcd_mutex);
     if (ret) {
       G1_LOG_ERR("spi transfer error....\n");
     }
-    p[len] = tail;
     memcpy((uint8_t *)p, backup, sizeof(backup));
   }
   spi_send_cmd(SPI_SYNC);
@@ -77,7 +75,7 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
     return -1;
   }
   if (y_end >= PANEL_FB_ROWS) {
-    y_end = PANEL_FB_ROWS;
+    y_end = PANEL_FB_ROWS - 1;
   }
   if (x_end >= PANEL_WIDTH) {
     x_end = PANEL_WIDTH;
@@ -88,7 +86,6 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
     int len = x_end / 2 - x_start / 2 + 5;
     uint8_t backup[5];
     volatile uint32_t addr;
-    uint8_t tail;
 
     memcpy(backup, (uint8_t *)p, sizeof(backup));
     addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
@@ -97,15 +94,14 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
     p[2] = (addr >> 8) & 0xff;
     p[3] = addr & 0xff;
     p[4] = 0xff;
-    tail = p[len];
-    p[len] = 0;
+    /* the dummy clocks: the byte behind the window, as it is in the frame buffer, since the
+     * panel takes in its first pixel */
     k_mutex_lock(&lcd_mutex, K_FOREVER);
-    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len, rx, 1);
+    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len + 1, rx, 1);
     k_mutex_unlock(&lcd_mutex);
     if (ret) {
       G1_LOG_ERR("spi transfer error....\n");
     }
-    p[len] = tail;
     memcpy((uint8_t *)p, backup, sizeof(backup));
   }
   spi_send_cmd(SPI_SYNC);

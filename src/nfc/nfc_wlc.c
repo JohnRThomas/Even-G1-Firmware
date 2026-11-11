@@ -370,12 +370,12 @@ uint32_t nfc_get_field_mv(void)
 
 uint32_t nfc_tick_elapsed(void)
 {
-  return (uint32_t)k_uptime_ticks() - nfc_tick_start;
+  return k_uptime_get_32() - nfc_tick_start;
 }
 
 void nfc_tick_reset(void)
 {
-  nfc_tick_start = k_uptime_ticks();
+  nfc_tick_start = k_uptime_get_32();
 }
 
 /* ------------------------------------------------------------------ */
@@ -471,9 +471,10 @@ int NfcType5_NDEFDetection(void)
     /* If Proprietary NDEF jump to end of proprietary message */
     else if (tlv_detect.Type == NFCT5_PROPRIETARY_TLV) {
       if (tlv_detect.Length == NFCT5_3_BYTES_L_TLV) {
-        CCFileStruct.NDEF_offset += tlv_detect.Length16;
+        CCFileStruct.NDEF_offset += sizeof(TT5_TLV_t) +
+                  sys_be16_to_cpu(tlv_detect.Length16);
       } else {
-        CCFileStruct.NDEF_offset += tlv_detect.Length;
+        CCFileStruct.NDEF_offset += 2 * sizeof(uint8_t) + tlv_detect.Length;
       }
       continue;
     }
@@ -622,8 +623,9 @@ int nfc_write_ndef(const uint8_t *pData, uint32_t Length)
 {
   int status;
 
-  if (NfcType5_WriteNDEF(Length, pData) != NDEF_ERROR) {
-    return NDEF_OK;
+  status = NfcType5_WriteNDEF(Length, pData);
+  if (status != NDEF_ERROR) {
+    return status;
   }
 
   /* not formatted: write a fresh CC file (E1 40 40 01) and retry */
@@ -632,9 +634,11 @@ int nfc_write_ndef(const uint8_t *pData, uint32_t Length)
   CCFileStruct.MemorySize = 0x40;
   CCFileStruct.TT5Tag = 0x01;
   status = NfcType5_TT5Init();
-  NfcType5_WriteNDEF(Length, pData);
+  if (status != NDEF_OK) {
+    return status;
+  }
 
-  return status;
+  return NfcType5_WriteNDEF(Length, pData);
 }
 
 /* ------------------------------------------------------------------ */
@@ -724,6 +728,10 @@ static ReturnCode ndefMessageInit(ndefMessage *message)
   return ERR_NONE;
 }
 
+#define WLC_FOD_RECORD_SIZE  11
+/* WLCCAP (15 bytes), WLCSTAI (up to 19 bytes) and WLCFOD records */
+#define WLC_NDEF_MESSAGE_SIZE  (15 + 19 + WLC_FOD_RECORD_SIZE)
+
 int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, const uint8_t *fod_info)
 {
   ndefBuffer bufPayload;
@@ -732,7 +740,8 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
   ndefRecord recordCap;
   ndefRecord recordFod;
   ndefRecord recordStai;
-  uint8_t buf[32];
+  uint8_t buf[WLC_FOD_RECORD_SIZE];
+  uint8_t msg[WLC_NDEF_MESSAGE_SIZE];
   ndefType typeCap;
   ndefType typeStai;
   ndefRecord records[4];
@@ -801,8 +810,8 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
       err |= ndefMessageAppend(&message, &records[i]);
     }
 
-    bufPayload.buffer = buf;
-    bufPayload.length = sizeof(buf);
+    bufPayload.buffer = msg;
+    bufPayload.length = sizeof(msg);
     err |= ndefMessageEncode(&message, &bufPayload);
   }
 
@@ -1512,7 +1521,8 @@ int nfc_init(void)
 
 void nfc_charge_update_state(struct nfc_charge *chg)
 {
-  int status = nfc_charge_status();
+  /* states 1 and 4: the pass before had the field */
+  int status = nfc_charge_status(chg->state == 1 || chg->state == 4);
 
   if (status == 1) {
     chg->state = 4;
@@ -1523,9 +1533,13 @@ void nfc_charge_update_state(struct nfc_charge *chg)
   }
 }
 
-int nfc_charge_status(void)
+/*
+ * The case's field starts above NFC_FIELD_ON_MV. Once the charger draws current the case
+ * regulates it down to 4.4..4.9 V, so a field that was there counts until NFC_FIELD_HOLD_MV.
+ */
+int nfc_charge_status(bool had_field)
 {
-  if (nfc_field_mv <= 5100) {
+  if (nfc_field_mv <= (had_field ? NFC_FIELD_HOLD_MV : NFC_FIELD_ON_MV)) {
     return 2;
   }
 
@@ -1534,11 +1548,11 @@ int nfc_charge_status(void)
 
 void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc)
 {
-  chg->state = 3;
   nfc_charge_update_state(chg);
 
   switch (chg->state) {
   case 1:
+    wlc->charging = 0;
     wlc->cap_info[5] = 9;
     wlc->field_lost = 0;
     if (chg->field_mv < 500) {
@@ -1550,7 +1564,7 @@ void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc)
     nfc_low_field = 0;
     break;
   case 2:
-    if ((int64_t)(k_uptime_ticks() - nfc_charge_tick) <= 3000) {
+    if (k_uptime_get_32() - nfc_charge_tick <= 3000) {
       return;
     }
     if (wlc->state == 10) {
@@ -1560,7 +1574,12 @@ void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc)
       wlc->fod_req = 1;
     }
     wlc->field_lost = 1;
-    nfc_charge_tick = k_uptime_ticks();
+    /* a full lens kept its listener state through the gap of a case reboot; this is longer */
+    if (wlc->charging) {
+      wlc->charging = 0;
+      wlc->state = 1;
+    }
+    nfc_charge_tick = k_uptime_get_32();
     return;
   case 4:
     if (wlc->state == 10) {
@@ -1577,7 +1596,7 @@ void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc)
     break;
   }
 
-  nfc_charge_tick = k_uptime_ticks();
+  nfc_charge_tick = k_uptime_get_32();
 }
 
 void nfc_field_voltage_update(void)
@@ -1595,7 +1614,7 @@ uint32_t chargerGetVdcRect(void)
 bool nfc_field_detected(void)
 {
   nfc_field_voltage_update();
-  return nfc_field_mv > 5100;
+  return nfc_field_mv > NFC_FIELD_ON_MV;
 }
 
 int nfc_field_check(void)
@@ -1641,7 +1660,6 @@ void nfc_charge_refresh(struct nfc_charge *chg, struct wlc_listener *wlc)
   wlc->stai_info[2] = get_dashboard_state()->battery_left;
   wlc->battery = get_dashboard_state()->battery_left;
   (void)get_dashboard_state();
-  wlc->charging = 0;
 
   nfc_charge_update(chg, wlc);
 }

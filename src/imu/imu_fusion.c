@@ -159,8 +159,9 @@ int update_head_up_thresholds(struct imu_ctx *c)
       c->thr_low = c->ref - t;
       c->thr_high = c->ref - 4500 - t;
     } else {
-      c->thr_low = t - 6300;
-      c->thr_high = t - 9300;
+      /* no reference: as from a level pitch of -63 degrees, with a 30 degree window */
+      c->thr_low = -6300 - t;
+      c->thr_high = -9300 - t;
     }
   }
 

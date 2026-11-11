@@ -447,12 +447,6 @@ int audioStreamFileManagerHandler(void)
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
         return 0;
       }
-      ret = get_dashboard_state()->flash_erase(get_dashboard_state(), VOICE_MANAGER_ADDR,
-                  VOICE_SECTOR_SIZE);
-      if (ret) {
-        G1_LOG_INF("Flash erase failed! %d\n\n", ret);
-        return 0;
-      }
       VOICE_MGR->magic = VOICE_MANAGER_MAGIC;
       VOICE_MGR->reserved = 0;
       VOICE_MGR->blocks[audio_block_num].state = VOICE_BLOCK_USED;
@@ -476,6 +470,12 @@ int audioStreamFileManagerHandler(void)
         clearAudioMessageQueue();
         G1_LOG_ERR("The dmic may have a problem. When the size of the recording file is 0, "
              "data block 0 is terminated\n");
+        return 0;
+      }
+      ret = get_dashboard_state()->flash_erase(get_dashboard_state(), VOICE_MANAGER_ADDR,
+                  VOICE_SECTOR_SIZE);
+      if (ret) {
+        G1_LOG_INF("Flash erase failed! %d\n\n", ret);
         return 0;
       }
       ret = get_dashboard_state()->flash_write(get_dashboard_state(), VOICE_MANAGER_ADDR,

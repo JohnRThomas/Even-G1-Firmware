@@ -11,10 +11,13 @@ action(B, phone_on(),
        recv(B, "F5 11"),
        within=5)
 
-# the test notification is pushed to the phone as 0x4B chunks by both lenses
+# the test notification is fed to each lens's own 0x4B handler in 0x4B chunks (message id 0), and the lens
+# answers each chunk as it does for the app's: 4B CB (more follow) until the last, then one 4B C9 (accepted)
 at(20)
 # debug string "#1@title@msg": a test notification, title "title", message "msg"
-action(B, send('23 31 40 74 69 74 6C 65 40 6D 73 67'), recv(B, "4B CA 0B", count=at_least(1)), within=1)
+action(B, send('23 31 40 74 69 74 6C 65 40 6D 73 67'),
+       recv(B, "4B CB 00", count=at_least(1)), recv(B, "4B C9 00"),
+       within=1)
 # read the unread notification count (tests/unit/vectors: 0x36_notification_count_get)
 action(B, send('36'), recv(B, "36 C9"), within=1)
 

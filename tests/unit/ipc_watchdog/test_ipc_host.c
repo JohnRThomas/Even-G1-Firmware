@@ -188,11 +188,8 @@ ZTEST(ipc_host, test_init_waits_for_the_network_core_to_bind)
   zassert_equal(ipc_ready, 1);
 }
 
-/* Skipped: without a bind it spins in while (1), which stops native_sim time. */
 ZTEST(ipc_host, test_init_reboots_when_the_network_core_never_binds)
 {
-  ztest_test_skip();
-
   (void)serialization_init();
   zassert_equal(system_reboot_delayed_fake.call_count, 1);
 }
@@ -229,8 +226,6 @@ ZTEST(ipc_host, test_packet_for_an_unknown_receiver_is_dropped)
   zassert_equal(recv_b_fake.call_count, 0);
 }
 
-/* DEFECT: len is not checked, so an empty packet reaches the receiver with len SIZE_MAX. */
-ZTEST_EXPECT_FAIL(ipc_host, test_empty_packet_is_dropped);
 ZTEST(ipc_host, test_empty_packet_is_dropped)
 {
   struct ipc_service_context *ctx = &g1_state()->ipc_ctx;

@@ -146,8 +146,7 @@ ZTEST(persistence, test_clean_commands_reset_one_field_each)
   zassert_equal(get_dashboard_startup_mode(), 0);
 }
 
-/* DEFECT: getAppLanguageInfofromFlash() returns the erased byte (0xff) as the language. */
-ZTEST_EXPECT_FAIL(persistence, test_startup_mode_stored_first_leaves_the_language_english);
+/* the language byte stays erased (ff) */
 ZTEST(persistence, test_startup_mode_stored_first_leaves_the_language_english)
 {
   upgradeDashboardStartupModeInfoToFlash(1);

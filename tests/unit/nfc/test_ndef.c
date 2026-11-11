@@ -502,8 +502,6 @@ ZTEST(nfc_wlc, test_8_byte_cc_puts_the_ndef_tlv_at_offset_8)
   zassert_equal(CCFileStruct.State, TT5_INITIALIZED);
 }
 
-/* DEFECT: a proprietary TLV is skipped by L only, without its T and L bytes. */
-ZTEST_EXPECT_FAIL(nfc_wlc, test_proprietary_tlv_is_skipped_to_the_ndef_tlv);
 ZTEST(nfc_wlc, test_proprietary_tlv_is_skipped_to_the_ndef_tlv)
 {
   tag_holds("e1 40 40 01 fd 02 55 55 03 00");
@@ -551,8 +549,6 @@ ZTEST(nfc_wlc, test_ndef_of_255_bytes_or_more_has_a_3_byte_tlv_length)
   zassert_equal(st25dv_emul_user_mem()[8 + 255], 0xfe);
 }
 
-/* DEFECT: the chip takes 256 bytes per write; the failure returns NDEF_OK. */
-ZTEST_EXPECT_FAIL(nfc_wlc, test_ndef_longer_than_256_bytes_is_written);
 ZTEST(nfc_wlc, test_ndef_longer_than_256_bytes_is_written)
 {
   static uint8_t msg[300];
@@ -566,8 +562,6 @@ ZTEST(nfc_wlc, test_ndef_longer_than_256_bytes_is_written)
   zassert_equal(st25dv_emul_user_mem()[8 + 300], 0xfe);
 }
 
-/* DEFECT: NDEF_ERROR_MEMORY_TAG is returned as NDEF_OK. */
-ZTEST_EXPECT_FAIL(nfc_wlc, test_ndef_larger_than_the_tag_is_reported_as_an_error);
 ZTEST(nfc_wlc, test_ndef_larger_than_the_tag_is_reported_as_an_error)
 {
   static uint8_t msg[600];

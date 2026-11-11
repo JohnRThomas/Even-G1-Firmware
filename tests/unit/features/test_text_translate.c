@@ -336,8 +336,6 @@ ZTEST(features, test_0x4e_style_4_complete_sets_type_8_for_8_s)
   zassert_equal(g1_state()->stay_time_left_s, 8);
 }
 
-/* DEFECT: chunks append at dash_buf->data + len without a size check. */
-ZTEST_EXPECT_FAIL(features, test_0x4e_text_longer_than_dash_buf_is_not_written_past_it);
 ZTEST(features, test_0x4e_text_longer_than_dash_buf_is_not_written_past_it)
 {
   static uint8_t text[NUS_RX_MAX - TEXT_HDR];
@@ -353,22 +351,17 @@ ZTEST(features, test_0x4e_text_longer_than_dash_buf_is_not_written_past_it)
   zassert_true(dash()->len <= DASH_DATA, "dash_buf->len %u", dash()->len);
 }
 
-/* DEFECT: copies hdr->len - 9 bytes, which underflows. */
 ZTEST(features, test_0x4e_packet_shorter_than_its_header_is_refused)
 {
-  ztest_test_skip();
-
   g1_send_hex("4e 01 01 00 71");
   zassert_equal(dash()->len, 0);
 }
 
-/* DEFECT: unbounded copy into multi_packet_buf. Dispatched directly: the link caps rx at 0x100. */
+/* Dispatched directly: the link caps rx at 0x100. */
 ZTEST(features, test_0x4e_chunk_longer_than_multi_packet_buf_is_rejected)
 {
   static uint8_t pkt[TEXT_HDR + 0x205];
   struct ble_req_hdr hdr = {.cmd = 0x4e, .source = 1, .len = sizeof(pkt)};
-
-  ztest_test_skip();
 
   memset(pkt, 'x', sizeof(pkt));
   g1_hex_parse("4e 01 01 00 71 00 00 01 01", pkt, sizeof(pkt));
@@ -376,8 +369,6 @@ ZTEST(features, test_0x4e_chunk_longer_than_multi_packet_buf_is_rejected)
   zassert_true(dash()->len <= DASH_DATA);
 }
 
-/* DEFECT: chunks append at data + len without a size check. */
-ZTEST_EXPECT_FAIL(features, test_0x0f_text_longer_than_the_translate_buffer_is_not_written_past_it);
 ZTEST(features, test_0x0f_text_longer_than_the_translate_buffer_is_not_written_past_it)
 {
   static uint8_t text[NUS_RX_MAX - TRANSLATE_HDR];
@@ -394,22 +385,17 @@ ZTEST(features, test_0x0f_text_longer_than_the_translate_buffer_is_not_written_p
          translate_dst()->len);
 }
 
-/* DEFECT: copies hdr->len - 7 bytes, which underflows. */
 ZTEST(features, test_0x0d_packet_shorter_than_its_header_is_refused)
 {
-  ztest_test_skip();
-
   g1_send_hex("0d 01 01 00");
   zassert_equal(translate_src()->len, 0);
 }
 
-/* DEFECT: unbounded copy into text_packet_buf. Dispatched directly: the link caps rx at 0x100. */
+/* Dispatched directly: the link caps rx at 0x100. */
 ZTEST(features, test_0x0d_chunk_longer_than_text_packet_buf_is_rejected)
 {
   static uint8_t pkt[TRANSLATE_HDR + TEXT_PKT_BUF + 1];
   struct ble_req_hdr hdr = {.cmd = 0x0d, .source = 1, .len = sizeof(pkt)};
-
-  ztest_test_skip();
 
   memset(pkt, 'x', sizeof(pkt));
   g1_hex_parse("0d 01 01 00 00 00 00", pkt, sizeof(pkt));

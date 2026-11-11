@@ -250,14 +250,6 @@ ZTEST(nfc_wlc, test_no_field_without_an_earlier_field_changes_nothing)
   zassert_equal(listener.state, 10);
 }
 
-/* DEFECT: tick counts are compared with ms constants; waits are 32.768x too short. */
-#if CONFIG_SYS_CLOCK_TICKS_PER_SEC != 1000
-ZTEST_EXPECT_FAIL(nfc_wlc, test_tick_elapsed_counts_milliseconds);
-ZTEST_EXPECT_FAIL(nfc_wlc, test_listener_settles_150ms_after_writing_its_records);
-ZTEST_EXPECT_FAIL(nfc_wlc, test_listener_waits_the_wlc_interval_before_polling_again);
-ZTEST_EXPECT_FAIL(nfc_wlc, test_field_loss_is_reported_after_3s_without_field);
-#endif
-
 ZTEST(nfc_wlc, test_tick_elapsed_counts_milliseconds)
 {
   nfc_tick_reset();
@@ -348,8 +340,6 @@ ZTEST(nfc_wlc, test_wlc_message_without_status_is_the_capability_record_alone)
   expect_bytes(st25dv_emul_user_mem(), 22, "e1 40 40 01 03 0f d1" WLCCAP " fe");
 }
 
-/* DEFECT: WLCFOD is decoded from the encode buffer and comes out as WLCCAP. */
-ZTEST_EXPECT_FAIL(nfc_wlc, test_wlc_foreign_object_record_is_wlcfod_with_its_two_bytes);
 ZTEST(nfc_wlc, test_wlc_foreign_object_record_is_wlcfod_with_its_two_bytes)
 {
   static const uint8_t stai[9] = {0};
@@ -361,8 +351,6 @@ ZTEST(nfc_wlc, test_wlc_foreign_object_record_is_wlcfod_with_its_two_bytes)
          "e1 40 40 01 03 1a 91" WLCCAP " 51 06 02 57 4c 43 46 4f 44 5a a5 fe");
 }
 
-/* DEFECT: 39 bytes are encoded into a 32-byte buffer. */
-ZTEST_EXPECT_FAIL(nfc_wlc, test_wlc_message_with_all_three_records_is_written_whole);
 ZTEST(nfc_wlc, test_wlc_message_with_all_three_records_is_written_whole)
 {
   static const uint8_t stai[9] = {1, 0x05, 0x32, 0, 0x01, 0, 0, 0, 0};
@@ -678,12 +666,9 @@ ZTEST(nfc_wlc, test_redock_field_ramp_sets_the_charge_state_from_the_field_alone
 }
 
 /*
- * Known defect: nfc_charge_status() calls a field at or below 5100 mV "no field" (state 2), yet
- * the case regulates its field to 4.4..4.9 V once the charger draws current (every captured
- * steady-state reply), so the WLC charge state reads "no field" through most of a real charge and
- * wlc_update_field_state() restarts the listener at the step down.
+ * The case regulates its field to 4.4..4.9 V once the charger draws current (every captured
+ * steady-state reply): a field that was above 5.1 V counts down to NFC_FIELD_HOLD_MV.
  */
-ZTEST_EXPECT_FAIL(nfc_wlc, test_charge_state_is_charging_at_the_case_regulated_4400mv_field);
 ZTEST(nfc_wlc, test_charge_state_is_charging_at_the_case_regulated_4400mv_field)
 {
   struct wlc_listener listener;
@@ -728,13 +713,7 @@ ZTEST(nfc_wlc, test_case_reboot_field_gap_restarts_a_listener_that_was_not_charg
   zassert_equal(listener.state, 3, "starting over, not back at 11");
 }
 
-/*
- * Known defect: nfc_charge_refresh() clears wlc->charging before every pass and nfc_charge_update()
- * sets it again only while the field is present, so at the field loss the listener never counts
- * as charging and wlc_update_field_state() restarts it (state 1, run on to 2 in the same pass)
- * even from state 14.
- */
-ZTEST_EXPECT_FAIL(nfc_wlc, test_case_reboot_field_gap_keeps_the_state_of_a_charging_listener);
+/* a full lens keeps wlc->charging through the gap, so wlc_update_field_state() leaves state 14 */
 ZTEST(nfc_wlc, test_case_reboot_field_gap_keeps_the_state_of_a_charging_listener)
 {
   struct wlc_listener listener;

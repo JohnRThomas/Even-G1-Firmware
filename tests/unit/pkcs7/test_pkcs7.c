@@ -179,8 +179,7 @@ ZTEST(pkcs7, test_null_destination_replies_ca)
   zassert_equal(parse_receiver_msg_pack_pkcs7(NULL, msg, sizeof(msg)), PKCS7_PACK_ERR);
 }
 
-/* DEFECT: no capacity check; chunk 34 overruns the buffer (dst has a guard). */
-ZTEST_EXPECT_FAIL(pkcs7, test_pack_chunk_overrunning_the_whitelist_buffer_is_rejected);
+/* dst has a guard after the buffer */
 ZTEST(pkcs7, test_pack_chunk_overrunning_the_whitelist_buffer_is_rejected)
 {
   uint8_t req[3 + APP_CHUNK_PAYLOAD] = {0x04, 40};
@@ -201,8 +200,7 @@ ZTEST(pkcs7, test_pack_chunk_overrunning_the_whitelist_buffer_is_rejected)
   zassert_equal(got, PKCS7_PACK_ERR, "chunk 34 (ends at %d): 0x%02x", 35 * 180, got);
 }
 
-/* DEFECT: a resent chunk (lost reply) is appended again. */
-ZTEST_EXPECT_FAIL(pkcs7, test_pack_duplicated_chunk_index_is_not_appended_twice);
+/* resent after a lost reply */
 ZTEST(pkcs7, test_pack_duplicated_chunk_index_is_not_appended_twice)
 {
   uint8_t req[] = {0x04, 0x03, 0x01, 0x42};
@@ -215,8 +213,7 @@ ZTEST(pkcs7, test_pack_duplicated_chunk_index_is_not_appended_twice)
   expect_dst("41 42 43 7e");
 }
 
-/* DEFECT: as above, chunk 11 overruns the 0x800-byte buffer. */
-ZTEST_EXPECT_FAIL(pkcs7, test_msg_chunk_overrunning_the_notification_buffer_is_rejected);
+/* 0x800-byte buffer, dst has a guard after it */
 ZTEST(pkcs7, test_msg_chunk_overrunning_the_notification_buffer_is_rejected)
 {
   uint8_t req[4 + APP_CHUNK_PAYLOAD] = {0x4b, 0x00, 15};
@@ -237,8 +234,7 @@ ZTEST(pkcs7, test_msg_chunk_overrunning_the_notification_buffer_is_rejected)
   zassert_equal(got, PKCS7_PACK_ERR, "chunk 11 (ends at %d): 0x%02x", 12 * 180, got);
 }
 
-/* DEFECT: as above, a resent chunk is appended again. */
-ZTEST_EXPECT_FAIL(pkcs7, test_msg_duplicated_chunk_index_is_not_appended_twice);
+/* resent after a lost reply */
 ZTEST(pkcs7, test_msg_duplicated_chunk_index_is_not_appended_twice)
 {
   uint8_t req[] = {0x4b, 0x00, 0x03, 0x01, 0x42};

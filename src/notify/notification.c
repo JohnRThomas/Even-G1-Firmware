@@ -214,11 +214,11 @@ void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_
     return;
   }
   if (ncs_buf == NULL) {
-    ncs_buf = malloc(0x800);
+    ncs_buf = malloc(PKCS7_MSG_PACK_BUF_SIZE);
     if (ncs_buf == NULL) {
       BLE_PRINTK("[%s-%d] malloc failed !!\n", __FUNCTION__, __LINE__);
     } else {
-      memset(ncs_buf, 0, 0x800);
+      memset(ncs_buf, 0, PKCS7_MSG_PACK_BUF_SIZE);
     }
   }
   if (ncs_buf != NULL) {
@@ -226,11 +226,14 @@ void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_
     rsp[1] = ret;
     rsp[2] = data[1];
     if (ret == PKCS7_PACK_DONE) {
-      parse_ncs_notification(ncs_buf, msg);
-      G1_LOG_INF("ncs data receive okay !\n\n");
-      *(uint16_t *)&tx[2] = sizeof(struct notif_msg);
-      spim_transfer(ctx, resp, 8);
-      rsp[1] = PKCS7_PACK_DONE;
+      if (parse_ncs_notification(ncs_buf, msg) == 0) {
+        G1_LOG_INF("ncs data receive okay !\n\n");
+        *(uint16_t *)&tx[2] = sizeof(struct notif_msg);
+        spim_transfer(ctx, resp, 8);
+        rsp[1] = PKCS7_PACK_DONE;
+      } else {
+        rsp[1] = PKCS7_PACK_ERR;
+      }
       free(ncs_buf);
       ncs_buf = NULL;
     }
@@ -559,10 +562,7 @@ move:
       memcpy(&g_arrMsgContent[i], &g_arrMsgContent[j], sizeof(struct notif_msg));
       memset(&g_arrMsgContent[j], 0, sizeof(struct notif_msg));
       G1_LOG_ERR("######clear_timeout_message copy data from %d to  i %d\n", j, i);
-      i++;
-      if (i == MSG_NORMAL_NUM) {
-        break;
-      }
+      /* slot i is checked again: the moved message may be due as well */
       continue;
     }
     offset++;
@@ -586,19 +586,20 @@ void confirm_message(uint32_t uid)
 {
   struct notif_msg *pending = &g_arrMsgContent[MSG_NORMAL_NUM];
   uint8_t action = pending->action;
+  bool duplicate = false;
   int count;
   uint8_t i;
 
   if (pending->app_identifier[0] == 0 || pending->uid != uid || pending->sync_state != 4) {
     return;
   }
+  msg_array_busy = 1;
   if (get_dashboard_state()->is_master == 1 && action == 0 &&
       message_uid_exists(MSG_NORMAL_NUM, uid)) {
     G1_LOG_ERR("add found same message, uidtail %d\n", uid);
-    memset(pending, 0, sizeof(*pending));
-    return;
+    duplicate = true;
+    goto drop_head;
   }
-  msg_array_busy = 1;
   if (get_dashboard_state()->dashboard_mode != 4) {
     clear_timeout_message(0);
   }
@@ -647,6 +648,7 @@ void confirm_message(uint32_t uid)
       }
     }
   }
+drop_head:
   memset(pending, 0, sizeof(*pending));
 
   for (i = MSG_NORMAL_NUM; i < g_msg_num_push; i++) {
@@ -661,6 +663,10 @@ void confirm_message(uint32_t uid)
     g_msg_num_push--;
   }
   memset(&g_arrMsgContent[g_msg_num_push], 0, sizeof(struct notif_msg));
+  if (duplicate) {
+    msg_array_busy = 0;
+    return;
+  }
 
   if (get_dashboard_state()->dashboard_mode != 4) {
     clear_timeout_message(0);

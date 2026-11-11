@@ -38,6 +38,9 @@ struct ble_req {
 #define BLE_RESP_OK       0xc9
 #define BLE_RESP_INVALID  0xca
 
+#define BLE_BRIGHTNESS_LEVEL_MAX 0x2a
+#define BLE_HEAD_UP_ANGLE_MAX    60
+
 static inline __attribute__((always_inline)) int read_fw_pack_from_nor_flash_by_qspi(uint32_t addr, uint8_t *buf, uint32_t len)
 {
   int ret;
@@ -144,6 +147,12 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 
     switch (req) {
     case BLE_CMD_BRIGHTNESS_SET:
+      if (data[0] > BLE_BRIGHTNESS_LEVEL_MAX) {
+        out[0] = BLE_RESP_INVALID;
+        ret = 1;
+        done = true;
+        break;
+      }
       if (state->panel.panel_brightness_level != data[0] || state->opt3007_context.auto_brightness != data[1]) {
         state->panel.set_brightness_cb(&state->panel, data[0]);
         state->opt3007_context.auto_brightness = data[1];
@@ -280,6 +289,12 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
     case BLE_CMD_HEAD_UP_ANGLE_SET:
       v = data[0];
       arg = data[1];
+      if (v > BLE_HEAD_UP_ANGLE_MAX) {
+        out[0] = BLE_RESP_INVALID;
+        ret = 1;
+        done = true;
+        break;
+      }
       if (state->imu.level != v || state->imu.wear != arg) {
         state->imu.level = v;
         state->imu.wear = arg;
@@ -353,7 +368,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
         r = 98;
       } else if (state->battery_info[1] == 96) {
         r = 99;
-      } else if (state->battery_info[0] > 96) {
+      } else if (state->battery_info[1] > 96) {
         r = 100;
       } else {
         r = state->battery_info[1];
@@ -408,7 +423,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
         memset(&pkt[12], 0, 21);
         state->ipc_ctx.send(pkt, sizeof(pkt));
       }
-      if (v & 1) {
+      if ((v & 1) && state->switch_to_dfu_cb) {
         state->switch_to_dfu_cb(&state->main_sem);
       }
       break;

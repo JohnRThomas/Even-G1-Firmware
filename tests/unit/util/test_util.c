@@ -129,8 +129,7 @@ ZTEST(util, test_rle_decode_zero_length_input_writes_nothing)
   expect_rle_decode(src, 0, 0, "ee ee ee ee ee ee ee ee");
 }
 
-/* DEFECT: an odd len reads src[len]; the fourth byte keeps the over-read in bounds. */
-ZTEST_EXPECT_FAIL(util, test_rle_decode_ignores_trailing_count_without_value);
+/* odd len: the trailing count has no value; the fourth byte keeps src[len] in bounds */
 ZTEST(util, test_rle_decode_ignores_trailing_count_without_value)
 {
   static const uint8_t src[] = {0x02, 0x11, 0x04, 0x77};
@@ -170,15 +169,12 @@ ZTEST(util, test_date_of_timestamp)
   expect_date(0xffffffffu, 2106, 2, 7, 6, 28, 15);
 }
 
-/* DEFECT: IS_LEAP_YEAR is not parenthesised, so every month of 2000 has 29 days. */
-ZTEST_EXPECT_FAIL(util, test_date_leap_day_2000_02_29);
+/* 2000 is a leap year (divisible by 400) */
 ZTEST(util, test_date_leap_day_2000_02_29)
 {
   expect_date(951782400u, 2000, 2, 29, 0, 0, 0);
 }
 
-/* DEFECT: same cause; got month 13, day 18. */
-ZTEST_EXPECT_FAIL(util, test_date_last_day_of_2000);
 ZTEST(util, test_date_last_day_of_2000)
 {
   expect_date(978307199u, 2000, 12, 31, 23, 59, 59);
@@ -251,16 +247,13 @@ ZTEST(util, test_format_float_2dp_negative_values_get_minus_sign)
   expect_2dp(-179.5f, "-179.50");
 }
 
-/* DEFECT: (int)(val * 100) truncates instead of rounding (C11 %.2f). */
-ZTEST_EXPECT_FAIL(util, test_format_float_2dp_rounds_to_nearest_hundredth);
+/* rounds to the nearest hundredth (C11 %.2f) */
 ZTEST(util, test_format_float_2dp_rounds_to_nearest_hundredth)
 {
   expect_2dp(1.2890625f, "+1.29");
   expect_2dp(-1.2890625f, "-1.29");
 }
 
-/* DEFECT: zero gets '-' and one digit: "-0.0". */
-ZTEST_EXPECT_FAIL(util, test_format_float_2dp_zero_is_plus_0_00);
 ZTEST(util, test_format_float_2dp_zero_is_plus_0_00)
 {
   expect_2dp(0.0f, "+0.00");

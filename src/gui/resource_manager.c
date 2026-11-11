@@ -337,9 +337,12 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
   case 3: {
     uint32_t res[2];
     *data = font_b_lookup(id, (int *)&res[0], (int *)&res[1]);
-    *w = res[0];
-    *h = res[1];
-    return 0;
+    if (*data != NULL) {
+      *w = res[0];
+      *h = res[1];
+      return 0;
+    }
+    break;
   }
   case 4:
     if ((uint32_t)(id - 0x16) > 0x71) {

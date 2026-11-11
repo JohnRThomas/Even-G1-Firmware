@@ -632,12 +632,14 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
           continue;
         }
         memcpy(glyph, data, h * (w / 2));
-        if (dark_lines != 0 && (int)lines < dark_lines) {
+        line_w += w + gui_font_kerning(code[-1], code[0]);
+        /* dimmed by the line the glyph lands on, the next one when it wraps */
+        if (dark_lines != 0 &&
+            (int)lines + (line_w > (uint32_t)(x1 - x0)) < dark_lines) {
           for (int k = 0; k < h * (w / 2); k++) {
             glyph[k] &= text_grey_level;
           }
         }
-        line_w += w + gui_font_kerning(code[-1], code[0]);
         if (line_w > (uint32_t)(x1 - x0)) {
           y_off += h;
           if (font == 0) {
@@ -1233,8 +1235,11 @@ int gui_utf_adv_draw_reset(void)
 /* horizontal text origin: the stored x shift (display depth setting, 22..42) plus the panel's per-eye offset */
 int gui_screen_x_offset(void)
 {
-  if ((get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) ||
-      get_dashboard_state()->canvas_x > 64) {
+  /* an unset canvas (both 0) gets both defaults, so x and y may be read in either order */
+  if (get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) {
+    get_dashboard_state()->canvas_x = 32;
+    get_dashboard_state()->canvas_y = 32;
+  } else if (get_dashboard_state()->canvas_x > 64) {
     get_dashboard_state()->canvas_x = 32;
   }
   return get_dashboard_state()->canvas_x + get_dashboard_state()->panel.y_offset;
@@ -1243,8 +1248,10 @@ int gui_screen_x_offset(void)
 /* vertical text origin (display height setting, clamped to 4..64) */
 int gui_screen_y_offset(void)
 {
-  if ((get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) ||
-      get_dashboard_state()->canvas_y > 64) {
+  if (get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) {
+    get_dashboard_state()->canvas_x = 32;
+    get_dashboard_state()->canvas_y = 32;
+  } else if (get_dashboard_state()->canvas_y > 64) {
     get_dashboard_state()->canvas_y = 32;
   }
   if (get_dashboard_state()->canvas_y < 4) {
@@ -1392,7 +1399,7 @@ int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
 int gui_screen_fade_out(void)
 {
   for (int step = 0; step < 8; step++) {
-    for (int row = 0; row < 199; row++) {
+    for (int row = 0; row < GUI_FB_ROWS; row++) {
       for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
         if (frame_buffer[row][col] != 0) {
           frame_buffer[row][col] &= gui_fade_mask_at(row % 26, 7 - step, col);
@@ -1585,7 +1592,7 @@ int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t 
    * row step as max(n, 0) like the target (bic fp, fp, asr #31) */
   n = (int)((uint32_t)x1 - (uint32_t)x0) >> 3;
   int k = 0;
-  for (int r = 0; r < y1 - y0; r++) {
+  for (int r = 0; r < y1 - y0 && y0 + r < GUI_FB_ROWS; r++) {
     for (int i = 0; i < (int)n; i++) {
       uint8_t bits = bmp[k++];
       uint32_t pix = 0;
@@ -1604,7 +1611,11 @@ int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t 
           pix = 0;
         }
       }
-      *(uint32_t *)&fb[y0 + r][x_byte + i * 4] = *(uint32_t *)out;
+      /* clipped at the right edge of the row */
+      if (x_byte + i * 4 < GUI_FB_ROW_BYTES) {
+        memcpy(&fb[y0 + r][x_byte + i * 4], out,
+               MIN(4, GUI_FB_ROW_BYTES - (x_byte + i * 4)));
+      }
     }
   }
 

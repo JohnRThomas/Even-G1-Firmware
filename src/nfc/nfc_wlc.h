@@ -331,7 +331,10 @@ void nfc_configure_gpo(uint32_t gpo_conf);
 int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, const uint8_t *fod_info);
 uint8_t nfc_is_tag_type_ok(void);
 int nfc_init(void);
-int nfc_charge_status(void);
+/* field thresholds of the charge state, in nfc_get_field_mv() units */
+#define NFC_FIELD_ON_MV   5100
+#define NFC_FIELD_HOLD_MV 4000
+int nfc_charge_status(bool had_field);
 void nfc_field_voltage_update(void);
 uint32_t chargerGetVdcRect(void);
 _Bool nfc_field_detected(void);

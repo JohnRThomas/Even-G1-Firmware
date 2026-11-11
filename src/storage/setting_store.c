@@ -160,7 +160,7 @@ uint8_t getAppLanguageInfofromFlash(void)
     G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
     return 0;
   }
-  if (rec.magic == SETTING_MAGIC) {
+  if (rec.magic == SETTING_MAGIC && rec.language != 0xff) {
     CURRENT_LANGUAGE.language = rec.language;
   } else {
     CURRENT_LANGUAGE.language = 2;

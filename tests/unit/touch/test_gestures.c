@@ -151,11 +151,6 @@ ZTEST(touch_gestures, test_triple_tap_is_key_event_3)
   expect_event(0, 3, 580 + SEQ_MS);
 }
 
-/*
- * DEFECT: sequences are only classified on a poll; a press before that restarts the count and the
- * first tap is lost.
- */
-ZTEST_EXPECT_FAIL(touch_gestures, test_two_taps_further_apart_than_the_window_are_two_single_taps);
 ZTEST(touch_gestures, test_two_taps_further_apart_than_the_window_are_two_single_taps)
 {
   start();

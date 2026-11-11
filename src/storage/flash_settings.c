@@ -19,6 +19,8 @@
 /* the logs print __LINE__: line numbers below follow the vendor file */
 #line 16
 #define SETT_ROOT "ar_glass_userdata_settings"
+/* the QSPI NOR driver takes write lengths above 4 only in multiples of 4 */
+#define FLASH_WRITE_ALIGN 4
 
 void local_store_delete(const char *key)
 {
@@ -33,6 +35,10 @@ int local_store_write(const char *key, const void *val, size_t len)
   char path[128] = SETT_ROOT "/";
   int err;
 
+  if (strlen(path) + strlen(key) >= sizeof(path)) {
+    G1_LOG_ERR("key too long: %s\n", key);
+    return -ENAMETOOLONG;
+  }
   strcat(path, key);
   err = settings_save_one(path, val, len);
   if (err) {
@@ -40,7 +46,7 @@ int local_store_write(const char *key, const void *val, size_t len)
   } else {
     G1_LOG_INF("save success:[%s], len=%d\n", key, len);
   }
-  return 0;
+  return err;
 }
 
 static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
@@ -210,6 +216,10 @@ int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
   uint8_t *buf;
   int ret;
 
+  if (len > 4096) {
+    printk("write data too long %d\n", (int)len);
+    return -EINVAL;
+  }
   buf = malloc(4096);
   if (buf == NULL) {
     BLE_PRINTK("[%s-%d]error, have no memory ! \n", __func__, __LINE__);
@@ -277,6 +287,10 @@ int write_font(uint32_t addr, const void *data, size_t len)
   int ret;
   uint32_t err;
 
+  if (len > sizeof(buf)) {
+    printk("font data too long %d\n", (int)len);
+    return -EINVAL;
+  }
   while (1) {
     if (!device_is_ready(FLASH_DEV)) {
       printk(" [%s] device not ready.\n", FLASH_DEV->name);
@@ -295,8 +309,11 @@ int write_font(uint32_t addr, const void *data, size_t len)
         if (err) {
           printk("Flash erase font failed! %d\n", err);
         } else {
-          err = get_dashboard_state()->flash_write(get_dashboard_state(),
-                     addr, data, len);
+          memset(buf, 0xff, sizeof(buf));
+          memcpy(buf, data, len);
+          err = get_dashboard_state()->flash_write(
+            get_dashboard_state(), addr, buf,
+            ROUND_UP(len, FLASH_WRITE_ALIGN));
           if (err) {
             printk("Flash write font failed! %d\n", err);
           } else {
@@ -333,7 +350,7 @@ int calc_flash_crc(uint16_t *crc, int addr, uint32_t size)
   int pos;
   int len;
   int ret;
-  uint8_t i;
+  int i;
 
   G1_LOG_INF("join in calc_flash_crc\n\n");
   if (crc == NULL || size == 0) {

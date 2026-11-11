@@ -138,11 +138,11 @@ void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uin
         uint16_t len, uint8_t *rsp)
 {
   if (whitelist_buf == NULL) {
-    whitelist_buf = malloc(0x1800);
+    whitelist_buf = malloc(PKCS7_PACK_BUF_SIZE);
     if (whitelist_buf == NULL) {
       BLE_PRINTK("[%s-%d] malloc failed !!\n", __func__, __LINE__);
     } else {
-      memset(whitelist_buf, 0, 0x1800);
+      memset(whitelist_buf, 0, PKCS7_PACK_BUF_SIZE);
     }
   }
   if (whitelist_buf != NULL) {
@@ -181,41 +181,45 @@ int parse_app_white_list_json(const char *json)
   uint8_t i;
   uint8_t n = 0;
   uint8_t count;
+  bool call_enable;
+  bool msg_enable;
+  bool calendar_enable;
+  bool ios_mail_enable;
+  bool app_enable;
 
   root = cJSON_Parse(json);
   if (root == NULL) {
     BLE_PRINTK("error root JSON NODE,json_buffer is %s\n", json);
     return 0;
   }
-  memset(&g_appWhiteListInfo, 0, sizeof(g_appWhiteListInfo));
   item = cJSON_GetObjectItem(root, "call_enable");
   if (item == NULL) {
     BLE_PRINTK("callEnable is NULL !\n");
     cJSON_Delete(root);
     return 0;
   }
-  g_appWhiteListInfo.call_enable = item->type == cJSON_True;
+  call_enable = item->type == cJSON_True;
   item = cJSON_GetObjectItem(root, "msg_enable");
   if (item == NULL) {
     BLE_PRINTK("msgEnable is NULL !\n");
     cJSON_Delete(root);
     return 0;
   }
-  g_appWhiteListInfo.msg_enable = item->type == cJSON_True;
+  msg_enable = item->type == cJSON_True;
   item = cJSON_GetObjectItem(root, "calendar_enable");
   if (item == NULL) {
     BLE_PRINTK("jsonCaledarEnable is NULL !\n");
     cJSON_Delete(root);
     return 0;
   }
-  g_appWhiteListInfo.calendar_enable = item->type == cJSON_True;
+  calendar_enable = item->type == cJSON_True;
   item = cJSON_GetObjectItem(root, "ios_mail_enable");
   if (item == NULL) {
     BLE_PRINTK("jsonIosMailEnable is NULL !\n");
     cJSON_Delete(root);
     return 0;
   }
-  g_appWhiteListInfo.ios_mail_enable = item->type == cJSON_True;
+  ios_mail_enable = item->type == cJSON_True;
   app = cJSON_GetObjectItem(root, "app");
   if (app == NULL) {
     BLE_PRINTK("appJson is NULL !\n");
@@ -228,20 +232,26 @@ int parse_app_white_list_json(const char *json)
     cJSON_Delete(root);
     return 0;
   }
-  g_appWhiteListInfo.app_enable = item->type == cJSON_True;
+  app_enable = item->type == cJSON_True;
   list = cJSON_GetObjectItem(app, "list");
   if (list == NULL) {
     BLE_PRINTK("appListJson is NULL !\n");
     cJSON_Delete(root);
     return 0;
   }
+  /* every key is there: the new record replaces the previous one */
+  memset(&g_appWhiteListInfo, 0, sizeof(g_appWhiteListInfo));
+  g_appWhiteListInfo.call_enable = call_enable;
+  g_appWhiteListInfo.msg_enable = msg_enable;
+  g_appWhiteListInfo.calendar_enable = calendar_enable;
+  g_appWhiteListInfo.ios_mail_enable = ios_mail_enable;
+  g_appWhiteListInfo.app_enable = app_enable;
   if (cJSON_IsArray(list)) {
     count = cJSON_GetArraySize(list);
     if (count > MAX_WHITE_LIST_APP_NUM - 1) {
       count = MAX_WHITE_LIST_APP_NUM;
     }
-    g_appWhiteListInfo.app_count = count;
-    for (i = 0; i < g_appWhiteListInfo.app_count; i++) {
+    for (i = 0; i < count; i++) {
       single = cJSON_GetArrayItem(list, i);
       if (single == NULL) {
         BLE_PRINTK("singleAppJson is NULL !\n");
@@ -266,6 +276,8 @@ int parse_app_white_list_json(const char *json)
         sizeof(g_appWhiteListInfo.list[n].name) - 1);
       n++;
     }
+    /* entries skipped above are not counted */
+    g_appWhiteListInfo.app_count = n;
   }
   cJSON_Delete(root);
   return 1;

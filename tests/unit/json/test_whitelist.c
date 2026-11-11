@@ -175,8 +175,6 @@ ZTEST(json, test_whitelist_without_a_required_key_is_rejected)
   }
 }
 
-/* DEFECT: the record is cleared before the keys are checked. */
-ZTEST_EXPECT_FAIL(json, test_whitelist_rejected_for_a_missing_key_keeps_the_previous_one);
 ZTEST(json, test_whitelist_rejected_for_a_missing_key_keeps_the_previous_one)
 {
   zassert_equal(parse_app_white_list_json(log_json), 1);
@@ -226,8 +224,6 @@ ZTEST(json, test_whitelist_with_more_apps_than_the_record_holds_keeps_the_first_
   zassert_equal(is_on_whitelist_by_identifier("com.example.app099"), 2);
 }
 
-/* DEFECT: app_count counts skipped entries; an empty id matches every app. */
-ZTEST_EXPECT_FAIL(json, test_whitelist_app_entry_without_a_name_is_dropped);
 ZTEST(json, test_whitelist_app_entry_without_a_name_is_dropped)
 {
   zassert_equal(parse_app_white_list_json(

@@ -105,7 +105,7 @@ int display_reflash_handler(struct GlassesState *gs, int screen_id, void *ctx, i
       G1_LOG_ERR("To perform exception handling, close the previous SCREEN ID = %d UI "
            "application first\n",
            disp_state.screen_id);
-      ui_task_handler(gs, screen_id, ctx, DISP_UI_EXIT);
+      ui_task_handler(gs, disp_state.screen_id, ctx, DISP_UI_EXIT);
       return -1;
     }
   } else if (event == DISP_UI_ENTER) {
@@ -148,8 +148,9 @@ int get_display_delay_close_ms(void)
 
 void display_thread_boost_priority(void)
 {
-  k_thread_priority_set(display_tid, -16);
+  /* set first: the raised thread may run before k_thread_priority_set() returns */
   display_prio_boosted = 1;
+  k_thread_priority_set(display_tid, -16);
 }
 
 void display_thread_restore_priority(void)
@@ -257,6 +258,7 @@ void display_thread_handler(struct GlassesState *gs)
               G1_LOG_ERR("screen ID message parampter error!\n");
             }
           }
+          display_thread_restore_priority();
           break;
         }
         switch (msg.type) {

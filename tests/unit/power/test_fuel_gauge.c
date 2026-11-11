@@ -98,9 +98,7 @@ ZTEST(fuel_gauge_init, test_init_fails_with_the_library_error)
   zassert_equal(fuel_gauge_init(CHARGER), -EINVAL);
 }
 
-/* DEFECT: after a failed init the update still runs the uninitialised library. */
-ZTEST_EXPECT_FAIL(fuel_gauge_init, test_update_after_a_failed_init_does_not_run_the_library);
-ZTEST(fuel_gauge_init, test_update_after_a_failed_init_does_not_run_the_library)
+ZTEST(fuel_gauge, test_update_after_a_failed_init_does_not_run_the_library)
 {
   fake_charger_set(3750000, 125000, 25500);
   nrf_fuel_gauge_init_fake.return_val = -EINVAL;
@@ -222,8 +220,7 @@ ZTEST(fuel_gauge, test_zero_current_with_a_full_battery_is_not_measured_again)
   zassert_equal(nrf_fuel_gauge_process_fake.call_count, 1);
 }
 
-/* DEFECT: every retry passes t_delta from the previous update, not the previous call. */
-ZTEST_EXPECT_FAIL(fuel_gauge, test_zero_current_retries_pass_the_time_since_the_previous_call);
+/* 1 s since the init, then the 5 ms sleep */
 ZTEST(fuel_gauge, test_zero_current_retries_pass_the_time_since_the_previous_call)
 {
   zassert_ok(fake_charger_queue(3750000, 0, 25500));

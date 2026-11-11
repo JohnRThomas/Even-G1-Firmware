@@ -29,7 +29,9 @@ static struct {
 
 #define PT_COMM_DEV()                                                               \
   (pt_comm.type == PT_COMM_NFC ? pt_comm.nfc : (void *)pt_comm.uart)
-static uint8_t pt_resp_buf[50];         /* response buffer */
+/* the largest reply (0x1b, 249 bytes) with the lpuart frame header and checksum */
+#define PT_RESP_BUF_SIZE 256
+static uint8_t pt_resp_buf[PT_RESP_BUF_SIZE]; /* response buffer */
 
 static uint8_t pt_req_buf[256];        /* request buffer */
 
@@ -79,6 +81,17 @@ int unlock_sensor_mutex(void)
   return 0;
 }
 
+/* true when the last of the len bytes is the 8-bit sum of the bytes before it */
+static bool pt_req_has_sum(const uint8_t *req, uint32_t len)
+{
+  uint8_t sum = 0;
+
+  for (uint32_t i = 0; i + 1 < len; i++) {
+    sum += req[i];
+  }
+  return req[len - 1] == sum;
+}
+
 int process_pt_data(void *arg)
 {
   uint8_t *p;
@@ -105,6 +118,16 @@ int process_pt_data(void *arg)
     return -2;
   }
 
+  /*
+   * The mailbox read gives the length - 1, which drops the sum of a framed request
+   * (cmd 01 02 n data sum). The case's poll, 13 00 ch 00 level lid, ends in data: without a
+   * valid sum the last byte counts.
+   */
+  if (pt_comm.type == PT_COMM_NFC && req_len < UINT8_MAX &&
+      !pt_req_has_sum(pt_req_buf, req_len + 1)) {
+    req_len++;
+  }
+
   if (process_pt_protocol(pt_comm.type, pt_req_buf, (uint8_t)req_len, &resp,
         (uint8_t *)&resp_len, arg)) {
     printk("process_pt_protocol is failed\n");
@@ -125,6 +148,8 @@ int process_pt_data(void *arg)
   if (resp[9] == 0x80) {
     k_msleep(1000);
     resp[9] = 0;
+    resp_len--;
+    pt_resp_checksum(&resp, (uint8_t *)&resp_len);
     pt_comm_busy_set();
     comm_write(pt_comm.type, pt_comm.nfc, resp, (uint8_t)resp_len);
     pt_comm_busy_clear();

@@ -156,8 +156,6 @@ ZTEST(events, test_f1_cc_packet_through_the_dispatcher_sends_the_queued_audio)
   expect_no_frame();
 }
 
-/* DEFECT: 0x0E does not reset dmic_seq, so the sequence continues. */
-ZTEST_EXPECT_FAIL(events, test_audio_sequence_restarts_at_0_when_the_mic_is_switched_on_again);
 ZTEST(events, test_audio_sequence_restarts_at_0_when_the_mic_is_switched_on_again)
 {
   queue_audio(3, 0x20);
@@ -289,8 +287,6 @@ ZTEST(events, test_debug_logging_set_23_6c_00_enables_the_channel)
   expect_no_frame();
 }
 
-/* DEFECT: "#l" disables only when atoi() of the arg is 1 (ASCII '1'), so C1 enables. */
-ZTEST_EXPECT_FAIL(events, test_debug_logging_set_23_6c_c1_disables_the_channel);
 ZTEST(events, test_debug_logging_set_23_6c_c1_disables_the_channel)
 {
   BLE_DEBUG = 1;

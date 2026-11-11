@@ -25,7 +25,7 @@ ZTEST_SUITE(panel_flush, NULL, NULL, panel_before, NULL, NULL);
 
 /*
  * Transfer index is a cache write of pixel_bytes frame bytes from frame_offset. The length is
- * checked with >=: the missing dummy byte of a flush row is pinned by
+ * checked with >=: the dummy byte of a flush row is checked by
  * row_window_ends_with_the_dummy_clocks.
  */
 static void expect_frame_window(int index, const char *header, int frame_offset,
@@ -172,10 +172,6 @@ ZTEST(panel_cmd, test_full_frame_draw_splits_at_192_rows)
   zassert_equal(g1_fake_spim.too_long, 0);
 }
 
-/*
- * Defect: spi_wr_buffer() ignores its buffer argument, so rows 0..7 are resent instead of 192..199.
- */
-ZTEST_EXPECT_FAIL(panel_cmd, test_full_frame_draw_sends_rows_192_to_199_last);
 ZTEST(panel_cmd, test_full_frame_draw_sends_rows_192_to_199_last)
 {
   struct jbd_panel_context *panel = panel_ctx();
@@ -250,8 +246,6 @@ ZTEST(panel_flush, test_flush_leaves_the_frame_buffer_as_it_was)
   zassert_mem_equal(start, snapshot, sizeof(snapshot));
 }
 
-/* Defect: no trailing dummy clocks, so the panel drops each row's last pixel. */
-ZTEST_EXPECT_FAIL(panel_flush, test_row_window_ends_with_the_dummy_clocks);
 ZTEST(panel_flush, test_row_window_ends_with_the_dummy_clocks)
 {
   zassert_equal(_reflash_fb_data_to_lcd(0x20, 0x10, 100, 10, 300, 10), 0);
@@ -260,8 +254,6 @@ ZTEST(panel_flush, test_row_window_ends_with_the_dummy_clocks)
           "row window of %zu bytes for 100 pixel bytes", panel_xfer(0)->len);
 }
 
-/* Defect: y_end is clipped to 200, not 199, so row 200 is read past the frame buffer. */
-ZTEST_EXPECT_FAIL(panel_flush, test_flush_stops_at_the_last_frame_row);
 ZTEST(panel_flush, test_flush_stops_at_the_last_frame_row)
 {
   zassert_equal(_reflash_fb_data_to_lcd(0, 0, 0, 195, 20, 250), 0);

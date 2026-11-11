@@ -178,11 +178,8 @@ ZTEST(features, test_0x52_text_of_only_the_header_stores_an_empty_text)
   expect_frame("52 0a 00 16 02 01 00 01 00 c9");
 }
 
-/* DEFECT: len = data_len - 12 underflows to 0xffff and that many bytes are copied. */
 ZTEST(features, test_0x52_text_shorter_than_its_header_is_refused)
 {
-  ztest_test_skip();
-
   tr_running(1);
   g1_send_hex("52 0b 00 17 02 01 00 01 00 00 00");
 
@@ -307,8 +304,6 @@ ZTEST(features, test_0x52_text_chunk_index_beyond_total_is_ignored)
   zassert_equal(tr()->len, 6);
 }
 
-/* DEFECT: an index above the total keeps the initial C9. */
-ZTEST_EXPECT_FAIL(features, test_0x52_text_chunk_index_beyond_total_replies_ca);
 ZTEST(features, test_0x52_text_chunk_index_beyond_total_replies_ca)
 {
   tr_running(1);
@@ -316,8 +311,6 @@ ZTEST(features, test_0x52_text_chunk_index_beyond_total_replies_ca)
   send_chunk_expect_reply(0x52, 0x57, 2, 3, "zzz", 3, "52 0a 00 57 02 02 00 03 00 ca");
 }
 
-/* DEFECT: the total-1 path clears multi_packet_buf but not multi_packet_len / _cnt / _total. */
-ZTEST_EXPECT_FAIL(features, test_0x52_single_text_inside_a_chunked_text_does_not_corrupt_it);
 ZTEST(features, test_0x52_single_text_inside_a_chunked_text_does_not_corrupt_it)
 {
   tr_running(1);
@@ -329,11 +322,8 @@ ZTEST(features, test_0x52_single_text_inside_a_chunked_text_does_not_corrupt_it)
           "text has a NUL inside its length %u", tr()->len);
 }
 
-/* DEFECT: copies data_len - 12 bytes, which underflows. */
 ZTEST(features, test_0x52_text_chunk_shorter_than_its_header_is_refused)
 {
-  ztest_test_skip();
-
   tr_running(1);
   g1_send_hex("52 0b 00 18 02 02 00 01 00 00 00");
 

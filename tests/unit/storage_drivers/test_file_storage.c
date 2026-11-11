@@ -49,12 +49,11 @@ ZTEST(file_storage, test_full_queue_drops_the_oldest_message)
   zassert_equal(dequeue_file(&msg), -ENOMSG);
 }
 
-/* DEFECT: no length check; 255 bytes overflow enqueue_file()'s stack frame. Skipped. */
+/* a queue entry holds 200 bytes */
 ZTEST(file_storage, test_enqueue_refuses_more_than_200_bytes)
 {
   static uint8_t big[255];
 
-  ztest_test_skip();
   zassert_not_equal(enqueue_file(big, sizeof(big)), 0);
 }
 
@@ -171,8 +170,6 @@ ZTEST(file_storage, test_demo_image_data_past_the_region_is_not_written)
   zassert_equal(*g1_nor_mem(0x200000, 1), 0xff);
 }
 
-/* DEFECT: chunks past the region are still appended to file_buf, which overflows. */
-ZTEST_EXPECT_FAIL(file_storage, test_demo_image_data_past_the_region_is_not_buffered);
 ZTEST(file_storage, test_demo_image_data_past_the_region_is_not_buffered)
 {
   uint32_t len;
