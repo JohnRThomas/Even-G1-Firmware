@@ -1,0 +1,23 @@
+# Session (0x4D, 0x2C, 0x37, 0x3E, 0x23, 0x39, 0x22, 0x47, 0x17)
+# mtu_251
+4d, fb
+# android
+2c, 01
+# ios
+2c, 02
+# uptime
+37
+# burial_point
+3e
+# build_info
+23, 74
+# running_app
+39, 05 00, 02, 01
+# status_get
+22, 05 00, 0a, 01
+# reboot
+23, 72
+# unpair
+47
+# upgrade_mode
+17

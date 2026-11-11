@@ -41,7 +41,14 @@ Run `git submodule update --init tools/simulator`.
 
 Then follow the directions here: https://github.com/JohnRThomas/Even-G1-Simulator
 
-> TODO: how to run unit and regression tests.
+### Unit Tests
+
+Unit tests are under tests/unit and they utilize [Zephyr Native Sim](https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html) to mock the hardware and run specific tests on different parts of the firmware. Based of the dependance on native_sim, the unit tests can only be run on Linux and Mac and are not compatible with Windows.
+
+Run:
+```sh
+tests/unit/run.sh
+```
 
 ## Contributing
 

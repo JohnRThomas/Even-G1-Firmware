@@ -1,0 +1,37 @@
+# One twister scenario per unit suite; CMakeLists.txt describes what each suite builds.
+# Start twister from the repo root (run.sh does): with no src/ here, it takes the ztest suite
+# names it expects from the *.c* files in its working directory.
+common:
+  platform_allow: native_sim
+  integration_platforms:
+    - native_sim
+  tags: unit
+tests:
+  unit.ahrs: {extra_args: G1_UNIT_SUITE=ahrs}
+  unit.audio: {extra_args: G1_UNIT_SUITE=audio}
+  unit.burial: {extra_args: G1_UNIT_SUITE=burial}
+  unit.buttons_gpio: {extra_args: G1_UNIT_SUITE=buttons_gpio}
+  unit.canvas_position: {extra_args: G1_UNIT_SUITE=canvas_position}
+  unit.dashboard: {extra_args: G1_UNIT_SUITE=dashboard}
+  unit.display_threads: {extra_args: G1_UNIT_SUITE=display_threads}
+  unit.events: {extra_args: G1_UNIT_SUITE=events}
+  unit.features: {extra_args: G1_UNIT_SUITE=features}
+  unit.gui: {extra_args: G1_UNIT_SUITE=gui}
+  unit.harness: {extra_args: G1_UNIT_SUITE=harness}
+  unit.imu: {extra_args: G1_UNIT_SUITE=imu}
+  unit.ipc_watchdog: {extra_args: G1_UNIT_SUITE=ipc_watchdog}
+  unit.json: {extra_args: G1_UNIT_SUITE=json}
+  unit.light: {extra_args: G1_UNIT_SUITE=light}
+  unit.nfc: {extra_args: G1_UNIT_SUITE=nfc}
+  unit.notifications: {extra_args: G1_UNIT_SUITE=notifications}
+  unit.panel: {extra_args: G1_UNIT_SUITE=panel}
+  unit.persistence: {extra_args: G1_UNIT_SUITE=persistence}
+  unit.pkcs7: {extra_args: G1_UNIT_SUITE=pkcs7}
+  unit.power: {extra_args: G1_UNIT_SUITE=power}
+  unit.production_test: {extra_args: G1_UNIT_SUITE=production_test}
+  unit.proto_dispatch: {extra_args: G1_UNIT_SUITE=proto_dispatch}
+  unit.proto_session: {extra_args: G1_UNIT_SUITE=proto_session}
+  unit.screen_state: {extra_args: G1_UNIT_SUITE=screen_state}
+  unit.storage_drivers: {extra_args: G1_UNIT_SUITE=storage_drivers}
+  unit.touch: {extra_args: G1_UNIT_SUITE=touch}
+  unit.util: {extra_args: G1_UNIT_SUITE=util}

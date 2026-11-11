@@ -1,0 +1,19 @@
+# Display (0x01, 0x29, 0x26, 0x3B, 0x3F)
+# brightness
+01, 2a, 00
+# brightness_auto
+01, 2a, 01
+# brightness_get
+29
+# height_depth
+26, 08 00, 00, 02, 00, 06, 09
+# height_depth_preview
+26, 08 00, 02, 02, 01, 05, 01
+# raster_config_get
+3b
+# lum_coefficient_enter
+26, 06 00, 10, 06, 01
+# lum_coefficient_set
+26, 07 00, 11, 06, 02, 64
+# lum_coefficient_get
+3f, 06

@@ -1,0 +1,39 @@
+/*
+ * Every suite: nodes whose labels the firmware passes to DEVICE_DT_GET without the suite having
+ * their driver. native_sim_drivers.overlay moves the mx25r64 label to the emulated NOR flash.
+ */
+
+/ {
+  mx25r64: g1-unit-mx25r64 {
+    compatible = "vnd,g1-unit-fake-device";
+  };
+
+  /* ipc_host.c's instance; the IPC service fakes take it */
+  ipc0: ipc0 {
+    compatible = "vnd,g1-unit-fake-device";
+  };
+
+  /*
+   * Zephyr's dmic_nrfx_pdm.c, which only the audio suite compiles, over the fake nrfx PDM.
+   * g1_unit_intc stands in for the NVIC.
+   */
+  g1_unit_intc: g1-unit-intc {
+    compatible = "vnd,g1-unit-intc";
+    interrupt-controller;
+    #interrupt-cells = <2>;
+  };
+
+  pdm0_default: pdm0_default {
+  };
+
+  pdm0: pdm@26000 {
+    compatible = "nordic,nrf-pdm";
+    reg = <0x26000 0x1000>;
+    interrupt-parent = <&g1_unit_intc>;
+    interrupts = <20 1>;
+    pinctrl-0 = <&pdm0_default>;
+    pinctrl-names = "default";
+    clock-source = "PCLK32M";
+    queue-size = <10>;
+  };
+};

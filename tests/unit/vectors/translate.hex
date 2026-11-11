@@ -1,0 +1,15 @@
+# Translate (0x1C, 0x0E, 0x0F, 0x0D)
+# translate_control
+1c, 00, 04, 02
+# mic_on
+0e, 01
+# translate_src_clear
+0f, 00, 01, 00, 00, 00 00, 0d
+# translate_dst_clear
+0d, 00, 01, 00, 00, 00 00, 0d
+# translate_src_text
+0f, 01, 01, 00, 00, 00 00, 20 0d 20 0d ec 95 88 eb 85 95 ed 95 98 ec 84 b8, ec 9a 94 2e
+# translate_dst_text
+0d, 01, 01, 00, 02, 00 00, 20 0d 20 0d 48 65 6c 6c 6f 2e
+# mic_off
+0e, 00

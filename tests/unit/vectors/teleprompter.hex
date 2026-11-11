@@ -1,0 +1,11 @@
+# Teleprompter (0x09, 0x24, 0x25)
+# teleprompter_init
+09, 3f 00, 00, 01, 01 00, 01 00, 03, 01, 00, 54 65 6c 65 70 72 6f 6d 70 74 65 72 20 74 65 73, 74 20 74 65 78 74 2e 20 4c 69 6e 65 20 6f 6e 65, 2e 0a 4c 69 6e 65 20 74 77 6f 2e, 0d 3a de 79 9a 01 00 00
+# teleprompter_position
+09, 10 00, 01, 02, 32, 14 00, 95 4d de 79 9a 01 00 00
+# teleprompter_pause
+24, 12 00, 03, 06, 01, 7d 51 de 79 9a 01 00 00, 06 00 00 00
+# teleprompter_heartbeat
+25, 06 00, 04, 04, 01
+# teleprompter_exit
+09, 06 00, 02, 05, 01

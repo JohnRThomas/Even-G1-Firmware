@@ -1,0 +1,11 @@
+description: |
+  Unit tests only (driver suites). Stand-in for the LSM6DSO IMU node (st,lsm6dso on the
+  lens) on an emulated I2C bus: a fake sensor driver in
+  tests/unit/common/emul/fake_sensors.c returns scripted accelerometer / gyroscope
+  samples and records every sensor_attr_set() call. The node's reg is the lens' address
+  (0x6b); nothing transfers to it. aw93203_port.c takes the touch controller's bus from
+  this node, as on the lens.
+
+compatible: "vnd,g1-unit-lsm6dso"
+
+include: i2c-device.yaml

@@ -1,0 +1,23 @@
+# Settings (0x03, 0x2B, 0x27, 0x3A, 0x2A, 0x3D, 0x26, 0x3F)
+# silent_mode_on
+03, 0c, 01
+# silent_mode_off
+03, 0a, 00
+# silent_mode_off_no_picture
+03, 0a, 01
+# silent_mode_get
+2b
+# wear_detection_on
+27, 01
+# wear_detection_get
+3a
+# anti_shake_get
+2a
+# language_en
+3d, 06 00, 1a, 01, 02
+# mic_on_head_up_off
+26, 06 00, 00, 08, 01
+# double_tap_get
+3f, 05
+# long_press_get
+3f, 07

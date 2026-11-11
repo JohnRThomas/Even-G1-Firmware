@@ -1,0 +1,15 @@
+description: |
+  Unit tests only (driver suites). Stand-in for the nPM1300 charger node
+  (nordic,npm1300-charger, label pmic_charger): a fake sensor driver in
+  tests/unit/common/emul/fake_sensors.c that returns the measurements the test scripted
+  (common/emul/drivers.h), latched at sensor_sample_fetch() like the real driver.
+
+compatible: "vnd,g1-unit-charger"
+
+properties:
+  current-microamp:
+    type: int
+    required: true
+    description: |
+      charge current, reported on SENSOR_CHAN_GAUGE_DESIRED_CHARGING_CURRENT as the
+      real driver does (40000 on the lens, boards/nrf5340dk_nrf5340_cpuapp.overlay)

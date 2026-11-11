@@ -1,0 +1,10 @@
+description: |
+  Unit tests only (driver suites). An I2C chip on a zephyr,i2c-emul-controller bus.
+  tests/unit/common/emul/devices.c gives every enabled node a stub device (the emulated
+  bus needs a device for each child); a suite that has the chip's emulator
+  (<suite>/<chip>_emul.c) binds it to the node by its label with
+  EMUL_DT_DEFINE(DT_NODELABEL(<label>), ...), and it answers at the node's reg address.
+
+compatible: "vnd,g1-unit-i2c-chip"
+
+include: i2c-device.yaml
