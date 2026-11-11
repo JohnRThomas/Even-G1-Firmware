@@ -83,6 +83,7 @@ void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len)
     }
     spi_wr_buffer(x, y, buf, 0xf000);
     len -= 0xf000;
+    buf += 0xf000;
     y = next;
   }
 }

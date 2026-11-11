@@ -33,7 +33,7 @@ void Mahony_init(struct ahrs *a)
   a->integralFBy = 0.0f;
   a->integralFBz = 0.0f;
   a->Now = 0;
-  a->lastUpdate = 0;
+  a->lastUpdate = k_uptime_get();  /* the first period starts here */
   a->anglesComputed = 0;
 }
 

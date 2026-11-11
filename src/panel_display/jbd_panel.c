@@ -44,6 +44,8 @@ void set_brightness_to_panel_reg(uint8_t level)
     send_cmd(SPI_DISPLAY_DISABLE);
     wr_lum_reg(lum);
     wr_cur_reg(cur);
+    JBD_LUM_REG_VAL = lum;
+    JBD_CUR_REG_VAL = cur;
   }
   wr_status_reg(SPI_WR_STATUS_REG2, 0x04);
   send_cmd(SPI_DISPLAY_ENABLE);

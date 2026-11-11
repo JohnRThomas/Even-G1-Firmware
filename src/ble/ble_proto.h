@@ -28,6 +28,10 @@
 #define PKCS7_PACK_ERR   0xca
 #define PKCS7_PACK_MORE  0xcb /* more packets follow */
 
+/* destination buffers of parse_receiver_pack_pkcs7() and parse_receiver_msg_pack_pkcs7() */
+#define PKCS7_PACK_BUF_SIZE     0x1800
+#define PKCS7_MSG_PACK_BUF_SIZE 0x800
+
 /* Usage-statistics record sent in reply to BLE_CMD_BURIAL_POINT_GET (always empty) */
 #define USAGE_STATS_RECORD_SIZE    0x11c
 #define USAGE_STATS_VERSION_OFFSET 0x14

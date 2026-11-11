@@ -140,7 +140,8 @@ enum AW9320X_OPERAION_MODE aw9320x_mode_operation_get(void)
 {
   uint32_t data = 0;
 
-  aw9320x_i2c_read(REG_WST, &data);
+  if (aw9320x_i2c_read(REG_WST, &data) != AW_OK)
+    return AW9320X_MODE_ERR;
   AWLOGD("data = 0x%x", data);
   if (data == AW_GET_REG_ACTIVE_VAL)
     return AW9320X_ACTIVE_MODE;
@@ -883,6 +884,7 @@ static int32_t soc_to_dri_pack_parse(uint32_t length, uint8_t module, uint8_t co
   if ((module == prot_pack_r->module) && (command == prot_pack_r->command) && (cmd_status == 0)) {
   } else {
     AWLOGE("soc_to_dri_pack_parse err");
+    free(prot_pack_r);
     return -AW_ERR;
   }
 

@@ -351,8 +351,6 @@ ZTEST(display_thread, test_close_while_idle_exits_the_named_page)
   zassert_equal(disp_state.state, 0);
 }
 
-/* DEFECT: the page with the message's id gets EXIT, not the running one. */
-ZTEST_EXPECT_FAIL(display_thread, test_closing_a_different_screen_id_exits_the_running_page);
 ZTEST(display_thread, test_closing_a_different_screen_id_exits_the_running_page)
 {
   display_start_running(6);
@@ -446,11 +444,7 @@ ZTEST(display_thread, test_messages_wait_while_in_dfu_mode)
 
 /* ---- priority ---- */
 
-/*
- * DEFECT: the priority is raised before display_prio_boosted is set; the ready thread runs at -16
- * first and the boost is never undone.
- */
-ZTEST_EXPECT_FAIL(display_thread, test_reflash_boosts_the_thread_until_it_has_handled_the_request);
+/* without the scheduler lock the ready thread runs at -16 before display_reflash() returns */
 ZTEST(display_thread, test_reflash_boosts_the_thread_until_it_has_handled_the_request)
 {
   display_start();
@@ -501,8 +495,6 @@ ZTEST(display_thread, test_restore_without_a_boost_leaves_the_priority_alone)
   zassert_equal(k_thread_priority_get(display_tid), -10);
 }
 
-/* DEFECT: the running-state branch breaks before restoring the priority. */
-ZTEST_EXPECT_FAIL(display_thread, test_reflash_while_running_drops_the_boost_after_handling);
 ZTEST(display_thread, test_reflash_while_running_drops_the_boost_after_handling)
 {
   display_start_running(6);

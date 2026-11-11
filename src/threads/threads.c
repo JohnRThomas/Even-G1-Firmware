@@ -2543,6 +2543,11 @@ static void touch_key_thread(void *p1, void *p2, void *p3)
     switch (aw9320x_wearing) {
     case IN_EAR:
       now = sys_clock_tick_get_32();
+      if (clicks != 0 && press_t < release_t && (int)(now - release_t) > 10000) {
+        /* classify the finished sequence on this pass, the press on the next */
+        k_sem_give(&state->touch_sem);
+        break;
+      }
       aw9320x_diff_get(&state->aw_diff);
       if ((int)(now - press_t) > 10000) {
         clicks = 0;

@@ -30,7 +30,7 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
     return -1;
   }
   if (y_end >= PANEL_FB_ROWS) {
-    y_end = PANEL_FB_ROWS;
+    y_end = PANEL_FB_ROWS - 1;
   }
   if (x_end >= PANEL_WIDTH) {
     x_end = PANEL_WIDTH;
@@ -52,7 +52,7 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
     tail = p[len];
     p[len] = 0;
     k_mutex_lock(&lcd_mutex, K_FOREVER);
-    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len, rx, 1);
+    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len + 1, rx, 1);
     k_mutex_unlock(&lcd_mutex);
     if (ret) {
       G1_LOG_ERR("spi transfer error....\n");
@@ -77,7 +77,7 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
     return -1;
   }
   if (y_end >= PANEL_FB_ROWS) {
-    y_end = PANEL_FB_ROWS;
+    y_end = PANEL_FB_ROWS - 1;
   }
   if (x_end >= PANEL_WIDTH) {
     x_end = PANEL_WIDTH;
@@ -100,7 +100,7 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
     tail = p[len];
     p[len] = 0;
     k_mutex_lock(&lcd_mutex, K_FOREVER);
-    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len, rx, 1);
+    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, (uint8_t *)p, len + 1, rx, 1);
     k_mutex_unlock(&lcd_mutex);
     if (ret) {
       G1_LOG_ERR("spi transfer error....\n");

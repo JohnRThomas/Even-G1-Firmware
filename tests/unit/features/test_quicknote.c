@@ -87,8 +87,6 @@ ZTEST(features, test_0x1e_title_of_0x28_chars_is_stored_whole)
   expect_frame("1e 3a 00 13 03 01 00 01 00 00");
 }
 
-/* DEFECT: copies up to 0x29 bytes, leaving no terminator. */
-ZTEST_EXPECT_FAIL(features, test_0x1e_title_of_0x29_chars_is_cut_to_keep_a_terminator);
 ZTEST(features, test_0x1e_title_of_0x29_chars_is_cut_to_keep_a_terminator)
 {
   char title[0x29 + 1];
@@ -101,8 +99,6 @@ ZTEST(features, test_0x1e_title_of_0x29_chars_is_cut_to_keep_a_terminator)
   zassert_equal(strnlen(note(2)->title, QN_TITLE), 0x28);
 }
 
-/* DEFECT: the single-packet path doesn't range-check the slot. */
-ZTEST_EXPECT_FAIL(features, test_0x1e_note_in_slot_5_is_rejected);
 ZTEST(features, test_0x1e_note_in_slot_5_is_rejected)
 {
   feat_guard_block(&g1_state()->quicknote, QN_BLOCK, 0x200, 0x200);
@@ -113,8 +109,6 @@ ZTEST(features, test_0x1e_note_in_slot_5_is_rejected)
   expect_frame("1e 1a 00 15 03 01 00 01 00 01");
 }
 
-/* DEFECT: clears notes[slot - 1].valid before the range check. */
-ZTEST_EXPECT_FAIL(features, test_0x1e_multi_packet_note_in_slot_5_is_rejected_without_writing);
 ZTEST(features, test_0x1e_multi_packet_note_in_slot_5_is_rejected_without_writing)
 {
   /* total 2, index 1, slot 5, title "t" */
@@ -129,13 +123,10 @@ ZTEST(features, test_0x1e_multi_packet_note_in_slot_5_is_rejected_without_writin
   feat_expect_guard_intact();
 }
 
-/* DEFECT: later chunks append to the static qn_text_buf unbounded. */
 ZTEST(features, test_0x1e_multi_packet_text_longer_than_the_note_is_refused)
 {
   uint8_t pkt[0x100] = {0x1e, 0x00, 0x00, 0x17, 0x03, 0x03, 0x00, 0x01, 0x00,
             0x01, 0x01, 0x01, 't'};
-
-  ztest_test_skip();
 
   g1_send(pkt, feat_set_len16(pkt, 16));
   memset(&pkt[9], 'x', sizeof(pkt) - 9);

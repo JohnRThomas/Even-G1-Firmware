@@ -85,8 +85,6 @@ ZTEST(json, test_ncs_message_longer_than_255_bytes_is_cut_to_255_and_terminated)
   expect_str(msg.date, "2025-11-11 14:25:59");
 }
 
-/* DEFECT: strncpy(..., 32) leaves a long date unterminated. */
-ZTEST_EXPECT_FAIL(json, test_ncs_date_longer_than_31_bytes_is_cut_to_31_and_terminated);
 ZTEST(json, test_ncs_date_longer_than_31_bytes_is_cut_to_31_and_terminated)
 {
   parse("{\"ncs_notification\":{\"action\":0,"
@@ -138,8 +136,7 @@ ZTEST(json, test_ncs_msg_id_and_action_numbers_are_stored)
   zassert_equal(msg.action, 1);
 }
 
-/* DEFECT: cJSON valueint saturates at INT_MAX, so 0x4C cannot clear such ids. */
-ZTEST_EXPECT_FAIL(json, test_ncs_msg_id_above_int32_max_is_stored_as_u32);
+/* 0x4C clears by the u32 id */
 ZTEST(json, test_ncs_msg_id_above_int32_max_is_stored_as_u32)
 {
   parse("{\"ncs_notification\":{\"msg_id\":3000000000}}");
@@ -180,8 +177,6 @@ ZTEST(json, test_ncs_utf8_title_and_message_from_the_unicode_log_are_copied_byte
   expect_str(msg.display_name, "Notification Notes");
 }
 
-/* DEFECT: the cut at 31 bytes leaves a UTF-8 lead byte at title[30]. */
-ZTEST_EXPECT_FAIL(json, test_ncs_utf8_title_cut_does_not_split_a_character);
 ZTEST(json, test_ncs_utf8_title_cut_does_not_split_a_character)
 {
   static const char syllable[] = "\xec\x83\x9d"; /* 생 */
@@ -227,11 +222,8 @@ ZTEST(json, test_ncs_invalid_json_or_missing_node_leaves_the_message_untouched)
   }
 }
 
-/* DEFECT: a non-string title passes NULL to strncpy(); skipped as it crashes. */
 ZTEST(json, test_ncs_null_title_is_treated_as_missing)
 {
-  ztest_test_skip();
-
   parse("{\"ncs_notification\":{\"msg_id\":5,\"title\":null,\"message\":\"m\"}}");
 
   EXPECT_ZERO_FIELD(title);

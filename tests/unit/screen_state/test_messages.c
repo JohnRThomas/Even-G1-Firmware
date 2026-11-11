@@ -355,8 +355,6 @@ ZTEST(screen_state, test_unread_msg_head_down_closes_to_idle)
   zassert_equal(display_close_screen_fake.arg0_val, 8);
 }
 
-/* DEFECT: process_for_unread_msg has no DFU exit; its only exit needs display mode 10. */
-ZTEST_EXPECT_FAIL(screen_state, test_unread_msg_closes_on_dfu);
 ZTEST(screen_state, test_unread_msg_closes_on_dfu)
 {
   unread_setup();
@@ -426,12 +424,7 @@ ZTEST(screen_state, test_new_message_display_mode_11_shows_message)
   zassert_equal(gs->dashboard_mode, 4);
 }
 
-/*
- * DEFECT: update_temp_task_status() refuses screen 8 over screen 5, yet SCREEN_CHANGED is returned,
- * so the dispatcher re-enters screen 5 in a busy loop. Run directly: that spin would stop simulated
- * time.
- */
-ZTEST_EXPECT_FAIL(screen_state, test_new_message_head_up_with_schedule_opens_unread_screen);
+/* Run directly, not through the dispatcher. */
 ZTEST(screen_state, test_new_message_head_up_with_schedule_opens_unread_screen)
 {
   new_message_setup();
@@ -477,8 +470,6 @@ ZTEST(screen_state, test_new_message_newer_message_restarts_stay_time)
          "new-msg-timeout-goto-idle");
 }
 
-/* DEFECT: with no unread message, entry unread_msg_num - 1 = -1 is read. */
-ZTEST_EXPECT_FAIL(screen_state, test_new_message_without_unread_reads_inside_queue);
 ZTEST(screen_state, test_new_message_without_unread_reads_inside_queue)
 {
   new_message_setup();

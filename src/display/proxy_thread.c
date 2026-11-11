@@ -180,7 +180,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3)
           } else {
             audio_sending = 1;
             audio_file_sent += n;
-            setAudioBlockInUse(audio_block_idx);
+            setAudioBlockInUse(audio_block_idx + 1);
             sendAudioStreamFileToApp(1, 0);
             break;
           }

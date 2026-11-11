@@ -147,12 +147,9 @@ ZTEST(features, test_0x15_packet_number_wraps_after_ff)
   zassert_equal(BIT_MAP_CHUNK_ID, 0x00);
 }
 
-/* DEFECT: enqueue_file() copies len - 1 bytes into a 201-byte stack struct. */
 ZTEST(features, test_0x15_packet_longer_than_a_queue_message_is_refused)
 {
   uint8_t pkt[2 + 243] = {0x15, 0x00};
-
-  ztest_test_skip();
 
   g1_send(pkt, sizeof(pkt));
   expect_queue_empty();

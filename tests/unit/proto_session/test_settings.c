@@ -41,8 +41,7 @@ ZTEST(proto_session, test_0x01_same_values_do_not_notify_the_dashboard)
   zassert_false(g1_dashboard_notified());
 }
 
-/* Defect: no range check; 0x2B and above reach the panel. */
-ZTEST_EXPECT_FAIL(proto_session, test_0x01_level_above_0x2a_is_rejected);
+/* Levels run 0x00..0x2A. */
 ZTEST(proto_session, test_0x01_level_above_0x2a_is_rejected)
 {
   g1_state()->panel.panel_brightness_level = 0x13;
@@ -183,8 +182,6 @@ ZTEST(proto_session, test_0x03_invalid_mode_leaves_the_mode_unchanged)
   zassert_false(g1_dashboard_notified());
 }
 
-/* Defect: the generic PUT path ignores the handler's CA and always replies C9. */
-ZTEST_EXPECT_FAIL(proto_session, test_0x03_invalid_mode_is_answered_ca);
 ZTEST(proto_session, test_0x03_invalid_mode_is_answered_ca)
 {
   g1_state()->display_mode = 0x0a;
@@ -207,8 +204,7 @@ ZTEST(proto_session, test_0x32_reads_back_the_angle_set_by_0x0b)
   expect_only_frame_padded("32 6d 14 01", 20);
 }
 
-/* Defect: no angle range check (0..60). */
-ZTEST_EXPECT_FAIL(proto_session, test_0x0b_angle_above_60_is_rejected);
+/* Angles run 0..60. */
 ZTEST(proto_session, test_0x0b_angle_above_60_is_rejected)
 {
   g1_state()->imu.level = 0x14;
@@ -269,11 +265,7 @@ static __noinline void poison_stack(void)
   }
 }
 
-/*
- * Defect: byte 3 is an uninitialised stack byte. The stack is poisoned first so the outcome is
- * stable.
- */
-ZTEST_EXPECT_FAIL(proto_session, test_0x4f_reply_byte_3_is_zero);
+/* The stack is poisoned first, so stale stack data would show in byte 3. */
 ZTEST(proto_session, test_0x4f_reply_byte_3_is_zero)
 {
   const uint8_t *frame;
@@ -347,12 +339,10 @@ ZTEST(proto_session, test_0x08_length_mismatch_is_dropped)
   expect_no_frame();
 }
 
-/* Defect, skipped (stack overflow): data_len bytes are copied into a 20-byte reply. */
+/* The reply echoes the request in 20 bytes; a longer request is dropped. */
 ZTEST(proto_session, test_0x08_long_packet_does_not_overflow_the_reply)
 {
   uint8_t pkt[30] = {0x08, 30, 0x00, 0x00, 0x04, 0x00};
-
-  ztest_test_skip();
 
   g1_send(pkt, sizeof(pkt));
   zassert_true(g1_frame_count() <= 1);

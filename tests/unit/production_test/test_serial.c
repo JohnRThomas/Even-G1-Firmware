@@ -194,8 +194,6 @@ ZTEST(production_test, test_serial_frame_of_255_bytes_is_received)
   zassert_mem_equal(payload, &frame[4], 250);
 }
 
-/* DEFECT: the frame length n + 5 is a uint8_t, so 256 wraps to 0 and the frame is lost. */
-ZTEST_EXPECT_FAIL(production_test, test_serial_frame_filling_the_whole_buffer_is_received);
 ZTEST(production_test, test_serial_frame_filling_the_whole_buffer_is_received)
 {
   uint8_t frame[256];

@@ -1,7 +1,7 @@
 /*
  * Pitch in 0.01 degree, nose up negative. lift = 50 x angle + offset(level byte).
  * Head-up window [reference - 4500 - lift, reference - lift] (reference = base, else ref),
- * else [lift - 9300, lift - 6300].
+ * else [-9300 - lift, -6300 - lift].
  */
 #include "harness.h"
 #include "drivers.h"
@@ -120,11 +120,6 @@ ZTEST(imu, test_thresholds_without_any_reference_at_angle_0)
   zassert_equal(imu->thr_high, -9300);
 }
 
-/*
- * DEFECT: without a reference thr_low is 50 x angle + offset - 6300, so a larger angle needs
- * the head raised less.
- */
-ZTEST_EXPECT_FAIL(imu, test_without_a_reference_a_larger_angle_needs_more_lift);
 ZTEST(imu, test_without_a_reference_a_larger_angle_needs_more_lift)
 {
   int prev;

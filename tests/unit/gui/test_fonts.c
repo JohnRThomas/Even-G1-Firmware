@@ -98,8 +98,6 @@ ZTEST(gui, test_utf8_to_unicode_keeps_at_most_1023_code_points)
   }
 }
 
-/* Defect: a 3-byte lead is taken without checking its continuation bytes. */
-ZTEST_EXPECT_FAIL(gui, test_utf8_to_unicode_truncated_sequence_keeps_following_ascii);
 ZTEST(gui, test_utf8_to_unicode_truncated_sequence_keeps_following_ascii)
 {
   uint16_t count = 0;
@@ -125,8 +123,6 @@ ZTEST(gui, test_expand_1bpp_writes_four_bytes_per_source_byte)
   expect_bytes(dst, sizeof(dst), "ffffffff 00000000 ffffffff 77777777");
 }
 
-/* Defect (latent): bit 7 goes to the low nibble, but the left pixel is the high one. */
-ZTEST_EXPECT_FAIL(gui, test_expand_1bpp_msb_is_left_pixel_in_high_nibble);
 ZTEST(gui, test_expand_1bpp_msb_is_left_pixel_in_high_nibble)
 {
   static const uint8_t src[] = {0x80, 0x01, 0xa5};
@@ -139,9 +135,7 @@ ZTEST(gui, test_expand_1bpp_msb_is_left_pixel_in_high_nibble)
 /*
  * The countdown page ("时间到!") and the template page (":YPR", digits) draw ASCII through
  * this lookup and copy the glyph rows from the result.
- * Defect: font_ascii_lookup() is a stub that returns NULL, and the callers copy from it.
  */
-ZTEST_EXPECT_FAIL(gui, test_find_chinese_bitmap_gives_printable_ascii_a_glyph);
 ZTEST(gui, test_find_chinese_bitmap_gives_printable_ascii_a_glyph)
 {
   for (int code = 0x20; code <= 0x7e; code++) {
@@ -150,11 +144,9 @@ ZTEST(gui, test_find_chinese_bitmap_gives_printable_ascii_a_glyph)
   }
 }
 
-/* Defect, skipped (corrupts memory): 12 x 36 expands 1728 bytes into the 432-byte buffer. */
+/* 12 x 36: 108 glyph bytes expand to the 432-byte buffer */
 ZTEST(gui, test_find_chinese_bitmap_expands_glyph_within_buffer)
 {
-  ztest_test_skip();
-
   zassert_not_null(find_chinese_bitmap_by_unicode(CJK_ZHONG, 12, 36));
 }
 
@@ -230,8 +222,6 @@ ZTEST(gui, test_resource_font3_ascii_glyph)
   zassert_not_null(expect_resource(3, 'A', 12, 26));
 }
 
-/* Defect: a missing glyph returns 0 with data NULL; callers then copy from NULL. */
-ZTEST_EXPECT_FAIL(gui, test_resource_font3_missing_glyph_returns_error);
 ZTEST(gui, test_resource_font3_missing_glyph_returns_error)
 {
   int width = 0, height = 0;

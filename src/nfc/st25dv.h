@@ -43,7 +43,7 @@ struct eeprom_st25dv_config {
   uint16_t pad_06;
   uint16_t addr;      /* 0x53 */
   uint16_t pad_0a;
-  size_t size;      /* 0x1000 */
+  size_t size;      /* 512 */
 };
 
 struct st25dv_passwd {

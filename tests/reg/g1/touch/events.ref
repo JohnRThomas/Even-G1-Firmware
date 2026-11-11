@@ -16,15 +16,16 @@ action(M, TAP, recv(M, "22 08 00 00 02"))
 action(S, TAP, quiet(B, "F5"), quiet(M, "22 08"))
 # Double tap on the master: reported, the dashboard closes on both lenses.
 action(M, taps(2), recv(M, "F5 00"), recv(B, "F5 1F"), display(B, blank))
-# Head up at 30: the played gesture dips first (head down) and then rises: head up, the dashboard opens with
-# the head-up status and the mic stream.
+# Head down, the dashboard already closed: reported, nothing to close. Head up: the dashboard opens with the
+# head-up status and the mic stream.
+action(B, gesture("head_down"), recv(M, "F5 03"))
 action(B, gesture("head_up"),
-       recv(M, "F5 03"), recv(M, "F5 02"), recv(B, "F5 1E"),
+       recv(M, "F5 02"), recv(B, "F5 1E"),
        recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M, during=True),
        # dashboard
        display(B, settles_to("dashboard")),
        within=3.5)
-# Head down at 34: the dashboard closes. Head up at 38: it opens again.
+# Head down: the dashboard closes. Head up: it opens again.
 action(B, gesture("head_down"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
 action(B, gesture("head_up"),
        recv(M, "F5 02"), recv(B, "F5 1E"),

@@ -1,7 +1,7 @@
 /* Production test, thread, main.c, sensor and panel fakes. */
 #define FFF_GCC_FUNCTION_ATTRIBUTES __attribute__((weak))
 
-#include <zephyr/random/rand32.h>
+#include <zephyr/random/random.h>
 
 #include "fakes.h"
 

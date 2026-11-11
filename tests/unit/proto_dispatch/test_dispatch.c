@@ -6,6 +6,7 @@
 
 #include "harness.h"
 #include "fakes.h"
+#include "notify/whitelist.h"
 
 ZTEST_SUITE(proto_dispatch, NULL, NULL, NULL, NULL, NULL);
 
@@ -53,7 +54,7 @@ ZTEST(proto_dispatch, test_unknown_ids_inside_a_range_get_the_range_error)
   expect_no_frame();
 }
 
-/* Byte 0 is covered by the EXPECT_FAIL test below. */
+/* Byte 0 is covered by the test below. */
 ZTEST(proto_dispatch, test_report_range_ends_at_0xf6)
 {
   const uint8_t *want = error_reply(0xf6, "error post req.");
@@ -68,8 +69,6 @@ ZTEST(proto_dispatch, test_report_range_ends_at_0xf6)
   zassert_mem_equal(frame + 1, want + 1, 19);
 }
 
-/* DEFECT: ble_process_report_response() never sets resp[0], so these start with 00. */
-ZTEST_EXPECT_FAIL(proto_dispatch, test_unknown_report_ids_echo_the_command_in_the_error_reply);
 ZTEST(proto_dispatch, test_unknown_report_ids_echo_the_command_in_the_error_reply)
 {
   static const uint8_t ids[] = {0xf2, 0xf3, 0xf6};
@@ -122,15 +121,9 @@ ZTEST(proto_dispatch, test_replies_are_20_byte_frames_padded_with_zeros)
   expect_only_frame_padded("4d c9", 20);
 }
 
-/*
- * DEFECT (skipped, crashes): length 0 dispatches the stale data[0] with hdr.len 0, and PUT
- * memcpy()s (size_t)-1 bytes.
- */
 ZTEST(proto_dispatch, test_zero_length_packet_is_ignored)
 {
   uint8_t none[1] = {0};
-
-  ztest_test_skip();
 
   g1_send_vector("0x01_brightness");
   g1_frames_clear();
@@ -138,11 +131,8 @@ ZTEST(proto_dispatch, test_zero_length_packet_is_ignored)
   expect_no_frame();
 }
 
-/* DEFECT (skipped): switch_to_dfu_cb is never set and is called unchecked. */
 ZTEST(proto_dispatch, test_0x4a_dfu_bit_without_a_dfu_callback_is_safe)
 {
-  ztest_test_skip();
-
   g1_send_hex("4a 01");
   expect_frame_padded("4a c9", 20);
 }
@@ -155,15 +145,17 @@ ZTEST(proto_dispatch, test_0x23_c_followed_by_more_text_is_not_an_unpair)
   expect_only_frame_bytes(error_reply(0x23, "error put req."), 20);
 }
 
-/*
- * DEFECT: the hook chunks with the glasses -> phone framing; the 0x4B handler rejects every chunk.
- */
-ZTEST_EXPECT_FAIL(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path);
+/* The hook's app is put on the whitelist: an unlisted one is announced with F6 frames as well. */
 ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path)
 {
   const struct notif_msg *msg = (const struct notif_msg *)&g1_ble()->tx_buf[4];
   int count;
 
+  zassert_equal(parse_app_white_list_json(
+            "{\"calendar_enable\":true,\"call_enable\":true,\"msg_enable\":true,"
+            "\"ios_mail_enable\":true,\"app\":{\"list\":["
+            "{\"id\":\"com.tencent.xin\",\"name\":\"WeChat\"}],\"enable\":true}}"),
+          1);
   g1_send((const uint8_t *)"#1@title@msg", strlen("#1@title@msg"));
 
   count = g1_frame_count();
@@ -181,21 +173,15 @@ ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path)
   expect_str(msg->message, "msg");
 }
 
-/* DEFECT (skipped): the unbounded scan for the second '@' reads the stack. */
 ZTEST(proto_dispatch, test_0x23_1_without_second_at_stays_inside_the_packet)
 {
-  ztest_test_skip();
-
   g1_send((const uint8_t *)"#1@no second at", strlen("#1@no second at"));
   zassert_true(g1_frame_count() <= 32);
 }
 
-/* DEFECT (skipped): strncpy / strcpy overflow title[32] / message[128]. */
 ZTEST(proto_dispatch, test_0x23_1_long_title_and_message_are_cut)
 {
   char pkt[201];
-
-  ztest_test_skip();
 
   memset(pkt, 'm', sizeof(pkt) - 1);
   memcpy(pkt, "#1@", 3);
@@ -205,11 +191,8 @@ ZTEST(proto_dispatch, test_0x23_1_long_title_and_message_are_cut)
   zassert_true(g1_frame_count() > 0);
 }
 
-/* DEFECT (skipped): unbounded '@' scan; memcpy of n bytes into cmd_type[4]. */
 ZTEST(proto_dispatch, test_0x23_cmd_with_long_command_number_stays_inside_the_buffer)
 {
-  ztest_test_skip();
-
   g1_send((const uint8_t *)"#cmd@123456789@1", strlen("#cmd@123456789@1"));
 }
 
@@ -268,12 +251,9 @@ ZTEST(proto_dispatch, test_0x23_t_in_an_unterminated_255_byte_string_replies_bui
   zassert_mem_equal(frame, "net build time", strlen("net build time"));
 }
 
-/* DEFECT (skipped): 256 bytes fill buf[256] and leave no NUL terminator. */
 ZTEST(proto_dispatch, test_0x23_256_byte_packet_is_read_inside_the_buffer)
 {
   uint8_t pkt[256];
-
-  ztest_test_skip();
 
   memset(pkt, 'x', sizeof(pkt));
   pkt[0] = '#';
@@ -281,20 +261,22 @@ ZTEST(proto_dispatch, test_0x23_256_byte_packet_is_read_inside_the_buffer)
   expect_error_reply(0x23, "error put req.");
 }
 
-/* DEFECT (skipped): flash_ops.fn is never set and is called unchecked. */
+static int spi_init_stub(struct spi_master_ctx *ctx)
+{
+  ARG_UNUSED(ctx);
+  return 0;
+}
+
 ZTEST(proto_dispatch, test_0x23_j_does_not_call_an_unset_flash_callback)
 {
-  ztest_test_skip();
+  /* set at boot by spi_master_register_context(), which this suite does not link */
+  g1_state()->spi.init_cb = spi_init_stub;
 
   g1_send_hex("23 6a 31");
   expect_frame_padded("69 6e 69 74 20 66 6c 61 73 68", 20);
 }
 
-/*
- * DEFECT: the hook strstr()s every packet, so "#2@" in an app name turns a whitelist chunk into a
- * head-up.
- */
-ZTEST_EXPECT_FAIL(proto_dispatch, test_debug_marker_inside_a_packet_is_not_a_debug_command);
+/* "#2@" in an app name must not turn a whitelist chunk into a head-up. */
 ZTEST(proto_dispatch, test_debug_marker_inside_a_packet_is_not_a_debug_command)
 {
   uint8_t pkt[256];

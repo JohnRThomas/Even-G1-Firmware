@@ -153,11 +153,8 @@ ZTEST(dashboard, test_0x06_stock_item_5_is_refused_with_status_1)
   }
 }
 
-/* DEFECT (skipped, corrupts memory): item 0 writes stock_items[-1]. */
 ZTEST(dashboard, test_0x06_stock_item_0_is_refused_with_status_1)
 {
-  ztest_test_skip();
-
   send_single(DASH_SUB_STOCK, 0x43, stock_body(0, "GME.XNYS", 2, 2));
   expect_chunk_reply(pkt, 0x01);
 }
@@ -173,8 +170,6 @@ ZTEST(dashboard, test_0x06_stock_image_one_byte_over_the_bound_is_refused)
   zassert_equal(stock_items[0].image_len, 0);
 }
 
-/* DEFECT: the texts are copied before the image length check. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_stock_refused_item_keeps_the_previous_stock);
 ZTEST(dashboard, test_0x06_stock_refused_item_keeps_the_previous_stock)
 {
   send_single(DASH_SUB_STOCK, 0x45, stock_body(1, "OLD.XNYS", 2, 2));
@@ -186,8 +181,6 @@ ZTEST(dashboard, test_0x06_stock_refused_item_keeps_the_previous_stock)
   assert_stock(0, "OLD.XNYS", 2);
 }
 
-/* DEFECT: an oversized field sends 01 and carries on, so a second reply follows. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_stock_oversize_code_gets_exactly_one_reply_with_status_1);
 ZTEST(dashboard, test_0x06_stock_oversize_code_gets_exactly_one_reply_with_status_1)
 {
   send_single(DASH_SUB_STOCK, 0x47, stock_body(1, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456", 2, 2));
@@ -317,8 +310,6 @@ ZTEST(dashboard, test_0x06_news_text_one_below_the_field_size_is_stored_whole)
   assert_news(0, "CBS News", repeat(text, 't', NEWS_TEXT_MAX - 1));
 }
 
-/* DEFECT: 0x118 bytes are copied, leaving text[] without a NUL. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_news_text_of_the_field_size_is_not_stored_unterminated);
 ZTEST(dashboard, test_0x06_news_text_of_the_field_size_is_not_stored_unterminated)
 {
   send_news_chunked(0x56, news_body(1, "CBS News", repeat(text, 't', NEWS_TEXT_MAX)));

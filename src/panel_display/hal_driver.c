@@ -11,14 +11,20 @@
 #include "g1_log.h"
 #include "panel.h"
 
+/* 02h, three address bytes, FFh */
+#define WR_BUFFER_HDR_SIZE 5
+
 /* write the frame buffer to the panel cache at column col / row row */
 void spi_wr_buffer(uint16_t col, uint16_t row, uint8_t *buf, uint32_t len)
 {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
-  uint8_t *p = c->current_buffer;
+  uint8_t *p = buf;
   uint32_t addr = ((row << 10) & 0x7fc00) | (col & 0x3ff);
+  uint8_t backup[WR_BUFFER_HDR_SIZE];
 
+  /* the header goes in front of buf, over the end of the previous row inside the frame */
+  memcpy(backup, p - sizeof(backup), sizeof(backup));
   p[-5] = SPI_WR_BUFFER;
   p[-4] = addr >> 16;
   p[-3] = addr >> 8;
@@ -27,6 +33,7 @@ void spi_wr_buffer(uint16_t col, uint16_t row, uint8_t *buf, uint32_t len)
   lock_lcd_mutex(K_FOREVER);
   c->spi_callbacks->xfer_cb(c->spi_callbacks, p - 5, len + 6, rx, 1);
   unlock_lcd_mutex();
+  memcpy(p - sizeof(backup), backup, sizeof(backup));
 }
 
 uint16_t spi_read_id(void)

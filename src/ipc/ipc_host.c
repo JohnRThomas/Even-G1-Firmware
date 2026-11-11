@@ -88,9 +88,9 @@ int serialization_init(void)
 
   ret = k_sem_take(&ipc0_bound_sem, K_SECONDS(10));
   if (ret != 0) {
+    G1_LOG_ERR("ipc0 endpoint not bound, reboot\n");
     system_reboot_delayed();
-    while (1) {
-    }
+    return -1;
   }
   ipc_ready = 1;
   G1_LOG_WRN("ipc_service[HOST] has ready!\n\n");
@@ -102,10 +102,15 @@ void ipc0_ept_recv(const void *data, size_t len, void *priv)
 {
   struct ipc_service_context *ctx = GLOBAL_IPC_SERVICE_CONTEXT;
   const uint8_t *buf = data;
-  uint8_t cmd = buf[0];
+  uint8_t cmd;
   struct ipc_ep_cfg *ep;
   int i;
 
+  if (len == 0) {
+    G1_LOG_WRN("empty packet dropped\n");
+    return;
+  }
+  cmd = buf[0];
   for (i = 0; i < ctx->count; i++) {
     ep = ctx->receivers[i];
     if (ep && ep->id == cmd) {

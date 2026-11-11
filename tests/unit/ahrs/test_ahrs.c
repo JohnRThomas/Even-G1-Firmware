@@ -153,8 +153,6 @@ ZTEST(ahrs, test_deltat_across_32_bit_ms_wrap)
            (double)dt, now);
 }
 
-/* DEFECT: Mahony_init() sets lastUpdate = 0, so the first period is the whole uptime. */
-ZTEST_EXPECT_FAIL(ahrs, test_first_period_after_init_is_time_since_init);
 ZTEST(ahrs, test_first_period_after_init_is_time_since_init)
 {
   float dt;

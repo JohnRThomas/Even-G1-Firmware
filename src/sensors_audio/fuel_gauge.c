@@ -33,6 +33,7 @@ static const struct battery_model battery_model = {
 };
 
 static uint8_t zero_current_count;     /* 0x20019a70 */
+static bool fuel_gauge_ready;          /* the library was initialised */
 
 int read_sensors(const struct device *charger, float *voltage, float *current, float *temp)
 {
@@ -70,6 +71,7 @@ int fuel_gauge_init(const struct device *charger)
   sensor_channel_get(charger, SENSOR_CHAN_GAUGE_DESIRED_CHARGING_CURRENT, &value);
 
   ret = nrf_fuel_gauge_init(&parameters, NULL);
+  fuel_gauge_ready = ret >= 0;
   if (ret < 0) {
     return ret;
   }
@@ -106,12 +108,14 @@ int fuel_gauge_update(const struct device *charger, int unused)
   int64_t delta;
   uint32_t now;
   int ret;
-  int busy = 0;
+
+  if (!fuel_gauge_ready) {
+    return -ENODEV;
+  }
 
   while (1) {
     if (pt_comm_busy_get()) {
       if (soc > 0) {
-        busy = 1;
         break;
       }
       return 0;
@@ -124,9 +128,11 @@ int fuel_gauge_update(const struct device *charger, int unused)
       return ret;
     }
 
+    /* 1 s after the previous update; the retries (soc > 0) follow 5 ms apart */
     delta = k_uptime_get() - fuel_gauge_ref_time;
-    if (delta >= 1000) {
+    if (delta >= 1000 || soc > 0) {
       soc = nrf_fuel_gauge_process(voltage, current, temp, (float)delta / 1000.f, NULL);
+      fuel_gauge_ref_time += delta;
       if (current != 0 || --retry == 0 || !(soc < 100) || !(soc > 0)) {
         break;
       }
@@ -134,9 +140,6 @@ int fuel_gauge_update(const struct device *charger, int unused)
     } else {
       return -1;
     }
-  }
-  if (!busy) {
-    fuel_gauge_ref_time = k_uptime_get();
   }
 
   G1_LOG_ERR("V: %.3f, I: %.3f, T: %.2f\n", voltage, current, temp);

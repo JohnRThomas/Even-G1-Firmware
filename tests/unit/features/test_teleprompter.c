@@ -163,8 +163,6 @@ ZTEST(features, test_0x09_update_text_replaces_the_text)
   expect_pkt(&g1_esb_response_log, 1, "09 17 00 30 03 01 00 01 00 00");
 }
 
-/* DEFECT: the last chunk copies into teleprompter->text without a size check. */
-ZTEST_EXPECT_FAIL(features, test_0x09_update_text_longer_than_0x200_is_not_written_past_the_block);
 ZTEST(features, test_0x09_update_text_longer_than_0x200_is_not_written_past_the_block)
 {
   static char text[0x100 - 12 + 1];
@@ -182,12 +180,9 @@ ZTEST(features, test_0x09_update_text_longer_than_0x200_is_not_written_past_the_
   zassert_true(tp()->len <= TP_TEXT, "len %u", tp()->len);
 }
 
-/* DEFECT: sub 1 chunks append to the static tp_buf.text without a size check. */
 ZTEST(features, test_0x09_set_text_longer_than_0x200_is_refused)
 {
   static char text[0x100 - 12 + 1];
-
-  ztest_test_skip();
 
   memset(text, 's', sizeof(text) - 1);
   tp_send(0x50, 1, 3, 1, 3, 1, 0, text, false, 0);
@@ -196,11 +191,8 @@ ZTEST(features, test_0x09_set_text_longer_than_0x200_is_refused)
   zassert_true(tp()->len <= TP_TEXT);
 }
 
-/* DEFECT: copies data_len - 0x14 bytes, which underflows. */
 ZTEST(features, test_0x09_set_text_shorter_than_its_header_is_refused)
 {
-  ztest_test_skip();
-
   g1_send_hex("09 09 00 00 01 01 00 01 00");
   zassert_equal(tp()->ready, 0);
 }

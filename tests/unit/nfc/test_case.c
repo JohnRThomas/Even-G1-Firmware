@@ -7,8 +7,8 @@
  * byte 5 (lid: 06 closed, 07 open, 08 closed with activity) when present; nothing else is checked.
  * The real case sends 13 00 ch 00 lvl lid without a checksum (REQ_*); the QUERY form
  * 13 01 02 <n> ... <sum> is the tree's older framing. The mailbox read hands the lens MB_LEN_Dyn,
- * the length minus one, so the lens sees 5 of the real request's 6 bytes: the lid byte never
- * reaches get_battery_info() (pinned below), only the 7-byte QUERY form gets it there.
+ * the length minus one; process_pt_data() counts the last byte again unless it is the sum of the
+ * bytes before it, so the lid byte reaches get_battery_info() in both forms.
  */
 #include <zephyr/drivers/adc/adc_emul.h>
 
@@ -291,12 +291,7 @@ ZTEST(nfc_case, test_real_request_on_either_channel_gives_case_level_40_and_char
   }
 }
 
-/*
- * Known defect: eeprom_st25dv_read_i2c_mb_mailbox_ram() returns MB_LEN_Dyn, the message length
- * minus one, so get_battery_info() sees the real 6-byte request as 5 bytes and never reads its lid
- * byte: lid 7 leaves a closed lid closed (the 7-byte QUERY framing with its sum byte opens it).
- */
-ZTEST_EXPECT_FAIL(nfc_case, test_real_request_lid_7_opens_the_lid);
+/* the 6-byte request ends in the lid byte, not in a sum */
 ZTEST(nfc_case, test_real_request_lid_7_opens_the_lid)
 {
   set_box_status(BOX_LID_CLOSED, 1);
@@ -307,11 +302,6 @@ ZTEST(nfc_case, test_real_request_lid_7_opens_the_lid)
   zassert_equal(can_enter_low_power, 0);
 }
 
-/*
- * Known defect: the lens sees 5 of the real request's 6 bytes (see above), so lid 8 does not close
- * the lid or refresh the activity time; the lid stays open.
- */
-ZTEST_EXPECT_FAIL(nfc_case, test_lid_8_closes_the_lid_and_refreshes_activity_but_not_low_power);
 ZTEST(nfc_case, test_lid_8_closes_the_lid_and_refreshes_activity_but_not_low_power)
 {
   int64_t before;
@@ -339,11 +329,6 @@ ZTEST(nfc_case, test_lid_8_closes_the_lid_and_refreshes_activity_but_not_low_pow
   zassert_equal(can_enter_low_power, 1);
 }
 
-/*
- * Known defect: the lens sees one byte less than the case sent (see above), so a 5-byte request
- * (no lid byte) is a 4-byte one to get_battery_info() and its level is ignored as well.
- */
-ZTEST_EXPECT_FAIL(nfc_case, test_short_requests_leave_the_lid_and_then_the_level_alone);
 ZTEST(nfc_case, test_short_requests_leave_the_lid_and_then_the_level_alone)
 {
   /* lid closed, 40 % charging: the QUERY form gets the lid byte through */
@@ -422,13 +407,7 @@ ZTEST(nfc_case, test_reply_after_a_case_boot_is_bit_exact)
   expect_lens_replies(rows, ARRAY_SIZE(rows));
 }
 
-/*
- * Known defect: get_battery_info() leaves byte 9 untouched when the field is 1..4999 mV and the
- * current is not negative (the only store on that path needs battery_high_v_count > 39, which the
- * cap at 5 makes impossible), so the reply carries the previous reply's current. The captured
- * post-boot reply reads 0 only because the 1 s resend of the 0x80 reply had just cleared it.
- */
-ZTEST_EXPECT_FAIL(nfc_case, test_reply_at_low_field_without_charge_current_reports_0_ma);
+/* byte 9 is this poll's current at every field, not what the reply before left there */
 ZTEST(nfc_case, test_reply_at_low_field_without_charge_current_reports_0_ma)
 {
   static const struct lens_reply charging[] = {
@@ -470,7 +449,7 @@ ZTEST(nfc_case, test_four_high_field_polls_without_charge_current_request_a_case
     zassert_equal(case_poll(REQ_NFC0), 11);
     zassert_equal(reply[9], 15, "poll %d: inside 10 s", poll);
   }
-  zassert_equal(battery_high_v_count, 5, "the counter stops at 5");
+  zassert_equal(battery_high_v_count, 9, "the counter runs on, to 40");
 
   g1_clock_advance_ms(10001);
   zassert_equal(case_poll(REQ_NFC0), 11);
@@ -674,11 +653,9 @@ ZTEST(nfc_case, test_status_4_after_40_high_field_polls_with_the_charger_refusin
 }
 
 /*
- * Known defect: get_battery_info() caps battery_high_v_count at 5, so the two branches that need
- * it above 39 (status 4 below 7.8 V without charge current, and byte 9 = 100 with status 4 below
- * 5 V) never run; the reply keeps status 0 and the current.
+ * 40 high-field polls without charge current: status 4 below 7.8 V. It holds while the case keeps
+ * a field up, with byte 9 = 100 below 5 V.
  */
-ZTEST_EXPECT_FAIL(nfc_case, test_status_4_after_40_high_field_polls_without_charge_current);
 ZTEST(nfc_case, test_status_4_after_40_high_field_polls_without_charge_current)
 {
   g1_state()->battery_current_ma = 15;
@@ -694,6 +671,29 @@ ZTEST(nfc_case, test_status_4_after_40_high_field_polls_without_charge_current)
   zassert_equal(case_poll(REQ_NFC0), 11);
   zassert_equal(reply[4], 4);
   zassert_equal(reply[9], 100, "the no-charge marker");
+}
+
+/* too hot outranks no-charge: the case still gets status 2 and the current, at any field */
+ZTEST(nfc_case, test_status_2_is_kept_over_the_no_charge_status)
+{
+  g1_state()->battery_current_ma = 15;
+  nfc_field_mv = 5600;
+  g1_clock_advance_ms(10001);
+
+  for (int poll = 1; poll <= 40; poll++) {
+    zassert_equal(case_poll(REQ_NFC0), 11);
+  }
+  zassert_equal(reply[4], 4, "40th poll at 5.6 V");
+
+  g1_state()->battery_temp_x100 = 6000;
+  zassert_equal(case_poll(REQ_NFC0), 11);
+  zassert_equal(reply[4], 2, "too hot at 5.6 V");
+
+  nfc_field_mv = 4900;
+  zassert_equal(case_poll(REQ_NFC0), 11);
+  zassert_equal(reply[4], 2, "too hot at 4.9 V");
+  zassert_equal(reply[9], 15, "the current, not the no-charge marker");
+  zassert_equal(is_box_charging(), 0);
 }
 
 /* ---- the field as the lens samples it ---- */
@@ -1074,11 +1074,6 @@ ZTEST(nfc_events, test_real_cadence_reports_end_of_charging_after_5_polls_and_le
   zassert_equal(poll_event(0, 0), EVT_OUT_UNWORN);
 }
 
-/*
- * Known defect: the lens sees 5 of the real request's 6 bytes (nfc_case above), so the case's lid
- * codes never reach get_battery_info(): the lid stays open and no F5 0B follows the lid 8 polls.
- */
-ZTEST_EXPECT_FAIL(nfc_events, test_lid_8_x3_then_7_reports_closed_then_open_without_low_power);
 /* lid closed with the lens in: three polls with lid 8, then lid 7 when it opens */
 ZTEST(nfc_events, test_lid_8_x3_then_7_reports_closed_then_open_without_low_power)
 {

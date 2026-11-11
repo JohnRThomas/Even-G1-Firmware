@@ -186,12 +186,10 @@ ZTEST(flash_settings, test_write_and_verify_without_the_flash_device_returns_min
             st()->calls[G1_NOR_WRITE], 0);
 }
 
-/* DEFECT: no length check; overruns the 4 KiB heap buffer. Skipped. */
 ZTEST(flash_settings, test_write_and_verify_refuses_more_than_one_sector)
 {
   static uint8_t big[SECTOR + 16];
 
-  ztest_test_skip();
   memset(big, 0x5a, sizeof(big));
   zassert_not_equal(flash_settings_write_and_verify(USR_ADDR, big, sizeof(big)), 0);
   zassert_equal(st()->calls[G1_NOR_WRITE], 0);
@@ -286,8 +284,7 @@ ZTEST(flash_settings, test_font_write_without_the_flash_device_gives_up_with_min
   expect_elapsed_ms(start, 9 * 100, 9 * 101);
 }
 
-/* DEFECT: the QSPI driver rejects lengths > 4 not a multiple of 4; the tail is never stored. */
-ZTEST_EXPECT_FAIL(flash_settings, test_font_write_stores_a_length_that_is_not_a_multiple_of_4);
+/* the QSPI driver rejects lengths > 4 that are not a multiple of 4 */
 ZTEST(flash_settings, test_font_write_stores_a_length_that_is_not_a_multiple_of_4)
 {
   static const uint8_t tail[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
@@ -355,16 +352,12 @@ ZTEST(flash_settings, test_crc_feeds_the_watchdog_only_when_it_runs_and_the_gaug
   zassert_equal(watchdog_feed_fake.call_count, 1);
 }
 
-/*
- * 0x1379 from an independent CRC-16/USB. DEFECT: a uint8_t loop index hangs for len >= 256.
- * Skipped.
- */
+/* 0x1379 from an independent CRC-16/USB */
 ZTEST(flash_settings, test_crc_over_300_bytes)
 {
   uint16_t crc = 0xffff;
   uint8_t *mem = g1_nor_mem(0x140000, 300);
 
-  ztest_test_skip();
   for (int offset = 0; offset < 300; offset++) {
     mem[offset] = (uint8_t)(offset * 13 + 5);
   }
@@ -492,8 +485,7 @@ ZTEST(flash_settings, test_local_store_delete_removes_the_key)
   zassert_equal(g1_state()->display_mode, 0x55);
 }
 
-/* DEFECT: local_store_write() returns 0 when the save fails. */
-ZTEST_EXPECT_FAIL(flash_settings, test_local_store_write_reports_a_failed_save);
+/* the settings backend cannot hold a value of a whole sector */
 ZTEST(flash_settings, test_local_store_write_reports_a_failed_save)
 {
   static uint8_t big[SECTOR];
@@ -501,13 +493,12 @@ ZTEST(flash_settings, test_local_store_write_reports_a_failed_save)
   zassert_not_equal(local_store_write("user_sched_info", big, sizeof(big)), 0);
 }
 
-/* DEFECT: unbounded strcat() into path[128] overflows the stack. Skipped. */
+/* the settings path, root included, holds 127 characters */
 ZTEST(flash_settings, test_local_store_refuses_a_key_longer_than_the_path_buffer)
 {
   static char key[160];
   uint8_t value = 1;
 
-  ztest_test_skip();
   memset(key, 'k', sizeof(key) - 1);
   zassert_not_equal(local_store_write(key, &value, 1), 0);
 }

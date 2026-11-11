@@ -10,15 +10,18 @@
 #include "g1_log.h"
 #include "panel.h"
 
+/* the current register (46h) is 6 bits wide */
+#define JBD_CUR_REG_MAX 63
+
 int _clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, int y_end)
 {
   int y;
 
   if (x_end >= PANEL_WIDTH) {
-    x_end = PANEL_WIDTH;
+    x_end = PANEL_WIDTH - 1;
   }
   if (y_end >= PANEL_FB_ROWS) {
-    y_end = PANEL_FB_ROWS;
+    y_end = PANEL_FB_ROWS - 1;
   }
   if (x_start > x_end || y_start > y_end) {
     G1_LOG_ERR("clean frame buffer parameter error!!!\n");
@@ -43,7 +46,7 @@ void update_brightness_level_for_jdb_panel(uint8_t level, uint16_t *lum, uint8_t
     *cur = 0;
   } else {
     *lum = (get_dashboard_state()->panel.brightness_max + 1) * 111;
-    *cur = level - 6;
+    *cur = MIN(level - 6, JBD_CUR_REG_MAX);
   }
   if ((get_dashboard_state()->panel.brightness_percent > 69) &
       (get_dashboard_state()->panel.brightness_percent < 100)) {
@@ -92,8 +95,8 @@ int copy_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, 
   if (x >= PANEL_WIDTH) {
     x = PANEL_WIDTH;
   }
-  for (i = 0; i < h; i++) {
-    memcpy(fb[y + i] + x / 2, src + i * w, w);
+  for (i = 0; i < h && y + i < PANEL_FB_ROWS; i++) {
+    memcpy(fb[y + i] + x / 2, src + i * w, MIN(w, PANEL_FB_STRIDE - x / 2));
   }
   return y;
 }
@@ -111,9 +114,11 @@ int or_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, in
     x = PANEL_WIDTH;
   }
   x_byte = x / 2;
-  for (i = 0; i < h; i++) {
-    for (j = 0; j < w / 2; j++) {
-      fb[y + i][x_byte + j] |= src[k++];
+  for (i = 0; i < h && y + i < PANEL_FB_ROWS; i++) {
+    for (j = 0; j < w / 2; j++, k++) {
+      if (x_byte + j < PANEL_FB_STRIDE) {
+        fb[y + i][x_byte + j] |= src[k];
+      }
     }
   }
   return y;
@@ -124,6 +129,9 @@ void copy_frame_buffer_rows(uint8_t **fb, int dst_x, int dst_y, int src_x, int s
   int i;
 
   for (i = 0; i < h; i++) {
-    memcpy(fb[dst_y + i] + dst_x / 2, fb[src_y + i] + src_x / 2, w / 2);
+    /* moving down, the last row goes first: overlapping rows are read before written */
+    int r = dst_y > src_y ? h - 1 - i : i;
+
+    memcpy(fb[dst_y + r] + dst_x / 2, fb[src_y + r] + src_x / 2, w / 2);
   }
 }

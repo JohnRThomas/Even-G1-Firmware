@@ -160,8 +160,7 @@ ZTEST(panel_brightness, test_lowest_settings_keep_the_panel_lit)
   zassert_equal(cur, 0);
 }
 
-/* Defect: no level range check; from 0x46, CUR = level - 6 sets the reserved bits 7:6. */
-ZTEST_EXPECT_FAIL(panel_brightness, test_out_of_range_level_keeps_reserved_current_bits_clear);
+/* CUR stays in 6 bits: from 0x46, level - 6 would reach the reserved bits 7:6 */
 ZTEST(panel_brightness, test_out_of_range_level_keeps_reserved_current_bits_clear)
 {
   static const uint8_t levels[] = {0x46, 0x80, 0xff};
@@ -286,11 +285,7 @@ ZTEST(panel_brightness, test_wr_lum_and_cur_reg_writes_only_what_changed)
   zassert_equal(JBD_CUR_REG_VAL, 6);
 }
 
-/*
- * Defect: direct writes skip the register cache, so a running change back to the cached value is
- * not sent.
- */
-ZTEST_EXPECT_FAIL(panel_brightness, test_running_change_after_a_direct_write_reaches_the_panel);
+/* direct writes update the register cache */
 ZTEST(panel_brightness, test_running_change_after_a_direct_write_reaches_the_panel)
 {
   panel_running();

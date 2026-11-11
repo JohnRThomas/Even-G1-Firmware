@@ -76,8 +76,6 @@ ZTEST(dashboard, test_0x06_pane_mode_on_the_slave_is_stored_and_echoed)
   zassert_equal(dts()->area, 1);
 }
 
-/* DEFECT: mode 03 is stored unchecked and acknowledged with 00. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_pane_mode_invalid_mode_id_is_rejected);
 ZTEST(dashboard, test_0x06_pane_mode_invalid_mode_id_is_rejected)
 {
   int len = g1_vector("0x06_pane_mode", pkt, sizeof(pkt));
@@ -273,8 +271,6 @@ ZTEST(dashboard, test_0x06_canvas_full_sized_background_in_dual_mode_is_dropped)
   zassert_equal(citywalk_canvas_valid, 0, "map drawn on a 5032-byte background in dual mode");
 }
 
-/* DEFECT: the canvas case always answers 00. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_canvas_dropped_background_is_reported_with_status_1);
 ZTEST(dashboard, test_0x06_canvas_dropped_background_is_reported_with_status_1)
 {
   uint16_t sent;
@@ -301,8 +297,6 @@ ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_drops_the_background)
   zassert_equal(citywalk_canvas_valid, 0);
 }
 
-/* DEFECT: a packet order error returns before the reply. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_canvas_chunk_count_mismatch_gets_an_error_reply);
 ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_gets_an_error_reply)
 {
   uint16_t sent;
@@ -384,8 +378,6 @@ ZTEST(dashboard, test_0x06_canvas_icon_limits_in_full_mode)
   zassert_equal(dts()->arrow_x, 0x108);
 }
 
-/* DEFECT: data_len - 0x10 bytes are copied, however many. */
-ZTEST_EXPECT_FAIL(dashboard, test_0x06_canvas_icon_one_byte_too_many_writes_nothing_behind_it);
 ZTEST(dashboard, test_0x06_canvas_icon_one_byte_too_many_writes_nothing_behind_it)
 {
   select_map_pane(0x01);

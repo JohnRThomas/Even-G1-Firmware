@@ -139,8 +139,7 @@ ZTEST(gui, test_bitmap_draw_rejects_bad_parameters)
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 0);
 }
 
-/* Defect: rows past 199 are written through the row pointers. */
-ZTEST_EXPECT_FAIL(gui, test_bitmap_draw_clips_at_bottom_edge);
+/* rows past 199 are clipped */
 ZTEST(gui, test_bitmap_draw_clips_at_bottom_edge)
 {
   static const uint8_t bmp[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -151,8 +150,7 @@ ZTEST(gui, test_bitmap_draw_clips_at_bottom_edge)
   zassert_true(gui_test_guard_intact(), "rows past 199 written");
 }
 
-/* Defect: a box past x 639 spills into the next row. */
-ZTEST_EXPECT_FAIL(gui, test_bitmap_draw_clips_at_right_edge);
+/* a box past x 639 is clipped at the right edge, not continued in the next row */
 ZTEST(gui, test_bitmap_draw_clips_at_right_edge)
 {
   static const uint8_t bmp[] = {0xff, 0xff};
@@ -262,8 +260,6 @@ ZTEST(gui, test_fade_out_never_lights_pixels)
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 0);
 }
 
-/* Defect: the loop stops at row < 199, so row 199 is never faded. */
-ZTEST_EXPECT_FAIL(gui, test_fade_out_darkens_last_row);
 ZTEST(gui, test_fade_out_darkens_last_row)
 {
   fade_full_screen();
@@ -327,8 +323,7 @@ ZTEST(gui, test_screen_offsets_out_of_range)
   zassert_equal(gui_screen_y_offset(), 4);
 }
 
-/* Defect: x stores its default but y does not, so the result depends on call order. */
-ZTEST_EXPECT_FAIL(gui, test_screen_offsets_unset_canvas_independent_of_call_order);
+/* an unset canvas gives 32, 32 in either call order */
 ZTEST(gui, test_screen_offsets_unset_canvas_independent_of_call_order)
 {
   int x_offset, y_offset;

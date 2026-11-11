@@ -722,6 +722,10 @@ static int process_for_unread_msg(struct GlassesState *state, struct imu_ctx *ct
   state->schedule_notif_pending = 0;
   get_dashboard_state()->unread_msg_num = count_unread_messages();
   while (1) {
+    if (IS_DFU(state)) {
+      update_persist_task_status_to_idle(state);
+      TASK_EXIT("imu-trigger-off-imm");
+    }
     if (ctx->mode == 1 && state->display_mode == 10) {
       sync_to_slave(state, 8, NULL, 0);
       update_persist_task_status_to_idle(state);
@@ -1081,7 +1085,11 @@ static int process_for_new_message_come_on(struct GlassesState *state, struct im
   state->stay_time_left_s = get_msg_stay_time(state->display_mode, get_dashboard_state()->message_stay_time);
   set_msg_show_state(2);
   cnt = 0;
-  msg_id = *(uint32_t *)get_message_by_index(get_dashboard_state()->unread_msg_num - 1);
+  msg_id = 0;
+  if (get_dashboard_state()->unread_msg_num) {
+    msg_id = *(uint32_t *)get_message_by_index(
+      get_dashboard_state()->unread_msg_num - 1);
+  }
   while (1) {
     if (state->work_mode == 1) {
       update_persist_task_status_to_idle(state);
@@ -1091,7 +1099,7 @@ static int process_for_new_message_come_on(struct GlassesState *state, struct im
       update_persist_task_status_to_idle(state);
       TASK_EXIT("message:imu-trigger-off-imm");
     }
-    if (state->is_master == 1) {
+    if (state->is_master == 1 && get_dashboard_state()->unread_msg_num) {
       id = *(uint32_t *)get_message_by_index(get_dashboard_state()->unread_msg_num - 1);
       if (msg_id != id) {
         state->stay_time_left_s = get_msg_stay_time(state->display_mode,
@@ -1106,7 +1114,7 @@ static int process_for_new_message_come_on(struct GlassesState *state, struct im
     if (ctx->mode == 2 || state->display_mode == 11) {
       set_particle_pending();
       if (state->schedule_notif_pending == 1) {
-        update_temp_task_status(state, 8, 2);
+        state->dashboard_mode = 8;
         set_msg_show_state(4);
         return SCREEN_CHANGED;
       }

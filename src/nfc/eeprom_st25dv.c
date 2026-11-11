@@ -13,6 +13,8 @@
 #include "st25dv.h"
 
 #define ST25DV_RETRIES  20
+#define ST25DV_WRITE_MAX  256  /* bytes the tag takes in one I2C write */
+#define ST25DV_USER_SIZE  512  /* ST25DV04KC user memory */
 
 static struct k_mutex st25dv_mutex;
 
@@ -57,26 +59,30 @@ int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf,
 {
   const struct eeprom_st25dv_config *config = dev->config;
   struct k_mutex *lock = dev->data;
-  int retries = ST25DV_RETRIES;
-  int ret;
+  const uint8_t *data = buf;
+  int retries;
+  size_t n;
+  int ret = 0;
 
-  if (!len) {
-    return 0;
-  }
+  /* in writes of at most ST25DV_WRITE_MAX bytes, each with its own retries */
+  for (; len; offset += n, data += n, len -= n) {
+    n = MIN(len, ST25DV_WRITE_MAX);
+    retries = ST25DV_RETRIES;
+    while (1) {
+      k_mutex_lock(lock, K_FOREVER);
+      ret = st25dv_write(config, config->addr, offset, data, n);
+      k_mutex_unlock(lock);
+      if (!ret || !--retries) {
+        break;
+      }
+      i2c_delay();
+    }
 
-  while (1) {
-    k_mutex_lock(lock, K_FOREVER);
-    ret = st25dv_write(config, config->addr, offset, buf, len);
-    k_mutex_unlock(lock);
-    if (!ret || !--retries) {
+    if (ret) {
+      printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n",
+             config->addr, (uint32_t)offset, ret);
       break;
     }
-    i2c_delay();
-  }
-
-  if (ret) {
-    printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n",
-           config->addr, (uint32_t)offset, ret);
   }
 
   return ret;
@@ -207,7 +213,7 @@ int eeprom_st25dv_write_sys(const struct device *dev, off_t offset, const void *
   return ret;
 }
 
-/* read the RF->host mailbox message: *buf receives the data, *len the length - 1 */
+/* read the RF->host mailbox message: *buf (256 bytes) receives it, *len its length - 1 */
 int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **buf, uint32_t *len)
 {
   uint8_t mb_ctrl;
@@ -235,7 +241,7 @@ int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **bu
   }
   *len = mb_len;
 
-  if (eeprom_st25dv_read(dev, ST25DV_MAILBOX_RAM_REG, *buf, 0xff)) {
+  if (eeprom_st25dv_read(dev, ST25DV_MAILBOX_RAM_REG, *buf, mb_len + 1)) {
     printk("eeprom_st25dv_read ST25DV_REG_MAILBOX_DYN is failed\n");
     return -5;
   }
@@ -298,7 +304,7 @@ const struct device *eeprom_st25dv_init(void)
   global_st25dv_context.api = &st25dv_callbacks;
   st25dv_device.bus_addr = ST25DV_ADDR_DATA_I2C;
   st25dv_device.addr = ST25DV_ADDR_DATA_I2C;
-  st25dv_device.size = 0x1000;
+  st25dv_device.size = ST25DV_USER_SIZE;
   global_st25dv_context.data = &st25dv_mutex;
   global_st25dv_context.config = &st25dv_device;
   k_mutex_init(&st25dv_mutex);

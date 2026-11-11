@@ -393,8 +393,7 @@ ZTEST(proxy_thread, test_audio_file_is_streamed_in_190_byte_chunks)
   zassert_true(clearAudioBlockInUse_fake.call_count >= 1);
 }
 
-/* DEFECT: setAudioBlockInUse() takes a 1-based block; the 0-based index is passed. */
-ZTEST_EXPECT_FAIL(proxy_thread, test_sending_block_1_marks_block_1_in_use);
+/* setAudioBlockInUse() takes a 1-based block */
 ZTEST(proxy_thread, test_sending_block_1_marks_block_1_in_use)
 {
   put_manager();

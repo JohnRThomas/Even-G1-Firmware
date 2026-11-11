@@ -132,9 +132,6 @@ ZTEST(notifications, test_confirm_message_on_the_master_drops_a_uid_already_show
   zassert_equal(slots_used(PUSH_FIRST, MSG_TOTAL_NUM), 0);
 }
 
-/* DEFECT: the duplicate drop clears slot 10 without moving the queue up, leaving an empty head. */
-ZTEST_EXPECT_FAIL(notifications,
-      test_confirm_message_after_dropping_a_duplicate_the_next_message_is_the_head);
 ZTEST(notifications, test_confirm_message_after_dropping_a_duplicate_the_next_message_is_the_head)
 {
   put_slot(0, 5, "com.discord", T0, 0, 0);
@@ -233,8 +230,6 @@ ZTEST(notifications, test_clear_timeout_force_drops_a_read_message_at_once)
   zassert_equal(g1_state()->unread_msg_num, 1);
 }
 
-/* DEFECT: a message moved into a dropped slot is not checked again. */
-ZTEST_EXPECT_FAIL(notifications, test_clear_timeout_force_drops_every_read_message_at_once);
 ZTEST(notifications, test_clear_timeout_force_drops_every_read_message_at_once)
 {
   g1_state()->message_stay_time = 60;

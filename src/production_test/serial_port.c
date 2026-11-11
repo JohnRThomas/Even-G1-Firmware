@@ -19,7 +19,7 @@ static K_MEM_SLAB_DEFINE(uart_slab, BUF_SIZE, 3, 4);
 
 /* last complete frame received on the lpuart */
 static uint8_t serial_rx_buf[BUF_SIZE];
-static uint8_t serial_rx_len;
+static uint16_t serial_rx_len;
 
 /* hex dump of the rx buffer when it holds no complete frame */
 static void serial_rx_dump(struct uart_event *evt, size_t offset)
@@ -38,7 +38,7 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
   struct device *uart = user_data;
   uint8_t *p;
   uint8_t *buf;
-  uint8_t len;
+  uint16_t len;
   uint8_t sum;
   uint16_t i;
   uint32_t j;

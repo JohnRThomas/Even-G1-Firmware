@@ -59,8 +59,7 @@ ZTEST(nfc_st25dv, test_init_with_the_bus_not_ready_returns_null)
   zassert_is_null(eeprom_st25dv_init());
 }
 
-/* DEFECT: size is hard-coded 0x1000; the 04KC has 512 bytes of user memory. */
-ZTEST_EXPECT_FAIL(nfc_st25dv, test_eeprom_size_is_the_user_memory_of_the_tag);
+/* the 04KC has 512 bytes of user memory */
 ZTEST(nfc_st25dv, test_eeprom_size_is_the_user_memory_of_the_tag)
 {
   zassert_equal(eeprom_get_size(dev), 512, "size %zu", eeprom_get_size(dev));
@@ -458,8 +457,7 @@ ZTEST(nfc_st25dv, test_mailbox_write_with_fast_transfer_mode_off_fails)
   zassert_equal(st25dv_emul_get_dyn(ST25DV_EMUL_DYN_MB_CTRL), 0);
 }
 
-/* DEFECT: always reads 255 bytes; a 256-byte message stays unread. */
-ZTEST_EXPECT_FAIL(nfc_st25dv, test_a_256_byte_case_message_is_read_whole);
+/* MB_LEN is the length - 1; reading the last byte releases the mailbox */
 ZTEST(nfc_st25dv, test_a_256_byte_case_message_is_read_whole)
 {
   uint8_t msg[256];

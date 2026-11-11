@@ -3,6 +3,7 @@
  * formatting, ANCS / hex dumps, uptime based timekeeping, generic CRC16 and a
  * run-length decoder.  Reconstructed from the v1.63 app core.
  */
+#include <math.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -14,8 +15,7 @@
 #include "../gui/gui.h"
 #include "../ui/ui.h"
 
-/* NB: not parenthesised in the vendor code ("i == 1 && IS_LEAP_YEAR(y)"). */
-#define IS_LEAP_YEAR(y) ((y) % 4 == 0 && (y) % 100 != 0) || (y) % 400 == 0
+#define IS_LEAP_YEAR(y) (((y) % 4 == 0 && (y) % 100 != 0) || (y) % 400 == 0)
 
 #define SECONDS_PER_DAY 86400
 
@@ -82,7 +82,7 @@ const char *get_weekday_name(uint32_t ts)
 /* formats val with two decimals and a sign ("+1.23", "-0.05"); returns the length */
 int format_float_2dp(float val, char *buf)
 {
-  int v = (int)(val * 100);
+  int v = lrintf(val * 100);
   uint32_t a = abs(v);
   char tmp[12] = { 0 };
   char *p = buf;
@@ -98,7 +98,8 @@ int format_float_2dp(float val, char *buf)
     mode = 0;
   }
 
-  while (a) {
+  /* at least one digit, for 0 */
+  do {
     uintptr_t dst;
 
     if (n == 2 && mode == 0) {
@@ -109,12 +110,12 @@ int format_float_2dp(float val, char *buf)
     dst += n++;
     *(char *)dst = a % 10 + '0';
     a /= 10;
-  }
+  } while (a);
 
   if (mode == 2) {
     tmp[n++] = '0';
   }
-  *p = (v <= 0) ? '-' : '+';
+  *p = (v < 0) ? '-' : '+';
 
   if (mode != 0) {
     p[1] = '0';
@@ -299,7 +300,8 @@ int rle_decode(const uint8_t *src, uint32_t len, uint8_t *dst)
 {
   int out = 0;
 
-  for (uint32_t i = 0; i < len; i += 2) {
+  /* a trailing count without its value is ignored */
+  for (uint32_t i = 0; i + 1 < len; i += 2) {
     uint8_t cnt = src[i];
 
     memset(dst + out, src[i + 1], cnt);

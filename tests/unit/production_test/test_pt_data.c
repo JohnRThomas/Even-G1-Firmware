@@ -282,8 +282,6 @@ ZTEST(production_test, test_pt_version_request_over_uart_reply_is_framed)
   zassert_equal(mailbox_tx.count, 0);
 }
 
-/* DEFECT: a refusing handler leaves the reply empty: a lone 00 checksum is sent. */
-ZTEST_EXPECT_FAIL(production_test, test_pt_refused_command_reply_names_the_command);
 ZTEST(production_test, test_pt_refused_command_reply_names_the_command)
 {
   zassert_equal(nfc_request("32 01 01 01 01"), 0);
@@ -294,11 +292,8 @@ ZTEST(production_test, test_pt_refused_command_reply_names_the_command)
   zassert_not_equal(mailbox_tx.data[0][4], 0);
 }
 
-/* DEFECT (skipped, corrupts memory): 0x1e builds an 0x52-byte reply in the 50-byte pt_resp_buf. */
 ZTEST(production_test, test_pt_flash_info_reply_fits_response_buffer)
 {
-  ztest_test_skip();
-
   g1_state()->flash_read = NULL; /* no flash API on the host */
   zassert_equal(nfc_request("1e 01 01 00"), 0);
   zassert_equal(mailbox_tx.len[0], 0x52 + 1);
@@ -381,14 +376,12 @@ ZTEST(production_test, test_pt_case_battery_flagged_reply_is_sent_again_after_1s
   zassert_equal(mailbox_tx.count, 5, "3 plain replies, then 2 for the fourth poll");
   zassert_equal(mailbox_tx.data[2][9], 0x64, "third poll is not flagged");
   expect_pkt(&mailbox_tx, 3, "13 01 02 06 00 17 70 32 00 80 55");
-  /* the resend has byte 9 cleared; its sum byte is the defect pinned below */
+  /* the resend has byte 9 cleared; its sum byte is checked below */
   zassert_equal(mailbox_tx.len[4], 11);
   expect_bytes(mailbox_tx.data[4], 10, "13 01 02 06 00 17 70 32 00 00");
   expect_elapsed_ms(start, 10001 + 1000, INT64_MAX);
 }
 
-/* DEFECT: byte 9 is cleared after the checksum, so the resent sum is wrong. */
-ZTEST_EXPECT_FAIL(production_test, test_pt_case_battery_repeated_reply_has_valid_checksum);
 ZTEST(production_test, test_pt_case_battery_repeated_reply_has_valid_checksum)
 {
   four_high_field_polls();

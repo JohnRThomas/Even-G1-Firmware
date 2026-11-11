@@ -346,8 +346,6 @@ ZTEST(audio_stream, test_stop_keeps_the_other_recordings)
   zassert_equal(get_block(3).state, 0);
 }
 
-/* DEFECT: an empty stop erases the manager sector without writing it back. */
-ZTEST_EXPECT_FAIL(audio_stream, test_stopping_an_empty_recording_keeps_the_other_recordings);
 ZTEST(audio_stream, test_stopping_an_empty_recording_keeps_the_other_recordings)
 {
   put_manager();

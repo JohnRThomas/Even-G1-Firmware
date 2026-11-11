@@ -76,6 +76,10 @@ int enqueue_file(const void *data, size_t len)
   struct file_msg msg;
   int ret;
 
+  if (len > FILE_MSG_LEN) {
+    G1_LOG_ERR("enqueue_file too long %d\n", (int)len);
+    return -EINVAL;
+  }
   if (k_msgq_num_used_get(&file_msgq) == FILE_MSGQ_DEPTH) {
     k_msgq_get(&file_msgq, &msg, K_NO_WAIT);
     G1_LOG_ERR("enqueue_file is full\n");
@@ -145,6 +149,9 @@ void try_to_save_file(struct GlassesState *gs)
     /* end of file */
     end = true;
   } else if (file_addr != 0) {
+    if (file_type == DEMO_IMAGE_ADDR && file_addr >= DEMO_IMAGE_END) {
+      return;
+    }
     memcpy(file_buf + file_buf_len, &msg.data[1], len - 1);
     file_buf_len += len - 1;
   } else {

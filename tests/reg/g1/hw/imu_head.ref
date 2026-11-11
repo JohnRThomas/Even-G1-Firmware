@@ -1,5 +1,5 @@
-# The phone sets the head-up angle to 30 and 60 degrees and reads it back, and the head is moved through poses
-# around that angle. The dashboard must open and close around the angle set.
+# The phone sets the head-up angle to 60 and 10 degrees and reads it back, and the head is moved through poses
+# around that angle. The dashboard must open and close around the angle set: a larger angle needs more lift.
 
 # Worn before the phone: the dashboard opens on both lenses.
 # dashboard, unpaired
@@ -18,25 +18,22 @@ action(B, pose(UP81),
        recv(M, "F5 02"), recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
        # dashboard
        display(B, settles_to("dashboard")))
-# Head-up angle 30 deg at 26: acknowledged; the detector re-evaluates the 81 deg pose as head down and the
-# dashboard closes. 0x32 reads 30 deg, enabled, back.
-action(M, send('0B 1E 01'), recv(M, "0B C9"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
-action(M, send('32'), recv(M, "32 6D 1E 01"))
-# Level at 28 and 45 deg at 31: nothing (still below the angle); 70 deg at 34: head up, the dashboard opens.
+# Head-up angle 60 deg at 26: acknowledged; the 81 deg pose is below that angle now, the detector re-evaluates it
+# as head down and the dashboard closes. 0x32 reads 60 deg, enabled, back.
+action(M, send('0B 3C 01'), recv(M, "0B C9"), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
+action(M, send('32'), recv(M, "32 6D 3C 01"))
+# Level at 28, then 70 and 81 deg: nothing (all below the angle).
 at(28)
 action(B, pose(LEVEL), quiet(B, "F5"))
+action(B, pose(UP70), quiet(B, "F5"))
+action(B, pose(UP81), quiet(B, "F5"))
+# Level again and head-up angle 10 deg, read back; 45 deg: nothing (still below the angle); 81 deg: head up, the
+# dashboard opens.
+action(B, pose(LEVEL), quiet(B, "F5"))
+action(M, send('0B 0A 01'), recv(M, "0B C9"))
+action(M, send('32'), recv(M, "32 6D 0A 01"))
 action(B, pose(UP45), quiet(B, "F5"))
-action(B, pose(UP70),
-       recv(M, "F5 02"), recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
-       # dashboard
-       display(B, settles_to("dashboard")))
-# Level at about 34.7: head down, closed.
-action(B, pose(LEVEL), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
-# Head-up angle 60 deg right after, read back; 45 deg at about 35.3: head up (the detector's thresholds are relative to
-# the level pitch), the dashboard opens.
-action(M, send('0B 3C 01'), recv(M, "0B C9"))
-action(M, send('32'), recv(M, "32 6D 3C 01"))
-action(B, pose(UP45),
+action(B, pose(UP81),
        recv(M, "F5 02"), recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
        # dashboard
        display(B, settles_to("dashboard")))

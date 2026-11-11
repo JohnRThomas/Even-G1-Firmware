@@ -81,8 +81,7 @@ ZTEST(panel_fb, test_clean_rejects_inverted_ranges)
   zassert_mem_equal(panel_frame(), before_img, FRAME_BYTES);
 }
 
-/* Defect: x_end 640 is inclusive here, so the clear spills into the next row. */
-ZTEST_EXPECT_FAIL(panel_fb, test_clean_to_the_right_edge_stays_in_its_rows);
+/* x_end 640 is clipped to the last pixel, 639 */
 ZTEST(panel_fb, test_clean_to_the_right_edge_stays_in_its_rows)
 {
   int ret;
@@ -96,8 +95,6 @@ ZTEST(panel_fb, test_clean_to_the_right_edge_stays_in_its_rows)
   zassert_equal(ret, 20);
 }
 
-/* Defect: y_end is clipped to 200, not 199, and row 200 aliases row 0, so row 0 is cleared. */
-ZTEST_EXPECT_FAIL(panel_fb, test_clean_past_the_bottom_stays_in_the_frame);
 ZTEST(panel_fb, test_clean_past_the_bottom_stays_in_the_frame)
 {
   fill_frame(0xff);
@@ -138,8 +135,6 @@ ZTEST(panel_fb, test_copy_at_an_odd_x_starts_on_the_byte_of_x_minus_1)
   zassert_mem_equal(&fb_row(7)[50], src, 2);
 }
 
-/* Defect: the width is not clipped, so bytes past byte 319 land in the next row. */
-ZTEST_EXPECT_FAIL(panel_fb, test_copy_at_the_right_edge_stays_in_its_row);
 ZTEST(panel_fb, test_copy_at_the_right_edge_stays_in_its_row)
 {
   static const uint8_t src[4] = {0x12, 0x34, 0x56, 0x78};
@@ -151,8 +146,6 @@ ZTEST(panel_fb, test_copy_at_the_right_edge_stays_in_its_row)
   expect_fill(fb_row(11), 2, 0xff, "row 11");
 }
 
-/* Defect: y is clipped to 200, not skipped, and row 200 aliases row 0. */
-ZTEST_EXPECT_FAIL(panel_fb, test_copy_below_the_frame_draws_nothing);
 ZTEST(panel_fb, test_copy_below_the_frame_draws_nothing)
 {
   static const uint8_t src[4] = {0x12, 0x34, 0x56, 0x78};
@@ -164,12 +157,9 @@ ZTEST(panel_fb, test_copy_below_the_frame_draws_nothing)
   zassert_mem_equal(panel_frame(), before_img, FRAME_BYTES, "frame changed");
 }
 
-/* Crashes: the second row pointer is current_row, 0 here. */
 ZTEST(panel_fb, test_copy_of_two_rows_below_the_frame_draws_nothing)
 {
   static const uint8_t src[2][4] = {{0x12, 0x34, 0x56, 0x78}, {0x12, 0x34, 0x56, 0x78}};
-
-  ztest_test_skip();
 
   fill_pattern();
   copy_to_frame_buffer(panel_fb(), &src[0][0], 4, 2, 100, 230);
@@ -205,8 +195,6 @@ ZTEST(panel_fb, test_or_merges_w_pixels_per_row)
   zassert_equal(fb_row(22)[50], 0x0f);
 }
 
-/* Defect: the width is not clipped, so bytes past byte 319 land in the next row. */
-ZTEST_EXPECT_FAIL(panel_fb, test_or_at_the_right_edge_stays_in_its_row);
 ZTEST(panel_fb, test_or_at_the_right_edge_stays_in_its_row)
 {
   static const uint8_t src[4] = {0xa0, 0xa0, 0xa0, 0xa0};
@@ -247,8 +235,7 @@ ZTEST(panel_fb, test_copy_rows_scrolls_up_by_one_row)
   }
 }
 
-/* Defect: rows are copied top-down, which breaks overlapping moves down. */
-ZTEST_EXPECT_FAIL(panel_fb, test_copy_rows_scrolls_down_by_one_row);
+/* rows moved down over themselves keep their content */
 ZTEST(panel_fb, test_copy_rows_scrolls_down_by_one_row)
 {
   fill_pattern();
