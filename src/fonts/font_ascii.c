@@ -10,7 +10,7 @@
 /* ASCII glyphs are drawn elsewhere */
 const uint8_t *font_ascii_lookup(uint8_t c, int size)
 {
-	return NULL;
+  return NULL;
 }
 
 /*
@@ -19,14 +19,14 @@ const uint8_t *font_ascii_lookup(uint8_t c, int size)
  */
 const uint8_t *font_ascii_get_glyph(uint16_t digit, int w, int h, int arg)
 {
-	(void)arg;
-	if ((uint16_t)(digit - 0x20) < 0x60) {
-		return (const uint8_t *)((digit - 0x20) * (w * h));
-	}
-	return NULL;
+  (void)arg;
+  if ((uint16_t)(digit - 0x20) < 0x60) {
+    return (const uint8_t *)((digit - 0x20) * (w * h));
+  }
+  return NULL;
 }
 
 int check_printable_code(uint32_t code)
 {
-	return code > 0x1f ? 0 : -1;
+  return code > 0x1f ? 0 : -1;
 }

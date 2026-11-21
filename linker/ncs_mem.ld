@@ -4,5 +4,5 @@
  */
 .ncs_mem 0x2007fc00 (NOLOAD) :
 {
-	KEEP(*(.ncs_mem))
+  KEEP(*(.ncs_mem))
 }

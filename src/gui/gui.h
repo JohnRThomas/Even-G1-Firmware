@@ -30,20 +30,20 @@ typedef int (*gui_effect_cb_t)(int arg, const char *str, int font, int x, int y)
  * of the file: highest addresses of gui.c's .bss groups).
  */
 struct gui_text_anim {
-	const uint8_t *text;             /* 0x00 */
-	uint32_t f_04;
-	uint32_t f_08;
-	uint32_t f_0c;
-	uint32_t f_10;
-	uint32_t f_14;
-	uint32_t f_18;
-	uint32_t buf_size;
+  const uint8_t *text;             /* 0x00 */
+  uint32_t f_04;
+  uint32_t f_08;
+  uint32_t f_0c;
+  uint32_t f_10;
+  uint32_t f_14;
+  uint32_t f_18;
+  uint32_t buf_size;
 };
 
 struct gui_utf_adv_cfg {
-	int cmd;
-	int param1;
-	int param2;
+  int cmd;
+  int param1;
+  int param2;
 };
 
 /* gui.c (frame_buffer is static there) */
@@ -65,25 +65,25 @@ int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, in
 int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level);
 int gui_text_state_reset(void);
 int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-		 uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
+     uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
 int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, int y0, int x1,
-				  int y1, uint32_t max_lines, uint16_t split_code, int effect,
-				  gui_effect_cb_t cb, int no_draw);
+          int y1, uint32_t max_lines, uint16_t split_code, int effect,
+          gui_effect_cb_t cb, int no_draw);
 int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-			  uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-			  int no_draw);
+        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
+        int no_draw);
 int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, int y0, int x1,
-				   int y1, uint32_t max_lines, uint8_t dark_lines, int effect,
-				   gui_effect_cb_t cb, int no_draw);
+           int y1, uint32_t max_lines, uint8_t dark_lines, int effect,
+           gui_effect_cb_t cb, int no_draw);
 int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
-			uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-			int no_draw);
+      uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
+      int no_draw);
 int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-			     uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-			     int no_draw);
+           uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
+           int no_draw);
 int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-			  uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-			  uint32_t no_draw);
+        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
+        uint32_t no_draw);
 int gui_utf_adv_draw_configure(struct gui_utf_adv_cfg cfg);
 int gui_dynamic_bitmap_reset_thunk(void);
 int64_t abs_diff_u64(int64_t a, int64_t b);
@@ -95,19 +95,19 @@ uint16_t gui_screen_x_offset(void);     /* the vendor prototype says uint16_t (c
 #endif
 int gui_screen_y_offset(void);
 int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-			     uint32_t max_lines, uint32_t dark_cnt);
+           uint32_t max_lines, uint32_t dark_cnt);
 int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
-		   bool is_24h);
+       bool is_24h);
 int gui_screen_fade_out(void);
 int hide_icon_notification_on_gui(void);
 /* callers pass a 7th argument (0), so the definition takes it too */
 int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, uint8_t percent,
-				 int unused);
+         int unused);
 int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segments, uint8_t gap,
-				  uint8_t percent);
+          uint8_t percent);
 int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color);
 int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, const uint8_t *bmp2,
-			  uint8_t color1, uint8_t color2);
+        uint8_t color1, uint8_t color2);
 int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color);
 int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y);
 int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, int *out_w);
@@ -140,9 +140,9 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 
 /* fonts/gui_fonts.c */
 struct font_glyph_idx {
-	uint16_t code;
-	uint8_t width;      /* in bytes (2 pixels per byte) */
-	uint8_t pad;
+  uint16_t code;
+  uint8_t width;      /* in bytes (2 pixels per byte) */
+  uint8_t pad;
 };
 extern const int font26_glyph_count;            /* 0x8e7b8 */
 extern const int font_b_glyph_count;            /* 0x8e7bc */

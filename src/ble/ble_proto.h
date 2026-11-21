@@ -40,9 +40,9 @@
 
 /* request header handed to ble_process_req_dispatch() */
 struct ble_req_hdr {
-	uint8_t cmd;
-	uint8_t source;
-	uint16_t len;
+  uint8_t cmd;
+  uint8_t source;
+  uint16_t len;
 };
 
 #define BLE_WORK_THREAD_STACK_SIZE 0x3000
@@ -55,37 +55,37 @@ struct ble_req_hdr {
 
 /* cmd 6 / sub 1: time sync */
 struct put_time_sync {
-	uint8_t hdr[5];
-	uint32_t sec_ts;   /* 0x05 */
-	int64_t ms_ts;     /* 0x09 */
+  uint8_t hdr[5];
+  uint32_t sec_ts;   /* 0x05 */
+  int64_t ms_ts;     /* 0x09 */
 } __packed;
 
 /* dashboard schedule entry (schedule_items[8], also read by DashBoard_Reflash) */
 struct schedule_item {
-	uint8_t valid;
-	char title[0x41];
-	char time[0x21];
-	char location[0x41];
+  uint8_t valid;
+  char title[0x41];
+  char time[0x21];
+  char location[0x41];
 };
 
 /* dashboard stock entry (stock_items[4]) */
 struct stock_item {
-	uint8_t valid;            /* 0x000 */
-	uint8_t change_status;    /* 0x001: 0 / 1 / 2 (dashboard trend arrow) */
-	uint16_t image_len;       /* 0x002 */
-	char code[0x20];          /* 0x004 */
-	char company[0x40];       /* 0x024 */
-	char price[0x10];         /* 0x064 */
-	char price_change[0x10];  /* 0x074 */
-	char change_rate[0x10];   /* 0x084 */
-	uint8_t image[0x75e];     /* 0x094 */
+  uint8_t valid;            /* 0x000 */
+  uint8_t change_status;    /* 0x001: 0 / 1 / 2 (dashboard trend arrow) */
+  uint16_t image_len;       /* 0x002 */
+  char code[0x20];          /* 0x004 */
+  char company[0x40];       /* 0x024 */
+  char price[0x10];         /* 0x064 */
+  char price_change[0x10];  /* 0x074 */
+  char change_rate[0x10];   /* 0x084 */
+  uint8_t image[0x75e];     /* 0x094 */
 };
 
 /* dashboard news entry (news_items[4]) */
 struct news_item {
-	uint8_t valid;
-	char source[0x40];
-	char text[0x118];
+  uint8_t valid;
+  char source[0x40];
+  char text[0x118];
 };
 
 
@@ -93,7 +93,7 @@ struct news_item {
 
 /* quick notes (GlassesState->quicknote) */
 struct qn_title {
-	char str[0x29];
+  char str[0x29];
 };
 
 
@@ -145,7 +145,7 @@ int deal_event_to_phone(struct ble_context *ctx, uint8_t *evt);
 typedef void (*ble_send_fn_t)(uint8_t *buf, uint32_t len);
 int subcontracing_send_data_pkcs7(const uint8_t *data, int len, uint8_t cmd, ble_send_fn_t send);
 int mobile_send_notification_to_ble_device_test(const char *title, const char *message,
-						 ble_send_fn_t send);
+             ble_send_fn_t send);
 void simulator_ancs_calendar_schedule_trigger(void);
 void ble_handle_rx_data(uint8_t *data, uint32_t len, int dump);
 int spec_ble_command_hook(uint8_t *data, uint32_t len);

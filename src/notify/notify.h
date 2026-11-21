@@ -31,14 +31,14 @@
 #define cJSON_Object (1 << 6)
 typedef int cJSON_bool;
 typedef struct cJSON {
-	struct cJSON *next;
-	struct cJSON *prev;
-	struct cJSON *child;
-	int type;
-	char *valuestring;
-	int valueint;
-	double valuedouble;
-	char *string;
+  struct cJSON *next;
+  struct cJSON *prev;
+  struct cJSON *child;
+  int type;
+  char *valuestring;
+  int valueint;
+  double valuedouble;
+  char *string;
 } cJSON;
 cJSON *cJSON_Parse(const char *value);
 char *cJSON_Print(const cJSON *item);
@@ -64,17 +64,17 @@ cJSON *cJSON_AddStringToObject(cJSON *const object, const char *const name, cons
 
 /* GlassesState->schedule_notif (0xffc) */
 struct schedule_notif {
-	uint32_t ts;                                     /* 0x00 */
-	uint8_t pad_04[4];
-	char title[17];                                  /* 0x08 */
-	char desc[0x97];                                 /* 0x19 */
+  uint32_t ts;                                     /* 0x00 */
+  uint8_t pad_04[4];
+  char title[17];                                  /* 0x08 */
+  char desc[0x97];                                 /* 0x19 */
 } __packed;
 
 /* notification.c */
 extern struct notif_msg g_arrMsgContent[MSG_TOTAL_NUM];
 void send_whilelist_app_info_wrapper(struct notif_msg *msg);
 int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, volatile uint8_t *src,
-				   uint8_t *hdr, uint8_t *arg, uint8_t *out, uint32_t len);
+           uint8_t *hdr, uint8_t *arg, uint8_t *out, uint32_t len);
 void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data);
 int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *out);
 void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, uint8_t *rsp);

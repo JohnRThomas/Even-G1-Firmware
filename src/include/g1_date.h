@@ -12,12 +12,12 @@
 #include <stdint.h>
 
 struct bp_date {
-	uint16_t year;   /* 0x0 */
-	uint16_t month;  /* 0x2 1..12 */
-	uint16_t day;    /* 0x4 1..31 */
-	uint16_t hour;   /* 0x6 */
-	uint16_t minute; /* 0x8 */
-	uint16_t second; /* 0xa */
+  uint16_t year;   /* 0x0 */
+  uint16_t month;  /* 0x2 1..12 */
+  uint16_t day;    /* 0x4 1..31 */
+  uint16_t hour;   /* 0x6 */
+  uint16_t minute; /* 0x8 */
+  uint16_t second; /* 0xa */
 };
 
 int init_burial_point_date(uint32_t timestamp, struct bp_date *date);

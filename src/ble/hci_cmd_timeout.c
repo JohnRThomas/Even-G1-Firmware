@@ -26,31 +26,31 @@ static atomic_t cmd_done;
 
 int hci_cmd_send_timeout(uint16_t opcode, int32_t timeout_ms)
 {
-	struct net_buf *buf;
-	int32_t waited;
-	int err;
+  struct net_buf *buf;
+  int32_t waited;
+  int err;
 
-	buf = bt_hci_cmd_create(opcode, 0);
-	if (!buf) {
-		return -ENOBUFS;
-	}
+  buf = bt_hci_cmd_create(opcode, 0);
+  if (!buf) {
+    return -ENOBUFS;
+  }
 
-	atomic_clear_bit(&cmd_done, 0);
-	bt_hci_cmd_state_set_init(buf, &cmd_state, &cmd_done, 0, true);
+  atomic_clear_bit(&cmd_done, 0);
+  bt_hci_cmd_state_set_init(buf, &cmd_state, &cmd_done, 0, true);
 
-	err = bt_hci_cmd_send(opcode, buf);
-	if (err) {
-		return err;
-	}
+  err = bt_hci_cmd_send(opcode, buf);
+  if (err) {
+    return err;
+  }
 
-	for (waited = 0; !atomic_test_bit(&cmd_done, 0); waited += POLL_INTERVAL_MS) {
-		if (waited >= timeout_ms) {
-			G1_LOG_ERR("command opcode 0x%04x timeout after %d ms\n", opcode,
-				   timeout_ms);
-			return -ETIMEDOUT;
-		}
-		k_msleep(POLL_INTERVAL_MS);
-	}
+  for (waited = 0; !atomic_test_bit(&cmd_done, 0); waited += POLL_INTERVAL_MS) {
+    if (waited >= timeout_ms) {
+      G1_LOG_ERR("command opcode 0x%04x timeout after %d ms\n", opcode,
+           timeout_ms);
+      return -ETIMEDOUT;
+    }
+    k_msleep(POLL_INTERVAL_MS);
+  }
 
-	return 0;
+  return 0;
 }

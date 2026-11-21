@@ -33,35 +33,35 @@
  * 0x28 bytes, 8-byte aligned), defined in dashboard.c.
  */
 struct dashboard_prv_data {
-	uint8_t state;               /* 0x00: 0 init, 1 running */
-	uint8_t notes_index;         /* 0x01 */
-	uint8_t notes_count;         /* 0x02 */
-	uint8_t stocks_index;        /* 0x03 */
-	uint8_t stocks_count;        /* 0x04 */
-	uint8_t news_index;          /* 0x05 */
-	uint8_t news_count;          /* 0x06 */
-	uint8_t calendar_last_index; /* 0x07 */
-	uint8_t calendar_index;      /* 0x08 */
-	uint8_t calendar_count;      /* 0x09 (calendar pages) */
-	uint8_t notes_shown;         /* 0x0a */
-	uint8_t news_shown;          /* 0x0b */
-	uint8_t init_done;           /* 0x0c */
-	uint8_t pad_0d;
-	uint8_t power_info_sent;     /* 0x0e */
-	uint8_t pad_0f;
-	int64_t enter_ts;            /* 0x10 */
-	uint8_t language;            /* 0x18 */
-	uint8_t display_mode;        /* 0x19 */
-	uint8_t pane_mode;           /* 0x1a _CurrentCustomAreaType (Ghidra PANE_MODE) */
-	uint8_t pad_1b;
-	uint32_t ble_connected;      /* 0x1c */
-	uint8_t calendar_disp_mode;  /* 0x20 (schedule_disp_status) */
-	uint8_t stocks_disp_mode;    /* 0x21 */
-	uint8_t news_disp_mode;      /* 0x22 */
-	uint8_t citywalk_disp_mode;  /* 0x23 */
-	uint8_t screen_cleared;      /* 0x24 (cleared by set_screen_cleared()) */
-	uint8_t msg_count;           /* 0x25 */
-	uint8_t pad_26[2];
+  uint8_t state;               /* 0x00: 0 init, 1 running */
+  uint8_t notes_index;         /* 0x01 */
+  uint8_t notes_count;         /* 0x02 */
+  uint8_t stocks_index;        /* 0x03 */
+  uint8_t stocks_count;        /* 0x04 */
+  uint8_t news_index;          /* 0x05 */
+  uint8_t news_count;          /* 0x06 */
+  uint8_t calendar_last_index; /* 0x07 */
+  uint8_t calendar_index;      /* 0x08 */
+  uint8_t calendar_count;      /* 0x09 (calendar pages) */
+  uint8_t notes_shown;         /* 0x0a */
+  uint8_t news_shown;          /* 0x0b */
+  uint8_t init_done;           /* 0x0c */
+  uint8_t pad_0d;
+  uint8_t power_info_sent;     /* 0x0e */
+  uint8_t pad_0f;
+  int64_t enter_ts;            /* 0x10 */
+  uint8_t language;            /* 0x18 */
+  uint8_t display_mode;        /* 0x19 */
+  uint8_t pane_mode;           /* 0x1a _CurrentCustomAreaType (Ghidra PANE_MODE) */
+  uint8_t pad_1b;
+  uint32_t ble_connected;      /* 0x1c */
+  uint8_t calendar_disp_mode;  /* 0x20 (schedule_disp_status) */
+  uint8_t stocks_disp_mode;    /* 0x21 */
+  uint8_t news_disp_mode;      /* 0x22 */
+  uint8_t citywalk_disp_mode;  /* 0x23 */
+  uint8_t screen_cleared;      /* 0x24 (cleared by set_screen_cleared()) */
+  uint8_t msg_count;           /* 0x25 */
+  uint8_t pad_26[2];
 };
 BUILD_ASSERT(sizeof(struct dashboard_prv_data) == 0x28);
 extern struct dashboard_prv_data _dashboard_prv_data;
@@ -95,7 +95,7 @@ int draw_template_dashboard_page(struct jbd_panel_context *panel, void *arg);
 int draw_template_schedule_page(struct jbd_panel_context *panel, void *arg);
 int power_info_battery_ok(void);
 void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
-		       uint8_t display_mode);
+           uint8_t display_mode);
 uint8_t getStocksIndex(void);
 int setStocksIndex(int idx);
 void cleanStocksIndex(void);

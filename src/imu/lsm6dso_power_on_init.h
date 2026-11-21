@@ -29,10 +29,10 @@ int lsm6dso_power_on_init(const struct device *dev);
 
 #undef SENSOR_DEVICE_DT_INST_DEFINE
 #define SENSOR_DEVICE_DT_INST_DEFINE(inst, init_fn, ...)                        \
-	int lsm6dso_power_on_init(const struct device *dev)                     \
-	{                                                                       \
-		return init_fn(dev);                                            \
-	}                                                                       \
-	SENSOR_DEVICE_DT_DEFINE(DT_DRV_INST(inst), NULL, __VA_ARGS__)
+  int lsm6dso_power_on_init(const struct device *dev)                     \
+  {                                                                       \
+    return init_fn(dev);                                            \
+  }                                                                       \
+  SENSOR_DEVICE_DT_DEFINE(DT_DRV_INST(inst), NULL, __VA_ARGS__)
 
 #endif /* IMU_LSM6DSO_POWER_ON_INIT_H_ */

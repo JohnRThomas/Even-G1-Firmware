@@ -16,21 +16,21 @@
 
 /* communication channel of the production-test protocol */
 enum pt_comm_type {
-	PT_COMM_NFC = 0,   /* st25dv mailbox */
-	PT_COMM_UART = 1,  /* lpuart */
-	PT_COMM_NONE = 2,
+  PT_COMM_NFC = 0,   /* st25dv mailbox */
+  PT_COMM_UART = 1,  /* lpuart */
+  PT_COMM_NONE = 2,
 };
 
 /* response frame: [cmd][1][3][payload len][payload...] */
 typedef int (*pt_cmd_handler_t)(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-				uint8_t *resp_len, void *arg);
+        uint8_t *resp_len, void *arg);
 
 typedef int pt_cmd_handler_fn(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-			      uint8_t *resp_len, void *arg);
+            uint8_t *resp_len, void *arg);
 
 struct pt_cmd {
-	uint8_t cmd;
-	pt_cmd_handler_t handler;
+  uint8_t cmd;
+  pt_cmd_handler_t handler;
 };
 
 /* production_test.c: command handlers of pt_cmd_table */
@@ -46,7 +46,7 @@ extern struct k_thread mic_transm_thread_data;
 K_THREAD_STACK_DECLARE(mic_transm_thread_stack, 1024);
 extern struct k_sem mic_transm_sem;             /* mic_transm_thread trigger */
 int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp,
-			uint8_t *resp_len, void *arg);
+      uint8_t *resp_len, void *arg);
 int64_t set_pt_deadline(void);                   /* pt_timeout_ms = uptime + 10 s */
 void mic_transm_thread(void *p1, void *p2, void *p3);
 void start_mic_transm_thread(void);

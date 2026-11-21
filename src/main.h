@@ -13,13 +13,13 @@
 
 /* Copy of the private config struct of drivers/regulator/regulator_npm1300.c */
 struct regulator_npm1300_config {
-	struct regulator_common_config common;
-	const struct device *mfd;
-	uint8_t source;
-	int32_t retention_uv;
-	struct gpio_dt_spec enable_gpios;
-	struct gpio_dt_spec retention_gpios;
-	struct gpio_dt_spec pwm_gpios;
+  struct regulator_common_config common;
+  const struct device *mfd;
+  uint8_t source;
+  int32_t retention_uv;
+  struct gpio_dt_spec enable_gpios;
+  struct gpio_dt_spec retention_gpios;
+  struct gpio_dt_spec pwm_gpios;
 };
 
 extern struct GlassesState *GLOBAL_STATE;
@@ -29,23 +29,23 @@ extern struct GlassesState *GLOBAL_STATE;
  * bootloader and the network core.
  */
 struct ncs_mem {
-	uint32_t ts;              /* 0x00 */
-	uint8_t weather_icon;             /* 0x04 */
-	uint8_t temperature;             /* 0x05 */
-	uint8_t pad_06[2];
-	uint64_t ms_ts;            /* 0x08 */
-	uint8_t retained_buf_a[0x25];       /* 0x10 */
-	uint8_t retained_buf_b[0x2a];       /* 0x35 */
-	uint8_t temp_unit;             /* 0x5f */
-	uint8_t time_disp_mode;             /* 0x60 */
-	uint8_t retained_a;             /* 0x61 */
-	uint8_t retained_b;             /* 0x62 */
-	bool erase_dfu;           /* 0x63 */
-	uint32_t magic;           /* 0x64 */
-	uint8_t retained_c;             /* 0x68 */
-	uint8_t notes_index;      /* 0x69 */
-	uint8_t pad_6a[6];
-	uint8_t pt_level;             /* 0x70 */
+  uint32_t ts;              /* 0x00 */
+  uint8_t weather_icon;             /* 0x04 */
+  uint8_t temperature;             /* 0x05 */
+  uint8_t pad_06[2];
+  uint64_t ms_ts;            /* 0x08 */
+  uint8_t retained_buf_a[0x25];       /* 0x10 */
+  uint8_t retained_buf_b[0x2a];       /* 0x35 */
+  uint8_t temp_unit;             /* 0x5f */
+  uint8_t time_disp_mode;             /* 0x60 */
+  uint8_t retained_a;             /* 0x61 */
+  uint8_t retained_b;             /* 0x62 */
+  bool erase_dfu;           /* 0x63 */
+  uint32_t magic;           /* 0x64 */
+  uint8_t retained_c;             /* 0x68 */
+  uint8_t notes_index;      /* 0x69 */
+  uint8_t pad_6a[6];
+  uint8_t pt_level;             /* 0x70 */
 };
 
 /*

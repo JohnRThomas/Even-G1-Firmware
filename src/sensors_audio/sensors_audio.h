@@ -18,7 +18,7 @@
 /* ext_flash.c */
 typedef int (*ext_flash_read_t)(struct GlassesState *gs, uint32_t offset, void *data, size_t len);
 typedef int (*ext_flash_write_t)(struct GlassesState *gs, uint32_t offset, const void *data,
-				 size_t len);
+         size_t len);
 typedef int (*ext_flash_erase_t)(struct GlassesState *gs, uint32_t offset, size_t size);
 
 int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_flash_erase_t *erase);

@@ -27,42 +27,42 @@ int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec);
 
 struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer)
 {
-	struct bt_conn *conn = __real_bt_conn_add_le(id, peer);
+  struct bt_conn *conn = __real_bt_conn_add_le(id, peer);
 
-	if (conn) {
-		conn->sec_level = BT_SECURITY_L2;
-		conn->required_sec_level = BT_SECURITY_L2;
-	}
-	return conn;
+  if (conn) {
+    conn->sec_level = BT_SECURITY_L2;
+    conn->required_sec_level = BT_SECURITY_L2;
+  }
+  return conn;
 }
 
 /* Zephyr's bt_conn_set_security() for an LE-only host, without its
  * "nothing to do" early return. */
 int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec)
 {
-	int err;
+  int err;
 
-	if (conn->state != BT_CONN_CONNECTED) {
-		return -ENOTCONN;
-	}
+  if (conn->state != BT_CONN_CONNECTED) {
+    return -ENOTCONN;
+  }
 
-	if (IS_ENABLED(CONFIG_BT_SMP_SC_ONLY)) {
-		sec = BT_SECURITY_L4;
-	}
+  if (IS_ENABLED(CONFIG_BT_SMP_SC_ONLY)) {
+    sec = BT_SECURITY_L4;
+  }
 
-	if (IS_ENABLED(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY)) {
-		sec = BT_SECURITY_L3;
-	}
+  if (IS_ENABLED(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY)) {
+    sec = BT_SECURITY_L3;
+  }
 
-	atomic_set_bit_to(conn->flags, BT_CONN_FORCE_PAIR, sec & BT_SECURITY_FORCE_PAIR);
-	conn->required_sec_level = sec & ~BT_SECURITY_FORCE_PAIR;
+  atomic_set_bit_to(conn->flags, BT_CONN_FORCE_PAIR, sec & BT_SECURITY_FORCE_PAIR);
+  conn->required_sec_level = sec & ~BT_SECURITY_FORCE_PAIR;
 
-	err = bt_smp_start_security(conn);
+  err = bt_smp_start_security(conn);
 
-	/* reset required security level in case of error */
-	if (err) {
-		conn->required_sec_level = conn->sec_level;
-	}
+  /* reset required security level in case of error */
+  if (err) {
+    conn->required_sec_level = conn->sec_level;
+  }
 
-	return err;
+  return err;
 }

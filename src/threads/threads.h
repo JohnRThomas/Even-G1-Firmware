@@ -16,7 +16,7 @@
 
 /* print without the LOG_LEVEL check / "%s(): " prefix */
 #define G1_PRINTK(fmt, ...) \
-	do { if (BLE_DEBUG) ble_printk(fmt, ##__VA_ARGS__); else printk(fmt, ##__VA_ARGS__); } while (0)
+  do { if (BLE_DEBUG) ble_printk(fmt, ##__VA_ARGS__); else printk(fmt, ##__VA_ARGS__); } while (0)
 
 /* threads.c */
 extern uint8_t watchdog_enabled;

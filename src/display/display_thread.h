@@ -16,38 +16,38 @@ struct jbd_panel_context;
 
 /* message posted to display_msgq (24 bytes) */
 enum disp_msg_type {
-	DISP_MSG_OPEN = 2,         /* display_reflash() */
-	DISP_MSG_CLOSE = 3,        /* display_close() */
-	DISP_MSG_DELAY_CLOSE = 4,  /* display_DelayClose() */
-	DISP_MSG_INPUT = 5,        /* display_inputEvent() */
-	DISP_MSG_MASTER_CLOSE = 6, /* display_MasterSendClose() */
-	DISP_MSG_POWER_ON = 7,     /* display_powerEvent(1) */
-	DISP_MSG_POWER_OFF = 8,    /* display_powerEvent(!1) */
+  DISP_MSG_OPEN = 2,         /* display_reflash() */
+  DISP_MSG_CLOSE = 3,        /* display_close() */
+  DISP_MSG_DELAY_CLOSE = 4,  /* display_DelayClose() */
+  DISP_MSG_INPUT = 5,        /* display_inputEvent() */
+  DISP_MSG_MASTER_CLOSE = 6, /* display_MasterSendClose() */
+  DISP_MSG_POWER_ON = 7,     /* display_powerEvent(1) */
+  DISP_MSG_POWER_OFF = 8,    /* display_powerEvent(!1) */
 };
 
 struct disp_msg {
-	uint8_t type;      /* 0x00 enum disp_msg_type */
-	uint8_t pad_01;
-	uint16_t len;      /* 0x02 payload length */
-	uint8_t data[20];  /* 0x04 payload: [0] = 1 valid, [1] = screen id */
+  uint8_t type;      /* 0x00 enum disp_msg_type */
+  uint8_t pad_01;
+  uint16_t len;      /* 0x02 payload length */
+  uint8_t data[20];  /* 0x04 payload: [0] = 1 valid, [1] = screen id */
 };
 
 /* UI process (event) passed to the ui_*_task() handlers */
 enum disp_ui_event {
-	DISP_UI_REFRESH = 0,
-	DISP_UI_ENTER = 1,
-	DISP_UI_EXIT = 2,
-	DISP_UI_DELAY_CLOSE = 3,
-	DISP_UI_INPUT = 4,
-	DISP_UI_MASTER_CLOSE = 5,
-	DISP_UI_POWER_ON = 6,
-	DISP_UI_POWER_OFF = 7,
+  DISP_UI_REFRESH = 0,
+  DISP_UI_ENTER = 1,
+  DISP_UI_EXIT = 2,
+  DISP_UI_DELAY_CLOSE = 3,
+  DISP_UI_INPUT = 4,
+  DISP_UI_MASTER_CLOSE = 5,
+  DISP_UI_POWER_ON = 6,
+  DISP_UI_POWER_OFF = 7,
 };
 
 /* display thread state machine */
 struct disp_state {
-	uint8_t state;      /* 0 idle, 1 running, 2 closing */
-	uint8_t screen_id;  /* screen id of the running UI application */
+  uint8_t state;      /* 0 idle, 1 running, 2 closing */
+  uint8_t screen_id;  /* screen id of the running UI application */
 };
 
 /* display_thread.c */

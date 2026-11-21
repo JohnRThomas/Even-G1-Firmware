@@ -17,15 +17,15 @@ extern int BLE_DEBUG;
 void ble_printk(const char *fmt, ...);
 
 #define G1_LOG(lvl, fmt, ...)                                                       \
-	do {                                                                        \
-		if (LOG_LEVEL > (lvl)) {                                            \
-			if (BLE_DEBUG) {                                            \
-				ble_printk("%s(): " fmt, __func__, ##__VA_ARGS__);  \
-			} else {                                                    \
-				printk("%s(): " fmt, __func__, ##__VA_ARGS__);      \
-			}                                                           \
-		}                                                                   \
-	} while (0)
+  do {                                                                        \
+    if (LOG_LEVEL > (lvl)) {                                            \
+      if (BLE_DEBUG) {                                            \
+        ble_printk("%s(): " fmt, __func__, ##__VA_ARGS__);  \
+      } else {                                                    \
+        printk("%s(): " fmt, __func__, ##__VA_ARGS__);      \
+      }                                                           \
+    }                                                                   \
+  } while (0)
 
 #define G1_LOG_ERR(fmt, ...) G1_LOG(0, fmt, ##__VA_ARGS__)
 #define G1_LOG_WRN(fmt, ...) G1_LOG(1, fmt, ##__VA_ARGS__)
@@ -34,12 +34,12 @@ void ble_printk(const char *fmt, ...);
 
 /* vendor log line without the LOG_LEVEL check and without the "%s(): " prefix */
 #define BLE_PRINTK(fmt, ...)                                                   \
-	do {                                                                   \
-		if (BLE_DEBUG) {                                               \
-			ble_printk(fmt, ##__VA_ARGS__);                        \
-		} else {                                                       \
-			printk(fmt, ##__VA_ARGS__);                            \
-		}                                                              \
-	} while (0)
+  do {                                                                   \
+    if (BLE_DEBUG) {                                               \
+      ble_printk(fmt, ##__VA_ARGS__);                        \
+    } else {                                                       \
+      printk(fmt, ##__VA_ARGS__);                            \
+    }                                                              \
+  } while (0)
 
 #endif /* G1_LOG_H_ */

@@ -19,8 +19,8 @@
 
 /* One queued NUS packet (enqueue_bt_data / dequeue_bt_data) */
 struct bt_data_msg {
-	uint8_t len;
-	uint8_t data[256];
+  uint8_t len;
+  uint8_t data[256];
 };
 
 /* ble_nus.c */

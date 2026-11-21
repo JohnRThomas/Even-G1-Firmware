@@ -58,9 +58,9 @@ void copy_frame_buffer_rows(uint8_t **fb, int dst_x, int dst_y, int src_x, int s
 extern uint32_t JDB_PANEL_ID;
 extern struct k_mutex lcd_mutex;
 int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start,
-			    int x_end, int y_end);
+          int x_end, int y_end);
 int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start,
-			       int x_end, int y_end, int offset);
+             int x_end, int y_end, int offset);
 int jbd_panel_suspend(void);
 int jbd_panel_resume(struct jbd_panel_context *c);
 void lock_lcd_mutex(k_timeout_t timeout);

@@ -12,18 +12,18 @@
 #define MAX_WHITE_LIST_BUF_LEN  (sizeof(struct app_whitelist) + 1)
 
 struct app_info {
-	char id[40];
-	char name[16];
+  char id[40];
+  char name[16];
 };
 
 struct app_whitelist {
-	uint8_t call_enable : 1;
-	uint8_t msg_enable : 1;
-	uint8_t ios_mail_enable : 1;
-	uint8_t calendar_enable : 1;
-	uint8_t app_enable : 1;
-	uint8_t app_count;
-	struct app_info list[MAX_WHITE_LIST_APP_NUM];
+  uint8_t call_enable : 1;
+  uint8_t msg_enable : 1;
+  uint8_t ios_mail_enable : 1;
+  uint8_t calendar_enable : 1;
+  uint8_t app_enable : 1;
+  uint8_t app_count;
+  struct app_info list[MAX_WHITE_LIST_APP_NUM];
 };
 
 BUILD_ASSERT(sizeof(struct app_whitelist) == 0x15e2);
@@ -34,7 +34,7 @@ int is_the_same_whitelist_app(const char *json);
 uint8_t *get_app_whitelist_info(void); /* BLE whitelist buffer */
 uint8_t is_on_whitelist_by_identifier(const char *pkg_name);
 void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uint8_t *data,
-				uint16_t len, uint8_t *rsp);
+        uint16_t len, uint8_t *rsp);
 void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp);
 void load_app_white_list_from_flash(void);
 

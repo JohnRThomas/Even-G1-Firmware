@@ -17,23 +17,23 @@ static uint8_t lpuart_ready;             /* lpuart initialised */
 
 int init_serial_port(void)
 {
-	const struct device *lpuart = DEVICE_DT_GET(DT_NODELABEL(uart0));
+  const struct device *lpuart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 
-	if (lpuart_ready) {
-		return 0;
-	}
+  if (lpuart_ready) {
+    return 0;
+  }
 
 #line 46 "../src/production_test/serial_thread.c"
-	__ASSERT(device_is_ready(lpuart), "LPUART device not ready");
+  __ASSERT(device_is_ready(lpuart), "LPUART device not ready");
 
-	if (lpuart_async_a(lpuart)) {
-		lpuart_ready = 0;
-		printk("init_serial_port is failed\n");
-		return -1;
-	}
-	lpuart_ready = 1;
+  if (lpuart_async_a(lpuart)) {
+    lpuart_ready = 0;
+    printk("init_serial_port is failed\n");
+    return -1;
+  }
+  lpuart_ready = 1;
 
-	return 0;
+  return 0;
 }
 
 /*
@@ -44,30 +44,30 @@ int init_serial_port(void)
  */
 void serial_thread(void)
 {
-	if (init_serial_port()) {
-		return;
-	}
-	if (setUARTDevice(DEVICE_DT_GET(DT_NODELABEL(uart0)))) {
-		printk("init_serial_comm is failed\n");
-		return;
-	}
-	printk("**********************************join in serial thread"
-	       "*******************************\n");
-	process_pt_data(NULL);
+  if (init_serial_port()) {
+    return;
+  }
+  if (setUARTDevice(DEVICE_DT_GET(DT_NODELABEL(uart0)))) {
+    printk("init_serial_comm is failed\n");
+    return;
+  }
+  printk("**********************************join in serial thread"
+         "*******************************\n");
+  process_pt_data(NULL);
 }
 
 int init_serial_comm(void)
 {
-	if (init_serial_port()) {
-		return -1;
-	}
+  if (init_serial_port()) {
+    return -1;
+  }
 
-	if (setUARTDevice(DEVICE_DT_GET(DT_NODELABEL(uart0)))) {
-		printk("init_serial_comm is failed\n");
-		k_sleep(K_MSEC(500));
-		return -2;
-	}
+  if (setUARTDevice(DEVICE_DT_GET(DT_NODELABEL(uart0)))) {
+    printk("init_serial_comm is failed\n");
+    k_sleep(K_MSEC(500));
+    return -2;
+  }
 
-	return process_pt_data(NULL) ? -3 : 0;
+  return process_pt_data(NULL) ? -3 : 0;
 }
 

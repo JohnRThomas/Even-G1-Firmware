@@ -14,47 +14,47 @@
 #include <zephyr/device.h>
 
 /* I2C addresses: user memory / dynamic registers at 0x53, system area at 0x57 */
-#define ST25DV_ADDR_DATA_I2C	0x53
+#define ST25DV_ADDR_DATA_I2C  0x53
 #define ST25DV_ADDR_SYST_I2C_BIT 0x04
 
 /* system configuration area (E2 = 1) */
-#define ST25DV_GPO_REG		0x0000
-#define ST25DV_ITTIME_REG	0x0001
-#define ST25DV_RFA1SS_REG	0x0004
-#define ST25DV_RFA3SS_REG	0x0008
-#define ST25DV_MEM_SIZE_REG	0x0014
-#define ST25DV_BLK_SIZE_REG	0x0016
-#define ST25DV_ICREF_REG	0x0017
-#define ST25DV_UID_REG		0x0018
-#define ST25DV_ICREV_REG	0x0020
-#define ST25DV_I2CPASSWD_REG	0x0900
+#define ST25DV_GPO_REG    0x0000
+#define ST25DV_ITTIME_REG  0x0001
+#define ST25DV_RFA1SS_REG  0x0004
+#define ST25DV_RFA3SS_REG  0x0008
+#define ST25DV_MEM_SIZE_REG  0x0014
+#define ST25DV_BLK_SIZE_REG  0x0016
+#define ST25DV_ICREF_REG  0x0017
+#define ST25DV_UID_REG    0x0018
+#define ST25DV_ICREV_REG  0x0020
+#define ST25DV_I2CPASSWD_REG  0x0900
 
 /* dynamic registers (E2 = 0) */
-#define ST25DV_EH_CTRL_DYN_REG	0x2002
-#define ST25DV_I2C_SSO_DYN_REG	0x2004
-#define ST25DV_ITSTS_DYN_REG	0x2005
-#define ST25DV_MB_CTRL_DYN_REG	0x2006
-#define ST25DV_MB_LEN_DYN_REG	0x2007
-#define ST25DV_MAILBOX_RAM_REG	0x2008
+#define ST25DV_EH_CTRL_DYN_REG  0x2002
+#define ST25DV_I2C_SSO_DYN_REG  0x2004
+#define ST25DV_ITSTS_DYN_REG  0x2005
+#define ST25DV_MB_CTRL_DYN_REG  0x2006
+#define ST25DV_MB_LEN_DYN_REG  0x2007
+#define ST25DV_MAILBOX_RAM_REG  0x2008
 
 struct eeprom_st25dv_config {
-	const struct device *bus;	/* i2c@9000 */
-	uint16_t bus_addr;		/* 0x53 */
-	uint16_t pad_06;
-	uint16_t addr;			/* 0x53 */
-	uint16_t pad_0a;
-	size_t size;			/* 0x1000 */
+  const struct device *bus;  /* i2c@9000 */
+  uint16_t bus_addr;    /* 0x53 */
+  uint16_t pad_06;
+  uint16_t addr;      /* 0x53 */
+  uint16_t pad_0a;
+  size_t size;      /* 0x1000 */
 };
 
 struct st25dv_passwd {
-	uint32_t msb;
-	uint32_t lsb;
+  uint32_t msb;
+  uint32_t lsb;
 };
 
 struct st25dv_mem_size {
-	uint8_t blk_size;
-	uint8_t pad_01;
-	uint16_t mem_size;
+  uint8_t blk_size;
+  uint8_t pad_01;
+  uint16_t mem_size;
 };
 
 /* the eeprom device and a pointer to it (set by nfc_init()) */
@@ -68,8 +68,8 @@ int eeprom_st25dv_write_sys(const struct device *dev, off_t offset, const void *
 int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **buf, uint32_t *len);
 int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void *buf, size_t len);
 const struct device *eeprom_st25dv_init(void);
-uint8_t eeprom_st25dv_lock(const struct device *dev);	/* no return value (vendor) */
-uint8_t eeprom_st25dv_unlock(const struct device *dev);	/* no return value (vendor) */
+uint8_t eeprom_st25dv_lock(const struct device *dev);  /* no return value (vendor) */
+uint8_t eeprom_st25dv_unlock(const struct device *dev);  /* no return value (vendor) */
 
 /* st25dv.c */
 int st25dv_configure_gpo(const struct device *dev, uint8_t it_conf);
