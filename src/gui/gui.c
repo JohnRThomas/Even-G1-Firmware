@@ -426,9 +426,10 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
             /* last line is full: make room for an ellipsis */
             uint16_t *p = code;
             int k = i;
-            uint16_t ch = c;
 
             while (k != 0 && (uint32_t)(width - x_off) <= 3) {
+              uint16_t ch;
+
               p--;
               k--;
               ch = *p;
@@ -444,7 +445,7 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
             }
             G1_LOG_WRN("end line x0=%d\n", x_off);
             if (resource_manger_get(font, 0x2026, &w, &h, &data, NULL) < 0) {
-              G1_LOG_WRN("can not find 0x%x font resource\n", ch);
+              G1_LOG_WRN("can not find 0x%x font resource\n", 0x2026);
               continue;
             }
             memcpy(glyph, data, h * (w / 2));
@@ -1554,7 +1555,7 @@ int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, i
 
   x = x0;
   for (size_t i = 0; i < len; i++) {
-    if ((uint8_t)str[0] >= 0x20) {
+    if ((uint8_t)str[i] >= 0x20) {
       int ret = resource_manger_get(font, (uint8_t)str[i], &w, &h, &data, NULL);
 
       if (data == NULL || ret != 0) {

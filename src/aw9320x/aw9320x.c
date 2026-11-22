@@ -104,8 +104,11 @@ static int32_t aw9320x_i2c_write(uint16_t reg_addr, uint32_t reg_data) {
 
 static int32_t aw9320x_i2c_write_bits(uint16_t reg_addr16, uint32_t mask, uint32_t reg_data32) {
   uint32_t reg_val = 0;
+  int32_t ret = aw9320x_i2c_read(reg_addr16, &reg_val);
 
-  aw9320x_i2c_read(reg_addr16, &reg_val);
+  if (ret != AW_OK) {
+    return ret;
+  }
   reg_val &= mask;
   reg_val |= (reg_data32 & (~mask));
   aw9320x_i2c_write(reg_addr16, reg_val);
@@ -1006,6 +1009,7 @@ static int32_t aw9320x_send_stop_cmd(void) {
 
   aw9320x_i2c_write(AW_REG_MCFG, AW_CPU_HALT);
   aw9320x_i2c_write(AW_REG_ACESS_EN, AW_ACC_PERI);
+  // Result unchecked: while the boot jump stays disabled, the init interrupt below does not come
   aw9320x_i2c_write_bits(REG_UPDATA_DIS, AW_REG_UPDATA_DIS_MASK, 0);
   aw9320x_i2c_write(REG_ACCESSEN, REG_ACCESSEN_CLOSE);
   aw9320x_i2c_write(AW_REG_MCFG, AW_CPU_RUN);

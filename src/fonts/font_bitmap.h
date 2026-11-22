@@ -14,7 +14,6 @@ const uint8_t *get_demo_picture(int id, int *w, int *h);
 void free_demo_line_buf(void);
 const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h);
 const uint8_t *font_ascii_lookup(uint8_t c, int w, int h, uint8_t *cell);
-const uint8_t *font_ascii_get_glyph(uint16_t digit, int w, int h, int arg);
 int check_printable_code(uint32_t code);
 
 /* font_bitmap_data.inc: 6x5 pixel markers of the demo position page (4 bpp) */

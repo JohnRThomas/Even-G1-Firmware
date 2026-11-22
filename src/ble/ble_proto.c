@@ -4546,7 +4546,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
         break;
       }
     }
-    char cmd[4] = {0};
+    char cmd[5] = {0};
 
     memcpy(cmd, str, p - str);
     G1_LOG_INF("cmd:%s\n\n", cmd);
@@ -4648,14 +4648,16 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       char *q;
 
       p++;
-      for (q = p; *q != '\0'; q++) {
-      }
-      n = q - p;
+      strncpy(value, p, sizeof(value) - 1);
+      n = (int)strlen(value);
       G1_LOG_INF("22 len=%d\n", n);
-      memcpy(value, p, n);
-      for (q = value; *q != '#'; q++) {
+      q = strchr(value, '#');
+      if (q == NULL) {
+        return -1;
       }
-      strncpy(title, value, q - value);
+      n = MIN((int)(q - value), (int)sizeof(title) - 1);
+      memcpy(title, value, n);
+      title[n] = '\0';
       strcpy(msg, q + 1);
       G1_LOG_INF("#cmd_type:%s, title=%s, msg=%s\n\n", cmd_type, title, msg);
       return mobile_send_notification_to_ble_device_test(title, msg, ble_dispatch_raw_packet);
@@ -4874,6 +4876,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     return 0;
   }
 
+  /* state->spi is the panel's SPI master; nothing registers flash_ops.fn */
   if (strncmp(buf, "#j", 2) == 0) {
     char out[20] = {0};
 
@@ -4884,10 +4887,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       }
       strcpy(out, "init flash");
     } else {
-      state->spi.init_cb(&state->spi);
-      if (state->flash_ops.fn) {
-        state->flash_ops.fn(&state->flash_ops);
-      }
+      state->spi.deinit_cb(&state->spi);
       strcpy(out, "deinit flash");
     }
     ctx->write(out, sizeof(out));

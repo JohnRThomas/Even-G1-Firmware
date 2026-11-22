@@ -259,6 +259,30 @@ ZTEST(touch, test_mode_get_on_a_nak_is_an_error) {
   zassert_equal(aw9320x_mode_operation_get(), AW9320X_MODE_ERR);
 }
 
+/* the mask names the bits to keep: 00FFFFFFh replaces bits 31:24 */
+ZTEST(touch, test_write_bits_replaces_only_the_bits_outside_the_mask) {
+  aw9320x_emul_set_reg(0x4744, 0x01abcdef);
+
+  zassert_equal(aw9320x_i2c_write_bits(0x4744, 0x00ffffff, 0), AW_OK);
+  expect_write(0, 0x4744, 0x00abcdef);
+
+  zassert_equal(aw9320x_i2c_write_bits(0x4744, 0x00ffffff, 0x5a123456), AW_OK);
+  expect_write(1, 0x4744, 0x5aabcdef);
+  zassert_equal(aw9320x_emul()->writes, 2);
+  zassert_equal(aw9320x_emul_get_reg(0x4744), 0x5aabcdef);
+}
+
+/* the three read attempts are NAKed; a write after them would reach the chip */
+ZTEST(touch, test_write_bits_on_a_failed_read_writes_nothing) {
+  aw9320x_emul_set_reg(0x4744, 0x01abcdef);
+  aw9320x_emul()->nak_remaining = 3;
+
+  zassert_equal(aw9320x_i2c_write_bits(0x4744, 0x00ffffff, 0), -AW_ERR);
+  zassert_equal(aw9320x_emul()->transfers, 3);
+  zassert_equal(aw9320x_emul()->writes, 0);
+  zassert_equal(aw9320x_emul_get_reg(0x4744), 0x01abcdef);
+}
+
 ZTEST(touch, test_pack_checksum_is_minus_the_sum_of_header_fields_and_words) {
   uint8_t erase[4] = {0x10, 0x00, 0x3f, 0x80};
   uint8_t check[16] = {0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x3f, 0xf8, 0x20, 0x22, 0x20, 0x22, 0x29, 0xc8, 0x2e, 0x7d};
@@ -428,6 +452,40 @@ ZTEST(touch, test_fw_update_stops_the_boot_loader_and_waits_for_init) {
   zassert_equal(aw9320x_emul()->writes, mcfg + 5);
   zassert_equal(aw9320x_emul()->state, AW9320X_EMUL_APP);
   zassert_false(aw9320x_emul_int_asserted(), "init interrupt not read");
+}
+
+static uint16_t unreadable_reg;
+
+/* the port's read, failing for unreadable_reg */
+static int32_t i2c_read_unless_unreadable(uint8_t *addr, uint8_t addr_len, uint8_t *r_data, uint32_t r_len) {
+  if (sys_get_be16(addr) == unreadable_reg) {
+    return -1;
+  }
+  return aw93203_i2c_read(addr, addr_len, r_data, r_len);
+}
+
+/* UPDATA_DIS keeps blocking the boot jump: the CPU restarts into the boot loader, no init interrupt */
+ZTEST(touch, test_stop_cmd_on_a_failed_updata_dis_read_leaves_it_restarts_the_cpu_and_fails) {
+  static struct aw9320x_func func;
+
+  aw9320x_emul_set_reg(0x4744, 0x00abcdef);
+  zassert_equal(aw9320x_i2c_write(0x4408, 0x14), AW_OK);
+  zassert_equal(aw9320x_emul_get_reg(0x4744), 0x01abcdef);
+  /* the power-on init interrupt is still pending */
+  aw9320x_emul_set_reg(AW9320X_EMUL_REG_IRQSRC, 0);
+  func = aw9320x_func;
+  func.i2c_func.i2c_r = i2c_read_unless_unreadable;
+  unreadable_reg = 0x4744;
+  g_aw9320x_func = &func;
+
+  zassert_equal(aw9320x_send_stop_cmd(), -AW_ERR);
+
+  zassert_equal(aw9320x_emul_find_write(0x4744, 0), -1, "UPDATA_DIS written after a failed read");
+  zassert_equal(aw9320x_emul_get_reg(0x4744), 0x01abcdef);
+  expect_write(3, 0xff20, 0x3c00f011);
+  expect_write(4, 0x4444, 0);
+  zassert_equal(aw9320x_emul()->writes, 5);
+  zassert_equal(aw9320x_emul()->state, AW9320X_EMUL_BOOT_LOADER);
 }
 
 ZTEST(touch, test_fw_update_without_an_acknowledge_fails_and_cleans_up) {

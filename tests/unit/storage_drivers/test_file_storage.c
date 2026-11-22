@@ -111,6 +111,43 @@ ZTEST(file_storage, test_upload_is_written_in_4_kib_blocks_and_the_tail_at_the_e
   zassert_equal(LAST_FILE_CRC, 0xb14f3a7b, "crc 0x%08x", LAST_FILE_CRC);
 }
 
+static void expect_no_flash_access(void) {
+  zassert_equal(g1_nor_stats()->calls[G1_NOR_READ], 0);
+  zassert_equal(g1_nor_stats()->calls[G1_NOR_WRITE], 0);
+  zassert_equal(g1_nor_stats()->calls[G1_NOR_ERASE], 0);
+}
+
+/* any message would start an upload (address, CRC) or, as an end marker, read the flash */
+ZTEST(file_storage, test_save_with_an_empty_queue_starts_no_upload) {
+  try_to_save_file(g1_state());
+
+  zassert_equal(file_addr, 0, "upload started at 0x%08x", file_addr);
+  zassert_equal(file_buf_len, 0);
+  zassert_equal(file_type, 0);
+  zassert_equal(LAST_FILE_CRC, 0, "crc 0x%08x", LAST_FILE_CRC);
+  zassert_equal(update_persist_task_status_fake.call_count, 0);
+  expect_no_flash_access();
+}
+
+ZTEST(file_storage, test_save_with_an_empty_queue_keeps_the_upload_in_progress) {
+  uint32_t crc;
+
+  chunk_first(FILE_ADDR, (const uint8_t *)"123456789abc", 12);
+  crc = LAST_FILE_CRC;
+
+  try_to_save_file(g1_state());
+
+  zassert_equal(file_addr, FILE_ADDR);
+  zassert_equal(file_buf_len, 12);
+  zassert_equal(LAST_FILE_CRC, crc, "crc 0x%08x", LAST_FILE_CRC);
+  expect_no_flash_access();
+
+  chunk_end();
+  zassert_mem_equal(g1_nor_mem(FILE_ADDR, 12), "123456789abc", 12);
+  zassert_equal(*g1_nor_mem(FILE_ADDR + 12, 1), 0xff);
+  zassert_equal(LAST_FILE_CRC, 0xe679ec0f, "crc 0x%08x", LAST_FILE_CRC);
+}
+
 static const uint8_t demo_chunk[4] = {1, 2, 3, 4};
 
 ZTEST(file_storage, test_demo_image_upload_starts_the_demo_task) {
