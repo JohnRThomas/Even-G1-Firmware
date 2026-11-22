@@ -3,28 +3,22 @@
  * g_arrMsgContent bookkeeping and the BLE notification commands.
  */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-#include "g1_log.h"
-#include "notify.h"
 #include "../ble/ble_proto.h"
-#include "whitelist.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "notify.h"
+#include "whitelist.h"
 
 static char ios_mail_list[10][32] = {
-  "com.apple.mail",
-  "com.google.Gmail",
-  "com.microsoft.Office.Outlook",
-  "com.yahoo.Aerogram",
-  "ch.protonmail.protonmail",
-  "com.easilydo.mail",
-  "Mailroom.Canary-iOS",
-  "com.fastmail.FastMail",
-  "com.apple.samsung",
+  "com.apple.mail",      "com.google.Gmail",         "com.microsoft.Office.Outlook",
+  "com.yahoo.Aerogram",  "ch.protonmail.protonmail", "com.easilydo.mail",
+  "Mailroom.Canary-iOS", "com.fastmail.FastMail",    "com.apple.samsung",
 };
 static char android_mail_list[10][32] = {
   "com.google.mail",
@@ -57,9 +51,7 @@ uint8_t g_msg_num_push;
 uint8_t g_curShowMsgIdx;
 uint8_t msg_show_state;
 
-int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id,
-           const char *name)
-{
+int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id, const char *name) {
   uint8_t pkt[21] = {0};
   char json[320];
   uint16_t len;
@@ -70,8 +62,8 @@ int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id,
   uint8_t last;
 
   memset(json, 0, sizeof(json));
-  len = sprintf(json, "{\"whitelist_app_add\": {\"%s\":  \"%s\",\"%s\": \"%s\"}}",
-          "app_identifier", app_id, "display_name", name);
+  len = sprintf(json, "{\"whitelist_app_add\": {\"%s\":  \"%s\",\"%s\": \"%s\"}}", "app_identifier", app_id,
+                "display_name", name);
   BLE_PRINTK("[csh_debug]:send_notifi_app_white_list app buf is: %s \n", json);
 
   total = len / 17;
@@ -104,42 +96,31 @@ int send_notifi_app_white_list_app(struct ble_context *ctx, const char *app_id,
   return 0;
 }
 
-void send_whilelist_app_info_wrapper(struct notif_msg *msg)
-{
+void send_whilelist_app_info_wrapper(struct notif_msg *msg) {
   if (msg == NULL) {
     return;
   }
   const char *special[] = {
-    "com.android.phone_missed",
-    "com.android.phone_incall",
-    "com.apple.mobilephone",
-    "com.apple.mobilephone_missed",
-    "com.apple.MobileSMS",
-    "com.android.even_sms",
-    "com.apple.mobilemail",
-    "com.apple.mobilecal",
-    "com.android.even_calendar",
+    "com.android.phone_missed",     "com.android.phone_incall", "com.apple.mobilephone",
+    "com.apple.mobilephone_missed", "com.apple.MobileSMS",      "com.android.even_sms",
+    "com.apple.mobilemail",         "com.apple.mobilecal",      "com.android.even_calendar",
   };
   uint8_t i;
 
   for (i = 0; i < 9; i++) {
     if (strncmp(special[i], msg->app_identifier, strlen(special[i])) == 0) {
-      BLE_PRINTK("[%s-%d] special package nane:%s,need not send to app !\n",
-           __func__, __LINE__, msg->app_identifier);
+      BLE_PRINTK("[%s-%d] special package nane:%s,need not send to app !\n", __func__, __LINE__, msg->app_identifier);
       return;
     }
   }
-  send_notifi_app_white_list_app(&get_dashboard_state()->ble_context,
-               msg->app_identifier, msg->display_name);
+  send_notifi_app_white_list_app(&get_dashboard_state()->ble_context, msg->app_identifier, msg->display_name);
 }
 
-int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, uint8_t *src,
-           uint8_t *hdr, uint8_t *arg, uint8_t *out, uint32_t len)
-{
+int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, uint8_t *src, uint8_t *hdr, uint8_t *arg,
+                                   uint8_t *out, uint32_t len) {
   struct notif_msg *msg;
 
-  if (state == NULL || data == NULL || src == NULL || hdr == NULL || arg == NULL ||
-      out == NULL) {
+  if (state == NULL || data == NULL || src == NULL || hdr == NULL || arg == NULL || out == NULL) {
     G1_LOG_WRN("input parm invalid !\n");
     return 0;
   }
@@ -151,13 +132,11 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, ui
     if (state->dashboard_mode == 0) {
       state->schedule_notif_pending = 1;
     }
-    G1_LOG_INF("schedule_notif#title:%s, desc:%s, ts:%d, date:%s\n",
-         state->schedule_notif->title, state->schedule_notif->desc,
-         state->schedule_notif->ts, data + 0x194);
+    G1_LOG_INF("schedule_notif#title:%s, desc:%s, ts:%d, date:%s\n", state->schedule_notif->title,
+               state->schedule_notif->desc, state->schedule_notif->ts, data + 0x194);
   } else {
     if (*(uint16_t *)&hdr[2] != sizeof(struct notif_msg)) {
-      G1_LOG_ERR("[%s-%d] invliad  message len, data_len is %d\n\n", __FUNCTION__,
-           __LINE__, *(uint16_t *)&hdr[2]);
+      G1_LOG_ERR("[%s-%d] invliad  message len, data_len is %d\n\n", __FUNCTION__, __LINE__, *(uint16_t *)&hdr[2]);
       return 0;
     }
     msg = (struct notif_msg *)(data + 4);
@@ -182,8 +161,7 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, ui
   return 5;
 }
 
-void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data)
-{
+void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_t *data) {
   uint8_t resp[128];
   uint8_t *tx;
   struct notif_msg *msg;
@@ -236,8 +214,7 @@ void post_notification_cmd_process(struct ble_context *ctx, uint8_t *req, uint8_
   ctx->write(rsp, 0x14);
 }
 
-int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *out)
-{
+int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *out) {
   if (state == NULL || out == NULL) {
     G1_LOG_WRN("input param is error !\n");
     return 0;
@@ -247,8 +224,7 @@ int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *ou
   return 1;
 }
 
-void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, uint8_t *rsp)
-{
+void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, uint8_t *rsp) {
   spim_transfer(ctx, buf, 1);
   rsp[1] = 0xc9;
   rsp[2] = *buf;
@@ -256,25 +232,21 @@ void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, 
   ctx->write(rsp, 0x14);
 }
 
-void normal_g_arrMsgContent(void)
-{
+void normal_g_arrMsgContent(void) {
   for (int i = 0; i < MSG_NORMAL_NUM; i++) {
-    BLE_PRINTK("normal g_arrMsgContent[%d].uidTail is %d %d recvTime %d\n", i,
-         g_arrMsgContent[i].uid, g_arrMsgContent[i].start_show_time,
-         g_arrMsgContent[i].recv_time);
+    BLE_PRINTK("normal g_arrMsgContent[%d].uidTail is %d %d recvTime %d\n", i, g_arrMsgContent[i].uid,
+               g_arrMsgContent[i].start_show_time, g_arrMsgContent[i].recv_time);
   }
 }
 
-void push_g_arrMsgContent(void)
-{
+void push_g_arrMsgContent(void) {
   for (int i = MSG_NORMAL_NUM; i < MSG_TOTAL_NUM; i++) {
-    BLE_PRINTK("PUSH: g_arrMsgContent[%d].uidTail is %d push %d \n", i,
-         g_arrMsgContent[i].uid, g_arrMsgContent[i].recv_time);
+    BLE_PRINTK("PUSH: g_arrMsgContent[%d].uidTail is %d push %d \n", i, g_arrMsgContent[i].uid,
+               g_arrMsgContent[i].recv_time);
   }
 }
 
-struct notif_msg *get_push_message_copy(void)
-{
+struct notif_msg *get_push_message_copy(void) {
   struct notif_msg *m = &g_arrMsgContent[MSG_NORMAL_NUM];
 
   if (m->app_identifier[0] == 0) {
@@ -291,8 +263,7 @@ struct notif_msg *get_push_message_copy(void)
   return &push_msg_copy;
 }
 
-struct notif_msg *get_push_message(void)
-{
+struct notif_msg *get_push_message(void) {
   struct notif_msg *m = &g_arrMsgContent[MSG_NORMAL_NUM];
 
   if (m->app_identifier[0] == 0) {
@@ -308,34 +279,28 @@ struct notif_msg *get_push_message(void)
   return m;
 }
 
-void set_msg_sync_state(int idx, uint8_t val)
-{
+void set_msg_sync_state(int idx, uint8_t val) {
   g_arrMsgContent[idx].sync_state = val;
 }
 
-uint8_t get_msg_sync_state(int idx)
-{
+uint8_t get_msg_sync_state(int idx) {
   return g_arrMsgContent[idx].sync_state;
 }
 
-struct notif_msg *find_push_message_by_uid(uint32_t uid)
-{
+struct notif_msg *find_push_message_by_uid(uint32_t uid) {
   for (int i = MSG_NORMAL_NUM; i < MSG_TOTAL_NUM; i++) {
-    if (g_arrMsgContent[i].app_identifier[0] && g_arrMsgContent[i].busy == 0 &&
-        g_arrMsgContent[i].uid == uid) {
+    if (g_arrMsgContent[i].app_identifier[0] && g_arrMsgContent[i].busy == 0 && g_arrMsgContent[i].uid == uid) {
       return &g_arrMsgContent[i];
     }
   }
   return NULL;
 }
 
-struct notif_msg *get_message_by_index(int idx)
-{
+struct notif_msg *get_message_by_index(int idx) {
   return &g_arrMsgContent[idx];
 }
 
-void clear_all_messages(void)
-{
+void clear_all_messages(void) {
   msg_array_busy = 1;
   for (int i = 0; i < MSG_TOTAL_NUM; i++) {
     memset(&g_arrMsgContent[i], 0, sizeof(g_arrMsgContent[i]));
@@ -348,8 +313,7 @@ void clear_all_messages(void)
   msg_array_busy = 0;
 }
 
-uint8_t find_last_read_message(void)
-{
+uint8_t find_last_read_message(void) {
   int i;
 
   for (i = MSG_NORMAL_NUM - 1; i >= 0; i--) {
@@ -362,8 +326,7 @@ uint8_t find_last_read_message(void)
   return 0xff;
 }
 
-uint8_t count_messages(void)
-{
+uint8_t count_messages(void) {
   uint8_t i;
 
   for (i = 0; i < MSG_NORMAL_NUM; i++) {
@@ -374,8 +337,7 @@ uint8_t count_messages(void)
   return i;
 }
 
-uint8_t count_unread_messages(void)
-{
+uint8_t count_unread_messages(void) {
   uint8_t unread = 0;
   uint8_t last = 0;
   uint8_t count;
@@ -403,8 +365,7 @@ uint8_t count_unread_messages(void)
  * Drop the shown messages whose display time is over (every read one when
  * force is set) and move the following messages down into the freed slots.
  */
-void clear_timeout_message(int force)
-{
+void clear_timeout_message(int force) {
   int i = 0;
   int offset = 0;
   bool has_msg = false;
@@ -425,8 +386,7 @@ void clear_timeout_message(int force)
       bool expired;
 
       if (m->read) {
-        expired = force || get_date() > m->start_show_time +
-                      get_dashboard_state()->message_stay_time;
+        expired = force || get_date() > m->start_show_time + get_dashboard_state()->message_stay_time;
       } else {
         expired = recv != 0 && get_date() > m->start_show_time + 5;
       }
@@ -454,8 +414,7 @@ void clear_timeout_message(int force)
   msg_array_busy = 0;
 }
 
-int message_uid_exists(uint32_t num, uint32_t uid)
-{
+int message_uid_exists(uint32_t num, uint32_t uid) {
   for (uint8_t i = 0; i < num; i++) {
     if (g_arrMsgContent[i].app_identifier[0] && g_arrMsgContent[i].uid == uid) {
       return 1;
@@ -464,8 +423,7 @@ int message_uid_exists(uint32_t num, uint32_t uid)
   return 0;
 }
 
-void confirm_message(uint32_t uid)
-{
+void confirm_message(uint32_t uid) {
   struct notif_msg *pending = &g_arrMsgContent[MSG_NORMAL_NUM];
   uint8_t action = pending->action;
   bool duplicate = false;
@@ -476,8 +434,7 @@ void confirm_message(uint32_t uid)
     return;
   }
   msg_array_busy = 1;
-  if (get_dashboard_state()->is_master == 1 && action == 0 &&
-      message_uid_exists(MSG_NORMAL_NUM, uid)) {
+  if (get_dashboard_state()->is_master == 1 && action == 0 && message_uid_exists(MSG_NORMAL_NUM, uid)) {
     G1_LOG_ERR("add found same message, uidtail %d\n", uid);
     duplicate = true;
     goto drop_head;
@@ -509,8 +466,7 @@ void confirm_message(uint32_t uid)
 
       for (i = 0; i < count; i++) {
         if (g_arrMsgContent[i].uid == pending->uid || found) {
-          memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1],
-                 sizeof(struct notif_msg));
+          memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1], sizeof(struct notif_msg));
           found = true;
           g_arrMsgContent[i].pos = i;
         }
@@ -575,8 +531,7 @@ drop_head:
   msg_array_busy = 0;
 }
 
-uint8_t push_message(struct notif_msg *msg)
-{
+uint8_t push_message(struct notif_msg *msg) {
   uint8_t pos;
 
   if (msg == NULL) {
@@ -601,10 +556,12 @@ uint8_t push_message(struct notif_msg *msg)
     msg->sync_state = 0;
     msg->pos = pos;
     memcpy(&g_arrMsgContent[pos], msg, sizeof(*msg));
-    G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d action %d\n", pos, msg->uid, msg->start_show_time, msg->action);
+    G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d action %d\n", pos, msg->uid,
+               msg->start_show_time, msg->action);
     g_msg_num_push++;
   } else {
-    G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d\n", MSG_TOTAL_NUM - 1, msg->uid, msg->start_show_time);
+    G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d\n", MSG_TOTAL_NUM - 1, msg->uid,
+               msg->start_show_time);
     for (int i = MSG_NORMAL_NUM; i < MSG_TOTAL_NUM - 1; i++) {
       if (g_arrMsgContent[i].sync_state == 0) {
         memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1], sizeof(*msg));
@@ -624,8 +581,7 @@ uint8_t push_message(struct notif_msg *msg)
   return g_msg_num_push;
 }
 
-uint8_t g_arrMsgContent_count(void)
-{
+uint8_t g_arrMsgContent_count(void) {
   uint8_t num = get_dashboard_state()->unread_msg_num;
 
   if (num != 0) {
@@ -645,15 +601,14 @@ uint8_t g_arrMsgContent_count(void)
   return get_dashboard_state()->unread_msg_num;
 }
 
-uint8_t pull_message(struct notif_msg **msg)
-{
+uint8_t pull_message(struct notif_msg **msg) {
   if (msg == NULL) {
     G1_LOG_ERR("[%s-%d] message is NULL \n\n", __FUNCTION__, __LINE__);
     return MSG_NORMAL_NUM;
   }
   if (get_dashboard_state()->unread_msg_num > MSG_NORMAL_NUM) {
     BLE_PRINTK("exception handle, GLOBAL->master_sync_pkg.panel_data_pkg.unread_msg_num is %d \n",
-         get_dashboard_state()->unread_msg_num);
+               get_dashboard_state()->unread_msg_num);
     return MSG_NORMAL_NUM;
   }
   *msg = &g_arrMsgContent[g_curShowMsgIdx];
@@ -661,18 +616,15 @@ uint8_t pull_message(struct notif_msg **msg)
   return g_curShowMsgIdx;
 }
 
-uint8_t get_cur_show_msg_idx(void)
-{
+uint8_t get_cur_show_msg_idx(void) {
   return g_curShowMsgIdx;
 }
 
-void set_cur_message_state(void)
-{
+void set_cur_message_state(void) {
   g_arrMsgContent[g_curShowMsgIdx].state = 1;
 }
 
-void mark_cur_message_read(void)
-{
+void mark_cur_message_read(void) {
   struct notif_msg *m = &g_arrMsgContent[g_curShowMsgIdx];
 
   if (m->recv_time != 0 && !m->read) {
@@ -691,29 +643,24 @@ void mark_cur_message_read(void)
   normal_g_arrMsgContent();
 }
 
-uint8_t get_msg_show_state(void)
-{
+uint8_t get_msg_show_state(void) {
   return msg_show_state;
 }
 
-void expire_cur_message(void)
-{
+void expire_cur_message(void) {
   if (g_arrMsgContent[g_curShowMsgIdx].start_show_time != 0) {
-    g_arrMsgContent[g_curShowMsgIdx].start_show_time -=
-      get_dashboard_state()->message_stay_time;
+    g_arrMsgContent[g_curShowMsgIdx].start_show_time -= get_dashboard_state()->message_stay_time;
   }
 }
 
-void set_msg_show_state(uint8_t val)
-{
+void set_msg_show_state(uint8_t val) {
   msg_show_state = val;
   if (val == 0) {
     expire_cur_message();
   }
 }
 
-uint8_t cur_message_show_state(void)
-{
+uint8_t cur_message_show_state(void) {
   uint8_t ret;
 
   if (get_dashboard_state()->message_mode && get_dashboard_state()->is_master == 1) {
@@ -723,8 +670,7 @@ uint8_t cur_message_show_state(void)
   if (ret) {
     ret = 0;
     if (g_arrMsgContent[g_curShowMsgIdx].start_show_time != 0) {
-      if (get_date() > g_arrMsgContent[g_curShowMsgIdx].start_show_time +
-                 get_dashboard_state()->message_stay_time) {
+      if (get_date() > g_arrMsgContent[g_curShowMsgIdx].start_show_time + get_dashboard_state()->message_stay_time) {
         ret = 2;
       } else {
         ret = 1;
@@ -737,13 +683,12 @@ uint8_t cur_message_show_state(void)
   return ret;
 }
 
-uint8_t latest_message_show_state(void)
-{
+uint8_t latest_message_show_state(void) {
   uint8_t ret = 0;
 
   if (g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time != 0) {
     if (get_date() > g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time +
-               get_dashboard_state()->message_stay_time) {
+                       get_dashboard_state()->message_stay_time) {
       ret = 2;
     } else {
       ret = 1;
@@ -752,8 +697,7 @@ uint8_t latest_message_show_state(void)
   return ret;
 }
 
-bool is_message_showing(void)
-{
+bool is_message_showing(void) {
   if (count_messages() == 0) {
     return false;
   }
@@ -766,26 +710,21 @@ bool is_message_showing(void)
   return false;
 }
 
-uint8_t parse_message_type(int idx)
-{
+uint8_t parse_message_type(int idx) {
   const char *id = g_arrMsgContent[idx].app_identifier;
   char (*list)[32];
   uint8_t len;
 
-  if (strncmp("com.android.phone_missed", id, 24) == 0 ||
-      strncmp("com.apple.mobilephone_missed", id, 28) == 0) {
+  if (strncmp("com.android.phone_missed", id, 24) == 0 || strncmp("com.apple.mobilephone_missed", id, 28) == 0) {
     return 1;
   }
-  if (strncmp("com.android.phone_incall", id, 24) == 0 ||
-      strncmp("com.apple.mobilephone", id, 21) == 0) {
+  if (strncmp("com.android.phone_incall", id, 24) == 0 || strncmp("com.apple.mobilephone", id, 21) == 0) {
     return 2;
   }
-  if (strncmp("com.apple.MobileSMS", id, 19) == 0 ||
-      strncmp("com.android.even_sms", id, 20) == 0) {
+  if (strncmp("com.apple.MobileSMS", id, 19) == 0 || strncmp("com.android.even_sms", id, 20) == 0) {
     return 0;
   }
-  for (list = get_dashboard_state()->phone_is_ios ? ios_mail_list : android_mail_list;
-       (*list)[0] != 0; list++) {
+  for (list = get_dashboard_state()->phone_is_ios ? ios_mail_list : android_mail_list; (*list)[0] != 0; list++) {
     len = strlen(*list);
     if (len > 31) {
       len = 31;
@@ -794,8 +733,8 @@ uint8_t parse_message_type(int idx)
       return 3;
     }
   }
-  for (list = get_dashboard_state()->phone_is_ios ? ios_calendar_list : android_calendar_list;
-       (*list)[0] != 0; list++) {
+  for (list = get_dashboard_state()->phone_is_ios ? ios_calendar_list : android_calendar_list; (*list)[0] != 0;
+       list++) {
     len = strlen(*list);
     if (len > 31) {
       len = 31;
@@ -807,8 +746,7 @@ uint8_t parse_message_type(int idx)
   return 5;
 }
 
-void app_list_init(void)
-{
+void app_list_init(void) {
   g_msg_num_push = MSG_NORMAL_NUM;
   g_curShowMsgIdx = 0;
   msg_show_state = 0;

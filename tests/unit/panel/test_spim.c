@@ -6,8 +6,7 @@
 
 ZTEST_SUITE(spim, NULL, NULL, NULL, NULL, NULL);
 
-ZTEST(spim, test_init_opens_spim4_on_the_panel_pins_at_32mhz)
-{
+ZTEST(spim, test_init_opens_spim4_on_the_panel_pins_at_32mhz) {
   struct spi_master_ctx *spi = panel_spi();
   const nrfx_spim_config_t *cfg = &g1_fake_spim.inst[4].config;
   int index;
@@ -32,16 +31,14 @@ ZTEST(spim, test_init_opens_spim4_on_the_panel_pins_at_32mhz)
   zassert_equal(spi->is_initialized, 1);
 }
 
-ZTEST(spim, test_spim4_transfers_are_blocking)
-{
+ZTEST(spim, test_spim4_transfers_are_blocking) {
   struct spi_master_ctx *spi = panel_spi();
 
   zassert_equal(spi->init_cb(spi), 0);
   zassert_is_null(g1_fake_spim.inst[4].handler);
 }
 
-ZTEST(spim, test_second_init_leaves_the_driver_alone)
-{
+ZTEST(spim, test_second_init_leaves_the_driver_alone) {
   struct spi_master_ctx *spi = panel_spi();
 
   zassert_equal(spi->init_cb(spi), 0);
@@ -50,8 +47,7 @@ ZTEST(spim, test_second_init_leaves_the_driver_alone)
   zassert_equal(nrfx_spim_init_fake.call_count, 1);
 }
 
-ZTEST(spim, test_init_on_an_unknown_bus_touches_no_instance)
-{
+ZTEST(spim, test_init_on_an_unknown_bus_touches_no_instance) {
   struct spi_master_ctx *spi = panel_spi();
 
   spi->bus = 2;
@@ -61,8 +57,7 @@ ZTEST(spim, test_init_on_an_unknown_bus_touches_no_instance)
   zassert_equal(spi->is_initialized, 0);
 }
 
-ZTEST(spim, test_xfer_before_init_clocks_nothing)
-{
+ZTEST(spim, test_xfer_before_init_clocks_nothing) {
   struct spi_master_ctx *spi = panel_spi();
   uint8_t tx[1] = {0x97};
   uint8_t rx[1];
@@ -71,8 +66,7 @@ ZTEST(spim, test_xfer_before_init_clocks_nothing)
   zassert_equal(nrfx_spim_xfer_fake.call_count, 0);
 }
 
-ZTEST(spim, test_xfer_is_one_transaction_with_both_buffers)
-{
+ZTEST(spim, test_xfer_is_one_transaction_with_both_buffers) {
   struct spi_master_ctx *spi = panel_spi();
   uint8_t tx[3] = {0x36, 0x1b, 0xc0};
   uint8_t rx[1] = {0x55};
@@ -91,8 +85,7 @@ ZTEST(spim, test_xfer_is_one_transaction_with_both_buffers)
   zassert_equal(rx[0], 0x00);
 }
 
-ZTEST(spim, test_xfer_returns_the_received_bytes)
-{
+ZTEST(spim, test_xfer_returns_the_received_bytes) {
   struct spi_master_ctx *spi = panel_spi();
   uint32_t tx = 0x9f;
   uint8_t rx[4] = {0};
@@ -104,8 +97,7 @@ ZTEST(spim, test_xfer_returns_the_received_bytes)
   expect_bytes(rx, 4, "00 bd 40 10");
 }
 
-ZTEST(spim, test_xfer_error_is_reported_as_minus_one)
-{
+ZTEST(spim, test_xfer_error_is_reported_as_minus_one) {
   struct spi_master_ctx *spi = panel_spi();
   uint8_t tx[1] = {0x97};
   uint8_t rx[1];
@@ -116,8 +108,7 @@ ZTEST(spim, test_xfer_error_is_reported_as_minus_one)
   zassert_equal(spi->xfer_cb(spi, tx, 1, rx, 1), -1);
 }
 
-ZTEST(spim, test_deinit_releases_spim4)
-{
+ZTEST(spim, test_deinit_releases_spim4) {
   struct spi_master_ctx *spi = panel_spi();
   int index;
 
@@ -131,16 +122,14 @@ ZTEST(spim, test_deinit_releases_spim4)
   zassert_equal(spi->is_initialized, 0);
 }
 
-ZTEST(spim, test_deinit_when_not_initialised_does_nothing)
-{
+ZTEST(spim, test_deinit_when_not_initialised_does_nothing) {
   struct spi_master_ctx *spi = panel_spi();
 
   zassert_equal(spi->deinit_cb(spi), 0);
   zassert_equal(nrfx_spim_uninit_fake.call_count, 0);
 }
 
-ZTEST(spim, test_reinit_after_deinit_opens_spim4_again)
-{
+ZTEST(spim, test_reinit_after_deinit_opens_spim4_again) {
   struct spi_master_ctx *spi = panel_spi();
 
   panel_spi_up();
@@ -152,8 +141,7 @@ ZTEST(spim, test_reinit_after_deinit_opens_spim4_again)
   zassert_equal(spi->is_initialized, 1);
 }
 
-ZTEST(spim, test_bus_3_signals_transfer_done_through_its_handler)
-{
+ZTEST(spim, test_bus_3_signals_transfer_done_through_its_handler) {
   struct spi_master_ctx *spi = panel_spi();
   uint8_t tx[1] = {0x97};
   uint8_t rx[1];

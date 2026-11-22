@@ -12,9 +12,7 @@
 uint32_t JDB_PANEL_ID;
 struct k_mutex lcd_mutex;
 
-int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start,
-          int x_end, int y_end)
-{
+int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
   int ret;
@@ -56,9 +54,8 @@ int _reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_st
   return 0;
 }
 
-int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start,
-             int x_end, int y_end, int offset)
-{
+int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end,
+                               int offset) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
   int ret;
@@ -74,8 +71,7 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
     x_end = PANEL_WIDTH;
   }
   for (; y_start <= y_end; y_start++) {
-    uint8_t *p = c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE +
-           x_start / 2 - 5;
+    uint8_t *p = c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE + x_start / 2 - 5;
     int len = x_end / 2 - x_start / 2 + 5;
     uint32_t addr = (((column + y_start) << 10) & 0x7fc00) | ((x_start + row) & 0x3ff);
     uint8_t backup[5];
@@ -101,8 +97,7 @@ int _reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y
   return 0;
 }
 
-int jbd_panel_suspend(void)
-{
+int jbd_panel_suspend(void) {
   uint8_t param = 0xff;
 
   G1_LOG_INF("SPI_DEEP_POWER_DOWN\n");
@@ -110,8 +105,7 @@ int jbd_panel_suspend(void)
   return 0;
 }
 
-int jbd_panel_resume(struct jbd_panel_context *c)
-{
+int jbd_panel_resume(struct jbd_panel_context *c) {
   G1_LOG_INF("release from deep power down\n");
   panel_init();
   set_brightness_to_panel_reg(c->panel_brightness_level);
@@ -119,12 +113,10 @@ int jbd_panel_resume(struct jbd_panel_context *c)
   return 0;
 }
 
-void lock_lcd_mutex(k_timeout_t timeout)
-{
+void lock_lcd_mutex(k_timeout_t timeout) {
   k_mutex_lock(&lcd_mutex, timeout);
 }
 
-int unlock_lcd_mutex(void)
-{
+int unlock_lcd_mutex(void) {
   return k_mutex_unlock(&lcd_mutex);
 }

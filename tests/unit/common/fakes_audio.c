@@ -24,13 +24,11 @@ FAKE_VALUE_FUNC(int, sendAudioStreamFileToApp, uint8_t, uint8_t);
 
 __weak struct k_sem mic_transm_sem;
 
-static uint8_t dmic_get_stop_state_default(void)
-{
+static uint8_t dmic_get_stop_state_default(void) {
   return get_dashboard_state()->is_master == 1 ? 1 : 0;
 }
 
-static void fakes_audio_reset(bool keep_media)
-{
+static void fakes_audio_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
 
   RESET_FAKE(dmic_get_stop_state);

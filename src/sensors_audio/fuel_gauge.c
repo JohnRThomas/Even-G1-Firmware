@@ -3,23 +3,23 @@
  * the NCS npm1300_fuel_gauge sample (src/fuel_gauge.c).
  */
 #include <stdlib.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/drivers/mfd/npm1300.h>
+#include <zephyr/drivers/regulator.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/sensor/npm1300_charger.h>
-#include <zephyr/drivers/regulator.h>
-#include <zephyr/drivers/mfd/npm1300.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
 #include "nrf_fuel_gauge.h"
 
-#include "g1_log.h"
-#include "sensors_audio.h"
 #include "../aw9320x/aw9320x.h"
 #include "../production_test/production_test.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "sensors_audio.h"
 
 #define DISPLAY_MODE_ABNORMAL_TEMP 0x0c
 
@@ -34,8 +34,7 @@ static const struct battery_model battery_model = {
 static uint8_t zero_current_count;
 static bool fuel_gauge_ready;          /* the library was initialised */
 
-int read_sensors(const struct device *charger, float *voltage, float *current, float *temp)
-{
+int read_sensors(const struct device *charger, float *voltage, float *current, float *temp) {
   struct sensor_value value;
   int ret;
 
@@ -56,10 +55,9 @@ int read_sensors(const struct device *charger, float *voltage, float *current, f
   return 0;
 }
 
-int fuel_gauge_init(const struct device *charger)
-{
+int fuel_gauge_init(const struct device *charger) {
   struct sensor_value value;
-  struct nrf_fuel_gauge_init_parameters parameters = { .model = &battery_model };
+  struct nrf_fuel_gauge_init_parameters parameters = {.model = &battery_model};
   int ret;
 
   ret = read_sensors(charger, &parameters.v0, &parameters.i0, &parameters.t0);
@@ -80,8 +78,7 @@ int fuel_gauge_init(const struct device *charger)
   return 0;
 }
 
-bool is_old_board(void)
-{
+bool is_old_board(void) {
   const char *hw = get_glasses_name();
 
   if (hw[4] == 'E' && hw[5] == 'G' && hw[6] == 'P') {
@@ -95,8 +92,7 @@ bool is_old_board(void)
   return false;
 }
 
-int fuel_gauge_update(const struct device *charger)
-{
+int fuel_gauge_update(const struct device *charger) {
   float voltage;
   float current;
   float temp;
@@ -195,7 +191,7 @@ int fuel_gauge_update(const struct device *charger)
       get_dashboard_state()->display_mode = DISPLAY_MODE_ABNORMAL_TEMP;
       exit_running_task(get_dashboard_state(), 1);
       G1_LOG_ERR("#############################Abnormal "
-           "temperature################################\n\n");
+                 "temperature################################\n\n");
     }
   }
   return 0;

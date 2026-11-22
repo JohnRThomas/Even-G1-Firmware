@@ -32,7 +32,8 @@ static const char *const strings_english[GUI_STRING_COUNT] = {
   /* 26 */ "WhatsApp",
   /* 27 */ "mins ago",
   /* 28 */ "Chris - When are you going to get here? The movie is about to\nstart.",
-  /* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+  /* 29 */
+  "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
   /* 30 */ "Single Tap TouchBar to Continue",
   /* 31 */ "Double Tap TouchBar to Continue",
   /* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",
@@ -121,7 +122,8 @@ static const char *const strings_german[GUI_STRING_COUNT] = {
   /*  9 */ "Tipp auf linke TouchBar zeigt Benachrichtigung",
   /* 10 */ "Tipp auf linke TouchBar zeigt Zurück",
   /* 11 */ "Tipp auf rechte TouchBar zeigt nächste Kurznotiz",
-  /* 12 */ "Noah - Wir sind interessiert, mehr über Ihr neuestes Projekt zu\nerfahren. Können wir nächste Woche ein Meeting vereinbaren?",
+  /* 12 */
+  "Noah - Wir sind interessiert, mehr über Ihr neuestes Projekt zu\nerfahren. Können wir nächste Woche ein Meeting vereinbaren?",
   /* 13 */ "Diskussionspunkte",
   /* 14 */ "1.Datenrecherche beschleunigen\n2.Erlebnisfluss aktualisieren\n3.Stakeholder neu verknüpfen",
   /* 15 */ "Kopf nach unten neigen, um zu schließen",
@@ -138,7 +140,8 @@ static const char *const strings_german[GUI_STRING_COUNT] = {
   /* 26 */ "WhatsApp",
   /* 27 */ "mins ago",
   /* 28 */ "Wolfgang - Wann kommst du hierher? Der Film wird gleich\nanfangen.",
-  /* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+  /* 29 */
+  "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
   /* 30 */ "Single Tap TouchBar to Continue",
   /* 31 */ "Doppeltippe die TouchBar",
   /* 32 */ "      Einrichtung abgeschlossen.\nWillkommen im Even G1-Universum.",
@@ -238,7 +241,8 @@ static const char *const strings_spanish[GUI_STRING_COUNT] = {
   /* 26 */ "WhatsApp",
   /* 27 */ "mins ago",
   /* 28 */ "Alejandro – ¿Cuándo vas a llegar? La película está a punto de\nempezar.",
-  /* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+  /* 29 */
+  "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
   /* 30 */ "Single Tap TouchBar to Continue",
   /* 31 */ "Double Tap TouchBar to Continue",
   /* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",
@@ -338,7 +342,8 @@ static const char *const strings_french[GUI_STRING_COUNT] = {
   /* 26 */ "WhatsApp",
   /* 27 */ "mins ago",
   /* 28 */ "Louis - Quand est-ce que tu arrives ? Le film est sur le point\nde commencer.",
-  /* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+  /* 29 */
+  "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
   /* 30 */ "Single Tap TouchBar to Continue",
   /* 31 */ "Double Tap TouchBar to Continue",
   /* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",
@@ -438,7 +443,8 @@ static const char *const strings_italian[GUI_STRING_COUNT] = {
   /* 26 */ "WhatsApp",
   /* 27 */ "mins ago",
   /* 28 */ "Marco - Quando arrivi? Il film sta per iniziare.",
-  /* 29 */ "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
+  /* 29 */
+  "               The HeadUp speed data\nfrom your two head raises differ too much.\n                    Please test again.",
   /* 30 */ "Single Tap TouchBar to Continue",
   /* 31 */ "Double Tap TouchBar to Continue",
   /* 32 */ "           Setup complete.\nWelcome to the Even G1 universe.",

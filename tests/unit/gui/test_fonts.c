@@ -3,13 +3,12 @@
  * resource_manager.c is compiled in to reach its static tables. Resource types: 0 text, 1/2 clock
  * digits, 3 26 px ASCII, 4 icons, 5 animations.
  */
-#include "gui_test.h"
 #include "fonts/font_bitmap.h"
+#include "gui_test.h"
 
 #include "gui/resource_manager.c"
 
-ZTEST(gui, test_utf8_decode)
-{
+ZTEST(gui, test_utf8_decode) {
   static const struct {
     const char *bytes;
     int len;
@@ -37,14 +36,13 @@ ZTEST(gui, test_utf8_decode)
   };
 
   for (size_t row = 0; row < ARRAY_SIZE(decode); row++) {
-    zassert_equal(utf8_decode_char((const uint8_t *)decode[row].bytes, decode[row].len),
-            decode[row].code, "%s", decode[row].what);
+    zassert_equal(utf8_decode_char((const uint8_t *)decode[row].bytes, decode[row].len), decode[row].code, "%s",
+                  decode[row].what);
   }
 }
 
 /* utf8_to_unicode_buf() gives exactly the code units want[0..count); returns its buffer */
-static uint16_t *expect_code_units(const char *text, const uint16_t *want, uint16_t count)
-{
+static uint16_t *expect_code_units(const char *text, const uint16_t *want, uint16_t count) {
   uint16_t len = 0;
   uint16_t *units = utf8_to_unicode_buf(text, &len);
 
@@ -53,31 +51,31 @@ static uint16_t *expect_code_units(const char *text, const uint16_t *want, uint1
   return units;
 }
 
-ZTEST(gui, test_utf8_to_unicode_mixed_text)
-{
+ZTEST(gui, test_utf8_to_unicode_mixed_text) {
   static const uint16_t want[] = {'A', 0x00e9, 0x4e2d, '\n'};
   uint16_t *units = expect_code_units("A\xc3\xa9\xe4\xb8\xad\n", want, ARRAY_SIZE(want));
 
   zassert_equal(units[4], 0, "terminated");
 }
 
-ZTEST(gui, test_utf8_to_unicode_drops_control_characters)
-{
+ZTEST(gui, test_utf8_to_unicode_drops_control_characters) {
   static const uint16_t want[] = {'a', 'b', 'c', '\r', '\n', 'd'};
 
-  expect_code_units("a\tb\x01" "c\r\nd", want, ARRAY_SIZE(want));
+  expect_code_units("a\tb\x01"
+                    "c\r\nd",
+                    want, ARRAY_SIZE(want));
 }
 
-ZTEST(gui, test_utf8_to_unicode_drops_four_byte_sequences)
-{
+ZTEST(gui, test_utf8_to_unicode_drops_four_byte_sequences) {
   static const uint16_t want[] = {'a', 'b'};
 
-  expect_code_units("a\xf0\x9f\x98\x80" "b", want, ARRAY_SIZE(want));
+  expect_code_units("a\xf0\x9f\x98\x80"
+                    "b",
+                    want, ARRAY_SIZE(want));
 }
 
 /* the buffer holds 0x400 code units */
-ZTEST(gui, test_utf8_to_unicode_keeps_at_most_1023_code_points)
-{
+ZTEST(gui, test_utf8_to_unicode_keeps_at_most_1023_code_points) {
   static const struct {
     size_t len;
     char fill;
@@ -98,10 +96,11 @@ ZTEST(gui, test_utf8_to_unicode_keeps_at_most_1023_code_points)
   }
 }
 
-ZTEST(gui, test_utf8_to_unicode_truncated_sequence_keeps_following_ascii)
-{
+ZTEST(gui, test_utf8_to_unicode_truncated_sequence_keeps_following_ascii) {
   uint16_t count = 0;
-  uint16_t *units = utf8_to_unicode_buf("\xe4\xb8" "AB", &count);
+  uint16_t *units = utf8_to_unicode_buf("\xe4\xb8"
+                                        "AB",
+                                        &count);
   bool has_a = false;
 
   for (int index = 0; index < count; index++) {
@@ -111,8 +110,7 @@ ZTEST(gui, test_utf8_to_unicode_truncated_sequence_keeps_following_ascii)
   zassert_equal(units[count - 1], 'B');
 }
 
-ZTEST(gui, test_expand_1bpp_writes_four_bytes_per_source_byte)
-{
+ZTEST(gui, test_expand_1bpp_writes_four_bytes_per_source_byte) {
   static const uint8_t src[] = {0xff, 0x00, 0xff};
   uint8_t dst[16];
 
@@ -123,8 +121,7 @@ ZTEST(gui, test_expand_1bpp_writes_four_bytes_per_source_byte)
   expect_bytes(dst, sizeof(dst), "ffffffff 00000000 ffffffff 77777777");
 }
 
-ZTEST(gui, test_expand_1bpp_msb_is_left_pixel_in_high_nibble)
-{
+ZTEST(gui, test_expand_1bpp_msb_is_left_pixel_in_high_nibble) {
   static const uint8_t src[] = {0x80, 0x01, 0xa5};
   uint8_t dst[12];
 
@@ -136,22 +133,18 @@ ZTEST(gui, test_expand_1bpp_msb_is_left_pixel_in_high_nibble)
  * The countdown page ("时间到!") and the template page (":YPR", digits) draw ASCII through
  * this lookup and copy the glyph rows from the result.
  */
-ZTEST(gui, test_find_chinese_bitmap_gives_printable_ascii_a_glyph)
-{
+ZTEST(gui, test_find_chinese_bitmap_gives_printable_ascii_a_glyph) {
   for (int code = 0x20; code <= 0x7e; code++) {
-    zassert_not_null(find_chinese_bitmap_by_unicode(code, 12, 36), "code 0x%02x '%c'",
-         code, code);
+    zassert_not_null(find_chinese_bitmap_by_unicode(code, 12, 36), "code 0x%02x '%c'", code, code);
   }
 }
 
 /* 12 x 36: 108 glyph bytes expand to the 432-byte buffer */
-ZTEST(gui, test_find_chinese_bitmap_expands_glyph_within_buffer)
-{
+ZTEST(gui, test_find_chinese_bitmap_expands_glyph_within_buffer) {
   zassert_not_null(find_chinese_bitmap_by_unicode(CJK_ZHONG, 12, 36));
 }
 
-ZTEST(gui, test_check_printable_code)
-{
+ZTEST(gui, test_check_printable_code) {
   zassert_equal(check_printable_code(' '), 0);
   zassert_equal(check_printable_code(0x4e2d), 0);
   zassert_equal(check_printable_code('\n'), -1);
@@ -159,56 +152,48 @@ ZTEST(gui, test_check_printable_code)
 }
 
 /* resource_manger_get() returns 0 and a width x height resource; returns its data */
-static const uint8_t *expect_resource(int type, int code, int width, int height)
-{
+static const uint8_t *expect_resource(int type, int code, int width, int height) {
   int got_width = 0, got_height = 0;
   const uint8_t *data = NULL;
 
-  zassert_equal(resource_manger_get(type, code, &got_width, &got_height, &data, NULL), 0,
-          "type %d code 0x%02x", type, code);
+  zassert_equal(resource_manger_get(type, code, &got_width, &got_height, &data, NULL), 0, "type %d code 0x%02x", type,
+                code);
   zassert_equal(got_width, width, "type %d code 0x%02x", type, code);
   zassert_equal(got_height, height, "type %d code 0x%02x", type, code);
   return data;
 }
 
 /* the return value of resource_manger_get() */
-static int get_resource(int type, int code)
-{
+static int get_resource(int type, int code) {
   int width = 0, height = 0;
   const uint8_t *data = NULL;
 
   return resource_manger_get(type, code, &width, &height, &data, NULL);
 }
 
-ZTEST(gui, test_resource_font0_ascii_glyph_is_built_in)
-{
+ZTEST(gui, test_resource_font0_ascii_glyph_is_built_in) {
   const uint8_t *data = expect_resource(0, 'A', 12, 26);
 
-  zassert_true(data >= font26_bitmap && data < font26_bitmap + 52988,
-         "not from font26_bitmap");
+  zassert_true(data >= font26_bitmap && data < font26_bitmap + 52988, "not from font26_bitmap");
   zassert_equal(g1_fake_flash_read_fake.call_count, 0, "built-in glyphs need no flash read");
 }
 
-ZTEST(gui, test_resource_font0_cjk_glyph_read_from_flash)
-{
+ZTEST(gui, test_resource_font0_cjk_glyph_read_from_flash) {
   const uint8_t *data = expect_resource(0, CJK_ZHONG, 18, 26);
 
   zassert_mem_equal(data, gui_test_cjk_glyph(CJK_ZHONG), 9 * 26);
 }
 
-ZTEST(gui, test_resource_font0_missing_cjk_glyph_returns_error)
-{
+ZTEST(gui, test_resource_font0_missing_cjk_glyph_returns_error) {
   zassert_equal(get_resource(0, CJK_ER), -1);
 }
 
-ZTEST(gui, test_resource_font0_flash_error_returns_error)
-{
+ZTEST(gui, test_resource_font0_flash_error_returns_error) {
   G1_FAKE_RETURN(g1_fake_flash_read, -EIO);
   zassert_equal(get_resource(0, CJK_ZHONG), -1);
 }
 
-ZTEST(gui, test_resource_clock_digit_fonts)
-{
+ZTEST(gui, test_resource_clock_digit_fonts) {
   expect_resource(1, '0', 24, 32);
   expect_resource(1, ':', 4, 32);
   expect_resource(2, '1', 6, 39);
@@ -217,36 +202,30 @@ ZTEST(gui, test_resource_clock_digit_fonts)
   zassert_equal(get_resource(2, ' '), -1);
 }
 
-ZTEST(gui, test_resource_font3_ascii_glyph)
-{
+ZTEST(gui, test_resource_font3_ascii_glyph) {
   zassert_not_null(expect_resource(3, 'A', 12, 26));
 }
 
-ZTEST(gui, test_resource_font3_missing_glyph_returns_error)
-{
+ZTEST(gui, test_resource_font3_missing_glyph_returns_error) {
   int width = 0, height = 0;
   const uint8_t *data = NULL;
 
-  zassert_equal(resource_manger_get(3, '!', &width, &height, &data, NULL), -1, "data %p",
-          (void *)data);
+  zassert_equal(resource_manger_get(3, '!', &width, &height, &data, NULL), -1, "data %p", (void *)data);
 }
 
-ZTEST(gui, test_resource_icon_lookup)
-{
+ZTEST(gui, test_resource_icon_lookup) {
   zassert_equal(expect_resource(4, 0x17, 10, 13), icon_scrollbar_thumb);
   zassert_equal(sizeof(icon_scrollbar_thumb), 10 / 2 * 13, "size matches the table");
 }
 
-ZTEST(gui, test_resource_icon_unknown_ids)
-{
+ZTEST(gui, test_resource_icon_unknown_ids) {
   zassert_equal(get_resource(4, 0x15), -1);
   zassert_equal(get_resource(4, 0x88), -1);
   zassert_equal(get_resource(4, 0x34), -1);
   zassert_equal(get_resource(4, 0x84), -1);
 }
 
-ZTEST(gui, test_resource_animations_frames_fill_their_tables)
-{
+ZTEST(gui, test_resource_animations_frames_fill_their_tables) {
   static const struct {
     int id;
     const uint8_t *data;
@@ -272,40 +251,34 @@ ZTEST(gui, test_resource_animations_frames_fill_their_tables)
     const uint8_t *data = NULL;
     uint8_t frames = 0;
 
-    zassert_equal(resource_manger_get(5, id, &width, &height, &data, &frames), 0,
-            "id %d", id);
+    zassert_equal(resource_manger_get(5, id, &width, &height, &data, &frames), 0, "id %d", id);
     zassert_equal(data, anims[row].data, "id %d", id);
-    zassert_equal((size_t)frames * (width / 2) * height, anims[row].size,
-            "id %d: %d frames of %dx%d, table %u bytes", id, frames, width,
-            height, (unsigned int)anims[row].size);
+    zassert_equal((size_t)frames * (width / 2) * height, anims[row].size, "id %d: %d frames of %dx%d, table %u bytes",
+                  id, frames, width, height, (unsigned int)anims[row].size);
   }
   zassert_equal(get_resource(5, 13), -1);
   zassert_equal(get_resource(5, 0), -1);
 }
 
-ZTEST(gui, test_weather_icon_ids_map_to_icons_of_notes_table)
-{
+ZTEST(gui, test_weather_icon_ids_map_to_icons_of_notes_table) {
   static const uint8_t *const want[0x11] = {
-    [0x01] = icon_weather_night,      [0x02] = icon_weather_clouds,
-    [0x03] = icon_weather_drizzle,    [0x04] = icon_weather_heavy_drizzle,
-    [0x05] = icon_weather_rain,       [0x06] = icon_weather_heavy_rain,
-    [0x07] = icon_weather_thunder,    [0x08] = icon_weather_thunderstorm,
-    [0x09] = icon_weather_snow,       [0x0a] = icon_weather_mist,
-    [0x0b] = icon_weather_fog,        [0x0c] = icon_weather_sand,
-    [0x0d] = icon_weather_squalls,    [0x0e] = icon_weather_tornado,
-    [0x0f] = icon_weather_freezing,   [0x10] = icon_weather_sunny,
+    [0x01] = icon_weather_night,         [0x02] = icon_weather_clouds,       [0x03] = icon_weather_drizzle,
+    [0x04] = icon_weather_heavy_drizzle, [0x05] = icon_weather_rain,         [0x06] = icon_weather_heavy_rain,
+    [0x07] = icon_weather_thunder,       [0x08] = icon_weather_thunderstorm, [0x09] = icon_weather_snow,
+    [0x0a] = icon_weather_mist,          [0x0b] = icon_weather_fog,          [0x0c] = icon_weather_sand,
+    [0x0d] = icon_weather_squalls,       [0x0e] = icon_weather_tornado,      [0x0f] = icon_weather_freezing,
+    [0x10] = icon_weather_sunny,
   };
 
   for (int id = 1; id <= 0x10; id++) {
     int resource = weather_icon_to_bitmap(id);
 
-    zassert_equal(expect_resource(4, resource, 20, 26), want[id],
-            "weather 0x%02x -> resource 0x%02x is the wrong icon", id, resource);
+    zassert_equal(expect_resource(4, resource, 20, 26), want[id], "weather 0x%02x -> resource 0x%02x is the wrong icon",
+                  id, resource);
   }
 }
 
-ZTEST(gui, test_weather_icon_none_and_error_ids_have_no_icon)
-{
+ZTEST(gui, test_weather_icon_none_and_error_ids_have_no_icon) {
   zassert_equal(weather_icon_to_bitmap(0x00), -1);
   zassert_equal(weather_icon_to_bitmap(0x11), -1);
   zassert_equal(weather_icon_to_bitmap(0xff), -1);

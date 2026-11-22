@@ -4,21 +4,21 @@
  * template/test pages.
  */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-#include "g1_log.h"
-#include "notify.h"
 #include "../dashboard/dashboard.h"
 #include "../gui/gui.h"
-#include "demo_image.h"
 #include "../panel_display/panel.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "../ui/ui.h"
 #include "../utils/common_utils.h"
+#include "demo_image.h"
+#include "g1_log.h"
+#include "notify.h"
 
 #define LANGUAGE_FRENCH  5
 #define LANGUAGE_GERMAN  6
@@ -60,8 +60,7 @@ static uint8_t last_num = 0xff;
 static uint8_t hide_icon_on_exit;
 static uint8_t particle_pending;
 
-int panel_related(struct jbd_panel_context *panel, int idx, void *arg)
-{
+int panel_related(struct jbd_panel_context *panel, int idx, void *arg) {
   struct ui_task *t;
 
   if (!CONTAINER_OF(panel, struct GlassesState, panel)->panel_on) {
@@ -86,8 +85,7 @@ int panel_related(struct jbd_panel_context *panel, int idx, void *arg)
   return 0;
 }
 
-void draw_time(char *buf, uint32_t recv_time)
-{
+void draw_time(char *buf, uint32_t recv_time) {
   uint8_t **fb = get_dashboard_state()->panel.panel_buffer;
   uint32_t now = get_date();
   uint32_t diff = now - recv_time;
@@ -132,10 +130,9 @@ void draw_time(char *buf, uint32_t recv_time)
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
-      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
-           date.month, date.day, date.hour, date.minute, date.second);
-      BLE_PRINTK("time_disp_mode is %d \n",
-           get_dashboard_state()->dashboard_ts->time_disp_mode);
+      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
+                 date.minute, date.second);
+      BLE_PRINTK("time_disp_mode is %d \n", get_dashboard_state()->dashboard_ts->time_disp_mode);
       if (!get_dashboard_state()->dashboard_ts->time_disp_mode) {
         sprintf(buf, "%02d:%02d", date.hour, date.minute);
       } else {
@@ -170,10 +167,9 @@ void draw_time(char *buf, uint32_t recv_time)
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
-      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
-           date.month, date.day, date.hour, date.minute, date.second);
-      BLE_PRINTK("time_disp_mode is %d \n",
-           get_dashboard_state()->dashboard_ts->time_disp_mode);
+      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
+                 date.minute, date.second);
+      BLE_PRINTK("time_disp_mode is %d \n", get_dashboard_state()->dashboard_ts->time_disp_mode);
       if (!get_dashboard_state()->dashboard_ts->time_disp_mode) {
         sprintf(buf, "%02d:%02d", date.hour, date.minute);
       } else {
@@ -208,10 +204,9 @@ void draw_time(char *buf, uint32_t recv_time)
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
-      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
-           date.month, date.day, date.hour, date.minute, date.second);
-      BLE_PRINTK("time_disp_mode is %d \n",
-           get_dashboard_state()->dashboard_ts->time_disp_mode);
+      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
+                 date.minute, date.second);
+      BLE_PRINTK("time_disp_mode is %d \n", get_dashboard_state()->dashboard_ts->time_disp_mode);
       if (!get_dashboard_state()->dashboard_ts->time_disp_mode) {
         sprintf(buf, "%02d:%02d", date.hour, date.minute);
       } else {
@@ -246,10 +241,9 @@ void draw_time(char *buf, uint32_t recv_time)
     } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
-      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year,
-           date.month, date.day, date.hour, date.minute, date.second);
-      BLE_PRINTK("time_disp_mode is %d \n",
-           get_dashboard_state()->dashboard_ts->time_disp_mode);
+      BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
+                 date.minute, date.second);
+      BLE_PRINTK("time_disp_mode is %d \n", get_dashboard_state()->dashboard_ts->time_disp_mode);
       if (!get_dashboard_state()->dashboard_ts->time_disp_mode) {
         sprintf(buf, "%02d:%02d", date.hour, date.minute);
       } else {
@@ -273,15 +267,14 @@ void draw_time(char *buf, uint32_t recv_time)
       sprintf(buf, "%02d/%02d", date.month, date.day);
     }
   }
-  _clean_fb_data(fb, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(),
-           gui_screen_x_offset() + 512, gui_screen_y_offset() + 27);
-  gui_utf_draw_align_right(0, buf, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(),
-         gui_screen_x_offset() + 512, gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
+  _clean_fb_data(fb, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(), gui_screen_x_offset() + 512,
+                 gui_screen_y_offset() + 27);
+  gui_utf_draw_align_right(0, buf, 0, gui_screen_x_offset() + 406, gui_screen_y_offset(), gui_screen_x_offset() + 512,
+                           gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
   BLE_PRINTK("gui_getScreenoffset_x=%d,timeDiffBuf is %s \n", gui_screen_x_offset(), buf);
 }
 
-void draw_message(uint8_t unread, struct notif_msg *msg)
-{
+void draw_message(uint8_t unread, struct notif_msg *msg) {
   char title[72] = {0};
   char time_str[32] = {0};
   char count[8] = {0};
@@ -295,74 +288,74 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
   type = parse_message_type(get_cur_show_msg_idx());
   BLE_PRINTK("show msgType is %d unReadCount %d\n", type, unread);
   switch (type) {
-  case 2:
-    memset(title, 0, sizeof(title));
-    snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
-    gui_utf_draw_middle(0, title, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-            gui_screen_x_offset() + 576, gui_screen_y_offset() + 81, 1, 0, 0, NULL, 0);
-    gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
-    memset(body, 0, sizeof(body));
-    snprintf(body, sizeof(body), "%s", msg->title);
-    if (body[0] == 0) {
+    case 2:
+      memset(title, 0, sizeof(title));
+      snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
+      gui_utf_draw_middle(0, title, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
+                          gui_screen_y_offset() + 81, 1, 0, 0, NULL, 0);
+      gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
+      memset(body, 0, sizeof(body));
+      snprintf(body, sizeof(body), "%s", msg->title);
+      if (body[0] == 0) {
+        return;
+      }
+      gui_utf_draw_middle(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 81, gui_screen_x_offset() + 576,
+                          gui_screen_y_offset() + 81, 1, 0, 0, NULL, 0);
       return;
-    }
-    gui_utf_draw_middle(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 81,
-            gui_screen_x_offset() + 576, gui_screen_y_offset() + 81, 1, 0, 0, NULL, 0);
-    return;
-  case 1:
-    gui_bmp_bitmap_draw(0x37, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
-    memset(title, 0, sizeof(title));
-    snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
-    break;
-  case 3:
-    gui_bmp_bitmap_draw(0x3a, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
-    memset(title, 0, sizeof(title));
-    snprintf(title, sizeof(title), "%s | %s", msg->display_name, msg->subtitle);
-    break;
-  case 4:
-    gui_bmp_bitmap_draw(0x39, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
-    memset(title, 0, sizeof(title));
-    snprintf(title, sizeof(title), "%s", msg->display_name);
-    break;
-  case 0:
-    gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
-    memset(title, 0, sizeof(title));
-    snprintf(title, sizeof(title), "%s", msg->display_name);
-    break;
-  default:
-    gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
-    memset(title, 0, sizeof(title));
-    if (msg->subtitle[0]) {
+    case 1:
+      gui_bmp_bitmap_draw(0x37, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+      memset(title, 0, sizeof(title));
+      snprintf(title, sizeof(title), "%.*s", (int)sizeof(title) - 1, msg->message);
+      break;
+    case 3:
+      gui_bmp_bitmap_draw(0x3a, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+      memset(title, 0, sizeof(title));
       snprintf(title, sizeof(title), "%s | %s", msg->display_name, msg->subtitle);
-    } else {
+      break;
+    case 4:
+      gui_bmp_bitmap_draw(0x39, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+      memset(title, 0, sizeof(title));
       snprintf(title, sizeof(title), "%s", msg->display_name);
-    }
-    break;
+      break;
+    case 0:
+      gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+      memset(title, 0, sizeof(title));
+      snprintf(title, sizeof(title), "%s", msg->display_name);
+      break;
+    default:
+      gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
+      memset(title, 0, sizeof(title));
+      if (msg->subtitle[0]) {
+        snprintf(title, sizeof(title), "%s | %s", msg->display_name, msg->subtitle);
+      } else {
+        snprintf(title, sizeof(title), "%s", msg->display_name);
+      }
+      break;
   }
-  gui_utf_draw_truncate(0, title, 0, gui_screen_x_offset() + 36, gui_screen_y_offset(),
-            gui_screen_x_offset() + 390, gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
+  gui_utf_draw_truncate(0, title, 0, gui_screen_x_offset() + 36, gui_screen_y_offset(), gui_screen_x_offset() + 390,
+                        gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
   BLE_PRINTK("recvTime is %u,curMsg->message %s\n", msg->recv_time, msg->message);
   draw_time(time_str, msg->recv_time);
   gui_bmp_bitmap_draw(0x3c, gui_screen_x_offset() + 528, gui_screen_y_offset(), 0, 0, 0);
   memset(count, 0, sizeof(count));
   sprintf(count, "%u", unread);
   gui_utf_draw(0, count, 0, gui_screen_x_offset() + 556, gui_screen_y_offset(), gui_screen_x_offset() + 580,
-         gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
+               gui_screen_y_offset() + 27, 1, 0, 0, NULL, 0);
   memset(body, 0, sizeof(body));
   if (type == 1) {
     snprintf(body, sizeof(body), "%s", msg->title);
     if (body[0] == 0) {
       return;
     }
-    gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-              gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
+    gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
+                          gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
   } else if (type == 4) {
     snprintf(body, sizeof(body), "%s\n%s", msg->title, msg->message);
     if (body[0] == 0) {
       return;
     }
-    gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-              gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
+    gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
+                          gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
   } else {
     if (msg->title[0] == 0) {
       snprintf(body, sizeof(body), "%s", msg->message);
@@ -372,13 +365,12 @@ void draw_message(uint8_t unread, struct notif_msg *msg)
     if (body[0] == 0) {
       return;
     }
-    gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
-              gui_screen_x_offset() + 576, gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
+    gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
+                          gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
   }
 }
 
-void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg)
-{
+void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg) {
   if (msg == NULL) {
     BLE_PRINTK("[%s-%d]curMsg is NULL !\n", __func__, __LINE__);
     return;
@@ -401,24 +393,21 @@ void draw_particle_effects(uint8_t **fb, uint8_t unread, struct notif_msg *msg)
       }
     }
     k_sleep(K_MSEC(5));
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, 0, 0, 640, 199);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,
+                            640, 199);
   }
   set_showing_notification_on_gui();
 }
 
-void set_hide_icon_on_exit(void)
-{
+void set_hide_icon_on_exit(void) {
   hide_icon_on_exit = 1;
 }
 
-void set_particle_pending(void)
-{
+void set_particle_pending(void) {
   particle_pending = 1;
 }
 
-int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int event)
-{
+int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int event) {
   struct notif_msg *msg = NULL;
   uint8_t idx;
   uint8_t num;

@@ -3,9 +3,9 @@
  * lpuart sample (nrf/samples/peripheral/lpuart).
  */
 #include <string.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
 #include "g1_log.h"
@@ -19,8 +19,7 @@ static uint8_t serial_rx_buf[BUF_SIZE];
 static uint16_t serial_rx_len;
 
 /* hex dump of the rx buffer when it holds no complete frame */
-static void serial_rx_dump(struct uart_event *evt, size_t offset)
-{
+static void serial_rx_dump(struct uart_event *evt, size_t offset) {
   uint32_t k;
 
   printk("recv data %d bytes:", evt->data.rx.len);
@@ -30,8 +29,7 @@ static void serial_rx_dump(struct uart_event *evt, size_t offset)
   printk("\n");
 }
 
-static void uart_callback(const struct device *dev, struct uart_event *evt, void *user_data)
-{
+static void uart_callback(const struct device *dev, struct uart_event *evt, void *user_data) {
   struct device *uart = user_data;
   uint8_t *p;
   uint8_t *buf;
@@ -45,67 +43,65 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
   int err;
 
   switch (evt->type) {
-  case UART_TX_DONE:
-    tx_len = evt->data.tx.len;
-    G1_LOG_INF("Tx sent %d bytes\n", tx_len);
-    for (j = 0; j < evt->data.tx.len; j++) {
-      printk("%02x ", evt->data.tx.buf[j]);
-    }
-    printk("\n");
-    break;
+    case UART_TX_DONE:
+      tx_len = evt->data.tx.len;
+      G1_LOG_INF("Tx sent %d bytes\n", tx_len);
+      for (j = 0; j < evt->data.tx.len; j++) {
+        printk("%02x ", evt->data.tx.buf[j]);
+      }
+      printk("\n");
+      break;
 
-  case UART_TX_ABORTED:
-    G1_LOG_ERR("Tx aborted\n");
-    break;
+    case UART_TX_ABORTED:
+      G1_LOG_ERR("Tx aborted\n");
+      break;
 
-  case UART_RX_RDY:
-    offset = evt->data.rx.offset;
-    for (i = offset; i < 248; i++) {
-      p = &evt->data.rx.buf[i];
-      if (p[0] == 0x5a && p[1] == 0xa5 && p[2] == 0x7f) {
-        len = p[3] + 5;
-        if (len > BUF_SIZE - i) {
-          continue;
-        }
-        sum = 0;
-        for (k = 0; k < len - 1; k++) {
-          sum += evt->data.rx.buf[i + k];
-        }
-        if (sum == evt->data.rx.buf[i + len - 1]) {
-          serial_rx_len = len;
-          memcpy(serial_rx_buf, p, len);
-          memset(evt->data.rx.buf, 0, BUF_SIZE);
-          return;
+    case UART_RX_RDY:
+      offset = evt->data.rx.offset;
+      for (i = offset; i < 248; i++) {
+        p = &evt->data.rx.buf[i];
+        if (p[0] == 0x5a && p[1] == 0xa5 && p[2] == 0x7f) {
+          len = p[3] + 5;
+          if (len > BUF_SIZE - i) {
+            continue;
+          }
+          sum = 0;
+          for (k = 0; k < len - 1; k++) {
+            sum += evt->data.rx.buf[i + k];
+          }
+          if (sum == evt->data.rx.buf[i + len - 1]) {
+            serial_rx_len = len;
+            memcpy(serial_rx_buf, p, len);
+            memset(evt->data.rx.buf, 0, BUF_SIZE);
+            return;
+          }
         }
       }
+      serial_rx_dump(evt, offset);
+      break;
+
+    case UART_RX_BUF_REQUEST: {
+      printk("*************alloc new rx buf*************\n");
+      err = k_mem_slab_alloc(&uart_slab, (void **)&buf, K_NO_WAIT);
+      __ASSERT(err == 0, "Failed to allocate slab");
+
+      err = uart_rx_buf_rsp(uart, buf, BUF_SIZE);
+      __ASSERT(err == 0, "Failed to provide new buffer");
+      break;
     }
-    serial_rx_dump(evt, offset);
-    break;
 
-  case UART_RX_BUF_REQUEST:
-  {
-    printk("*************alloc new rx buf*************\n");
-    err = k_mem_slab_alloc(&uart_slab, (void **)&buf, K_NO_WAIT);
-    __ASSERT(err == 0, "Failed to allocate slab");
+    case UART_RX_BUF_RELEASED:
+      printk("****************************UART_RX_BUF_RELEASED"
+             "***************************************\n");
+      k_mem_slab_free(&uart_slab, (void *)evt->data.rx_buf.buf);
+      break;
 
-    err = uart_rx_buf_rsp(uart, buf, BUF_SIZE);
-    __ASSERT(err == 0, "Failed to provide new buffer");
-    break;
-  }
-
-  case UART_RX_BUF_RELEASED:
-    printk("****************************UART_RX_BUF_RELEASED"
-           "***************************************\n");
-    k_mem_slab_free(&uart_slab, (void *)evt->data.rx_buf.buf);
-    break;
-
-  default:
-    break;
+    default:
+      break;
   }
 }
 
-int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len)
-{
+int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len) {
   uint8_t *p;
   uint8_t *d;
   uint8_t n;
@@ -121,8 +117,8 @@ int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len)
   }
 
   for (i = 0; i <= BUF_SIZE - serial_rx_len; i++) {
-    if (serial_rx_buf[i] == 0x5a && serial_rx_buf[i + 1] == 0xa5 &&
-        serial_rx_buf[i + 2] == 0x7f && serial_rx_buf[i + 3] + 4 < BUF_SIZE - i) {
+    if (serial_rx_buf[i] == 0x5a && serial_rx_buf[i + 1] == 0xa5 && serial_rx_buf[i + 2] == 0x7f &&
+        serial_rx_buf[i + 3] + 4 < BUF_SIZE - i) {
       n = serial_rx_buf[i + 3];
       sum = 0;
       for (j = 0; j <= n + 3; j++) {
@@ -153,8 +149,7 @@ int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len)
   return 0;
 }
 
-int lpuart_async_b(const struct device *dev, uint8_t *data, size_t len)
-{
+int lpuart_async_b(const struct device *dev, uint8_t *data, size_t len) {
   int err;
 
   if (dev == NULL || data == NULL || len == 0) {
@@ -174,8 +169,7 @@ int lpuart_async_b(const struct device *dev, uint8_t *data, size_t len)
   return err;
 }
 
-int lpuart_async_a(const struct device *dev)
-{
+int lpuart_async_a(const struct device *dev) {
   uint8_t *buf;
   int err;
 
@@ -204,8 +198,7 @@ int lpuart_async_a(const struct device *dev)
   return 0;
 }
 
-void serial_rx_clear(void)
-{
+void serial_rx_clear(void) {
   serial_rx_len = 0;
   memset(serial_rx_buf, 0, sizeof(serial_rx_buf));
 }

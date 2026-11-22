@@ -4,13 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-#include "g1_log.h"
-#include "production_test.h"
 #include "../aw9320x/aw9320x.h"
 #include "../imu/imu_fusion.h"
 #include "../main.h"
@@ -20,8 +18,10 @@
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "production_test.h"
 
-#define MIC_DATA_CHUNK 240
+#define MIC_DATA_CHUNK   240
 #define MIC_TRANSM_CHUNK 200
 #define MIC_TRANSM_FRAME (6 + MIC_TRANSM_CHUNK)
 
@@ -49,8 +49,8 @@ static uint8_t pt_uart_frame[256];        /* UART frame scratch (process_pt_prot
 static union {
   uint8_t raw;
   struct {
-    uint8_t level : 7;
-    uint8_t flag : 1;
+    uint8_t level: 7;
+    uint8_t flag: 1;
   } bits;
 } pt_level_flags;
 static uint8_t pt_test_mode;
@@ -72,9 +72,7 @@ static bool charger_enable_ok = true;
 static K_THREAD_STACK_DEFINE(aging_thread_stack, 1024);
 static K_THREAD_STACK_DEFINE(mic_transm_thread_stack, 1024);
 
-static int get_mac_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int get_mac_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -95,9 +93,7 @@ static int get_mac_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_mac_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-        uint8_t *resp_len, void *arg)
-{
+static int get_mac_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -119,9 +115,7 @@ static int get_mac_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_keyboard_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int get_keyboard_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -141,9 +135,7 @@ static int get_keyboard_info(const uint8_t *req, uint32_t req_len, uint8_t **res
   return 0;
 }
 
-static int set_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-          uint8_t *resp_len, void *arg)
-{
+static int set_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   int16_t v;
 
@@ -171,9 +163,7 @@ static int set_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
   return 0;
 }
 
-static int set_imu_base(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int set_imu_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   struct sys_settings settings;
   uint8_t *p;
   uint8_t retry;
@@ -196,9 +186,8 @@ static int set_imu_base(const uint8_t *req, uint32_t req_len, uint8_t **resp,
 
   char buf[20] = {0};
 
-  if (imu_yaw_x100 == 0 && imu_pitch_x100 == 0 && imu_roll_x100 == 0 &&
-      get_dashboard_state()->accel[0] == 0 && get_dashboard_state()->accel[1] == 0 &&
-      get_dashboard_state()->accel[2] == 0) {
+  if (imu_yaw_x100 == 0 && imu_pitch_x100 == 0 && imu_roll_x100 == 0 && get_dashboard_state()->accel[0] == 0 &&
+      get_dashboard_state()->accel[1] == 0 && get_dashboard_state()->accel[2] == 0) {
     p[4] = 1;
   } else {
     get_dashboard_state()->imu.ref = imu_pitch_x100;
@@ -223,9 +212,7 @@ static int set_imu_base(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int set_charge_limit(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-          uint8_t *resp_len, void *arg)
-{
+static int set_charge_limit(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   struct usr_settings settings;
   uint8_t *p;
   uint8_t upper, lower;
@@ -257,8 +244,7 @@ static int set_charge_limit(const uint8_t *req, uint32_t req_len, uint8_t **resp
   save_usr_settings(get_dashboard_state(), 0);
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_usr_settting_from_flash(&settings) == 0 &&
-        settings.charge_limit_upper == upper &&
+    if (read_usr_settting_from_flash(&settings) == 0 && settings.charge_limit_upper == upper &&
         settings.charge_limit_lower == lower) {
       break;
     }
@@ -270,9 +256,7 @@ static int set_charge_limit(const uint8_t *req, uint32_t req_len, uint8_t **resp
   return 0;
 }
 
-static int get_query_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int get_query_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   struct sys_settings settings;
   uint8_t *p;
   uint8_t retry;
@@ -299,8 +283,7 @@ static int get_query_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **res
   *resp_len = 5;
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 &&
-        memcmp(req + 4, settings.sn, PT_SN_LEN) == 0) {
+    if (read_sys_settting_from_flash(&settings) == 0 && memcmp(req + 4, settings.sn, PT_SN_LEN) == 0) {
       break;
     }
     k_msleep(100);
@@ -312,9 +295,7 @@ static int get_query_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **res
   return 0;
 }
 
-static int set_brightness(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-        uint8_t *resp_len, void *arg)
-{
+static int set_brightness(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint8_t level;
   uint8_t ret = 1;
@@ -331,8 +312,7 @@ static int set_brightness(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   p[3] = 1;
   level = req[4];
   if (get_dashboard_state()->panel.panel_brightness_level != level) {
-    get_dashboard_state()->panel.set_brightness_cb(&get_dashboard_state()->panel,
-               level);
+    get_dashboard_state()->panel.set_brightness_cb(&get_dashboard_state()->panel, level);
     ret = 0;
   }
   p[4] = ret;
@@ -341,9 +321,7 @@ static int set_brightness(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_keyboard_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int get_keyboard_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -369,9 +347,7 @@ static int get_keyboard_info_2(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-static int set_restart_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-          uint8_t *resp_len, void *arg)
-{
+static int set_restart_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -390,9 +366,7 @@ static int set_restart_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp
   return 0;
 }
 
-static int set_restart_mode_2(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-            uint8_t *resp_len, void *arg)
-{
+static int set_restart_mode_2(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -412,9 +386,7 @@ static int set_restart_mode_2(const uint8_t *req, uint32_t req_len, uint8_t **re
   return 0;
 }
 
-static int get_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int get_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -441,9 +413,7 @@ static int get_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int set_panel_voltage(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int set_panel_voltage(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint8_t val;
   uint8_t retry;
@@ -469,8 +439,7 @@ static int set_panel_voltage(const uint8_t *req, uint32_t req_len, uint8_t **res
     get_dashboard_state()->panel.voltage = val;
     save_sys_settings(get_dashboard_state(), 0);
     for (retry = 0; retry < 5; retry++) {
-      if (read_sys_settting_from_flash(&settings) == 0 &&
-          settings.panel_voltage == val) {
+      if (read_sys_settting_from_flash(&settings) == 0 && settings.panel_voltage == val) {
         break;
       }
       k_msleep(100);
@@ -482,9 +451,7 @@ static int set_panel_voltage(const uint8_t *req, uint32_t req_len, uint8_t **res
   return 0;
 }
 
-static int get_flash_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-          uint8_t *resp_len, void *arg)
-{
+static int get_flash_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint16_t size;
 
@@ -510,9 +477,7 @@ static int get_flash_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp
   return 0;
 }
 
-static int exit_mic_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-       uint8_t *resp_len, void *arg)
-{
+static int exit_mic_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -533,9 +498,7 @@ static int exit_mic_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int get_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   char buf[32] = {0};
   uint8_t *p;
   size_t len;
@@ -558,9 +521,7 @@ static int get_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int set_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int set_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
   uint8_t *p;
   uint32_t addr;
@@ -653,9 +614,7 @@ static int set_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_assign_channel_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int get_assign_channel_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   struct sys_settings settings;
   uint8_t *p;
   uint8_t retry;
@@ -681,10 +640,8 @@ static int get_assign_channel_info(const uint8_t *req, uint32_t req_len, uint8_t
   p[4] = 0;
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 &&
-        req[4] == settings.esb_channel &&
-        req[5] == settings.esb_master_addr &&
-        req[6] == settings.esb_slave_addr) {
+    if (read_sys_settting_from_flash(&settings) == 0 && req[4] == settings.esb_channel &&
+        req[5] == settings.esb_master_addr && req[6] == settings.esb_slave_addr) {
       break;
     }
     k_msleep(100);
@@ -697,9 +654,7 @@ static int get_assign_channel_info(const uint8_t *req, uint32_t req_len, uint8_t
   return 0;
 }
 
-static int resume_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int resume_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -719,9 +674,7 @@ static int resume_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_imu_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int get_imu_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -746,9 +699,7 @@ static int get_imu_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int set_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int set_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   struct sys_settings settings;
   uint8_t *p;
   uint8_t retry;
@@ -775,8 +726,7 @@ static int set_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   *resp_len = 5;
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 &&
-        memcmp(req + 4, settings.name, PT_GLASSES_SN_LEN) == 0) {
+    if (read_sys_settting_from_flash(&settings) == 0 && memcmp(req + 4, settings.name, PT_GLASSES_SN_LEN) == 0) {
       break;
     }
     k_msleep(100);
@@ -788,9 +738,7 @@ static int set_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-static int get_flash_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-        uint8_t *resp_len, void *arg)
-{
+static int get_flash_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
   uint8_t *p;
   int err;
@@ -836,9 +784,7 @@ static int get_flash_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int suspend_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-       uint8_t *resp_len, void *arg)
-{
+static int suspend_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -858,9 +804,7 @@ static int suspend_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_flash_burn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int get_flash_burn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -879,9 +823,7 @@ static int get_flash_burn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   struct sys_settings settings;
   uint8_t *p;
   int lux;
@@ -906,64 +848,63 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   lux = opt3007_read(0);
   idx = req[4];
   switch (idx) {
-  case 1:
-    if (lux >= 50 && lux < 200) {
-      p[4] = 0;
-    } else if (lux > 0) {
-      p[4] = 1;
-    } else {
-      p[4] = 2;
-      lux = 80000;
-    }
-    get_dashboard_state()->lux_base[0] = lux;
-    lux_calibrated_mask |= 1;
-    break;
-  case 2:
-    if (lux >= 200 && lux < 1000) {
-      p[4] = 0;
-    } else if (lux > 0) {
-      p[4] = 1;
-    } else {
-      p[4] = 2;
-      lux = 80000;
-    }
-    get_dashboard_state()->lux_base[1] = lux;
-    lux_calibrated_mask |= 2;
-    break;
-  case 3:
-    if (lux >= 1000 && lux < 10000) {
-      p[4] = 0;
-    } else if (lux > 0) {
-      p[4] = 1;
-    } else {
-      p[4] = 2;
-      lux = 80000;
-    }
-    get_dashboard_state()->lux_base[2] = lux;
-    lux_calibrated_mask |= 4;
-    break;
-  case 4:
-    if (lux >= 80000) {
-      p[4] = 0;
-    } else if (lux > 0) {
-      p[4] = 1;
-    } else {
-      p[4] = 2;
-      lux = 80000;
-    }
-    get_dashboard_state()->opt3007_context.lux_base_max = lux;
-    lux_calibrated_mask |= 0x8000;
-    break;
-  default:
-    break;
+    case 1:
+      if (lux >= 50 && lux < 200) {
+        p[4] = 0;
+      } else if (lux > 0) {
+        p[4] = 1;
+      } else {
+        p[4] = 2;
+        lux = 80000;
+      }
+      get_dashboard_state()->lux_base[0] = lux;
+      lux_calibrated_mask |= 1;
+      break;
+    case 2:
+      if (lux >= 200 && lux < 1000) {
+        p[4] = 0;
+      } else if (lux > 0) {
+        p[4] = 1;
+      } else {
+        p[4] = 2;
+        lux = 80000;
+      }
+      get_dashboard_state()->lux_base[1] = lux;
+      lux_calibrated_mask |= 2;
+      break;
+    case 3:
+      if (lux >= 1000 && lux < 10000) {
+        p[4] = 0;
+      } else if (lux > 0) {
+        p[4] = 1;
+      } else {
+        p[4] = 2;
+        lux = 80000;
+      }
+      get_dashboard_state()->lux_base[2] = lux;
+      lux_calibrated_mask |= 4;
+      break;
+    case 4:
+      if (lux >= 80000) {
+        p[4] = 0;
+      } else if (lux > 0) {
+        p[4] = 1;
+      } else {
+        p[4] = 2;
+        lux = 80000;
+      }
+      get_dashboard_state()->opt3007_context.lux_base_max = lux;
+      lux_calibrated_mask |= 0x8000;
+      break;
+    default:
+      break;
   }
 
   if (lux_calibrated_mask > 0x8000) {
     get_dashboard_state()->lux_k_max = 22156.0 / get_dashboard_state()->opt3007_context.lux_base_max;
     get_dashboard_state()->lux_k_min = 4210.7 / get_dashboard_state()->lux_base[0];
     get_dashboard_state()->luminance_curve =
-      (get_dashboard_state()->lux_k_max + get_dashboard_state()->lux_k_min) / 2 *
-      1000000;
+      (get_dashboard_state()->lux_k_max + get_dashboard_state()->lux_k_min) / 2 * 1000000;
   }
   save_sys_settings(get_dashboard_state(), 0);
 
@@ -997,9 +938,7 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int set_brightness_lum_base(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int set_brightness_lum_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   struct sys_settings settings;
   uint8_t *p;
   uint16_t val;
@@ -1032,25 +971,24 @@ static int set_brightness_lum_base(const uint8_t *req, uint32_t req_len, uint8_t
   }
 
   switch (idx) {
-  case 0:
-    get_dashboard_state()->panel.brightness_lum[1] = val;
-    break;
-  case 1:
-    get_dashboard_state()->panel.brightness_lum[2] = val;
-    break;
-  case 2:
-    get_dashboard_state()->panel.brightness_lum[3] = val;
-    break;
-  default:
-    break;
+    case 0:
+      get_dashboard_state()->panel.brightness_lum[1] = val;
+      break;
+    case 1:
+      get_dashboard_state()->panel.brightness_lum[2] = val;
+      break;
+    case 2:
+      get_dashboard_state()->panel.brightness_lum[3] = val;
+      break;
+    default:
+      break;
   }
   get_dashboard_state()->panel.brightness_lum[0] = val;
   save_sys_settings(get_dashboard_state(), 0);
 
   for (retry = 0; retry < 5; retry++) {
     if (read_sys_settting_from_flash(&settings) == 0) {
-      if ((idx == 0 && settings.lum_base[0] == val) ||
-          (idx == 1 && settings.lum_base[1] == val) ||
+      if ((idx == 0 && settings.lum_base[0] == val) || (idx == 1 && settings.lum_base[1] == val) ||
           (idx == 2 && settings.lum_base[2] == val)) {
         break;
       }
@@ -1066,9 +1004,7 @@ static int set_brightness_lum_base(const uint8_t *req, uint32_t req_len, uint8_t
   return 0;
 }
 
-static int get_esb_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int get_esb_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1090,9 +1026,7 @@ static int get_esb_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_brightness_lum_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int get_brightness_lum_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1114,9 +1048,7 @@ static int get_brightness_lum_info(const uint8_t *req, uint32_t req_len, uint8_t
   return 0;
 }
 
-static int chnange_test_image(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-            uint8_t *resp_len, void *arg)
-{
+static int chnange_test_image(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1136,9 +1068,7 @@ static int chnange_test_image(const uint8_t *req, uint32_t req_len, uint8_t **re
   return 0;
 }
 
-static int get_role_info_right(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int get_role_info_right(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1161,9 +1091,7 @@ static int get_role_info_right(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-          uint8_t *resp_len, void *arg)
-{
+static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p = *resp;
   uint32_t now = k_uptime_get();
   uint32_t voltage;
@@ -1178,20 +1106,20 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
     set_ncs_mem_pt_level(pt_level_flags.bits.level);
     if (req_len != 5) {
       switch (req[5]) {
-      case 6:
-        can_enter_low_power = 1;
-        set_box_status(1, true);
-        break;
-      case 7:
-        set_box_status(1, false);
-        can_enter_low_power = 0;
-        break;
-      case 8:
-        set_box_status(1, true);
-        update_activity_time();
-        break;
-      default:
-        break;
+        case 6:
+          can_enter_low_power = 1;
+          set_box_status(1, true);
+          break;
+        case 7:
+          set_box_status(1, false);
+          can_enter_low_power = 0;
+          break;
+        case 8:
+          set_box_status(1, true);
+          update_activity_time();
+          break;
+        default:
+          break;
       }
     }
   }
@@ -1240,8 +1168,7 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
     battery_full_count = 0;
   }
   if (p[4] == 0 && voltage > 0 && voltage < 7800 && battery_full_flag == 0 &&
-      battery_high_v_count >= BATTERY_NO_CHARGE_POLLS &&
-      get_dashboard_state()->battery_current_ma >= 0) {
+      battery_high_v_count >= BATTERY_NO_CHARGE_POLLS && get_dashboard_state()->battery_current_ma >= 0) {
     p[4] = 4;
   }
 
@@ -1257,9 +1184,8 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
   }
   p[9] = abs(get_dashboard_state()->battery_current_ma);
   /* the no-charge marker goes with status 4 only: it never replaces status 1 (full) or 2 (too hot) */
-  if (p[4] == 4 && voltage > 0 && voltage < 5000 &&
-      get_dashboard_state()->battery_current_ma >= 0 && battery_full_flag == 0 &&
-      battery_high_v_count >= BATTERY_NO_CHARGE_POLLS) {
+  if (p[4] == 4 && voltage > 0 && voltage < 5000 && get_dashboard_state()->battery_current_ma >= 0 &&
+      battery_full_flag == 0 && battery_high_v_count >= BATTERY_NO_CHARGE_POLLS) {
     p[9] = 100;
   }
   *resp_len = 10;
@@ -1286,9 +1212,7 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
   return 0;
 }
 
-static int power_on_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-          uint8_t *resp_len, void *arg)
-{
+static int power_on_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1308,9 +1232,7 @@ static int power_on_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **resp
   return 0;
 }
 
-static int power_off_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int power_off_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1330,8 +1252,7 @@ static int power_off_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **res
   return 0;
 }
 
-void enable_charger_retry(void)
-{
+void enable_charger_retry(void) {
   uint8_t i;
   uint32_t now;
 
@@ -1358,24 +1279,20 @@ void enable_charger_retry(void)
   }
 }
 
-uint8_t get_pt_level_flag(void)
-{
+uint8_t get_pt_level_flag(void) {
   return pt_level_flags.bits.flag;
 }
 
-uint8_t get_pt_level(void)
-{
+uint8_t get_pt_level(void) {
   return pt_level_flags.bits.level;
 }
 
-uint8_t set_pt_level(uint8_t level)
-{
+uint8_t set_pt_level(uint8_t level) {
   pt_level_flags.bits.level = level;
   return pt_level_flags.bits.level;
 }
 
-uint8_t get_aging_charge_limit(void)
-{
+uint8_t get_aging_charge_limit(void) {
   if (aging_mode == 1 && aging_phase != 1) {
     return (aging_phase == 2) ? 70 : 85;
   }
@@ -1383,9 +1300,7 @@ uint8_t get_aging_charge_limit(void)
   return 100;
 }
 
-static int set_comflag(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int set_comflag(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1412,9 +1327,7 @@ static int set_comflag(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int into_long_trip_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int into_long_trip_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   printk("join in into_long_trip_mode\n");
@@ -1441,8 +1354,7 @@ static int into_long_trip_mode(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-int pt_resp_checksum(uint8_t **resp, uint8_t *resp_len)
-{
+int pt_resp_checksum(uint8_t **resp, uint8_t *resp_len) {
   uint8_t *p;
   uint8_t len;
   int sum = 0;
@@ -1463,16 +1375,13 @@ int pt_resp_checksum(uint8_t **resp, uint8_t *resp_len)
   return 0;
 }
 
-int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t hdr[12];
   uint8_t *p;
   int i;
   int ret = 0;
 
-  if (req == NULL || req_len == 0 || resp == NULL || resp_len == NULL ||
-      type == PT_COMM_NONE) {
+  if (req == NULL || req_len == 0 || resp == NULL || resp_len == NULL || type == PT_COMM_NONE) {
     printk("process_pt_protocol para is error\n");
     return -1;
   }
@@ -1522,17 +1431,14 @@ int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t 
   return 0;
 }
 
-int64_t set_pt_deadline(void)
-{
+int64_t set_pt_deadline(void) {
   int64_t deadline = k_uptime_get() + 10000;
 
   pt_timeout_ms = deadline;
   return deadline;
 }
 
-static int get_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int get_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1552,9 +1458,7 @@ static int get_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-static int get_mac_info_3(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-        uint8_t *resp_len, void *arg)
-{
+static int get_mac_info_3(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1577,9 +1481,7 @@ static int get_mac_info_3(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-static int get_version(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int get_version(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -1605,20 +1507,15 @@ static int get_version(const uint8_t *req, uint32_t req_len, uint8_t **resp,
  * 16 bytes of every region.  Returns 0 if all match, 1 on a mismatch and 2 if
  * the flash cannot be read.
  */
-int is_ext_flash_burned(void)
-{
+int is_ext_flash_burned(void) {
   static const struct {
     int head;
     int tail;
     uint16_t crc;
   } regions[] = {
-    { 0x140000, 0x17fcf8, 0x0d59 },
-    { 0x200000, 0x3f8c98, 0xdab9 },
-    { 0x500000, 0x515768, 0x1265 },
-    { 0x520000, 0x97c44f, 0xdab9 },
-    { 0xa20000, 0xa2b77f, 0xd412 },
-    { 0xa40000, 0xdbedcf, 0xdab9 },
-    { 0x180000, 0x1af0d8, 0x2632 },
+    {0x140000, 0x17fcf8, 0x0d59}, {0x200000, 0x3f8c98, 0xdab9}, {0x500000, 0x515768, 0x1265},
+    {0x520000, 0x97c44f, 0xdab9}, {0xa20000, 0xa2b77f, 0xd412}, {0xa40000, 0xdbedcf, 0xdab9},
+    {0x180000, 0x1af0d8, 0x2632},
   };
   uint8_t retry = 0;
   uint16_t crc;
@@ -1626,8 +1523,7 @@ int is_ext_flash_burned(void)
 
   while (step < ARRAY_SIZE(regions)) {
     crc = 0xffff;
-    if (calc_flash_crc(&crc, regions[step].head, 16) ||
-        calc_flash_crc(&crc, regions[step].tail, 16)) {
+    if (calc_flash_crc(&crc, regions[step].head, 16) || calc_flash_crc(&crc, regions[step].tail, 16)) {
       if (retry == 5) {
         return 2;
       }
@@ -1646,20 +1542,16 @@ int is_ext_flash_burned(void)
   return 0;
 }
 
-uint8_t get_pt_test_mode(void)
-{
+uint8_t get_pt_test_mode(void) {
   return pt_test_mode;
 }
 
-void set_test_mode(uint8_t mode)
-{
+void set_test_mode(uint8_t mode) {
   BLE_PRINTK("set testmode is %d \n", mode);
   pt_test_mode = mode;
 }
 
-static int enter_into_testmode(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int enter_into_testmode(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint8_t val;
 
@@ -1689,14 +1581,11 @@ static int enter_into_testmode(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-uint8_t get_aging_phase(void)
-{
+uint8_t get_aging_phase(void) {
   return aging_phase;
 }
 
-static int get_firmware_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-           uint8_t *resp_len, void *arg)
-{
+static int get_firmware_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL || req == NULL || req_len < 4) {
@@ -1714,14 +1603,11 @@ static int get_firmware_mode(const uint8_t *req, uint32_t req_len, uint8_t **res
   return 0;
 }
 
-void set_aging_mode(uint8_t v)
-{
+void set_aging_mode(uint8_t v) {
   aging_mode = v;
 }
 
-static int set_mic_nocompress(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-            uint8_t *resp_len, void *arg)
-{
+static int set_mic_nocompress(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint8_t val;
 
@@ -1754,9 +1640,7 @@ static int set_mic_nocompress(const uint8_t *req, uint32_t req_len, uint8_t **re
   return 0;
 }
 
-static int get_brightness_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int get_brightness_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL || req == NULL || req_len < 4) {
@@ -1775,14 +1659,11 @@ static int get_brightness_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-uint8_t get_aging_mode(void)
-{
+uint8_t get_aging_mode(void) {
   return aging_mode;
 }
 
-static int get_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int get_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   char buf[32] = {0};
   uint8_t *p;
   size_t len;
@@ -1805,9 +1686,7 @@ static int get_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-static int get_charge_test_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-        uint8_t *resp_len, void *arg)
-{
+static int get_charge_test_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint16_t *q;
   int i;
@@ -1838,8 +1717,7 @@ static int get_charge_test_info(const uint8_t *req, uint32_t req_len, uint8_t **
   return 0;
 }
 
-void enter_aging_mode(void)
-{
+void enter_aging_mode(void) {
   exit_silent_mode();
   aging_mode = 1;
   aging_phase = 1;
@@ -1858,9 +1736,7 @@ void enter_aging_mode(void)
   save_sys_settings(get_dashboard_state(), 0);
 }
 
-static int set_aging_test_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int set_aging_test_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint8_t val;
 
@@ -1897,8 +1773,7 @@ static int set_aging_test_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-void exit_aging_mode(void)
-{
+void exit_aging_mode(void) {
   enter_silent_mode();
   aging_mode = 0;
   aging_phase = 0;
@@ -1906,8 +1781,7 @@ void exit_aging_mode(void)
   set_brightness_to_panel_reg_in_running(get_dashboard_state()->panel.panel_brightness_level);
 }
 
-void aging_charge_test(int interval)
-{
+void aging_charge_test(int interval) {
   bool need_save;
   int t;
   int i;
@@ -1932,11 +1806,9 @@ void aging_charge_test(int interval)
     if (get_dashboard_state()->battery_left > 96) {
       aging_phase = 2;
       get_dashboard_state()->panel.panel_brightness_level = 0x15;
-      set_brightness_to_panel_reg_in_running(
-        get_dashboard_state()->panel.panel_brightness_level);
+      set_brightness_to_panel_reg_in_running(get_dashboard_state()->panel.panel_brightness_level);
       discharge_test_start_ms = k_uptime_get();
-      get_dashboard_state()->aging_charge_time_s =
-        k_uptime_get() / 1000 - get_dashboard_state()->aging_start_uptime_s;
+      get_dashboard_state()->aging_charge_time_s = k_uptime_get() / 1000 - get_dashboard_state()->aging_start_uptime_s;
       need_save = true;
     }
   } else if (aging_phase == 2) {
@@ -1999,8 +1871,7 @@ void aging_charge_test(int interval)
   }
 }
 
-static void aging_test_thread(void *p1, void *p2, void *p3)
-{
+static void aging_test_thread(void *p1, void *p2, void *p3) {
   while (1) {
     if (aging_mode == 1) {
       G1_LOG_WRN("$$$$$$$$$$$$$$$$$$$$$enter agemode!$$$$$$$$$$$$$$$$$$$$$\n");
@@ -2020,8 +1891,7 @@ static void aging_test_thread(void *p1, void *p2, void *p3)
   }
 }
 
-void aging_charge_check(void)
-{
+void aging_charge_check(void) {
   bool need_save = false;
 
   if (aging_mode != 1 || aging_phase != 1) {
@@ -2061,22 +1931,19 @@ void aging_charge_check(void)
   }
 }
 
-void start_aging_mode_thread(void)
-{
+void start_aging_mode_thread(void) {
   if (aging_thread_started) {
     printk("[%s-%d], thread has started !\n", __func__, __LINE__);
     return;
   }
 
-  if (k_thread_create(&aging_thread, aging_thread_stack, K_THREAD_STACK_SIZEOF(aging_thread_stack),
-          aging_test_thread, NULL, NULL, NULL, -12, 0, K_NO_WAIT) == NULL) {
+  if (k_thread_create(&aging_thread, aging_thread_stack, K_THREAD_STACK_SIZEOF(aging_thread_stack), aging_test_thread,
+                      NULL, NULL, NULL, -12, 0, K_NO_WAIT) == NULL) {
     aging_thread_started = 1;
   }
 }
 
-static int get_lux_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg)
-{
+static int get_lux_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint32_t lux;
   float curve;
@@ -2106,14 +1973,11 @@ static int get_lux_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
   return 0;
 }
 
-uint8_t get_pt_version_major(void)
-{
+uint8_t get_pt_version_major(void) {
   return 0x5b;
 }
 
-static int set_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-             uint8_t *resp_len, void *arg)
-{
+static int set_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
   uint32_t x, y;
   uint8_t ret;
@@ -2156,8 +2020,7 @@ static int set_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   return 0;
 }
 
-void mic_transm_thread(void *p1, void *p2, void *p3)
-{
+void mic_transm_thread(void *p1, void *p2, void *p3) {
   const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
   uint8_t buf[MIC_TRANSM_FRAME] = {0};
   uint8_t fail = 0;
@@ -2225,9 +2088,7 @@ void mic_transm_thread(void *p1, void *p2, void *p3)
   }
 }
 
-static int get_role_info_left(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-            uint8_t *resp_len, void *arg)
-{
+static int get_role_info_left(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
   uint8_t *p;
 
   if (resp == NULL || resp_len == NULL) {
@@ -2250,10 +2111,9 @@ static int get_role_info_left(const uint8_t *req, uint32_t req_len, uint8_t **re
   return 0;
 }
 
-void start_mic_transm_thread(void)
-{
+void start_mic_transm_thread(void) {
   k_thread_create(&mic_transm_thread_data, mic_transm_thread_stack, K_THREAD_STACK_SIZEOF(mic_transm_thread_stack),
-      mic_transm_thread, NULL, NULL, NULL, -12, 0, K_NO_WAIT);
+                  mic_transm_thread, NULL, NULL, NULL, -12, 0, K_NO_WAIT);
 }
 
 const struct pt_cmd pt_cmd_table[48] = {

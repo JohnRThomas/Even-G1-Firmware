@@ -26,8 +26,7 @@ struct ahrs {
 
 void Mahony_init(struct ahrs *a);
 float Mahony_invSqrt(float x);
-void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az, float dt,
-          struct ahrs *a);
+void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az, float dt, struct ahrs *a);
 float Mahony_deltatUpdate(struct ahrs *a);
 float Mahony_getRoll(struct ahrs *a);
 float Mahony_getPitch(struct ahrs *a);

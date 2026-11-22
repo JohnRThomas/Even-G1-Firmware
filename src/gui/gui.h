@@ -4,19 +4,19 @@
 #ifndef G1_GUI_H_
 #define G1_GUI_H_
 
-#include <stdint.h>
+#include <g1_date.h>
+#include <g1_log.h>
+#include <glasses_state.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <g1_log.h>
-#include <g1_date.h>
-#include <glasses_state.h>
 
-#define GUI_SCREEN_WIDTH   640
-#define GUI_SCREEN_HEIGHT  200
-#define GUI_FB_ROWS        200          /* 4 bpp, 320 bytes per row */
-#define GUI_FB_ROW_BYTES   320
+#define GUI_SCREEN_WIDTH  640
+#define GUI_SCREEN_HEIGHT 200
+#define GUI_FB_ROWS       200          /* 4 bpp, 320 bytes per row */
+#define GUI_FB_ROW_BYTES  320
 
 typedef int (*gui_effect_cb_t)(int arg, const char *str, int font, int x, int y);
 
@@ -63,9 +63,8 @@ extern const uint8_t gui_fade_mask_bits[GUI_FADE_PATTERN_ROWS][GUI_FADE_STORED_S
  * above keeps both, 1..6 come from gui_fade_mask_bits.  Always inlined: the
  * fade loops call it once per frame-buffer byte.
  */
-static ALWAYS_INLINE uint8_t gui_fade_mask_at(unsigned int row, unsigned int step, unsigned int col)
-{
-  static const uint8_t expand[4] = { 0x00, 0x0f, 0xf0, 0xff };
+static ALWAYS_INLINE uint8_t gui_fade_mask_at(unsigned int row, unsigned int step, unsigned int col) {
+  static const uint8_t expand[4] = {0x00, 0x0f, 0xf0, 0xff};
 
   if (step == 0) {
     return 0x00;
@@ -88,46 +87,37 @@ int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8
 int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, int no_draw);
 int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level);
 int gui_text_state_reset(void);
-int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-     uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
-int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, int y0, int x1,
-          int y1, uint32_t max_lines, uint16_t split_code, int effect,
-          gui_effect_cb_t cb, int no_draw);
-int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-        int no_draw);
-int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, int y0, int x1,
-           int y1, uint32_t max_lines, uint8_t dark_lines, int effect,
-           gui_effect_cb_t cb, int no_draw);
+int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                 uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
+int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
+                                  uint32_t max_lines, uint16_t split_code, int effect, gui_effect_cb_t cb, int no_draw);
+int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                          uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
+int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
+                                   uint32_t max_lines, uint8_t dark_lines, int effect, gui_effect_cb_t cb, int no_draw);
 int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
-      uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-      int no_draw);
-int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-           uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-           int no_draw);
-int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-        int no_draw);
+                        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
+int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                             uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
+int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                          uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw);
 int gui_utf_adv_draw_configure(struct gui_utf_adv_cfg cfg);
 int gui_dynamic_bitmap_reset_thunk(void);
 int64_t abs_diff_u64(int64_t a, int64_t b);
 int gui_utf_adv_draw_reset(void);
 int gui_screen_x_offset(void);
 int gui_screen_y_offset(void);
-int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-           uint32_t max_lines, uint32_t dark_cnt);
-int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
-       bool is_24h);
+int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                             uint32_t dark_cnt);
+int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool is_24h);
 int gui_screen_fade_out(void);
 int hide_icon_notification_on_gui(void);
 /* callers pass a 7th argument (0), so the definition takes it too */
-int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, uint8_t percent,
-         int unused);
-int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segments, uint8_t gap,
-          uint8_t percent);
+int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, uint8_t percent, int unused);
+int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segments, uint8_t gap, uint8_t percent);
 int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color);
-int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, const uint8_t *bmp2,
-        uint8_t color1, uint8_t color2);
+int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, const uint8_t *bmp2, uint8_t color1,
+                          uint8_t color2);
 int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color);
 int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y);
 int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, int *out_w);

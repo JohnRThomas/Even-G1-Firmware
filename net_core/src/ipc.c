@@ -6,8 +6,8 @@
 #include <zephyr/device.h>
 #include <zephyr/ipc/ipc_service.h>
 
-#include "net_common.h"
 #include "ipc.h"
+#include "net_common.h"
 
 static struct ipc_ops *g_ops;
 static int ipc_ready;
@@ -15,8 +15,7 @@ static struct ipc_ept ipc_ept;
 
 static K_SEM_DEFINE(ept_bound_sem, 0, 1);
 
-static void ipc_ept_recv(const void *data, size_t len, void *priv)
-{
+static void ipc_ept_recv(const void *data, size_t len, void *priv) {
   const uint8_t *p = data;
   uint8_t id = p[0];
   struct ipc_ops *ops = g_ops;
@@ -31,8 +30,7 @@ static void ipc_ept_recv(const void *data, size_t len, void *priv)
   }
 }
 
-static int ipc_register(struct ipc_ep *ep)
-{
+static int ipc_register(struct ipc_ep *ep) {
   struct ipc_ops *ops = g_ops;
 
   if (ops->count < IPC_EP_MAX) {
@@ -41,13 +39,11 @@ static int ipc_register(struct ipc_ep *ep)
     NET_INF("ipc service register(%d,%s) %d,SUCCESS\n", ep->id, ep->name, ops->count);
     return 0;
   }
-  NET_ERR("ipc service register(%d,%s) %d,total must < %d\n", ep->id, ep->name,
-    ops->count, IPC_EP_MAX);
+  NET_ERR("ipc service register(%d,%s) %d,total must < %d\n", ep->id, ep->name, ops->count, IPC_EP_MAX);
   return -1;
 }
 
-static int ipc_send(const void *data, size_t len)
-{
+static int ipc_send(const void *data, size_t len) {
   int ret;
 
   if (ipc_ready == 1) {
@@ -61,21 +57,20 @@ static int ipc_send(const void *data, size_t len)
   return -1;
 }
 
-static void ipc_ept_bound(void *priv)
-{
+static void ipc_ept_bound(void *priv) {
   k_sem_give(&ept_bound_sem);
 }
 
 static struct ipc_ept_cfg ipc_ept_cfg = {
   .name = "ipc0",
-  .cb = {
-    .bound    = ipc_ept_bound,
-    .received = ipc_ept_recv,
-  },
+  .cb =
+    {
+      .bound = ipc_ept_bound,
+      .received = ipc_ept_recv,
+    },
 };
 
-int ipc_init(void)
-{
+int ipc_init(void) {
   const struct device *ipc_instance = DEVICE_DT_GET(DT_NODELABEL(ipc0));
   int err;
 
@@ -97,8 +92,7 @@ int ipc_init(void)
   return 0;
 }
 
-int ipc_ops_init(struct ipc_ops *ops)
-{
+int ipc_ops_init(struct ipc_ops *ops) {
   ops->send = ipc_send;
   ops->reg = ipc_register;
   g_ops = ops;

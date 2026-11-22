@@ -8,20 +8,17 @@
 #include "panel.h"
 
 /* send a JBD013VGA SPI command to the panel */
-void send_cmd(uint8_t cmd)
-{
+void send_cmd(uint8_t cmd) {
   spi_send_cmd(cmd);
 }
 
 /* write status register regAddr */
-void wr_status_reg(uint8_t reg, uint8_t data)
-{
+void wr_status_reg(uint8_t reg, uint8_t data) {
   spi_tx_frame(reg, &data, 1);
 }
 
 /* write offset register, row offset (0~31), column offset (0~31) */
-void wr_offset_reg(uint8_t row, uint8_t col)
-{
+void wr_offset_reg(uint8_t row, uint8_t col) {
   uint8_t buf[2];
 
   buf[0] = row;
@@ -32,14 +29,12 @@ void wr_offset_reg(uint8_t row, uint8_t col)
 }
 
 /* write current register (0~63) */
-void wr_cur_reg(uint8_t param)
-{
+void wr_cur_reg(uint8_t param) {
   spi_tx_frame(SPI_WR_CURRENT_REG, &param, 1);
 }
 
 /* write luminance register */
-void wr_lum_reg(uint16_t param)
-{
+void wr_lum_reg(uint16_t param) {
   uint8_t buf[2];
 
   sys_put_be16(param, buf);
@@ -47,8 +42,7 @@ void wr_lum_reg(uint16_t param)
 }
 
 /* clear the panel cache */
-void clr_cache(uint8_t val)
-{
+void clr_cache(uint8_t val) {
   uint8_t *buf = get_jdb_panel_context()->panel_buffer[0];
 
   memset(buf, val, PANEL_FB_SIZE);
@@ -57,16 +51,14 @@ void clr_cache(uint8_t val)
   spi_wr_buffer(0, 384, buf, 0x7800);
 }
 
-void jbd_clear_cache_sync(uint8_t val)
-{
+void jbd_clear_cache_sync(uint8_t val) {
   clr_cache(val);
   send_cmd(SPI_SYNC);
   delay_ms(1);
 }
 
 /* display an image */
-void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len)
-{
+void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len) {
   uint16_t y = row;
   uint16_t x = col;
 
@@ -82,8 +74,7 @@ void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len)
 }
 
 /* reset the panel */
-void panel_rst(void)
-{
+void panel_rst(void) {
   delay_ms(1);
   send_cmd(SPI_RST_EN);
   delay_ms(1);
@@ -92,8 +83,7 @@ void panel_rst(void)
 }
 
 /* initialise the panel */
-void panel_init(void)
-{
+void panel_init(void) {
   panel_rst();
   send_cmd(SPI_WR_ENABLE);
   wr_status_reg(SPI_WR_STATUS_REG1, 0x10);

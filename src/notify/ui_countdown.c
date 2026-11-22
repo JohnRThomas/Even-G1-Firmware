@@ -3,21 +3,20 @@
  * ui_notification.c, screen id 2) and its helpers.
  */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-#include "g1_log.h"
-#include "notify.h"
 #include "../fonts/font_bitmap.h"
 #include "../panel_display/panel.h"
 #include "../ui/ui.h"
+#include "g1_log.h"
+#include "notify.h"
 
 static uint32_t countdown_last_ms;
 
-void countdown_tick(struct countdown_ts_context *cd)
-{
+void countdown_tick(struct countdown_ts_context *cd) {
   uint32_t now;
 
   if (cd->reset == 1) {
@@ -35,8 +34,7 @@ void countdown_tick(struct countdown_ts_context *cd)
   }
 }
 
-int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg)
-{
+int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg) {
   uint8_t **fb = panel->panel_buffer;
   struct GlassesState *state = get_dashboard_state();
   struct ui_timer_payload *timer = &state->ui.timer;
@@ -53,8 +51,7 @@ int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg)
   if (done) {
     codes = utf8_to_unicode_buf("时间到!", &count);
     for (int i = 0; i < count; i++) {
-      copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12, 36,
-             i * 12 + 32, 8);
+      copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12, 36, i * 12 + 32, 8);
     }
   } else {
     x = 12;
@@ -85,13 +82,11 @@ int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg)
   return 0;
 }
 
-int draw_template_notification_page(struct jbd_panel_context *panel, void *arg)
-{
+int draw_template_notification_page(struct jbd_panel_context *panel, void *arg) {
   return 0;
 }
 
-void countdown_reset(struct countdown_ts_context *cd)
-{
+void countdown_reset(struct countdown_ts_context *cd) {
   cd->seconds = 60;
   cd->state = 0;
 }

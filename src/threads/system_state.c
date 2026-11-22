@@ -1,13 +1,12 @@
 /*
  * Screen on/off state, IMU on/off hooks and global suspend/resume.
  */
-#include <string.h>
-#include <zephyr/kernel.h>
 #include "g1_log.h"
 #include "threads.h"
+#include <string.h>
+#include <zephyr/kernel.h>
 
-int trigger_screen_state_change(const char *who, struct GlassesState *state, uint8_t on)
-{
+int trigger_screen_state_change(const char *who, struct GlassesState *state, uint8_t on) {
   if (state->screen_on == on) {
     G1_LOG_WRN("%s: ignore:%d.\n", who, state->screen_on);
     return -1;
@@ -22,8 +21,7 @@ int trigger_screen_state_change(const char *who, struct GlassesState *state, uin
   return on;
 }
 
-int set_imu_on_state(struct GlassesState *state, uint32_t on)
-{
+int set_imu_on_state(struct GlassesState *state, uint32_t on) {
   if (state->imu.on != on) {
     state->imu.on = on;
     if (state->display_mode == 10 && on && !state->imu_busy) {
@@ -35,15 +33,13 @@ int set_imu_on_state(struct GlassesState *state, uint32_t on)
   return -1;
 }
 
-int trigger_imu_state_change(void *dev, struct GlassesState *state, bool on)
-{
+int trigger_imu_state_change(void *dev, struct GlassesState *state, bool on) {
   set_imu_on_state(state, on);
   trigger_screen_state_change(on ? "imu-on" : "imu-off", state, on);
   return 0;
 }
 
-int global_system_suspend(struct GlassesState *state)
-{
+int global_system_suspend(struct GlassesState *state) {
   if (state->suspend_state == 0 || state->suspend_state == 4) {
     state->suspend_state = 2;
     G1_LOG_WRN("begin.\n");
@@ -55,8 +51,7 @@ int global_system_suspend(struct GlassesState *state)
   return 0;
 }
 
-int global_system_resume(struct GlassesState *state)
-{
+int global_system_resume(struct GlassesState *state) {
   if (state->suspend_state == 1 || state->suspend_state == 5) {
     state->suspend_state = 3;
     G1_LOG_WRN("begin.\n");

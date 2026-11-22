@@ -6,15 +6,13 @@
 
 #define TP_TEXT 0x200 /* sizeof(teleprompter_info.text) */
 
-static struct teleprompter_info *tp(void)
-{
+static struct teleprompter_info *tp(void) {
   return g1_state()->teleprompter;
 }
 
 /* sends a chunk; b9..b11: countdown, mode, scroll (sub 1) or scroll, mark16 (sub 3) */
-static void tp_send(uint8_t seq, uint8_t sub, uint16_t total, uint16_t index, uint8_t b9,
-        uint8_t b10, uint8_t b11, const char *text, bool with_ts, uint64_t ts)
-{
+static void tp_send(uint8_t seq, uint8_t sub, uint16_t total, uint16_t index, uint8_t b9, uint8_t b10, uint8_t b11,
+                    const char *text, bool with_ts, uint64_t ts) {
   uint8_t pkt[0x100];
   uint8_t payload[sizeof(pkt) - G1_CHUNK_HDR_LEN] = {b9, b10, b11};
   size_t len = strlen(text);
@@ -28,8 +26,7 @@ static void tp_send(uint8_t seq, uint8_t sub, uint16_t total, uint16_t index, ui
   g1_send(pkt, g1_put_chunk(pkt, 0x09, seq, sub, total, index, payload, len));
 }
 
-ZTEST(features, test_0x09_set_text_fills_every_teleprompter_info_field)
-{
+ZTEST(features, test_0x09_set_text_fills_every_teleprompter_info_field) {
   g1_send_vector("0x09_teleprompter_init");
 
   zassert_equal(tp()->mode, 1);
@@ -46,8 +43,7 @@ ZTEST(features, test_0x09_set_text_fills_every_teleprompter_info_field)
   feat_expect_field(tp()->text, TP_TEXT, "Teleprompter test text. Line one.\nLine two.");
 }
 
-ZTEST(features, test_0x09_set_text_splits_mode_and_mode_flag)
-{
+ZTEST(features, test_0x09_set_text_splits_mode_and_mode_flag) {
   tp_send(0x10, 1, 1, 1, 5, 0x83, 0x20, "abc", true, 1000);
 
   zassert_equal(tp()->mode, 3);
@@ -59,8 +55,7 @@ ZTEST(features, test_0x09_set_text_splits_mode_and_mode_flag)
 }
 
 /* task 9 = teleprompter */
-ZTEST(features, test_0x09_set_text_starts_the_teleprompter_task)
-{
+ZTEST(features, test_0x09_set_text_starts_the_teleprompter_task) {
   g1_send_vector("0x09_teleprompter_init");
 
   zassert_equal(update_persist_task_status_fake.call_count, 1);
@@ -68,8 +63,7 @@ ZTEST(features, test_0x09_set_text_starts_the_teleprompter_task)
   zassert_equal(update_persist_task_status_fake.arg2_val, 2);
 }
 
-ZTEST(features, test_0x09_set_text_reply_is_queued_on_the_master)
-{
+ZTEST(features, test_0x09_set_text_reply_is_queued_on_the_master) {
   g1_send_vector("0x09_teleprompter_init");
 
   feat_expect_queued_count(1);
@@ -77,8 +71,7 @@ ZTEST(features, test_0x09_set_text_reply_is_queued_on_the_master)
   expect_no_frame();
 }
 
-ZTEST(features, test_0x09_set_text_reply_is_written_at_once_on_the_slave)
-{
+ZTEST(features, test_0x09_set_text_reply_is_written_at_once_on_the_slave) {
   g1_unit_set_role(G1_ROLE_SLAVE);
   g1_send_vector("0x09_teleprompter_init");
 
@@ -86,8 +79,7 @@ ZTEST(features, test_0x09_set_text_reply_is_written_at_once_on_the_slave)
   feat_expect_queued_count(0);
 }
 
-ZTEST(features, test_0x09_set_text_in_two_chunks_is_assembled)
-{
+ZTEST(features, test_0x09_set_text_in_two_chunks_is_assembled) {
   tp_send(0x20, 1, 2, 1, 4, 0x02, 0x10, "first half, ", false, 0);
   expect_frame("09 18 00 20 01 02 00 01 00 00");
   zassert_equal(tp()->ready, 0, "nothing shown before the last chunk");
@@ -105,8 +97,7 @@ ZTEST(features, test_0x09_set_text_in_two_chunks_is_assembled)
   expect_pkt(&g1_esb_response_log, 0, "09 1f 00 21 01 02 00 02 00 00");
 }
 
-ZTEST(features, test_0x09_set_text_chunk_out_of_order_replies_01)
-{
+ZTEST(features, test_0x09_set_text_chunk_out_of_order_replies_01) {
   tp_send(0x20, 1, 3, 1, 4, 0x02, 0x10, "one ", false, 0);
   expect_frame("09 10 00 20 01 03 00 01 00 00");
   tp_send(0x21, 1, 3, 3, 0, 0, 0, "three", true, 5);
@@ -116,8 +107,7 @@ ZTEST(features, test_0x09_set_text_chunk_out_of_order_replies_01)
   zassert_equal(tp()->len, 0);
 }
 
-ZTEST(features, test_0x09_length_field_mismatch_is_dropped)
-{
+ZTEST(features, test_0x09_length_field_mismatch_is_dropped) {
   g1_send_vector_with("0x09_teleprompter_init", 1, 0x40); /* length 0x3f + 1 */
 
   expect_no_frame();
@@ -125,8 +115,7 @@ ZTEST(features, test_0x09_length_field_mismatch_is_dropped)
   zassert_equal(tp()->ready, 0);
 }
 
-ZTEST(features, test_0x09_position_sets_scroll_mark_and_timestamp)
-{
+ZTEST(features, test_0x09_position_sets_scroll_mark_and_timestamp) {
   g1_send_vector("0x09_teleprompter_init");
   g1_send_vector("0x09_teleprompter_position");
 
@@ -137,8 +126,7 @@ ZTEST(features, test_0x09_position_sets_scroll_mark_and_timestamp)
   zassert_equal(tp()->len, 43);
 }
 
-ZTEST(features, test_0x09_position_is_echoed)
-{
+ZTEST(features, test_0x09_position_is_echoed) {
   g1_send_vector("0x09_teleprompter_position");
   expect_pkt(&g1_esb_response_log, 0, "09 10 00 01 02 00");
   expect_no_frame();
@@ -148,8 +136,7 @@ ZTEST(features, test_0x09_position_is_echoed)
   expect_frame("09 10 00 01 02 00");
 }
 
-ZTEST(features, test_0x09_update_text_replaces_the_text)
-{
+ZTEST(features, test_0x09_update_text_replaces_the_text) {
   g1_send_vector("0x09_teleprompter_init");
   tp_send(0x30, 3, 1, 1, 0x40, 0x05, 0x01, "new", true, 123456);
 
@@ -163,8 +150,7 @@ ZTEST(features, test_0x09_update_text_replaces_the_text)
   expect_pkt(&g1_esb_response_log, 1, "09 17 00 30 03 01 00 01 00 00");
 }
 
-ZTEST(features, test_0x09_update_text_longer_than_0x200_is_not_written_past_the_block)
-{
+ZTEST(features, test_0x09_update_text_longer_than_0x200_is_not_written_past_the_block) {
   static char text[0x100 - 12 + 1];
 
   memset(text, 'u', sizeof(text) - 1);
@@ -180,8 +166,7 @@ ZTEST(features, test_0x09_update_text_longer_than_0x200_is_not_written_past_the_
   zassert_true(tp()->len <= TP_TEXT, "len %u", tp()->len);
 }
 
-ZTEST(features, test_0x09_set_text_longer_than_0x200_is_refused)
-{
+ZTEST(features, test_0x09_set_text_longer_than_0x200_is_refused) {
   static char text[0x100 - 12 + 1];
 
   memset(text, 's', sizeof(text) - 1);
@@ -191,14 +176,12 @@ ZTEST(features, test_0x09_set_text_longer_than_0x200_is_refused)
   zassert_true(tp()->len <= TP_TEXT);
 }
 
-ZTEST(features, test_0x09_set_text_shorter_than_its_header_is_refused)
-{
+ZTEST(features, test_0x09_set_text_shorter_than_its_header_is_refused) {
   g1_send_hex("09 09 00 00 01 01 00 01 00");
   zassert_equal(tp()->ready, 0);
 }
 
-ZTEST(features, test_0x09_exit_clears_the_teleprompter_and_echoes)
-{
+ZTEST(features, test_0x09_exit_clears_the_teleprompter_and_echoes) {
   g1_send_vector("0x09_teleprompter_init");
   g1_send_vector("0x09_teleprompter_exit");
 
@@ -206,8 +189,7 @@ ZTEST(features, test_0x09_exit_clears_the_teleprompter_and_echoes)
   expect_only_frame("09 06 00 02 05 01");
 }
 
-ZTEST(features, test_0x24_pause_sets_suspend_timestamp_and_counter)
-{
+ZTEST(features, test_0x24_pause_sets_suspend_timestamp_and_counter) {
   g1_send_vector("0x09_teleprompter_init");
   g1_send_vector("0x24_teleprompter_pause");
 
@@ -218,16 +200,14 @@ ZTEST(features, test_0x24_pause_sets_suspend_timestamp_and_counter)
   expect_no_frame();
 }
 
-ZTEST(features, test_0x24_byte_00_resumes)
-{
+ZTEST(features, test_0x24_byte_00_resumes) {
   g1_send_vector("0x24_teleprompter_pause");
   zassert_equal(tp()->suspend, 1);
   g1_send_vector_with("0x24_teleprompter_pause", 5, 0x00);
   zassert_equal(tp()->suspend, 0);
 }
 
-ZTEST(features, test_0x24_other_sub_is_ignored)
-{
+ZTEST(features, test_0x24_other_sub_is_ignored) {
   g1_send_vector_with("0x24_teleprompter_pause", 4, 0x07);
 
   zassert_equal(tp()->suspend, 0);
@@ -236,8 +216,7 @@ ZTEST(features, test_0x24_other_sub_is_ignored)
   expect_no_frame();
 }
 
-ZTEST(features, test_0x25_heartbeat_is_counted_and_echoed)
-{
+ZTEST(features, test_0x25_heartbeat_is_counted_and_echoed) {
   g1_send_vector("0x25_teleprompter_heartbeat");
   g1_send_vector("0x25_teleprompter_heartbeat");
 

@@ -8,13 +8,11 @@
 
 #include "st25dv.h"
 
-int st25dv_configure_gpo(const struct device *dev, uint8_t it_conf)
-{
+int st25dv_configure_gpo(const struct device *dev, uint8_t it_conf) {
   return eeprom_st25dv_write_sys(dev, ST25DV_GPO_REG, &it_conf, 1);
 }
 
-int st25dv_read_it_pulse(const struct device *dev, uint8_t *it_time)
-{
+int st25dv_read_it_pulse(const struct device *dev, uint8_t *it_time) {
   if (!it_time) {
     return -EINVAL;
   }
@@ -22,8 +20,7 @@ int st25dv_read_it_pulse(const struct device *dev, uint8_t *it_time)
   return eeprom_st25dv_read_sys(dev, ST25DV_ITTIME_REG, it_time, 1);
 }
 
-int st25dv_write_it_pulse(const struct device *dev, uint8_t it_time)
-{
+int st25dv_write_it_pulse(const struct device *dev, uint8_t it_time) {
   uint8_t reg;
   int ret;
 
@@ -37,8 +34,7 @@ int st25dv_write_it_pulse(const struct device *dev, uint8_t it_time)
   return eeprom_st25dv_write_sys(dev, ST25DV_ITTIME_REG, &reg, 1);
 }
 
-int ST25DV_GetUID(const struct device *dev, uint8_t *uid)
-{
+int ST25DV_GetUID(const struct device *dev, uint8_t *uid) {
   if (!uid) {
     return -EINVAL;
   }
@@ -46,8 +42,7 @@ int ST25DV_GetUID(const struct device *dev, uint8_t *uid)
   return eeprom_st25dv_read_sys(dev, ST25DV_UID_REG, uid, 8);
 }
 
-int st25dv_read_ic_rev(const struct device *dev, uint8_t *ic_rev)
-{
+int st25dv_read_ic_rev(const struct device *dev, uint8_t *ic_rev) {
   if (!ic_rev) {
     return -EINVAL;
   }
@@ -55,8 +50,7 @@ int st25dv_read_ic_rev(const struct device *dev, uint8_t *ic_rev)
   return eeprom_st25dv_read_sys(dev, ST25DV_ICREV_REG, ic_rev, 1);
 }
 
-int st25dv_read_id(const struct device *dev, uint8_t *ic_ref)
-{
+int st25dv_read_id(const struct device *dev, uint8_t *ic_ref) {
   if (!ic_ref) {
     return -EINVAL;
   }
@@ -64,8 +58,7 @@ int st25dv_read_id(const struct device *dev, uint8_t *ic_ref)
   return eeprom_st25dv_read_sys(dev, ST25DV_ICREF_REG, ic_ref, 1);
 }
 
-int st25dv_read_mem_size(const struct device *dev, struct st25dv_mem_size *size)
-{
+int st25dv_read_mem_size(const struct device *dev, struct st25dv_mem_size *size) {
   uint8_t reg[2] = {0};
   int ret;
 
@@ -82,8 +75,7 @@ int st25dv_read_mem_size(const struct device *dev, struct st25dv_mem_size *size)
   return eeprom_st25dv_read_sys(dev, ST25DV_BLK_SIZE_REG, &size->blk_size, 1);
 }
 
-int st25dv_present_i2c_password(const struct device *dev, const struct st25dv_passwd *pwd)
-{
+int st25dv_present_i2c_password(const struct device *dev, const struct st25dv_passwd *pwd) {
   uint8_t msg[17] = {0};
   uint32_t msb = pwd->msb;
   uint32_t lsb = pwd->lsb;
@@ -101,23 +93,19 @@ int st25dv_present_i2c_password(const struct device *dev, const struct st25dv_pa
   return eeprom_st25dv_write_sys(dev, ST25DV_I2CPASSWD_REG, msg, sizeof(msg));
 }
 
-int st25dv_read_eh_ctrl_dyn(const struct device *dev, uint8_t *eh_ctrl)
-{
+int st25dv_read_eh_ctrl_dyn(const struct device *dev, uint8_t *eh_ctrl) {
   return eeprom_st25dv_read(dev, ST25DV_EH_CTRL_DYN_REG, eh_ctrl, 1);
 }
 
-int st25dv_write_eh_ctrl_dyn(const struct device *dev, uint8_t eh_ctrl)
-{
+int st25dv_write_eh_ctrl_dyn(const struct device *dev, uint8_t eh_ctrl) {
   return eeprom_st25dv_write(dev, ST25DV_EH_CTRL_DYN_REG, &eh_ctrl, 1);
 }
 
-int st25dv_read_itsts_dyn(const struct device *dev, uint8_t *it_status)
-{
+int st25dv_read_itsts_dyn(const struct device *dev, uint8_t *it_status) {
   return eeprom_st25dv_read(dev, ST25DV_ITSTS_DYN_REG, it_status, 1);
 }
 
-int st25dv_read_i2c_security_session_dyn(const struct device *dev, uint8_t *session)
-{
+int st25dv_read_i2c_security_session_dyn(const struct device *dev, uint8_t *session) {
   uint8_t reg;
   int ret;
 

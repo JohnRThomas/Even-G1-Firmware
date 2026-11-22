@@ -1,29 +1,29 @@
 /*
  * External QSPI NOR flash (mx25r6435f) access wrappers.
  */
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
+#include <zephyr/kernel.h>
 
+#include "../main.h"
 #include "g1_log.h"
 #include "sensors_audio.h"
-#include "../main.h"
 
 #define EXT_FLASH_MODULE_ON BIT(4)
 
 /* power hooks of the flash module (main.c) */
-#define EXT_FLASH_POWER_ON(gs)                                 \
-  do {                                                   \
-    if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) { \
-      ext_flash_power_up();                        \
-    }                                              \
+#define EXT_FLASH_POWER_ON(gs)                                                                                         \
+  do {                                                                                                                 \
+    if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) {                                                                  \
+      ext_flash_power_up();                                                                                            \
+    }                                                                                                                  \
   } while (0)
-#define EXT_FLASH_POWER_OFF(gs)                                \
-  do {                                                   \
-    if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) { \
-      ext_flash_power_down();                        \
-    }                                              \
+#define EXT_FLASH_POWER_OFF(gs)                                                                                        \
+  do {                                                                                                                 \
+    if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) {                                                                  \
+      ext_flash_power_down();                                                                                          \
+    }                                                                                                                  \
   } while (0)
 
 static const struct device *ext_flash_dev;
@@ -33,8 +33,7 @@ int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size);
 int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len);
 int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len);
 
-int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_flash_erase_t *erase)
-{
+int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_flash_erase_t *erase) {
   const struct device *dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
 
   k_mutex_init(&ext_flash_mutex);
@@ -51,8 +50,7 @@ int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_fla
   return -1;
 }
 
-int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size)
-{
+int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size) {
   int ret = 0;
 
   EXT_FLASH_POWER_ON(gs);
@@ -68,8 +66,7 @@ int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size)
   return ret;
 }
 
-int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len)
-{
+int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len) {
   int ret = 0;
 
   EXT_FLASH_POWER_ON(gs);
@@ -85,8 +82,7 @@ int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, 
   return ret;
 }
 
-int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len)
-{
+int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len) {
   int ret = 0;
 
   EXT_FLASH_POWER_ON(gs);

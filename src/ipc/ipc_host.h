@@ -2,10 +2,10 @@
 #ifndef G1_IPC_HOST_H_
 #define G1_IPC_HOST_H_
 
-#include <stdint.h>
-#include <stddef.h>
-#include <zephyr/kernel.h>
 #include <glasses_state.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <zephyr/kernel.h>
 
 /* ipc_host.c */
 int global_ipc_service_send(const void *data, size_t len);

@@ -33,8 +33,7 @@ int g1_fake_msg_bad_index;
 struct GlassesState *gs;
 uint8_t *const msg_timeout_flag_ptr = &msg_timeout_flag;
 
-static int sync_to_slave_logged(struct GlassesState *state, int cmd, void *data, size_t len)
-{
+static int sync_to_slave_logged(struct GlassesState *state, int cmd, void *data, size_t len) {
   uint8_t pkt[1 + 4] = {(uint8_t)cmd};
   size_t data_len = (data && len) ? MIN(len, 4) : 0; /* sync_data holds 4 bytes */
 
@@ -46,23 +45,19 @@ static int sync_to_slave_logged(struct GlassesState *state, int cmd, void *data,
   return sync_to_slave_fake.return_val;
 }
 
-__weak uint8_t get_msg_show_state(void)
-{
+__weak uint8_t get_msg_show_state(void) {
   return g1_fake_msg_show_state;
 }
 
-__weak void set_msg_show_state(uint8_t val)
-{
+__weak void set_msg_show_state(uint8_t val) {
   g1_fake_msg_show_state = val;
 }
 
-__weak uint8_t g_arrMsgContent_count(void)
-{
+__weak uint8_t g_arrMsgContent_count(void) {
   return gs->unread_msg_num;
 }
 
-__weak struct notif_msg *get_message_by_index(int idx)
-{
+__weak struct notif_msg *get_message_by_index(int idx) {
   static struct notif_msg spare_msg;
 
   if (idx < 0 || idx >= MSG_TOTAL_NUM) {
@@ -73,13 +68,11 @@ __weak struct notif_msg *get_message_by_index(int idx)
   return &g1_fake_msgs[idx];
 }
 
-static void imu_set_period(struct imu_ctx *ctx, uint32_t period_ms)
-{
+static void imu_set_period(struct imu_ctx *ctx, uint32_t period_ms) {
   ctx->sample_period_ms = period_ms;
 }
 
-static void screen_test_reset(bool keep_media)
-{
+static void screen_test_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
   gs = g1_state();
   msg_busy = 0;
@@ -115,8 +108,7 @@ static void screen_test_reset(bool keep_media)
 
 G1_UNIT_RESET_HOOK(screen_test_reset);
 
-static void screen_after(void *fixture)
-{
+static void screen_after(void *fixture) {
   ARG_UNUSED(fixture);
   screen_stop();
 }
@@ -126,21 +118,17 @@ ZTEST_SUITE(screen_state, NULL, NULL, NULL, screen_after, NULL);
 typedef int (*screen_fn)(struct GlassesState *state, struct imu_ctx *ctx, const char **reason);
 
 /* the handlers that take no IMU context */
-#define RUN_WITHOUT_CTX(name)                                                                      \
-  static int run_##name(struct GlassesState *state, struct imu_ctx *ctx,                           \
-                        const char **reason)                                                       \
-  {                                                                                                \
-    ARG_UNUSED(ctx);                                                                               \
-    return process_for_##name(state, reason);                                                      \
+#define RUN_WITHOUT_CTX(name)                                                                                          \
+  static int run_##name(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {                        \
+    ARG_UNUSED(ctx);                                                                                                   \
+    return process_for_##name(state, reason);                                                                          \
   }
 
 /* the handlers that give no exit reason */
-#define RUN_WITHOUT_REASON(name)                                                                   \
-  static int run_##name(struct GlassesState *state, struct imu_ctx *ctx,                           \
-                        const char **reason)                                                       \
-  {                                                                                                \
-    ARG_UNUSED(reason);                                                                            \
-    return process_for_##name(state, ctx);                                                         \
+#define RUN_WITHOUT_REASON(name)                                                                                       \
+  static int run_##name(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {                        \
+    ARG_UNUSED(reason);                                                                                                \
+    return process_for_##name(state, ctx);                                                                             \
   }
 
 RUN_WITHOUT_REASON(IDLE)
@@ -153,8 +141,7 @@ RUN_WITHOUT_CTX(prompt)
 RUN_WITHOUT_CTX(transcribe)
 RUN_WITHOUT_CTX(even_ai_v2_show)
 
-static int run_dispatch(struct GlassesState *state, struct imu_ctx *ctx, const char **reason)
-{
+static int run_dispatch(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
   ARG_UNUSED(reason);
   return screen_task_dispatch(state, ctx);
 }
@@ -192,8 +179,7 @@ int screen_ret;
 const char *screen_reason;
 int64_t screen_start_ms;
 
-static void screen_entry(void *arg, void *unused1, void *unused2)
-{
+static void screen_entry(void *arg, void *unused1, void *unused2) {
   screen_fn handler = (screen_fn)arg;
   const char *reason = NULL;
 
@@ -205,53 +191,45 @@ static void screen_entry(void *arg, void *unused1, void *unused2)
   screen_done = true;
 }
 
-static void start_worker(screen_fn handler)
-{
+static void start_worker(screen_fn handler) {
   zassert_false(screen_alive && !screen_done, "a screen handler is already running");
   screen_done = false;
   screen_ret = RET_NOT_RETURNED;
   screen_reason = NULL;
   screen_started = gs->dashboard_mode;
   screen_start_ms = k_uptime_get();
-  k_thread_create(&screen_thread, screen_stack, K_THREAD_STACK_SIZEOF(screen_stack),
-      screen_entry, (void *)handler, NULL, NULL, K_PRIO_PREEMPT(1), 0, K_NO_WAIT);
+  k_thread_create(&screen_thread, screen_stack, K_THREAD_STACK_SIZEOF(screen_stack), screen_entry, (void *)handler,
+                  NULL, NULL, K_PRIO_PREEMPT(1), 0, K_NO_WAIT);
   screen_alive = true;
 }
 
-void screen_start(void)
-{
+void screen_start(void) {
   unsigned int screen = gs->dashboard_mode;
 
-  zassert_true(screen < ARRAY_SIZE(handlers) && handlers[screen], "no handler for screen %u",
-         screen);
+  zassert_true(screen < ARRAY_SIZE(handlers) && handlers[screen], "no handler for screen %u", screen);
   start_worker(handlers[screen]);
 }
 
-void dispatch_start(void)
-{
+void dispatch_start(void) {
   start_worker(run_dispatch);
 }
 
-bool screen_wait(uint32_t max_ms)
-{
+bool screen_wait(uint32_t max_ms) {
   for (uint32_t waited_ms = 0; waited_ms < max_ms && !screen_done; waited_ms++) {
     g1_clock_advance_ms(1);
   }
   return screen_done;
 }
 
-int64_t since_start(void)
-{
+int64_t since_start(void) {
   return k_uptime_get() - screen_start_ms;
 }
 
-int64_t done_after(void)
-{
+int64_t done_after(void) {
   return screen_done_ms - screen_start_ms;
 }
 
-void screen_stop(void)
-{
+void screen_stop(void) {
   if (!screen_alive) {
     return;
   }
@@ -263,8 +241,7 @@ void screen_stop(void)
   screen_alive = false;
 }
 
-const char *triggers(void)
-{
+const char *triggers(void) {
   static char out[2048];
   static const char prefix[] = "trigger_screen_state_change(): ";
   static const char on_text[] = ": trigger_on_screen -> ";
@@ -283,20 +260,17 @@ const char *triggers(void)
     on = strstr(line, on_text);
     ignore = strstr(line, ignore_text);
     if (on) {
-      used += snprintf(out + used, sizeof(out) - used, "%s%.*s->%c",
-           used ? "; " : "", (int)(on - line), line,
-           on[sizeof(on_text) - 1]);
+      used += snprintf(out + used, sizeof(out) - used, "%s%.*s->%c", used ? "; " : "", (int)(on - line), line,
+                       on[sizeof(on_text) - 1]);
     } else if (ignore) {
-      used += snprintf(out + used, sizeof(out) - used, "%s%.*s->%c (no change)",
-           used ? "; " : "", (int)(ignore - line), line,
-           ignore[sizeof(ignore_text) - 1]);
+      used += snprintf(out + used, sizeof(out) - used, "%s%.*s->%c (no change)", used ? "; " : "", (int)(ignore - line),
+                       line, ignore[sizeof(ignore_text) - 1]);
     }
   }
   return out;
 }
 
-const char *syncs(void)
-{
+const char *syncs(void) {
   static char out[1024];
   size_t used = 0;
 
@@ -304,57 +278,48 @@ const char *syncs(void)
   for (int index = 0; index < g1_fake_sync_log.count && used < sizeof(out) - 32; index++) {
     char hex[64];
 
-    g1_hex_format(g1_fake_sync_log.data[index], g1_fake_sync_log.len[index], hex,
-            sizeof(hex));
+    g1_hex_format(g1_fake_sync_log.data[index], g1_fake_sync_log.len[index], hex, sizeof(hex));
     used += snprintf(out + used, sizeof(out) - used, "%s%s", used ? "; " : "", hex);
   }
   return out;
 }
 
-void head_up(void)
-{
+void head_up(void) {
   gs->imu.mode = 2;
 }
 
-void head_down(void)
-{
+void head_down(void) {
   gs->imu.mode = 1;
 }
 
-void showing(int screen)
-{
+void showing(int screen) {
   gs->dashboard_mode = screen;
   gs->screen_on = 1;
 }
 
-void persist_task(int task, int status)
-{
+void persist_task(int task, int status) {
   gs->task_status->task = task;
   gs->task_status->status = status;
   gs->sync_status.task = task;
   gs->sync_status.status = status;
 }
 
-void expect_dfu_exit(int work_mode, const char *reason)
-{
+void expect_dfu_exit(int work_mode, const char *reason) {
   gs->work_mode = work_mode;
   screen_start();
   expect_exit_within(10, RET_TASK_EXITED, reason);
   zassert_equal(gs->dashboard_mode, 0, "%s", reason);
 }
 
-void expect_wait_blow_head_exit(const char *reason)
-{
+void expect_wait_blow_head_exit(const char *reason) {
   start_screen_expect_running(100);
   gs->dashboard_mode = 1;
   expect_exit_within(POLL_MS + 1, RET_TASK_EXITED, reason);
 }
 
-void expect_screen_stays(uint32_t ms)
-{
+void expect_screen_stays(uint32_t ms) {
   int screen = gs->dashboard_mode;
 
   start_screen_expect_running(ms);
-  zassert_equal(gs->dashboard_mode, screen, "screen %d changed to %d", screen,
-          gs->dashboard_mode);
+  zassert_equal(gs->dashboard_mode, screen, "screen %d changed to %d", screen, gs->dashboard_mode);
 }

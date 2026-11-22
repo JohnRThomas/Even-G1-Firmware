@@ -3,28 +3,27 @@
  * user settings, serial number.  The raw read / write-and-verify
  * helpers are in flash_settings.c.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/sys/reboot.h>
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/conn.h>
-#include "g1_log.h"
-#include "storage.h"
 #include "../dashboard/dashboard.h"
 #include "../main.h"
 #include "../notify/notify.h"
 #include "../production_test/production_test.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "storage.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/reboot.h>
 
 char SERIAL_NUMBER[32] = "S100demodevice";
 char glasses_name[32] = "S100demoglasses";
 
-int save_sys_settings(struct GlassesState *gs, int force)
-{
+int save_sys_settings(struct GlassesState *gs, int force) {
   struct sys_settings s = {0};
 
   s.valid = 1;
@@ -59,8 +58,7 @@ int save_sys_settings(struct GlassesState *gs, int force)
   return 0;
 }
 
-int load_sys_setting(struct GlassesState *gs)
-{
+int load_sys_setting(struct GlassesState *gs) {
   struct sys_settings s;
 
   memset(&s, 0, sizeof(s));
@@ -152,8 +150,7 @@ int load_sys_setting(struct GlassesState *gs)
   return 0;
 }
 
-int save_usr_settings(struct GlassesState *gs, int unused)
-{
+int save_usr_settings(struct GlassesState *gs, int unused) {
   struct usr_settings s = {0};
 
   s.display_mode = gs->display_mode;
@@ -182,8 +179,7 @@ int save_usr_settings(struct GlassesState *gs, int unused)
   return 0;
 }
 
-int clear_user_settings(struct GlassesState *gs)
-{
+int clear_user_settings(struct GlassesState *gs) {
   gs->display_mode = 10;
   gs->panel.panel_brightness_level = 0x15;
   gs->imu.dof3_enable = 1;
@@ -211,8 +207,7 @@ int clear_user_settings(struct GlassesState *gs)
   return 0;
 }
 
-int load_usr_setting(struct GlassesState *gs)
-{
+int load_usr_setting(struct GlassesState *gs) {
   struct usr_settings s;
   uint8_t test_mode;
 
@@ -298,16 +293,14 @@ int load_usr_setting(struct GlassesState *gs)
 #define LEGACY_USAGE_STATS_ADDR 0x135000
 #define LEGACY_USAGE_STATS_SIZE 0x11c
 
-static int erase_legacy_usage_stats(void)
-{
+static int erase_legacy_usage_stats(void) {
   uint8_t blank[LEGACY_USAGE_STATS_SIZE];
 
   memset(blank, 0xff, sizeof(blank));
   return flash_settings_write_and_verify(LEGACY_USAGE_STATS_ADDR, blank, sizeof(blank));
 }
 
-void reset_all_usr_data(struct GlassesState *gs, int reboot)
-{
+void reset_all_usr_data(struct GlassesState *gs, int reboot) {
   int i;
 
   cleanNotesIndex();
@@ -342,8 +335,7 @@ void reset_all_usr_data(struct GlassesState *gs, int reboot)
   k_msleep(1000);
 }
 
-int get_settings_from_flash(struct GlassesState *gs)
-{
+int get_settings_from_flash(struct GlassesState *gs) {
   gs->store.write("dashboard_ts", gs->dashboard_ts, sizeof(struct dashboard_ts_context));
   gs->store.write("countdown_ts", gs->countdown_ts, sizeof(struct countdown_ts_context));
   gs->store.write("brightness_level", &gs->panel.panel_brightness_level, sizeof(uint8_t));
@@ -354,30 +346,25 @@ int get_settings_from_flash(struct GlassesState *gs)
   return 0;
 }
 
-char *get_serial_number(void)
-{
+char *get_serial_number(void) {
   return SERIAL_NUMBER;
 }
 
-char *get_glasses_name(void)
-{
+char *get_glasses_name(void) {
   return glasses_name;
 }
 
-int save_serial_number(const char *sn)
-{
+int save_serial_number(const char *sn) {
   snprintf(SERIAL_NUMBER, 16, "%s", sn);
   return 0;
 }
 
-int dump_serial_number(const char *name)
-{
+int dump_serial_number(const char *name) {
   snprintf(glasses_name, 16, "%s", name);
   return 0;
 }
 
-int read_sys_settting_from_flash(struct sys_settings *out)
-{
+int read_sys_settting_from_flash(struct sys_settings *out) {
   struct sys_settings s;
 
   memset(&s, 0, sizeof(s));
@@ -421,8 +408,7 @@ int read_sys_settting_from_flash(struct sys_settings *out)
   return 0;
 }
 
-int read_usr_settting_from_flash(struct usr_settings *out)
-{
+int read_usr_settting_from_flash(struct usr_settings *out) {
   struct usr_settings s;
 
   memset(&s, 0, sizeof(s));
@@ -437,8 +423,7 @@ int read_usr_settting_from_flash(struct usr_settings *out)
   return 0;
 }
 
-int load_settings_from_flash(struct GlassesState *gs)
-{
+int load_settings_from_flash(struct GlassesState *gs) {
   if (load_sys_setting(gs) == 0 && load_usr_setting(gs) == 0) {
     countdown_reset(get_dashboard_state()->countdown_ts);
   }

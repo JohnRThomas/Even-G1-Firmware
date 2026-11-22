@@ -4,14 +4,12 @@
 #include "fakes.h"
 #include "pt_test.h"
 
-#include "production_test/pt_data.c"
 #include "production_test/production_test.c"
+#include "production_test/pt_data.c"
 
 /* nfc/eeprom_st25dv.c: a mailbox read gives mailbox_rx, the writes go to mailbox_tx */
-FAKE_VALUE_FUNC(int, eeprom_st25dv_read_i2c_mb_mailbox_ram, const struct device *, uint8_t **,
-    uint32_t *);
-FAKE_VALUE_FUNC(int, eeprom_st25dv_write_i2c_mb_mailbox_ram, const struct device *, const void *,
-    size_t);
+FAKE_VALUE_FUNC(int, eeprom_st25dv_read_i2c_mb_mailbox_ram, const struct device *, uint8_t **, uint32_t *);
+FAKE_VALUE_FUNC(int, eeprom_st25dv_write_i2c_mb_mailbox_ram, const struct device *, const void *, size_t);
 FAKE_VALUE_FUNC(uint8_t, eeprom_st25dv_lock, const struct device *);
 FAKE_VALUE_FUNC(uint8_t, eeprom_st25dv_unlock, const struct device *);
 /* sensors_audio/charger_box.c and nfc/nfc_wlc.c */
@@ -24,16 +22,14 @@ static uint8_t mailbox_rx[256];
 static uint32_t mailbox_rx_len;
 static struct g1_pkt_log mailbox_tx;
 
-static int mailbox_read(const struct device *dev, uint8_t **buf, uint32_t *len)
-{
+static int mailbox_read(const struct device *dev, uint8_t **buf, uint32_t *len) {
   ARG_UNUSED(dev);
   memcpy(*buf, mailbox_rx, mailbox_rx_len);
   *len = mailbox_rx_len;
   return 0;
 }
 
-static int mailbox_write(const struct device *dev, const void *buf, size_t len)
-{
+static int mailbox_write(const struct device *dev, const void *buf, size_t len) {
   ARG_UNUSED(dev);
   g1_pkt_log_add(&mailbox_tx, buf, len);
   return 0;
@@ -45,8 +41,7 @@ static int reboot_count;
 static int reboot_type;
 static int64_t reboot_uptime_ms;
 
-FUNC_NORETURN void sys_reboot(int type)
-{
+FUNC_NORETURN void sys_reboot(int type) {
   reboot_count++;
   reboot_type = type;
   reboot_uptime_ms = k_uptime_get();
@@ -60,8 +55,7 @@ FUNC_NORETURN void sys_reboot(int type)
 /* only compared, never read */
 static struct device nfc_dev = {.name = "g1_unit_st25dv"};
 
-static void pt_before(void *fixture)
-{
+static void pt_before(void *fixture) {
   ARG_UNUSED(fixture);
 
   RESET_FAKE(eeprom_st25dv_read_i2c_mb_mailbox_ram);
@@ -86,16 +80,14 @@ ZTEST_SUITE(production_test, NULL, NULL, pt_before, NULL, NULL);
 #define CASE_BATTERY_QUERY "13 01 02 00"
 
 /* the lens gets the request over NFC; returns process_pt_data() */
-static int nfc_request(const char *hex)
-{
+static int nfc_request(const char *hex) {
   setNFCDevice(&nfc_dev);
   mailbox_rx_len = g1_hex(hex, mailbox_rx, sizeof(mailbox_rx));
   return process_pt_data(NULL);
 }
 
 /* nfc_request() that has to end in sys_reboot(); returns when it does */
-static void nfc_request_reboots(const char *hex)
-{
+static void nfc_request_reboots(const char *hex) {
   reboot_expected = true;
   if (setjmp(reboot_jmp) == 0) {
     nfc_request(hex);
@@ -105,16 +97,14 @@ static void nfc_request_reboots(const char *hex)
   reboot_expected = false;
 }
 
-static void battery_charging(void)
-{
+static void battery_charging(void) {
   g1_state()->battery_left = 50;
   g1_state()->battery_current_ma = 100;
   g1_state()->battery_temp_x100 = 2500;
   nfc_get_field_mv_fake.return_val = 5000;
 }
 
-ZTEST(production_test, test_comm_write_rejects_bad_arguments)
-{
+ZTEST(production_test, test_comm_write_rejects_bad_arguments) {
   uint8_t reply[5] = {0x24};
 
   zassert_equal(comm_write(PT_COMM_NFC, NULL, reply, sizeof(reply)), -1);
@@ -125,8 +115,7 @@ ZTEST(production_test, test_comm_write_rejects_bad_arguments)
   zassert_equal(g1_pt_uart_tx_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_comm_write_nfc_puts_bytes_in_mailbox)
-{
+ZTEST(production_test, test_comm_write_nfc_puts_bytes_in_mailbox) {
   uint8_t reply[] = {0x24, 0x01, 0x03, 0x03, 0x01, 0x06, 0x06, 0x38};
 
   zassert_equal(comm_write(PT_COMM_NFC, &nfc_dev, reply, sizeof(reply)), 0);
@@ -138,8 +127,7 @@ ZTEST(production_test, test_comm_write_nfc_puts_bytes_in_mailbox)
   zassert_equal(comm_write(PT_COMM_NFC, &nfc_dev, reply, sizeof(reply)), -3);
 }
 
-ZTEST(production_test, test_comm_write_uart_sends_bytes_on_lpuart)
-{
+ZTEST(production_test, test_comm_write_uart_sends_bytes_on_lpuart) {
   uint8_t frame[] = {0x5a, 0xa5, 0xff, 0x01, 0x07, 0x06};
 
   zassert_equal(comm_write(PT_COMM_UART, &g1_pt_uart_dev, frame, sizeof(frame)), 0);
@@ -148,8 +136,7 @@ ZTEST(production_test, test_comm_write_uart_sends_bytes_on_lpuart)
   zassert_equal(eeprom_st25dv_write_i2c_mb_mailbox_ram_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_comm_write_unknown_transport_sends_nothing)
-{
+ZTEST(production_test, test_comm_write_unknown_transport_sends_nothing) {
   uint8_t reply = 0x24;
 
   zassert_equal(comm_write(3, &nfc_dev, &reply, 1), 0);
@@ -157,8 +144,7 @@ ZTEST(production_test, test_comm_write_unknown_transport_sends_nothing)
   zassert_equal(g1_pt_uart_tx_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_comm_read_rejects_bad_arguments)
-{
+ZTEST(production_test, test_comm_read_rejects_bad_arguments) {
   uint8_t buf[256];
   uint8_t *dest = buf;
   uint32_t len;
@@ -170,8 +156,7 @@ ZTEST(production_test, test_comm_read_rejects_bad_arguments)
   zassert_equal(eeprom_st25dv_read_i2c_mb_mailbox_ram_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_comm_read_nfc_takes_message_from_mailbox)
-{
+ZTEST(production_test, test_comm_read_nfc_takes_message_from_mailbox) {
   uint8_t buf[256];
   uint8_t *dest = buf;
   uint32_t len = 0;
@@ -183,8 +168,7 @@ ZTEST(production_test, test_comm_read_nfc_takes_message_from_mailbox)
   expect_bytes(buf, len, CASE_BATTERY_QUERY);
 }
 
-ZTEST(production_test, test_comm_read_uart_takes_payload_of_serial_frame)
-{
+ZTEST(production_test, test_comm_read_uart_takes_payload_of_serial_frame) {
   uint8_t buf[256];
   uint8_t *dest = buf;
   uint32_t len = 0;
@@ -196,8 +180,7 @@ ZTEST(production_test, test_comm_read_uart_takes_payload_of_serial_frame)
   zassert_equal(eeprom_st25dv_read_i2c_mb_mailbox_ram_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_transport_setters_reject_null)
-{
+ZTEST(production_test, test_transport_setters_reject_null) {
   zassert_equal(setNFCDevice(NULL), -1);
   zassert_equal(setUARTDevice(NULL), -1);
   zassert_equal(setNFCDevice(&nfc_dev), 0);
@@ -205,8 +188,7 @@ ZTEST(production_test, test_transport_setters_reject_null)
   zassert_equal(pt_comm.type, PT_COMM_NFC, "a rejected device does not switch transport");
 }
 
-ZTEST(production_test, test_sensor_mutex_locks_nfc_tag_when_set)
-{
+ZTEST(production_test, test_sensor_mutex_locks_nfc_tag_when_set) {
   lock_sensor_mutex();
   unlock_sensor_mutex();
   zassert_equal(eeprom_st25dv_lock_fake.call_count, 0);
@@ -220,15 +202,13 @@ ZTEST(production_test, test_sensor_mutex_locks_nfc_tag_when_set)
   zassert_equal(eeprom_st25dv_unlock_fake.call_count, 1);
 }
 
-ZTEST(production_test, test_pt_without_transport_returns_minus_1)
-{
+ZTEST(production_test, test_pt_without_transport_returns_minus_1) {
   zassert_equal(process_pt_data(NULL), -1);
   zassert_equal(eeprom_st25dv_read_i2c_mb_mailbox_ram_fake.call_count, 0);
   zassert_equal(pt_comm_busy_set_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_pt_mailbox_read_error_returns_minus_2)
-{
+ZTEST(production_test, test_pt_mailbox_read_error_returns_minus_2) {
   G1_FAKE_RETURN(eeprom_st25dv_read_i2c_mb_mailbox_ram, -3);
 
   zassert_equal(nfc_request(""), -2);
@@ -238,8 +218,7 @@ ZTEST(production_test, test_pt_mailbox_read_error_returns_minus_2)
 }
 
 /* 01 06 06 = VERSION */
-ZTEST(production_test, test_pt_version_request_over_nfc)
-{
+ZTEST(production_test, test_pt_version_request_over_nfc) {
   zassert_equal(nfc_request("24 01 01 00"), 0);
   zassert_equal(mailbox_tx.count, 1);
   expect_pkt(&mailbox_tx, 0, "24 01 03 03 01 06 06 38");
@@ -248,21 +227,18 @@ ZTEST(production_test, test_pt_version_request_over_nfc)
   zassert_equal(pt_comm_busy_clear_fake.call_count, 1);
 }
 
-ZTEST(production_test, test_pt_unknown_command_replies_status_2)
-{
+ZTEST(production_test, test_pt_unknown_command_replies_status_2) {
   zassert_equal(nfc_request("77 01 01 00"), 0);
   expect_pkt(&mailbox_tx, 0, "77 01 03 01 02 7e");
 }
 
-ZTEST(production_test, test_pt_empty_request_is_not_answered)
-{
+ZTEST(production_test, test_pt_empty_request_is_not_answered) {
   zassert_equal(nfc_request(""), -3);
   zassert_equal(mailbox_tx.count, 0);
   zassert_equal(pt_comm_busy_clear_fake.call_count, 1);
 }
 
-ZTEST(production_test, test_pt_mailbox_write_error_returns_minus_4)
-{
+ZTEST(production_test, test_pt_mailbox_write_error_returns_minus_4) {
   G1_FAKE_RETURN(eeprom_st25dv_write_i2c_mb_mailbox_ram, -3);
 
   zassert_equal(nfc_request("24 01 01 00"), -4);
@@ -270,8 +246,7 @@ ZTEST(production_test, test_pt_mailbox_write_error_returns_minus_4)
 }
 
 /* then the stray 0x5a */
-ZTEST(production_test, test_pt_version_request_over_uart_reply_is_framed)
-{
+ZTEST(production_test, test_pt_version_request_over_uart_reply_is_framed) {
   zassert_equal(setUARTDevice(&g1_pt_uart_dev), 0);
   pt_test_uart_receive("5a a5 7f 04 24 01 01 00 a8", 0);
 
@@ -282,26 +257,22 @@ ZTEST(production_test, test_pt_version_request_over_uart_reply_is_framed)
   zassert_equal(mailbox_tx.count, 0);
 }
 
-ZTEST(production_test, test_pt_refused_command_reply_names_the_command)
-{
+ZTEST(production_test, test_pt_refused_command_reply_names_the_command) {
   zassert_equal(nfc_request("32 01 01 01 01"), 0);
   zassert_equal(mailbox_tx.count, 1);
-  zassert_true(mailbox_tx.len[0] >= 6, "reply is %d byte(s), first 0x%02x", mailbox_tx.len[0],
-         mailbox_tx.data[0][0]);
+  zassert_true(mailbox_tx.len[0] >= 6, "reply is %d byte(s), first 0x%02x", mailbox_tx.len[0], mailbox_tx.data[0][0]);
   zassert_equal(mailbox_tx.data[0][0], 0x32);
   zassert_not_equal(mailbox_tx.data[0][4], 0);
 }
 
-ZTEST(production_test, test_pt_flash_info_reply_fits_response_buffer)
-{
+ZTEST(production_test, test_pt_flash_info_reply_fits_response_buffer) {
   g1_state()->flash_read = NULL; /* no flash API on the host */
   zassert_equal(nfc_request("1e 01 01 00"), 0);
   zassert_equal(mailbox_tx.len[0], 0x52 + 1);
 }
 
 /* status, field mV (BE), SoC %, 1 = discharging, |mA| */
-ZTEST(production_test, test_pt_case_battery_query_reports_charging_state)
-{
+ZTEST(production_test, test_pt_case_battery_query_reports_charging_state) {
   battery_charging();
 
   zassert_equal(nfc_request(CASE_BATTERY_QUERY), 0);
@@ -309,16 +280,14 @@ ZTEST(production_test, test_pt_case_battery_query_reports_charging_state)
   expect_pkt(&mailbox_tx, 0, "13 01 02 06 00 13 88 32 00 64 4d");
 }
 
-ZTEST(production_test, test_pt_case_battery_status_ok_enables_charger)
-{
+ZTEST(production_test, test_pt_case_battery_status_ok_enables_charger) {
   battery_charging();
 
   zassert_equal(nfc_request(CASE_BATTERY_QUERY), 0);
   zassert_equal(enable_charger_fake.call_count, 1);
 }
 
-ZTEST(production_test, test_pt_case_battery_charger_error_returns_minus_5)
-{
+ZTEST(production_test, test_pt_case_battery_charger_error_returns_minus_5) {
   battery_charging();
   enable_charger_fake.return_val = -EIO;
 
@@ -326,8 +295,7 @@ ZTEST(production_test, test_pt_case_battery_charger_error_returns_minus_5)
   zassert_equal(mailbox_tx.count, 1);
 }
 
-ZTEST(production_test, test_pt_case_battery_over_temperature_does_not_enable_charger)
-{
+ZTEST(production_test, test_pt_case_battery_over_temperature_does_not_enable_charger) {
   battery_charging();
   g1_state()->battery_temp_x100 = 6000;
 
@@ -336,8 +304,7 @@ ZTEST(production_test, test_pt_case_battery_over_temperature_does_not_enable_cha
   zassert_equal(enable_charger_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_pt_case_battery_full_does_not_enable_charger)
-{
+ZTEST(production_test, test_pt_case_battery_full_does_not_enable_charger) {
   battery_charging();
   g1_state()->battery_left = 100;
 
@@ -346,8 +313,7 @@ ZTEST(production_test, test_pt_case_battery_full_does_not_enable_charger)
   zassert_equal(enable_charger_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_pt_case_battery_discharging_sets_direction_byte)
-{
+ZTEST(production_test, test_pt_case_battery_discharging_sets_direction_byte) {
   battery_charging();
   g1_state()->battery_current_ma = -100;
 
@@ -357,8 +323,7 @@ ZTEST(production_test, test_pt_case_battery_discharging_sets_direction_byte)
 }
 
 /* Field above 5.5 V on four polls: byte 9 = 0x80, resent 1 s later cleared. */
-static void four_high_field_polls(void)
-{
+static void four_high_field_polls(void) {
   battery_charging();
   nfc_get_field_mv_fake.return_val = 6000;
   g1_clock_advance_ms(10001);
@@ -367,8 +332,7 @@ static void four_high_field_polls(void)
   }
 }
 
-ZTEST(production_test, test_pt_case_battery_flagged_reply_is_sent_again_after_1s)
-{
+ZTEST(production_test, test_pt_case_battery_flagged_reply_is_sent_again_after_1s) {
   int64_t start = g1_clock_uptime_ms();
 
   four_high_field_polls();
@@ -382,17 +346,14 @@ ZTEST(production_test, test_pt_case_battery_flagged_reply_is_sent_again_after_1s
   expect_elapsed_ms(start, 10001 + 1000, INT64_MAX);
 }
 
-ZTEST(production_test, test_pt_case_battery_repeated_reply_has_valid_checksum)
-{
+ZTEST(production_test, test_pt_case_battery_repeated_reply_has_valid_checksum) {
   four_high_field_polls();
 
   zassert_equal(mailbox_tx.count, 5);
-  zassert_equal(mailbox_tx.data[4][10], g1_sum8(mailbox_tx.data[4], 10), "sum byte 0x%02x",
-          mailbox_tx.data[4][10]);
+  zassert_equal(mailbox_tx.data[4][10], g1_sum8(mailbox_tx.data[4], 10), "sum byte 0x%02x", mailbox_tx.data[4][10]);
 }
 
-ZTEST(production_test, test_pt_long_trip_from_case_arms_low_power)
-{
+ZTEST(production_test, test_pt_long_trip_from_case_arms_low_power) {
   zassert_equal(nfc_request("06 01 02 00"), 0);
   expect_pkt(&mailbox_tx, 0, "06 01 02 01 00 0a");
   zassert_equal(can_enter_low_power, 1);
@@ -402,8 +363,7 @@ ZTEST(production_test, test_pt_long_trip_from_case_arms_low_power)
   zassert_equal(change_work_mode_fake.call_count, 0);
 }
 
-ZTEST(production_test, test_pt_long_trip_from_tool_enters_work_mode_7_after_10s)
-{
+ZTEST(production_test, test_pt_long_trip_from_tool_enters_work_mode_7_after_10s) {
   int64_t start = g1_clock_uptime_ms();
 
   zassert_equal(nfc_request("06 01 01 00"), 0);
@@ -414,8 +374,7 @@ ZTEST(production_test, test_pt_long_trip_from_tool_enters_work_mode_7_after_10s)
   zassert_equal(can_enter_low_power, 0);
 }
 
-ZTEST(production_test, test_pt_restart_replies_then_reboots)
-{
+ZTEST(production_test, test_pt_restart_replies_then_reboots) {
   int64_t start = g1_clock_uptime_ms();
 
   nfc_request_reboots("0b 01 01 00");
@@ -426,8 +385,7 @@ ZTEST(production_test, test_pt_restart_replies_then_reboots)
   zassert_true(reboot_uptime_ms - start >= 300);
 }
 
-ZTEST(production_test, test_pt_enter_testmode_saves_and_reboots)
-{
+ZTEST(production_test, test_pt_enter_testmode_saves_and_reboots) {
   nfc_request_reboots("01 01 01 01 01");
 
   expect_pkt(&mailbox_tx, 0, "01 01 03 01 00 06");
@@ -436,8 +394,7 @@ ZTEST(production_test, test_pt_enter_testmode_saves_and_reboots)
   zassert_equal(reboot_type, SYS_REBOOT_COLD);
 }
 
-ZTEST(production_test, test_pt_enter_testmode_already_set_does_not_reboot)
-{
+ZTEST(production_test, test_pt_enter_testmode_already_set_does_not_reboot) {
   pt_test_mode = 1;
 
   zassert_equal(nfc_request("01 01 01 01 01"), 0);
@@ -446,8 +403,7 @@ ZTEST(production_test, test_pt_enter_testmode_already_set_does_not_reboot)
   zassert_equal(reboot_count, 0);
 }
 
-ZTEST(production_test, test_pt_enter_testmode_invalid_value_is_refused)
-{
+ZTEST(production_test, test_pt_enter_testmode_invalid_value_is_refused) {
   zassert_equal(nfc_request("01 01 01 01 02"), 0);
   expect_pkt(&mailbox_tx, 0, "01 01 03 01 03 09");
   zassert_equal(get_pt_test_mode(), 0);

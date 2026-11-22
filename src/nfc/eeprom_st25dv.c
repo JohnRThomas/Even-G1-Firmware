@@ -3,18 +3,18 @@
  * mailbox helpers and the hand-made device instance.
  */
 #include <string.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
-#include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/eeprom.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 
 #include "st25dv.h"
 
-#define ST25DV_RETRIES  20
-#define ST25DV_WRITE_MAX  256  /* bytes the tag takes in one I2C write */
-#define ST25DV_USER_SIZE  512  /* ST25DV04KC user memory */
+#define ST25DV_RETRIES   20
+#define ST25DV_WRITE_MAX 256  /* bytes the tag takes in one I2C write */
+#define ST25DV_USER_SIZE 512  /* ST25DV04KC user memory */
 
 static struct k_mutex st25dv_mutex;
 
@@ -26,14 +26,12 @@ static struct eeprom_st25dv_config st25dv_device = {
   .bus_addr = ST25DV_ADDR_DATA_I2C,
 };
 
-void i2c_delay(void)
-{
+void i2c_delay(void) {
   k_sleep(K_MSEC(1));
 }
 
-static int st25dv_write(const struct eeprom_st25dv_config *config, uint16_t addr, off_t offset,
-      const uint8_t *buf, size_t len)
-{
+static int st25dv_write(const struct eeprom_st25dv_config *config, uint16_t addr, off_t offset, const uint8_t *buf,
+                        size_t len) {
   uint8_t block[len + 2];
   struct i2c_msg msg;
   int ret;
@@ -55,8 +53,7 @@ static int st25dv_write(const struct eeprom_st25dv_config *config, uint16_t addr
   return ret;
 }
 
-int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf, size_t len)
-{
+int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf, size_t len) {
   const struct eeprom_st25dv_config *config = dev->config;
   struct k_mutex *lock = dev->data;
   const uint8_t *data = buf;
@@ -79,8 +76,7 @@ int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf,
     }
 
     if (ret) {
-      printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n",
-             config->addr, (uint32_t)offset, ret);
+      printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n", config->addr, (uint32_t)offset, ret);
       break;
     }
   }
@@ -88,9 +84,7 @@ int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf,
   return ret;
 }
 
-static int st25dv_read(const struct device *bus, uint16_t addr, off_t offset, uint8_t *buf,
-           size_t len)
-{
+static int st25dv_read(const struct device *bus, uint16_t addr, off_t offset, uint8_t *buf, size_t len) {
   uint8_t wr_addr[2];
   struct i2c_msg msgs[2];
   int ret;
@@ -114,8 +108,7 @@ static int st25dv_read(const struct device *bus, uint16_t addr, off_t offset, ui
   return ret;
 }
 
-int eeprom_st25dv_read(const struct device *dev, off_t offset, void *buf, size_t len)
-{
+int eeprom_st25dv_read(const struct device *dev, off_t offset, void *buf, size_t len) {
   const struct eeprom_st25dv_config *config = dev->config;
   struct k_mutex *lock = dev->data;
   int retries = ST25DV_RETRIES;
@@ -136,27 +129,21 @@ int eeprom_st25dv_read(const struct device *dev, off_t offset, void *buf, size_t
   }
 
   if (ret) {
-    printk("eeprom_st25dv_read addr %04X offset %04X failed %d\r\n",
-           config->addr, (uint32_t)offset, ret);
+    printk("eeprom_st25dv_read addr %04X offset %04X failed %d\r\n", config->addr, (uint32_t)offset, ret);
   }
 
   return ret;
 }
 
-static int st25dv_write_sys(const struct eeprom_st25dv_config *config, off_t offset,
-          const void *buf, size_t len)
-{
+static int st25dv_write_sys(const struct eeprom_st25dv_config *config, off_t offset, const void *buf, size_t len) {
   return st25dv_write(config, config->addr | ST25DV_ADDR_SYST_I2C_BIT, offset, buf, len);
 }
 
-static int st25dv_read_sys(const struct eeprom_st25dv_config *config, off_t offset, void *buf,
-         size_t len)
-{
+static int st25dv_read_sys(const struct eeprom_st25dv_config *config, off_t offset, void *buf, size_t len) {
   return st25dv_read(config->bus, config->addr | ST25DV_ADDR_SYST_I2C_BIT, offset, buf, len);
 }
 
-int eeprom_st25dv_read_sys(const struct device *dev, off_t offset, void *buf, size_t len)
-{
+int eeprom_st25dv_read_sys(const struct device *dev, off_t offset, void *buf, size_t len) {
   const struct eeprom_st25dv_config *config = dev->config;
   struct k_mutex *lock = dev->data;
   int retries = ST25DV_RETRIES;
@@ -177,15 +164,14 @@ int eeprom_st25dv_read_sys(const struct device *dev, off_t offset, void *buf, si
   }
 
   if (ret) {
-    printk("eeprom_st25dv_read_sys addr %04X offset %04X failed %d\r\n",
-           config->addr | ST25DV_ADDR_SYST_I2C_BIT, (uint32_t)offset, ret);
+    printk("eeprom_st25dv_read_sys addr %04X offset %04X failed %d\r\n", config->addr | ST25DV_ADDR_SYST_I2C_BIT,
+           (uint32_t)offset, ret);
   }
 
   return ret;
 }
 
-int eeprom_st25dv_write_sys(const struct device *dev, off_t offset, const void *buf, size_t len)
-{
+int eeprom_st25dv_write_sys(const struct device *dev, off_t offset, const void *buf, size_t len) {
   const struct eeprom_st25dv_config *config = dev->config;
   struct k_mutex *lock = dev->data;
   int retries = ST25DV_RETRIES;
@@ -206,16 +192,15 @@ int eeprom_st25dv_write_sys(const struct device *dev, off_t offset, const void *
   }
 
   if (ret) {
-    printk("eeprom_st25dv_write_sys addr %04X offset %04X failed %d\r\n",
-           config->addr | ST25DV_ADDR_SYST_I2C_BIT, (uint32_t)offset, ret);
+    printk("eeprom_st25dv_write_sys addr %04X offset %04X failed %d\r\n", config->addr | ST25DV_ADDR_SYST_I2C_BIT,
+           (uint32_t)offset, ret);
   }
 
   return ret;
 }
 
 /* read the RF->host mailbox message: *buf (256 bytes) receives it, *len its length - 1 */
-int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **buf, uint32_t *len)
-{
+int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **buf, uint32_t *len) {
   uint8_t mb_ctrl;
   uint32_t mb_len;
 
@@ -249,8 +234,7 @@ int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **bu
   return 0;
 }
 
-int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void *buf, size_t len)
-{
+int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void *buf, size_t len) {
   uint8_t mb_ctrl;
 
   if (!dev || !buf || !len) {
@@ -282,8 +266,7 @@ int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void 
   return 0;
 }
 
-static size_t eeprom_st25dv_size(const struct device *dev)
-{
+static size_t eeprom_st25dv_size(const struct device *dev) {
   const struct eeprom_st25dv_config *config = dev->config;
 
   return config->size;
@@ -295,8 +278,7 @@ static const struct eeprom_driver_api st25dv_callbacks = {
   .size = eeprom_st25dv_size,
 };
 
-const struct device *eeprom_st25dv_init(void)
-{
+const struct device *eeprom_st25dv_init(void) {
   global_st25dv_context.api = &st25dv_callbacks;
   st25dv_device.bus_addr = ST25DV_ADDR_DATA_I2C;
   st25dv_device.addr = ST25DV_ADDR_DATA_I2C;
@@ -323,16 +305,14 @@ const struct device *eeprom_st25dv_init(void)
 }
 
 /* Lock / unlock with dev->data; both always return 0. */
-uint8_t eeprom_st25dv_lock(const struct device *dev)
-{
+uint8_t eeprom_st25dv_lock(const struct device *dev) {
   if (dev) {
     k_mutex_lock(dev->data, K_FOREVER);
   }
   return 0;
 }
 
-uint8_t eeprom_st25dv_unlock(const struct device *dev)
-{
+uint8_t eeprom_st25dv_unlock(const struct device *dev) {
   if (dev) {
     k_mutex_unlock(dev->data);
   }

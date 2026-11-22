@@ -1,6 +1,6 @@
 /* PKCS#7 padding: RFC 5652 section 6.3. */
-#include "harness.h"
 #include "ble/ble_proto.h"
+#include "harness.h"
 
 #define WHITELIST_BUF_SIZE 0x1800
 #define NCS_BUF_SIZE       0x800
@@ -11,22 +11,19 @@
 
 static uint8_t dst[WHITELIST_BUF_SIZE + GUARD_SIZE];
 
-static void reset_dst(void)
-{
+static void reset_dst(void) {
   memset(dst, 0, sizeof(dst));
   memset(dst, SENTINEL, SENTINEL_LEN);
 }
 
-static void pkcs7_before(void *fixture)
-{
+static void pkcs7_before(void *fixture) {
   ARG_UNUSED(fixture);
   reset_dst();
 }
 
 ZTEST_SUITE(pkcs7, NULL, NULL, pkcs7_before, NULL, NULL);
 
-static int hex_len(const char *hex)
-{
+static int hex_len(const char *hex) {
   uint8_t bytes[256];
 
   return g1_hex(hex, bytes, sizeof(bytes));
@@ -37,8 +34,7 @@ static int hex_len(const char *hex)
 
 typedef int (*parse_fn)(uint8_t *origin_data, const uint8_t *req, uint16_t req_len);
 
-static void expect_parse(parse_fn parse, const char *name, const char *hex, int want)
-{
+static void expect_parse(parse_fn parse, const char *name, const char *hex, int want) {
   uint8_t req[256];
   int len = g1_hex(hex, req, sizeof(req));
   int got = parse(dst, req, (uint16_t)len);
@@ -46,13 +42,11 @@ static void expect_parse(parse_fn parse, const char *name, const char *hex, int 
   zassert_equal(got, want, "%s(%s) = 0x%02x, want 0x%02x", name, hex, got, want);
 }
 
-static void expect_pack(const char *hex, int want)
-{
+static void expect_pack(const char *hex, int want) {
   expect_parse(parse_receiver_pack_pkcs7, "parse_receiver_pack_pkcs7", hex, want);
 }
 
-static void expect_msg(const char *hex, int want)
-{
+static void expect_msg(const char *hex, int want) {
   expect_parse(parse_receiver_msg_pack_pkcs7, "parse_receiver_msg_pack_pkcs7", hex, want);
 }
 
@@ -62,8 +56,7 @@ static void expect_msg(const char *hex, int want)
  * The parsers keep separate chunk state, so a test runs both; reset_dst() drops the pack bytes.
  */
 
-ZTEST(pkcs7, test_single_chunk_replies_c9_and_copies_the_payload)
-{
+ZTEST(pkcs7, test_single_chunk_replies_c9_and_copies_the_payload) {
   expect_pack("04 01 00 7b 7d", PKCS7_PACK_DONE);
   expect_dst("7b 7d 7e");
 
@@ -72,8 +65,7 @@ ZTEST(pkcs7, test_single_chunk_replies_c9_and_copies_the_payload)
   expect_dst("7b 7d 7e");
 }
 
-ZTEST(pkcs7, test_in_order_chunks_reply_cb_then_c9_and_concatenate)
-{
+ZTEST(pkcs7, test_in_order_chunks_reply_cb_then_c9_and_concatenate) {
   expect_pack("04 03 00 41 42", PKCS7_PACK_MORE);
   expect_pack("04 03 01 43", PKCS7_PACK_MORE);
   expect_pack("04 03 02 44 45", PKCS7_PACK_DONE);
@@ -86,8 +78,7 @@ ZTEST(pkcs7, test_in_order_chunks_reply_cb_then_c9_and_concatenate)
   expect_dst("41 42 43 44 45 7e");
 }
 
-ZTEST(pkcs7, test_index_0_restarts_at_offset_0)
-{
+ZTEST(pkcs7, test_index_0_restarts_at_offset_0) {
   expect_pack("04 03 00 41 42", PKCS7_PACK_MORE);
   expect_pack("04 03 01 43 44", PKCS7_PACK_MORE);
   expect_pack("04 02 00 58", PKCS7_PACK_MORE);
@@ -102,8 +93,7 @@ ZTEST(pkcs7, test_index_0_restarts_at_offset_0)
   expect_dst("58 59");
 }
 
-ZTEST(pkcs7, test_index_0_takes_the_new_command_and_message_id)
-{
+ZTEST(pkcs7, test_index_0_takes_the_new_command_and_message_id) {
   expect_pack("04 03 00 41", PKCS7_PACK_MORE);
   expect_pack("05 02 00 31", PKCS7_PACK_MORE);
   expect_pack("05 02 01 32", PKCS7_PACK_DONE);
@@ -116,8 +106,7 @@ ZTEST(pkcs7, test_index_0_takes_the_new_command_and_message_id)
   expect_dst("31 32 7e");
 }
 
-ZTEST(pkcs7, test_command_change_mid_sequence_replies_ca_and_writes_nothing)
-{
+ZTEST(pkcs7, test_command_change_mid_sequence_replies_ca_and_writes_nothing) {
   expect_pack("04 03 00 41", PKCS7_PACK_MORE);
   expect_pack("05 03 01 42", PKCS7_PACK_ERR);
   expect_dst("41 7e");
@@ -128,15 +117,13 @@ ZTEST(pkcs7, test_command_change_mid_sequence_replies_ca_and_writes_nothing)
   expect_dst("41 7e");
 }
 
-ZTEST(pkcs7, test_msg_message_id_change_mid_sequence_replies_ca_and_writes_nothing)
-{
+ZTEST(pkcs7, test_msg_message_id_change_mid_sequence_replies_ca_and_writes_nothing) {
   expect_msg("4b 01 03 00 41", PKCS7_PACK_MORE);
   expect_msg("4b 02 03 01 42", PKCS7_PACK_ERR);
   expect_dst("41 7e");
 }
 
-ZTEST(pkcs7, test_request_shorter_than_the_header_replies_ca)
-{
+ZTEST(pkcs7, test_request_shorter_than_the_header_replies_ca) {
   expect_pack("", PKCS7_PACK_ERR);
   expect_pack("04", PKCS7_PACK_ERR);
   expect_pack("04 01", PKCS7_PACK_ERR);
@@ -149,8 +136,7 @@ ZTEST(pkcs7, test_request_shorter_than_the_header_replies_ca)
   expect_fill(dst, SENTINEL_LEN, SENTINEL, "dst");
 }
 
-ZTEST(pkcs7, test_header_only_chunk_is_accepted)
-{
+ZTEST(pkcs7, test_header_only_chunk_is_accepted) {
   expect_pack("04 02 00", PKCS7_PACK_MORE);
   expect_pack("04 02 01 41", PKCS7_PACK_DONE);
   expect_dst("41 7e");
@@ -161,8 +147,7 @@ ZTEST(pkcs7, test_header_only_chunk_is_accepted)
   expect_dst("41 7e");
 }
 
-ZTEST(pkcs7, test_null_request_replies_ca)
-{
+ZTEST(pkcs7, test_null_request_replies_ca) {
   zassert_equal(parse_receiver_pack_pkcs7(dst, NULL, 5), PKCS7_PACK_ERR);
   expect_fill(dst, SENTINEL_LEN, SENTINEL, "dst");
 
@@ -170,8 +155,7 @@ ZTEST(pkcs7, test_null_request_replies_ca)
   expect_fill(dst, SENTINEL_LEN, SENTINEL, "dst");
 }
 
-ZTEST(pkcs7, test_null_destination_replies_ca)
-{
+ZTEST(pkcs7, test_null_destination_replies_ca) {
   static const uint8_t pack[] = {0x04, 0x01, 0x00, 0x41};
   static const uint8_t msg[] = {0x4b, 0x00, 0x01, 0x00, 0x41};
 
@@ -180,8 +164,7 @@ ZTEST(pkcs7, test_null_destination_replies_ca)
 }
 
 /* dst has a guard after the buffer */
-ZTEST(pkcs7, test_pack_chunk_overrunning_the_whitelist_buffer_is_rejected)
-{
+ZTEST(pkcs7, test_pack_chunk_overrunning_the_whitelist_buffer_is_rejected) {
   uint8_t req[3 + APP_CHUNK_PAYLOAD] = {0x04, 40};
   int got;
 
@@ -201,8 +184,7 @@ ZTEST(pkcs7, test_pack_chunk_overrunning_the_whitelist_buffer_is_rejected)
 }
 
 /* resent after a lost reply */
-ZTEST(pkcs7, test_pack_duplicated_chunk_index_is_not_appended_twice)
-{
+ZTEST(pkcs7, test_pack_duplicated_chunk_index_is_not_appended_twice) {
   uint8_t req[] = {0x04, 0x03, 0x01, 0x42};
 
   expect_pack("04 03 00 41", PKCS7_PACK_MORE);
@@ -214,8 +196,7 @@ ZTEST(pkcs7, test_pack_duplicated_chunk_index_is_not_appended_twice)
 }
 
 /* 0x800-byte buffer, dst has a guard after it */
-ZTEST(pkcs7, test_msg_chunk_overrunning_the_notification_buffer_is_rejected)
-{
+ZTEST(pkcs7, test_msg_chunk_overrunning_the_notification_buffer_is_rejected) {
   uint8_t req[4 + APP_CHUNK_PAYLOAD] = {0x4b, 0x00, 15};
   int got;
 
@@ -235,8 +216,7 @@ ZTEST(pkcs7, test_msg_chunk_overrunning_the_notification_buffer_is_rejected)
 }
 
 /* resent after a lost reply */
-ZTEST(pkcs7, test_msg_duplicated_chunk_index_is_not_appended_twice)
-{
+ZTEST(pkcs7, test_msg_duplicated_chunk_index_is_not_appended_twice) {
   uint8_t req[] = {0x4b, 0x00, 0x03, 0x01, 0x42};
 
   expect_msg("4b 00 03 00 41", PKCS7_PACK_MORE);
@@ -249,24 +229,20 @@ ZTEST(pkcs7, test_msg_duplicated_chunk_index_is_not_appended_twice)
 
 /* ---- send: frames of cmd, frame count, index and 17 data bytes ---- */
 
-static void send_to_frames(uint8_t *buf, uint32_t len)
-{
+static void send_to_frames(uint8_t *buf, uint32_t len) {
   g1_ble()->write(buf, (uint16_t)len);
 }
 
 /* data bytes a0, a1, ... cannot be mistaken for pad values */
-static void send_a0_pattern(int len)
-{
+static void send_a0_pattern(int len) {
   uint8_t data[64];
 
   g1_fill_pattern(data, len, 0xa0);
-  zassert_equal(subcontracing_send_data_pkcs7(data, len, 0x4b, send_to_frames), 0,
-          "%d bytes", len);
+  zassert_equal(subcontracing_send_data_pkcs7(data, len, 0x4b, send_to_frames), 0, "%d bytes", len);
 }
 
 /* the last frame is padded with N bytes of value N, 1 <= N <= 17 */
-ZTEST(pkcs7, test_send_pads_the_last_frame_with_its_pad_length)
-{
+ZTEST(pkcs7, test_send_pads_the_last_frame_with_its_pad_length) {
   static const struct {
     int len;
     const char *frames[2];
@@ -274,26 +250,26 @@ ZTEST(pkcs7, test_send_pads_the_last_frame_with_its_pad_length)
     {0, {"4b 01 00 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11"}},
     {1, {"4b 01 00 a0 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10"}},
     {16, {"4b 01 00 a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af 01"}},
-    {17, {"4b 02 00 a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b0",
-          "4b 02 01 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11"}},
-    {18, {"4b 02 00 a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b0",
-          "4b 02 01 b1 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10"}},
+    {17,
+     {"4b 02 00 a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b0",
+      "4b 02 01 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11"}},
+    {18,
+     {"4b 02 00 a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b0",
+      "4b 02 01 b1 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10"}},
   };
 
   for (size_t row = 0; row < ARRAY_SIZE(rows); row++) {
     send_a0_pattern(rows[row].len);
 
     for (size_t frame = 0; frame < 2 && rows[row].frames[frame]; frame++) {
-      expect_frame_msg(rows[row].frames[frame], -1, "%d bytes, frame %u",
-           rows[row].len, (unsigned int)frame);
+      expect_frame_msg(rows[row].frames[frame], -1, "%d bytes, frame %u", rows[row].len, (unsigned int)frame);
     }
     expect_no_frame_msg("%d bytes", rows[row].len);
   }
 }
 
 /* 180 = 10 x 17 + 10 */
-ZTEST(pkcs7, test_send_180_bytes_is_11_frames_the_last_padded_with_7_bytes_of_0x07)
-{
+ZTEST(pkcs7, test_send_180_bytes_is_11_frames_the_last_padded_with_7_bytes_of_0x07) {
   uint8_t data[180];
 
   g1_fill_pattern(data, sizeof(data), 0);
@@ -312,8 +288,7 @@ ZTEST(pkcs7, test_send_180_bytes_is_11_frames_the_last_padded_with_7_bytes_of_0x
   expect_only_frame("4b 0b 0a aa ab ac ad ae af b0 b1 b2 b3 07 07 07 07 07 07 07");
 }
 
-ZTEST(pkcs7, test_sent_frames_reassemble_to_the_message_and_its_padding)
-{
+ZTEST(pkcs7, test_sent_frames_reassemble_to_the_message_and_its_padding) {
   uint8_t frame[20];
   int len;
 
@@ -327,5 +302,5 @@ ZTEST(pkcs7, test_sent_frames_reassemble_to_the_message_and_its_padding)
   zassert_equal(parse_receiver_pack_pkcs7(dst, frame, len), PKCS7_PACK_DONE);
 
   expect_dst("a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b0 b1"
-       " 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 7e");
+             " 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 7e");
 }

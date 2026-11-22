@@ -5,31 +5,29 @@
  * records, the white list and the font download (read, write and verify,
  * CRC).  The records themselves are in settings_records.c.
  */
-#include <stdlib.h>
-#include <string.h>
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/settings/settings.h>
-#include "g1_log.h"
-#include "storage.h"
 #include "../notify/whitelist.h"
 #include "../threads/threads.h"
 #include "../utils/common_utils.h"
+#include "g1_log.h"
+#include "storage.h"
+#include <stdlib.h>
+#include <string.h>
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/settings/settings.h>
 
-#define SETT_ROOT "ar_glass_userdata_settings"
+#define SETT_ROOT         "ar_glass_userdata_settings"
 /* the QSPI NOR driver takes write lengths above 4 only in multiples of 4 */
 #define FLASH_WRITE_ALIGN 4
 
-void local_store_delete(const char *key)
-{
+void local_store_delete(const char *key) {
   char path[128] = SETT_ROOT "/";
 
   strcat(path, key);
   settings_delete(path);
 }
 
-int local_store_write(const char *key, const void *val, size_t len)
-{
+int local_store_write(const char *key, const void *val, size_t len) {
   char path[128] = SETT_ROOT "/";
   int err;
 
@@ -47,9 +45,7 @@ int local_store_write(const char *key, const void *val, size_t len)
   return err;
 }
 
-static int sett_handler(const char *key, size_t len, settings_read_cb read_cb,
-      void *cb_arg)
-{
+static int sett_handler(const char *key, size_t len, settings_read_cb read_cb, void *cb_arg) {
   int rc;
 
   if (!strcmp(key, "ble_whitelist_app")) {
@@ -157,13 +153,11 @@ static struct settings_handler sett_conf = {
   .h_set = sett_handler,
 };
 
-static int local_store_load(void)
-{
+static int local_store_load(void) {
   return 0;
 }
 
-void sett_init(struct local_store *st)
-{
+void sett_init(struct local_store *st) {
   int err;
 
   err = settings_subsys_init();
@@ -183,8 +177,7 @@ void sett_init(struct local_store *st)
   st->del = local_store_delete;
 }
 
-int flash_settings_read(uint32_t addr, void *buf, size_t len)
-{
+int flash_settings_read(uint32_t addr, void *buf, size_t len) {
   int retry = 0;
   int ret;
 
@@ -209,8 +202,7 @@ int flash_settings_read(uint32_t addr, void *buf, size_t len)
   return ret;
 }
 
-int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
-{
+int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len) {
   uint8_t *buf;
   int ret;
 
@@ -261,8 +253,7 @@ int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
   return ret;
 }
 
-int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size)
-{
+int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size) {
   int ret = 0;
   uint8_t pages;
   int16_t last;
@@ -273,13 +264,12 @@ int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size)
   last = size - (pages - 1) * EXT_FLASH_SECTOR_SIZE;
   for (i = 0; i < pages; i++) {
     ret += flash_settings_write_and_verify(addr + i * EXT_FLASH_SECTOR_SIZE, data + i * EXT_FLASH_SECTOR_SIZE,
-                   i < pages - 1 ? EXT_FLASH_SECTOR_SIZE : last);
+                                           i < pages - 1 ? EXT_FLASH_SECTOR_SIZE : last);
   }
   return ret;
 }
 
-int write_font(uint32_t addr, const void *data, size_t len)
-{
+int write_font(uint32_t addr, const void *data, size_t len) {
   uint8_t buf[EXT_FLASH_SECTOR_SIZE] = {0};
   int retry = 0;
   int ret;
@@ -306,14 +296,11 @@ int write_font(uint32_t addr, const void *data, size_t len)
         } else {
           memset(buf, 0xff, sizeof(buf));
           memcpy(buf, data, len);
-          ret = get_dashboard_state()->flash_write(
-            get_dashboard_state(), addr, buf,
-            ROUND_UP(len, FLASH_WRITE_ALIGN));
+          ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, buf, ROUND_UP(len, FLASH_WRITE_ALIGN));
           if (ret) {
             printk("Flash write font failed! %d\n", ret);
           } else {
-            ret = get_dashboard_state()->flash_read(
-              get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
+            ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
             if (ret) {
               printk("Flash read font failed! %d\n", ret);
             } else if (memcmp(data, buf, len) == 0) {
@@ -336,8 +323,7 @@ int write_font(uint32_t addr, const void *data, size_t len)
 
 #define FLASH_CRC_CHUNK_LEN 1024
 
-int calc_flash_crc(uint16_t *crc, int addr, uint32_t size)
-{
+int calc_flash_crc(uint16_t *crc, int addr, uint32_t size) {
   uint16_t pages;
   int pos;
   int len;

@@ -94,21 +94,18 @@ __weak uint8_t demo_mode;
 __weak uint32_t imu_roll_x100;
 __weak uint32_t imu_yaw_x100;
 
-static uint8_t is_master_default(void)
-{
+static uint8_t is_master_default(void) {
   return get_dashboard_state()->is_master;
 }
 
-static int panel_set_brightness_default(struct jbd_panel_context *panel, uint8_t level)
-{
+static int panel_set_brightness_default(struct jbd_panel_context *panel, uint8_t level) {
   if (panel->panel_brightness_level != level) {
     panel->panel_brightness_level = level;
   }
   return level;
 }
 
-static void fakes_misc_reset(bool keep_media)
-{
+static void fakes_misc_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
 
   RESET_FAKE(get_pt_level);

@@ -1,21 +1,20 @@
-#include <string.h>
-#include <stdlib.h>
-#include <zephyr/kernel.h>
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/conn.h>
-#include <bluetooth/services/nus.h>
-#include "g1_log.h"
-#include "ble_ancs.h"
-#include "ble_proto.h"
 #include "../production_test/production_test.h"
 #include "../threads/threads.h"
+#include "ble_ancs.h"
+#include "ble_proto.h"
+#include "g1_log.h"
+#include <bluetooth/services/nus.h>
+#include <stdlib.h>
+#include <string.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/kernel.h>
 
 K_MSGQ_DEFINE(nus_data_msgq, sizeof(struct bt_data_msg), BT_DATA_MSGQ_MAX, 4);
 static struct ble_context *ble_ctx;
 static struct k_mutex nus_mutex;
 
-static void bt_send_enabled(enum bt_nus_send_status status)
-{
+static void bt_send_enabled(enum bt_nus_send_status status) {
   G1_LOG_INF("status:%d\n\n", status);
   if (status == BT_NUS_SEND_STATUS_ENABLED) {
     ble_ctx->send_enabled = true;
@@ -24,8 +23,7 @@ static void bt_send_enabled(enum bt_nus_send_status status)
   }
 }
 
-static int ble_write_thread(const uint8_t *data, uint16_t len)
-{
+static int ble_write_thread(const uint8_t *data, uint16_t len) {
   bool connected = get_current_conn();
   int err;
 
@@ -45,8 +43,7 @@ static int ble_write_thread(const uint8_t *data, uint16_t len)
   return 0;
 }
 
-int enqueue_bt_data(void *data, uint8_t len)
-{
+int enqueue_bt_data(void *data, uint8_t len) {
   struct bt_data_msg msg;
   int err;
 
@@ -64,8 +61,7 @@ int enqueue_bt_data(void *data, uint8_t len)
   return err;
 }
 
-static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint16_t len)
-{
+static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint16_t len) {
   char addr[BT_ADDR_LE_STR_LEN] = {0};
   struct bt_data_msg msg;
   struct ble_context *ctx = ble_ctx;
@@ -73,9 +69,8 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
   memset(&msg, 0, sizeof(msg));
   bt_addr_le_to_str(bt_conn_get_dst(conn), addr, ARRAY_SIZE(addr));
   G1_LOG_ERR("**Received data from: %s, len=%d,cmd 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x,"
-       "receiver_thd_is_running is %d\n",
-       addr, len, data[0], data[1], data[2], data[3], data[4], data[5],
-       ctx->receiver_thd_is_running);
+             "receiver_thd_is_running is %d\n",
+             addr, len, data[0], data[1], data[2], data[3], data[4], data[5], ctx->receiver_thd_is_running);
 
   ctx->last_rx_time = k_uptime_get();
 
@@ -85,8 +80,7 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
     if (data[0] == 0x18) {
       resp[1] = 0xc9;
       ctx->write(resp, sizeof(resp));
-      if (get_dashboard_state()->is_master == 2 &&
-          get_dashboard_state()->dashboard_mode == 6) {
+      if (get_dashboard_state()->is_master == 2 && get_dashboard_state()->dashboard_mode == 6) {
         k_msleep(50);
       }
       exit_running_task(get_dashboard_state(), 0);
@@ -125,8 +119,7 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
   k_sem_give(&ctx->rx_sem);
 }
 
-int dequeue_bt_data(struct bt_data_msg *out)
-{
+int dequeue_bt_data(struct bt_data_msg *out) {
   struct bt_data_msg msg;
   int err;
 
@@ -143,18 +136,15 @@ static struct bt_nus_cb nus_cb = {
   .send_enabled = bt_send_enabled,
 };
 
-int init_nus(void)
-{
+int init_nus(void) {
   return bt_nus_init(&nus_cb);
 }
 
-struct ble_context *get_ble_context(void)
-{
+struct ble_context *get_ble_context(void) {
   return ble_ctx;
 }
 
-void ble_context_init(struct ble_context *ctx)
-{
+void ble_context_init(struct ble_context *ctx) {
   ctx->init_cb = start_ble_work_thread;
   k_mutex_init(&nus_mutex);
   ctx->write = ble_write_thread;

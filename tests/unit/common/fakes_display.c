@@ -35,32 +35,27 @@ DEFINE_FAKE_VOID_FUNC(transcribe_info_timeout_reset);
 FAKE_VOID_FUNC(quicknote_timeout_reset);
 DEFINE_FAKE_VOID_FUNC(request_not_disturb_bitmap, uint8_t);
 DEFINE_FAKE_VOID_FUNC(show_not_disturb_bitmap, uint8_t);
-DEFINE_FAKE_VALUE_FUNC(int, onboarding_ble_process, struct GlassesState *,
-           const struct ble_req_hdr *, const uint8_t *, uint8_t *);
+DEFINE_FAKE_VALUE_FUNC(int, onboarding_ble_process, struct GlassesState *, const struct ble_req_hdr *, const uint8_t *,
+                       uint8_t *);
 
 DEFINE_FAKE_VALUE_FUNC(int, _reflash_fb_data_to_lcd, uint32_t, uint32_t, int, int, int, int);
-DEFINE_FAKE_VALUE_FUNC(int, _reflash_fb_data_to_lcd_ex, uint32_t, uint32_t, int, int, int, int,
-           int);
+DEFINE_FAKE_VALUE_FUNC(int, _reflash_fb_data_to_lcd_ex, uint32_t, uint32_t, int, int, int, int, int);
 DEFINE_FAKE_VOID_FUNC(jbd_clear_cache_sync, uint8_t);
 
-static uint32_t set_date_default(uint32_t date)
-{
+static uint32_t set_date_default(uint32_t date) {
   get_dashboard_state()->date_ts = date;
   return date;
 }
 
-static uint32_t get_date_default(void)
-{
+static uint32_t get_date_default(void) {
   return get_dashboard_state()->date_ts;
 }
 
-static uint32_t get_dashboard_tx_ctx_default(void)
-{
+static uint32_t get_dashboard_tx_ctx_default(void) {
   return get_dashboard_state()->dashboard_ts->ts;
 }
 
-static void fakes_display_reset(bool keep_media)
-{
+static void fakes_display_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
 
   RESET_FAKE(display_DelayClose);

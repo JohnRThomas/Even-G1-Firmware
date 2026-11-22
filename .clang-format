@@ -1,0 +1,28 @@
+---
+BasedOnStyle: LLVM
+ColumnLimit: 120
+IndentWidth: 2
+ContinuationIndentWidth: 2
+ConstructorInitializerIndentWidth: 2
+UseTab: Never
+BreakBeforeBraces: Attach
+IndentCaseLabels: true
+InsertBraces: true
+SortIncludes: true
+AlignConsecutiveMacros: AcrossComments
+AlignTrailingComments:
+  Kind: Leave
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BitFieldColonSpacing: After
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+# Keep log and UI strings greppable.
+BreakStringLiterals: false
+AttributeMacros:
+  - __aligned
+  - __packed
+  - __printf_like

@@ -21,14 +21,12 @@ __weak int esb_rx_count;
 __weak int esb_tx_count;
 __weak int esb_tx_fail_count;
 
-static int send_response_default(const void *data, uint32_t len)
-{
+static int send_response_default(const void *data, uint32_t len) {
   g1_pkt_log_add(&g1_esb_response_log, data, len);
   return 0;
 }
 
-static void fakes_esb_reset(bool keep_media)
-{
+static void fakes_esb_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
 
   RESET_FAKE(SendDashBoardStartupModeInfoToSlave);

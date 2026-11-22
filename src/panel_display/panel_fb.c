@@ -12,8 +12,7 @@
 /* the current register (46h) is 6 bits wide */
 #define JBD_CUR_REG_MAX 63
 
-int _clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, int y_end)
-{
+int _clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, int y_end) {
   int y;
 
   if (x_end >= PANEL_WIDTH) {
@@ -32,8 +31,7 @@ int _clean_fb_data(uint8_t **fb, int val, int x_start, int y_start, int x_end, i
   return x_end / 2 - x_start / 2 + 1;
 }
 
-void update_brightness_level_for_jdb_panel(uint8_t level, uint16_t *lum, uint8_t *cur)
-{
+void update_brightness_level_for_jdb_panel(uint8_t level, uint16_t *lum, uint8_t *cur) {
   if (level <= 5) {
     int base = get_dashboard_state()->panel.brightness_max * 2 / 9;
 
@@ -56,26 +54,21 @@ void update_brightness_level_for_jdb_panel(uint8_t level, uint16_t *lum, uint8_t
   }
 }
 
-void *clear_panel(struct jbd_panel_context *c)
-{
+void *clear_panel(struct jbd_panel_context *c) {
   return memset(c->panel_buffer[0], 0, c->current_buffer_size);
 }
 
-void panel_draw_cb(struct jbd_panel_context *c)
-{
+void panel_draw_cb(struct jbd_panel_context *c) {
   if (c->init_done) {
-    display_image(c->current_row, c->current_column, c->panel_buffer[0],
-            c->current_buffer_size);
+    display_image(c->current_row, c->current_column, c->panel_buffer[0], c->current_buffer_size);
   }
 }
 
-struct jbd_panel_context *get_jdb_panel_context(void)
-{
+struct jbd_panel_context *get_jdb_panel_context(void) {
   return &get_dashboard_state()->panel;
 }
 
-int copy_to_frame_buffer_raw(uint8_t **fb, const uint8_t *src, int w, int h, int x, int y)
-{
+int copy_to_frame_buffer_raw(uint8_t **fb, const uint8_t *src, int w, int h, int x, int y) {
   int i;
 
   for (i = 0; i < h; i++) {
@@ -84,8 +77,7 @@ int copy_to_frame_buffer_raw(uint8_t **fb, const uint8_t *src, int w, int h, int
   return y;
 }
 
-int copy_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, int y)
-{
+int copy_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, int y) {
   int i;
 
   if (y >= PANEL_FB_ROWS) {
@@ -100,8 +92,7 @@ int copy_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, 
   return y;
 }
 
-int or_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, int y)
-{
+int or_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, int y) {
   int k = 0;
   int i, j;
   int x_byte;
@@ -123,8 +114,7 @@ int or_to_frame_buffer(uint8_t **fb, const uint8_t *src, int w, int h, int x, in
   return y;
 }
 
-void copy_frame_buffer_rows(uint8_t **fb, int dst_x, int dst_y, int src_x, int src_y, int h, int w)
-{
+void copy_frame_buffer_rows(uint8_t **fb, int dst_x, int dst_y, int src_x, int src_y, int h, int w) {
   int i;
 
   for (i = 0; i < h; i++) {

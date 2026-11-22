@@ -18,8 +18,7 @@ int aw93203_ready;
 
 #define SW_FLAGS (GPIO_INPUT | GPIO_PULL_UP | GPIO_ACTIVE_LOW)
 
-static void buttons_before(void *fixture)
-{
+static void buttons_before(void *fixture) {
   ARG_UNUSED(fixture);
   /* reconfiguring a pin fires callbacks */
   g1_gpio_remove_callback(GPIO1, &button1_irq_cb);
@@ -36,23 +35,20 @@ static void buttons_before(void *fixture)
 
 ZTEST_SUITE(buttons_gpio, NULL, NULL, buttons_before, NULL, NULL);
 
-static void sw_set(gpio_pin_t pin, int level)
-{
+static void sw_set(gpio_pin_t pin, int level) {
   zassert_ok(gpio_emul_input_set(GPIO1, pin, level), "P1.%02u <- %d", pin, level);
 }
 
-static void gpo_pulses(int count)
-{
+static void gpo_pulses(int count) {
   for (int pulse = 0; pulse < count; pulse++) {
     sw_set(PIN_SW1, 0);
     sw_set(PIN_SW1, 1);
   }
 }
 
-static uint8_t init_with_straps(int p26, int p25, int p27, int p28)
-{
-  static const gpio_pin_t pins[] = { 26, 25, 27, 28 };
-  const int levels[] = { p26, p25, p27, p28 };
+static uint8_t init_with_straps(int p26, int p25, int p27, int p28) {
+  static const gpio_pin_t pins[] = {26, 25, 27, 28};
+  const int levels[] = {p26, p25, p27, p28};
 
   for (size_t index = 0; index < ARRAY_SIZE(pins); index++) {
     zassert_ok(gpio_pin_configure(GPIO0, pins[index], GPIO_INPUT));
@@ -61,36 +57,30 @@ static uint8_t init_with_straps(int p26, int p25, int p27, int p28)
   return button_init();
 }
 
-ZTEST(buttons_gpio, test_init_configures_the_straps_as_plain_inputs)
-{
-  static const gpio_pin_t straps[] = { 26, 25, 28, 27 };
+ZTEST(buttons_gpio, test_init_configures_the_straps_as_plain_inputs) {
+  static const gpio_pin_t straps[] = {26, 25, 28, 27};
 
   button_init();
 
   for (size_t index = 0; index < ARRAY_SIZE(straps); index++) {
-    zassert_equal(g1_gpio_flags(GPIO0, straps[index]), GPIO_INPUT, "P0.%u flags 0x%x",
-            straps[index], g1_gpio_flags(GPIO0, straps[index]));
+    zassert_equal(g1_gpio_flags(GPIO0, straps[index]), GPIO_INPUT, "P0.%u flags 0x%x", straps[index],
+                  g1_gpio_flags(GPIO0, straps[index]));
   }
 }
 
-ZTEST(buttons_gpio, test_init_drives_the_control_lines_to_their_boot_levels)
-{
-  static const gpio_pin_t lines[] = { PIN_PANEL, PIN_TMR, PIN_NFC_LPD, PIN_TOUCH_PWR,
-              PIN_PMIC_RST };
+ZTEST(buttons_gpio, test_init_drives_the_control_lines_to_their_boot_levels) {
+  static const gpio_pin_t lines[] = {PIN_PANEL, PIN_TMR, PIN_NFC_LPD, PIN_TOUCH_PWR, PIN_PMIC_RST};
 
   button_init();
 
   for (size_t index = 0; index < ARRAY_SIZE(lines); index++) {
-    zassert_equal(g1_gpio_flags(GPIO0, lines[index]) & (GPIO_INPUT | GPIO_OUTPUT),
-            GPIO_INPUT | GPIO_OUTPUT, "P0.%u flags 0x%x", lines[index],
-            g1_gpio_flags(GPIO0, lines[index]));
+    zassert_equal(g1_gpio_flags(GPIO0, lines[index]) & (GPIO_INPUT | GPIO_OUTPUT), GPIO_INPUT | GPIO_OUTPUT,
+                  "P0.%u flags 0x%x", lines[index], g1_gpio_flags(GPIO0, lines[index]));
   }
-  zassert_equal(g1_gpio_outputs(GPIO0), BIT(PIN_TOUCH_PWR), "gpio0 outputs 0x%08x",
-          g1_gpio_outputs(GPIO0));
+  zassert_equal(g1_gpio_outputs(GPIO0), BIT(PIN_TOUCH_PWR), "gpio0 outputs 0x%08x", g1_gpio_outputs(GPIO0));
 }
 
-ZTEST(buttons_gpio, test_init_arms_sw0_on_the_falling_edge)
-{
+ZTEST(buttons_gpio, test_init_arms_sw0_on_the_falling_edge) {
   gpio_flags_t flags;
 
   button_init();
@@ -100,8 +90,7 @@ ZTEST(buttons_gpio, test_init_arms_sw0_on_the_falling_edge)
   zassert_equal(flags & G1_GPIO_INT_FLAGS, GPIO_INT_EDGE_FALLING, "flags 0x%x", flags);
 }
 
-ZTEST(buttons_gpio, test_init_arms_the_nfc_gpo_edge_by_tag_type)
-{
+ZTEST(buttons_gpio, test_init_arms_the_nfc_gpo_edge_by_tag_type) {
   gpio_flags_t flags;
 
   nfc_is_tag_type_ok_fake.return_val = 1;
@@ -116,8 +105,7 @@ ZTEST(buttons_gpio, test_init_arms_the_nfc_gpo_edge_by_tag_type)
   zassert_equal(flags & G1_GPIO_INT_FLAGS, GPIO_INT_EDGE_FALLING, "tag not ok: 0x%x", flags);
 }
 
-ZTEST(buttons_gpio, test_sw0_falling_edge_flags_the_touch_irq_once_touch_is_ready)
-{
+ZTEST(buttons_gpio, test_sw0_falling_edge_flags_the_touch_irq_once_touch_is_ready) {
   button_init();
   aw93203_ready = 1;
 
@@ -128,8 +116,7 @@ ZTEST(buttons_gpio, test_sw0_falling_edge_flags_the_touch_irq_once_touch_is_read
   zassert_equal(g1_gpio_flags(GPIO1, PIN_SW0) & G1_GPIO_INT_FLAGS, GPIO_INT_EDGE_FALLING);
 }
 
-ZTEST(buttons_gpio, test_sw0_edge_before_touch_is_ready_is_ignored)
-{
+ZTEST(buttons_gpio, test_sw0_edge_before_touch_is_ready_is_ignored) {
   button_init();
 
   sw_set(PIN_SW0, 0);
@@ -139,8 +126,7 @@ ZTEST(buttons_gpio, test_sw0_edge_before_touch_is_ready_is_ignored)
   zassert_equal(g1_gpio_flags(GPIO1, PIN_SW0) & G1_GPIO_INT_FLAGS, GPIO_INT_EDGE_FALLING);
 }
 
-ZTEST(buttons_gpio, test_sw0_release_does_not_interrupt)
-{
+ZTEST(buttons_gpio, test_sw0_release_does_not_interrupt) {
   button_init();
   aw93203_ready = 1;
   sw_set(PIN_SW0, 0);
@@ -153,8 +139,7 @@ ZTEST(buttons_gpio, test_sw0_release_does_not_interrupt)
   zassert_equal(k_sem_count_get(&g1_state()->touch_sem), 0);
 }
 
-ZTEST(buttons_gpio, test_sw0_irq_level_reads_the_raw_line)
-{
+ZTEST(buttons_gpio, test_sw0_irq_level_reads_the_raw_line) {
   button_init();
   zassert_equal(get_sw0_irq_level(), 1);
 
@@ -165,8 +150,7 @@ ZTEST(buttons_gpio, test_sw0_irq_level_reads_the_raw_line)
   zassert_equal(get_sw0_irq_level(), 1);
 }
 
-ZTEST(buttons_gpio, test_every_gpo_pulse_triggers_an_nfc_event)
-{
+ZTEST(buttons_gpio, test_every_gpo_pulse_triggers_an_nfc_event) {
   button_init();
 
   gpo_pulses(3);
@@ -174,8 +158,7 @@ ZTEST(buttons_gpio, test_every_gpo_pulse_triggers_an_nfc_event)
   zassert_equal(trigger_nfc_event_fake.call_count, 3);
 }
 
-ZTEST(buttons_gpio, test_fifth_gpo_pulse_cancels_pending_low_power)
-{
+ZTEST(buttons_gpio, test_fifth_gpo_pulse_cancels_pending_low_power) {
   button_init();
   can_enter_low_power = 2;
 
@@ -189,8 +172,7 @@ ZTEST(buttons_gpio, test_fifth_gpo_pulse_cancels_pending_low_power)
   zassert_equal(can_enter_low_power, 0);
 }
 
-ZTEST(buttons_gpio, test_fifth_gpo_pulse_in_work_mode_8_cancels_low_power)
-{
+ZTEST(buttons_gpio, test_fifth_gpo_pulse_in_work_mode_8_cancels_low_power) {
   button_init();
   g1_state()->work_mode = 8;
   can_enter_low_power = 1;
@@ -202,8 +184,7 @@ ZTEST(buttons_gpio, test_fifth_gpo_pulse_in_work_mode_8_cancels_low_power)
   zassert_equal(can_enter_low_power, 0);
 }
 
-ZTEST(buttons_gpio, test_gpo_pulses_are_not_counted_otherwise)
-{
+ZTEST(buttons_gpio, test_gpo_pulses_are_not_counted_otherwise) {
   button_init();
   can_enter_low_power = 1;
 
@@ -214,47 +195,43 @@ ZTEST(buttons_gpio, test_gpo_pulses_are_not_counted_otherwise)
 }
 
 /* P0.26: 0 master, 1 slave */
-ZTEST(buttons_gpio, test_init_returns_the_p0_26_role_strap)
-{
+ZTEST(buttons_gpio, test_init_returns_the_p0_26_role_strap) {
   zassert_equal(init_with_straps(0, 1, 1, 1), 0);
   zassert_equal(init_with_straps(1, 0, 0, 0), 1);
 }
 
-ZTEST(buttons_gpio, test_power_helpers_toggle_exactly_their_line)
-{
+ZTEST(buttons_gpio, test_power_helpers_toggle_exactly_their_line) {
   static const struct power_step {
     void (*fn)(void);
     const char *name;
     gpio_pin_t pin;
     int level;
   } steps[] = {
-    { panel_gpio_enable, "panel_gpio_enable", PIN_PANEL, 1 },
-    { panel_gpio_disable, "panel_gpio_disable", PIN_PANEL, 0 },
-    { nfc_lpd_on, "nfc_lpd_on", PIN_NFC_LPD, 1 },
-    { nfc_lpd_off, "nfc_lpd_off", PIN_NFC_LPD, 0 },
-    { touch_power_off, "touch_power_off", PIN_TOUCH_PWR, 0 },
-    { touch_power_on, "touch_power_on", PIN_TOUCH_PWR, 1 },
-    { reset_pmic_on, "reset_pmic_on", PIN_PMIC_RST, 1 },
-    { reset_pmic_off, "reset_pmic_off", PIN_PMIC_RST, 0 },
+    {panel_gpio_enable, "panel_gpio_enable", PIN_PANEL, 1},
+    {panel_gpio_disable, "panel_gpio_disable", PIN_PANEL, 0},
+    {nfc_lpd_on, "nfc_lpd_on", PIN_NFC_LPD, 1},
+    {nfc_lpd_off, "nfc_lpd_off", PIN_NFC_LPD, 0},
+    {touch_power_off, "touch_power_off", PIN_TOUCH_PWR, 0},
+    {touch_power_on, "touch_power_on", PIN_TOUCH_PWR, 1},
+    {reset_pmic_on, "reset_pmic_on", PIN_PMIC_RST, 1},
+    {reset_pmic_off, "reset_pmic_off", PIN_PMIC_RST, 0},
   };
 
   button_init();
   for (size_t index = 0; index < ARRAY_SIZE(steps); index++) {
     const struct power_step *step = &steps[index];
     gpio_port_value_t before = g1_gpio_outputs(GPIO0);
-    gpio_port_value_t want = (before & ~BIT(step->pin)) |
-           (step->level ? BIT(step->pin) : 0);
+    gpio_port_value_t want = (before & ~BIT(step->pin)) | (step->level ? BIT(step->pin) : 0);
 
     step->fn();
-    zassert_equal(g1_gpio_outputs(GPIO0), want, "%s: outputs 0x%08x, want 0x%08x",
-            step->name, g1_gpio_outputs(GPIO0), want);
+    zassert_equal(g1_gpio_outputs(GPIO0), want, "%s: outputs 0x%08x, want 0x%08x", step->name, g1_gpio_outputs(GPIO0),
+                  want);
     zassert_not_equal(before, want, "%s: step does not change its line", step->name);
   }
 }
 
 /* a registered callback is not added twice */
-ZTEST(buttons_gpio, test_reinit_restores_the_boot_state_without_doubling_callbacks)
-{
+ZTEST(buttons_gpio, test_reinit_restores_the_boot_state_without_doubling_callbacks) {
   gpio_flags_t sw0_flags;
   uint8_t role;
 
@@ -268,8 +245,7 @@ ZTEST(buttons_gpio, test_reinit_restores_the_boot_state_without_doubling_callbac
 
   zassert_equal(button_init(), role);
 
-  zassert_equal(g1_gpio_outputs(GPIO0), BIT(PIN_TOUCH_PWR), "gpio0 outputs 0x%08x",
-          g1_gpio_outputs(GPIO0));
+  zassert_equal(g1_gpio_outputs(GPIO0), BIT(PIN_TOUCH_PWR), "gpio0 outputs 0x%08x", g1_gpio_outputs(GPIO0));
   zassert_equal(g1_gpio_flags(GPIO1, PIN_SW0), sw0_flags);
 
   /* reinit fired the callbacks */
@@ -280,8 +256,7 @@ ZTEST(buttons_gpio, test_reinit_restores_the_boot_state_without_doubling_callbac
   zassert_equal(k_sem_count_get(&g1_state()->touch_sem), 1);
 }
 
-ZTEST(buttons_gpio, test_init_without_gpio1_skips_both_interrupt_lines)
-{
+ZTEST(buttons_gpio, test_init_without_gpio1_skips_both_interrupt_lines) {
   g1_device_set_ready(GPIO1, false);
 
   zassert_equal(init_with_straps(1, 0, 0, 0), 1);

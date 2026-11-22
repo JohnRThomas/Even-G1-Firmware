@@ -2,9 +2,9 @@
 #ifndef G1_SPIM_H_
 #define G1_SPIM_H_
 
+#include <glasses_state.h>
 #include <stdint.h>
 #include <zephyr/kernel.h>
-#include <glasses_state.h>
 
 /* spim.c */
 void spi_master_register_context(struct spi_master_ctx *ctx);

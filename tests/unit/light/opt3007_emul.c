@@ -20,14 +20,13 @@
 #define CFG_ME       BIT(2)
 #define CFG_RO_MASK  (CFG_OVF | CFG_CRF | CFG_FH | CFG_FL | CFG_L)
 
-#define RN_AUTO      0xc
-#define M_SHUTDOWN   0
-#define M_SINGLE     1
+#define RN_AUTO    0xc
+#define M_SHUTDOWN 0
+#define M_SINGLE   1
 
 struct opt3007_emul_data opt3007_emul;
 
-static void power_on(struct opt3007_emul_data *data)
-{
+static void power_on(struct opt3007_emul_data *data) {
   memset(data, 0, sizeof(*data));
   data->config = OPT3007_EMUL_CONFIG_RESET;
   data->high_limit = 0xbfff;
@@ -36,24 +35,20 @@ static void power_on(struct opt3007_emul_data *data)
   data->conv_end = -1;
 }
 
-static unsigned int mode(const struct opt3007_emul_data *data)
-{
+static unsigned int mode(const struct opt3007_emul_data *data) {
   return (data->config & CFG_M_MASK) >> CFG_M_SHIFT;
 }
 
-static unsigned int range(const struct opt3007_emul_data *data)
-{
+static unsigned int range(const struct opt3007_emul_data *data) {
   return data->config >> CFG_RN_SHIFT;
 }
 
-static int64_t conv_ms(const struct opt3007_emul_data *data)
-{
+static int64_t conv_ms(const struct opt3007_emul_data *data) {
   return (data->config & CFG_CT) ? OPT3007_EMUL_CONV_800_MS : OPT3007_EMUL_CONV_100_MS;
 }
 
 /* at 0 lux (datasheet Equation 2) the mantissa is 0 and only a manual range's exponent shows */
-static uint16_t conversion(const struct opt3007_emul_data *data)
-{
+static uint16_t conversion(const struct opt3007_emul_data *data) {
   if (data->fixed_result) {
     return data->fixed;
   }
@@ -61,8 +56,7 @@ static uint16_t conversion(const struct opt3007_emul_data *data)
 }
 
 /* latch conversions that ended by now */
-static void advance(struct opt3007_emul_data *data, int64_t now)
-{
+static void advance(struct opt3007_emul_data *data, int64_t now) {
   if (data->conv_end < 0 || now < data->conv_end || mode(data) == M_SHUTDOWN) {
     return;
   }
@@ -77,28 +71,26 @@ static void advance(struct opt3007_emul_data *data, int64_t now)
   }
 }
 
-static uint16_t *reg_of(struct opt3007_emul_data *data, uint8_t reg)
-{
+static uint16_t *reg_of(struct opt3007_emul_data *data, uint8_t reg) {
   switch (reg) {
-  case OPT3007_EMUL_REG_RESULT:
-    return &data->result;
-  case OPT3007_EMUL_REG_CONFIG:
-    return &data->config;
-  case OPT3007_EMUL_REG_LOW_LIMIT:
-    return &data->low_limit;
-  case OPT3007_EMUL_REG_HIGH_LIMIT:
-    return &data->high_limit;
-  case OPT3007_EMUL_REG_MFG_ID:
-    return &data->mfg_id;
-  case OPT3007_EMUL_REG_DEVICE_ID:
-    return &data->device_id;
-  default:
-    return NULL;
+    case OPT3007_EMUL_REG_RESULT:
+      return &data->result;
+    case OPT3007_EMUL_REG_CONFIG:
+      return &data->config;
+    case OPT3007_EMUL_REG_LOW_LIMIT:
+      return &data->low_limit;
+    case OPT3007_EMUL_REG_HIGH_LIMIT:
+      return &data->high_limit;
+    case OPT3007_EMUL_REG_MFG_ID:
+      return &data->mfg_id;
+    case OPT3007_EMUL_REG_DEVICE_ID:
+      return &data->device_id;
+    default:
+      return NULL;
   }
 }
 
-static uint16_t reg_read(struct opt3007_emul_data *data, uint8_t reg, int64_t now)
-{
+static uint16_t reg_read(struct opt3007_emul_data *data, uint8_t reg, int64_t now) {
   uint16_t *value = reg_of(data, reg);
   uint16_t result;
 
@@ -110,8 +102,7 @@ static uint16_t reg_read(struct opt3007_emul_data *data, uint8_t reg, int64_t no
   return result;
 }
 
-static void reg_write(struct opt3007_emul_data *data, uint8_t reg, uint16_t val, int64_t now)
-{
+static void reg_write(struct opt3007_emul_data *data, uint8_t reg, uint16_t val, int64_t now) {
   if (data->writes < OPT3007_EMUL_WRITE_LOG) {
     data->write_reg[data->writes] = reg;
     data->write_val[data->writes] = val;
@@ -125,8 +116,7 @@ static void reg_write(struct opt3007_emul_data *data, uint8_t reg, uint16_t val,
       data->conv_end = -1;
     } else {
       data->config &= ~CFG_CRF;
-      data->conv_end = now + conv_ms(data) +
-           (range(data) >= RN_AUTO ? OPT3007_EMUL_AUTO_FIRST_MS : 0);
+      data->conv_end = now + conv_ms(data) + (range(data) >= RN_AUTO ? OPT3007_EMUL_AUTO_FIRST_MS : 0);
     }
   } else if (reg == OPT3007_EMUL_REG_LOW_LIMIT || reg == OPT3007_EMUL_REG_HIGH_LIMIT) {
     /* the result and the IDs are read-only */
@@ -134,9 +124,7 @@ static void reg_write(struct opt3007_emul_data *data, uint8_t reg, uint16_t val,
   }
 }
 
-static int opt3007_emul_transfer(const struct emul *target, struct i2c_msg *msgs, int num_msgs,
-         int addr)
-{
+static int opt3007_emul_transfer(const struct emul *target, struct i2c_msg *msgs, int num_msgs, int addr) {
   struct opt3007_emul_data *data = target->data;
   int64_t now = k_uptime_get();
 
@@ -173,26 +161,22 @@ static const struct i2c_emul_api opt3007_emul_bus_api = {
   .transfer = opt3007_emul_transfer,
 };
 
-static int opt3007_emul_init(const struct emul *target, const struct device *parent)
-{
+static int opt3007_emul_init(const struct emul *target, const struct device *parent) {
   ARG_UNUSED(parent);
   power_on(target->data);
   return 0;
 }
 
-EMUL_DT_DEFINE(DT_NODELABEL(opt3007), opt3007_emul_init, &opt3007_emul, NULL,
-         &opt3007_emul_bus_api, NULL);
+EMUL_DT_DEFINE(DT_NODELABEL(opt3007), opt3007_emul_init, &opt3007_emul, NULL, &opt3007_emul_bus_api, NULL);
 
-void opt3007_emul_set_result(uint16_t result)
-{
+void opt3007_emul_set_result(uint16_t result) {
   /* earlier conversions keep the old result */
   advance(&opt3007_emul, k_uptime_get());
   opt3007_emul.fixed = result;
   opt3007_emul.fixed_result = true;
 }
 
-static void opt3007_emul_reset(bool keep_media)
-{
+static void opt3007_emul_reset(bool keep_media) {
   /* a reboot power-cycles the sensor too */
   ARG_UNUSED(keep_media);
   power_on(&opt3007_emul);

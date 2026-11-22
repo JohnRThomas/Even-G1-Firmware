@@ -5,13 +5,13 @@
 #ifndef G1_THREADS_H_
 #define G1_THREADS_H_
 
-#include <stdint.h>
+#include <glasses_state.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <zephyr/kernel.h>
+#include <stdint.h>
 #include <zephyr/device.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <glasses_state.h>
 
 /* print without the LOG_LEVEL check / "%s(): " prefix */
 #define G1_PRINTK(fmt, ...) g1_printk(fmt, ##__VA_ARGS__)

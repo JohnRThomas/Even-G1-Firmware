@@ -19,8 +19,7 @@ static uint8_t seq;
 
 /* ---- sub 6: pane mode ---- */
 
-ZTEST(dashboard, test_0x06_pane_mode_stores_mode_and_pane_and_echoes)
-{
+ZTEST(dashboard, test_0x06_pane_mode_stores_mode_and_pane_and_echoes) {
   static const struct {
     uint8_t seq;
     uint8_t mode;
@@ -45,19 +44,16 @@ ZTEST(dashboard, test_0x06_pane_mode_stores_mode_and_pane_and_echoes)
 
     snprintf(reply, sizeof(reply), "06 07 00 %02x 06 00", rows[row].seq);
     expect_frame_msg(reply, -1, "row %u", row);
-    zassert_equal(dts()->disp_mode, rows[row].mode, "row %u: mode %u", row,
-            dts()->disp_mode);
+    zassert_equal(dts()->disp_mode, rows[row].mode, "row %u: mode %u", row, dts()->disp_mode);
     zassert_equal(dts()->area, rows[row].pane, "row %u: pane %u", row, dts()->area);
-    zassert_equal(save_dashboard_ts_to_ncs_mem_fake.call_count, row + 1,
-            "row %u: %u saves", row,
-            save_dashboard_ts_to_ncs_mem_fake.call_count);
+    zassert_equal(save_dashboard_ts_to_ncs_mem_fake.call_count, row + 1, "row %u: %u saves", row,
+                  save_dashboard_ts_to_ncs_mem_fake.call_count);
   }
   expect_no_frame();
 }
 
 /* the app sends it to each lens itself */
-ZTEST(dashboard, test_0x06_pane_mode_is_not_forwarded_to_the_slave)
-{
+ZTEST(dashboard, test_0x06_pane_mode_is_not_forwarded_to_the_slave) {
   g1_send_vector("0x06_pane_mode");
 
   zassert_equal(SendDashBoardStartupModeInfoToSlave_fake.call_count, 0);
@@ -65,8 +61,7 @@ ZTEST(dashboard, test_0x06_pane_mode_is_not_forwarded_to_the_slave)
   zassert_equal(g1_fake_ipc_send_fake.call_count, 0);
 }
 
-ZTEST(dashboard, test_0x06_pane_mode_on_the_slave_is_stored_and_echoed)
-{
+ZTEST(dashboard, test_0x06_pane_mode_on_the_slave_is_stored_and_echoed) {
   g1_unit_set_role(G1_ROLE_SLAVE);
 
   g1_send_vector("0x06_pane_mode");
@@ -76,8 +71,7 @@ ZTEST(dashboard, test_0x06_pane_mode_on_the_slave_is_stored_and_echoed)
   zassert_equal(dts()->area, 1);
 }
 
-ZTEST(dashboard, test_0x06_pane_mode_invalid_mode_id_is_rejected)
-{
+ZTEST(dashboard, test_0x06_pane_mode_invalid_mode_id_is_rejected) {
   int len = g1_vector("0x06_pane_mode", pkt, sizeof(pkt));
 
   g1_send(pkt, len);
@@ -91,8 +85,7 @@ ZTEST(dashboard, test_0x06_pane_mode_invalid_mode_id_is_rejected)
   expect_frame("06 07 00 0a 06 01");
 }
 
-ZTEST(dashboard, test_0x06_pane_mode_length_mismatch_replies_status_1_and_stores_nothing)
-{
+ZTEST(dashboard, test_0x06_pane_mode_length_mismatch_replies_status_1_and_stores_nothing) {
   g1_send_vector_with("0x06_pane_mode", 1, 0x08);
 
   expect_frame_padded("06 08 00 08 06 01", 20);
@@ -104,8 +97,7 @@ ZTEST(dashboard, test_0x06_pane_mode_length_mismatch_replies_status_1_and_stores
 /* ---- sub 7: map canvas ---- */
 
 /* pane mode with the map pane (04) */
-static void select_map_pane(uint8_t mode)
-{
+static void select_map_pane(uint8_t mode) {
   const uint8_t request[] = {0x06, 0x07, 0x00, seq, DASH_SUB_PANE_MODE, mode, 0x04};
   const uint8_t reply[] = {0x06, 0x07, 0x00, seq, DASH_SUB_PANE_MODE, 0x00};
 
@@ -115,8 +107,7 @@ static void select_map_pane(uint8_t mode)
 }
 
 /* canvas[]: <mode> 04 02 01 + len bytes 00 01 02 ..., in chunks; the last carries last_count */
-static uint16_t send_background(uint8_t mode, size_t len, uint16_t count, uint16_t last_count)
-{
+static uint16_t send_background(uint8_t mode, size_t len, uint16_t count, uint16_t last_count) {
   const uint8_t header[] = {mode, 0x04, 0x02, 0x01};
   size_t total = sizeof(header) + len;
   uint16_t chunks = DIV_ROUND_UP(total, DASH_CHUNK_DATA);
@@ -126,15 +117,13 @@ static uint16_t send_background(uint8_t mode, size_t len, uint16_t count, uint16
   for (uint16_t chunk = 1; chunk <= chunks; chunk++) {
     size_t part = MIN(DASH_CHUNK_DATA, total - (chunk - 1) * DASH_CHUNK_DATA);
 
-    g1_send(pkt, g1_put_chunk(pkt, 0x06, seq++, DASH_SUB_CANVAS,
-            chunk == chunks ? last_count : count, chunk,
-            canvas + (chunk - 1) * DASH_CHUNK_DATA, part));
+    g1_send(pkt, g1_put_chunk(pkt, 0x06, seq++, DASH_SUB_CANVAS, chunk == chunks ? last_count : count, chunk,
+                              canvas + (chunk - 1) * DASH_CHUNK_DATA, part));
   }
   return chunks;
 }
 
-static void send_good_background(uint8_t mode, size_t len)
-{
+static void send_good_background(uint8_t mode, size_t len) {
   uint16_t chunks = DIV_ROUND_UP(4 + len, DASH_CHUNK_DATA);
 
   send_background(mode, len, chunks, chunks);
@@ -142,8 +131,7 @@ static void send_good_background(uint8_t mode, size_t len)
 }
 
 /* mode 03 with len icon bytes 80 81 ... ff 80 (kept in icon[]); returns the packet length */
-static size_t make_icon(uint8_t mode, uint16_t x_pos, uint16_t y_pos, size_t len)
-{
+static size_t make_icon(uint8_t mode, uint16_t x_pos, uint16_t y_pos, size_t len) {
   uint8_t body[12 + sizeof(icon)] = {mode, 0x04, 0x03};
 
   sys_put_le16(x_pos, &body[3]);
@@ -155,13 +143,11 @@ static size_t make_icon(uint8_t mode, uint16_t x_pos, uint16_t y_pos, size_t len
   return g1_put_chunk(pkt, 0x06, seq++, DASH_SUB_CANVAS, 1, 1, body, 7 + len);
 }
 
-static void send_icon(uint8_t mode, uint16_t x_pos, uint16_t y_pos)
-{
+static void send_icon(uint8_t mode, uint16_t x_pos, uint16_t y_pos) {
   g1_send(pkt, make_icon(mode, x_pos, y_pos, ICON_SIZE));
 }
 
-ZTEST(dashboard, test_0x06_canvas_mode_0_is_acked_and_stores_the_map_pane)
-{
+ZTEST(dashboard, test_0x06_canvas_mode_0_is_acked_and_stores_the_map_pane) {
   g1_send_vector("0x06_canvas_mode0");
 
   expect_only_frame("06 0c 00 13 07 01 00 01 00 00");
@@ -171,8 +157,7 @@ ZTEST(dashboard, test_0x06_canvas_mode_0_is_acked_and_stores_the_map_pane)
 }
 
 /* chunks 2..35 continue the vector's pattern; dual_bitmap gets the bitmap sent */
-static void send_dual_background_vectors(void)
-{
+static void send_dual_background_vectors(void) {
   uint8_t data[DASH_CHUNK_DATA];
   int len = g1_vector_load("0x06_canvas_bg_chunk1", pkt, sizeof(pkt));
 
@@ -182,8 +167,7 @@ static void send_dual_background_vectors(void)
   g1_send(pkt, len);
   for (int chunk = 2; chunk <= 35; chunk++) {
     g1_fill_pattern(data, sizeof(data), 176 + (chunk - 2) * DASH_CHUNK_DATA);
-    g1_send(pkt, g1_put_chunk(pkt, 0x06, 0x1d + chunk, DASH_SUB_CANVAS, 36, chunk, data,
-            sizeof(data)));
+    g1_send(pkt, g1_put_chunk(pkt, 0x06, 0x1d + chunk, DASH_SUB_CANVAS, 36, chunk, data, sizeof(data)));
   }
   len = g1_vector_load("0x06_canvas_bg_last_chunk", pkt, sizeof(pkt));
   zassert_equal(len, 105);
@@ -191,8 +175,7 @@ static void send_dual_background_vectors(void)
   g1_send(pkt, len);
 }
 
-ZTEST(dashboard, test_0x06_canvas_dual_background_chunks_are_acked_chunk_by_chunk)
-{
+ZTEST(dashboard, test_0x06_canvas_dual_background_chunks_are_acked_chunk_by_chunk) {
   char hex[32];
 
   seq = 0x10;
@@ -202,15 +185,13 @@ ZTEST(dashboard, test_0x06_canvas_dual_background_chunks_are_acked_chunk_by_chun
 
   zassert_equal(g1_frame_count(), 36);
   for (int chunk = 1; chunk <= 35; chunk++) {
-    snprintf(hex, sizeof(hex), "06 bd 00 %02x 07 24 00 %02x 00 00", 0x1d + chunk,
-       chunk);
+    snprintf(hex, sizeof(hex), "06 bd 00 %02x 07 24 00 %02x 00 00", 0x1d + chunk, chunk);
     expect_frame(hex);
   }
   expect_frame("06 69 00 43 07 24 00 24 00 00");
 }
 
-ZTEST(dashboard, test_0x06_canvas_icon_on_the_dual_background_completes_the_map)
-{
+ZTEST(dashboard, test_0x06_canvas_icon_on_the_dual_background_completes_the_map) {
   select_map_pane(0x01);
   send_dual_background_vectors();
   g1_frames_clear();
@@ -226,13 +207,11 @@ ZTEST(dashboard, test_0x06_canvas_icon_on_the_dual_background_completes_the_map)
   zassert_mem_equal(citywalk_arrow_dual, icon, ICON_SIZE);
 }
 
-ZTEST(dashboard, test_0x06_canvas_full_background_of_5032_bytes_is_kept_and_completed)
-{
+ZTEST(dashboard, test_0x06_canvas_full_background_of_5032_bytes_is_kept_and_completed) {
   select_map_pane(0x00);
   send_good_background(0x00, BG_FULL);
 
-  zassert_equal(dts()->citywalk_state, 2, "background not kept (state %d)",
-          dts()->citywalk_state);
+  zassert_equal(dts()->citywalk_state, 2, "background not kept (state %d)", dts()->citywalk_state);
   zassert_mem_equal(panoramic_map_buf + 4, canvas + 4, BG_FULL);
 
   send_icon(0x00, 0x40, 0x20);
@@ -242,8 +221,7 @@ ZTEST(dashboard, test_0x06_canvas_full_background_of_5032_bytes_is_kept_and_comp
   zassert_mem_equal(citywalk_arrow_full, icon, ICON_SIZE);
 }
 
-ZTEST(dashboard, test_0x06_canvas_dual_background_one_byte_too_many_is_dropped)
-{
+ZTEST(dashboard, test_0x06_canvas_dual_background_one_byte_too_many_is_dropped) {
   select_map_pane(0x01);
   send_good_background(0x01, BG_DUAL + 1);
 
@@ -252,8 +230,7 @@ ZTEST(dashboard, test_0x06_canvas_dual_background_one_byte_too_many_is_dropped)
   zassert_equal(citywalk_canvas_valid, 0, "map drawn on a 6393-byte background");
 }
 
-ZTEST(dashboard, test_0x06_canvas_dual_background_one_byte_too_few_is_dropped)
-{
+ZTEST(dashboard, test_0x06_canvas_dual_background_one_byte_too_few_is_dropped) {
   select_map_pane(0x01);
   send_good_background(0x01, BG_DUAL - 1);
 
@@ -262,8 +239,7 @@ ZTEST(dashboard, test_0x06_canvas_dual_background_one_byte_too_few_is_dropped)
   zassert_equal(citywalk_canvas_valid, 0);
 }
 
-ZTEST(dashboard, test_0x06_canvas_full_sized_background_in_dual_mode_is_dropped)
-{
+ZTEST(dashboard, test_0x06_canvas_full_sized_background_in_dual_mode_is_dropped) {
   select_map_pane(0x01);
   send_good_background(0x01, BG_FULL);
 
@@ -271,8 +247,7 @@ ZTEST(dashboard, test_0x06_canvas_full_sized_background_in_dual_mode_is_dropped)
   zassert_equal(citywalk_canvas_valid, 0, "map drawn on a 5032-byte background in dual mode");
 }
 
-ZTEST(dashboard, test_0x06_canvas_dropped_background_is_reported_with_status_1)
-{
+ZTEST(dashboard, test_0x06_canvas_dropped_background_is_reported_with_status_1) {
   uint16_t sent;
 
   select_map_pane(0x01);
@@ -286,8 +261,7 @@ ZTEST(dashboard, test_0x06_canvas_dropped_background_is_reported_with_status_1)
   zassert_equal(g1_frame_peek(sent - 1, NULL)[9], 0x01, "last chunk acked with status 00");
 }
 
-ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_drops_the_background)
-{
+ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_drops_the_background) {
   select_map_pane(0x01);
   send_background(0x01, 34 * DASH_CHUNK_DATA + 96 - 4, 36, 35);
   g1_frames_clear();
@@ -297,8 +271,7 @@ ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_drops_the_background)
   zassert_equal(citywalk_canvas_valid, 0);
 }
 
-ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_gets_an_error_reply)
-{
+ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_gets_an_error_reply) {
   uint16_t sent;
 
   select_map_pane(0x01);
@@ -311,8 +284,7 @@ ZTEST(dashboard, test_0x06_canvas_chunk_count_mismatch_gets_an_error_reply)
 
 /* ---- sub 7: icon ---- */
 
-ZTEST(dashboard, test_0x06_canvas_icon_is_acked_and_stores_x_y_and_its_128_bytes)
-{
+ZTEST(dashboard, test_0x06_canvas_icon_is_acked_and_stores_x_y_and_its_128_bytes) {
   int len;
 
   select_map_pane(0x01);
@@ -326,8 +298,7 @@ ZTEST(dashboard, test_0x06_canvas_icon_is_acked_and_stores_x_y_and_its_128_bytes
   zassert_mem_equal(panoramic_map_buf + ICON_DUAL, pkt + 16, ICON_SIZE);
 }
 
-ZTEST(dashboard, test_0x06_canvas_icon_odd_x_is_rounded_down)
-{
+ZTEST(dashboard, test_0x06_canvas_icon_odd_x_is_rounded_down) {
   select_map_pane(0x01);
   send_icon(0x01, 0xad, 0x35);
 
@@ -336,8 +307,7 @@ ZTEST(dashboard, test_0x06_canvas_icon_odd_x_is_rounded_down)
   zassert_equal(dts()->arrow_y, 0x35);
 }
 
-ZTEST(dashboard, test_0x06_canvas_icon_at_the_dual_limits_is_stored)
-{
+ZTEST(dashboard, test_0x06_canvas_icon_at_the_dual_limits_is_stored) {
   select_map_pane(0x01);
   send_icon(0x01, 0x158, 0x68);
 
@@ -348,8 +318,7 @@ ZTEST(dashboard, test_0x06_canvas_icon_at_the_dual_limits_is_stored)
 }
 
 /* the 32x32 icon fits up to x 376 - 32 = 0x158, y 136 - 32 = 0x68 */
-ZTEST(dashboard, test_0x06_canvas_icon_past_the_dual_limits_is_not_stored)
-{
+ZTEST(dashboard, test_0x06_canvas_icon_past_the_dual_limits_is_not_stored) {
   select_map_pane(0x01);
   send_good_background(0x01, BG_DUAL);
 
@@ -362,8 +331,7 @@ ZTEST(dashboard, test_0x06_canvas_icon_past_the_dual_limits_is_not_stored)
 }
 
 /* the 32x32 icon fits up to x 296 - 32 = 0x108, y 136 - 32 = 0x68 */
-ZTEST(dashboard, test_0x06_canvas_icon_limits_in_full_mode)
-{
+ZTEST(dashboard, test_0x06_canvas_icon_limits_in_full_mode) {
   select_map_pane(0x00);
   send_good_background(0x00, BG_FULL);
 
@@ -378,20 +346,17 @@ ZTEST(dashboard, test_0x06_canvas_icon_limits_in_full_mode)
   zassert_equal(dts()->arrow_x, 0x108);
 }
 
-ZTEST(dashboard, test_0x06_canvas_icon_one_byte_too_many_writes_nothing_behind_it)
-{
+ZTEST(dashboard, test_0x06_canvas_icon_one_byte_too_many_writes_nothing_behind_it) {
   select_map_pane(0x01);
   g1_send(pkt, make_icon(0x01, 0xac, 0x34, ICON_SIZE + 1));
   g1_frames_clear();
 
-  zassert_equal(panoramic_map_buf[ICON_DUAL + ICON_SIZE], 0,
-          "byte 0x%x behind the icon written (0x%02x)", ICON_DUAL + ICON_SIZE,
-          panoramic_map_buf[ICON_DUAL + ICON_SIZE]);
+  zassert_equal(panoramic_map_buf[ICON_DUAL + ICON_SIZE], 0, "byte 0x%x behind the icon written (0x%02x)",
+                ICON_DUAL + ICON_SIZE, panoramic_map_buf[ICON_DUAL + ICON_SIZE]);
 }
 
 /* a dual canvas does not fit the full layout */
-ZTEST(dashboard, test_0x06_pane_mode_change_puts_the_map_pane_back_to_no_data)
-{
+ZTEST(dashboard, test_0x06_pane_mode_change_puts_the_map_pane_back_to_no_data) {
   select_map_pane(0x01);
   send_dual_background_vectors();
   send_icon(0x01, 0xac, 0x34);

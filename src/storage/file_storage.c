@@ -3,20 +3,20 @@
  * stores) and the storage commit thread (settings commit, file download
  * into the external flash).
  */
-#include <string.h>
-#include <zephyr/kernel.h>
-#include <zephyr/sys/byteorder.h>
-#include "g1_log.h"
-#include "storage.h"
 #include "../main.h"
 #include "../notify/demo_image.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "storage.h"
+#include <string.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/byteorder.h>
 
-#define FILE_MSG_LEN     200
-#define FILE_MSGQ_DEPTH  30
-#define DEMO_IMAGE_ADDR  0x1c0000
-#define DEMO_IMAGE_END   0x200000
+#define FILE_MSG_LEN    200
+#define FILE_MSGQ_DEPTH 30
+#define DEMO_IMAGE_ADDR 0x1c0000
+#define DEMO_IMAGE_END  0x200000
 
 struct file_msg {
   uint8_t data[FILE_MSG_LEN];
@@ -39,8 +39,7 @@ static struct k_thread flash_ops_thread_data;
 K_THREAD_STACK_DEFINE(storage_commit_stack, 0x1400);
 K_THREAD_STACK_DEFINE(flash_ops_stack, 0x800);
 
-static void flash_ops_thread(void *p1, void *p2, void *p3)
-{
+static void flash_ops_thread(void *p1, void *p2, void *p3) {
   G1_LOG_INF("flash op thread startup ...\n");
   while (1) {
     k_sem_take(&flash_ops_sem, K_FOREVER);
@@ -56,8 +55,7 @@ static void flash_ops_thread(void *p1, void *p2, void *p3)
   }
 }
 
-int file_init(void)
-{
+int file_init(void) {
   int ret;
 
   ret = k_msgq_alloc_init(&file_msgq, sizeof(struct file_msg), FILE_MSGQ_DEPTH);
@@ -69,8 +67,7 @@ int file_init(void)
   return ret;
 }
 
-int enqueue_file(const void *data, size_t len)
-{
+int enqueue_file(const void *data, size_t len) {
   struct file_msg msg;
   int ret;
 
@@ -91,8 +88,7 @@ int enqueue_file(const void *data, size_t len)
   return ret;
 }
 
-int dequeue_file(struct file_msg *out)
-{
+int dequeue_file(struct file_msg *out) {
   struct file_msg msg;
   int ret;
 
@@ -105,8 +101,7 @@ int dequeue_file(struct file_msg *out)
   return ret;
 }
 
-void crc32_init(void)
-{
+void crc32_init(void) {
   uint32_t i, j, c;
 
   for (i = 0; i < 256; i++) {
@@ -122,8 +117,7 @@ void crc32_init(void)
   }
 }
 
-uint32_t crc32(uint32_t crc, const uint8_t *buf, int len)
-{
+uint32_t crc32(uint32_t crc, const uint8_t *buf, int len) {
   const uint8_t *end = buf + len;
 
   crc = ~crc;
@@ -133,8 +127,7 @@ uint32_t crc32(uint32_t crc, const uint8_t *buf, int len)
   return ~crc;
 }
 
-void try_to_save_file(struct GlassesState *gs)
-{
+void try_to_save_file(struct GlassesState *gs) {
   struct file_msg msg;
   uint32_t addr;
   uint8_t len;
@@ -185,8 +178,7 @@ void try_to_save_file(struct GlassesState *gs)
   }
 }
 
-static void storage_commit_thread(void *p1, void *p2, void *p3)
-{
+static void storage_commit_thread(void *p1, void *p2, void *p3) {
   struct GlassesState *gs = p1;
   bool saved;
   int force_sys = 0;
@@ -205,56 +197,56 @@ static void storage_commit_thread(void *p1, void *p2, void *p3)
       continue;
     }
     switch (gs->dashboard_cmd) {
-    case 1:
-      gs->store.write("brightness_level", &gs->panel.panel_brightness_level, sizeof(uint8_t));
-      break;
-    case 2:
-      gs->store.write("3dof_enable", &gs->imu.dof3_enable, sizeof(uint8_t));
-      break;
-    case 3:
-      gs->store.write("display_mode", &gs->display_mode, sizeof(uint8_t));
-      break;
-    case 7:
-      gs->store.write("countdown_ts", gs->countdown_ts, sizeof(struct countdown_ts_context));
-      break;
-    case 6:
-      gs->store.write("dashboard_ts", gs->dashboard_ts, sizeof(struct dashboard_ts_context));
-      break;
-    case 8:
-      gs->store.write("user_sched_info", gs->user_sched_info, sizeof(struct user_schedule_context));
-      break;
-    case 0x0b:
-      gs->store.write("wakeup_angle", &gs->imu.level, sizeof(uint8_t));
-      break;
-    case 0x16:
-      if (file_type == DEMO_IMAGE_ADDR) {
-        get_demo_image_source_from_flash();
-        if (get_dashboard_state()->is_master == 1) {
-          get_dashboard_state()->dash_buf->type = 0x0d;
-        } else {
-          get_dashboard_state()->dash_buf->type = 0x0c;
+      case 1:
+        gs->store.write("brightness_level", &gs->panel.panel_brightness_level, sizeof(uint8_t));
+        break;
+      case 2:
+        gs->store.write("3dof_enable", &gs->imu.dof3_enable, sizeof(uint8_t));
+        break;
+      case 3:
+        gs->store.write("display_mode", &gs->display_mode, sizeof(uint8_t));
+        break;
+      case 7:
+        gs->store.write("countdown_ts", gs->countdown_ts, sizeof(struct countdown_ts_context));
+        break;
+      case 6:
+        gs->store.write("dashboard_ts", gs->dashboard_ts, sizeof(struct dashboard_ts_context));
+        break;
+      case 8:
+        gs->store.write("user_sched_info", gs->user_sched_info, sizeof(struct user_schedule_context));
+        break;
+      case 0x0b:
+        gs->store.write("wakeup_angle", &gs->imu.level, sizeof(uint8_t));
+        break;
+      case 0x16:
+        if (file_type == DEMO_IMAGE_ADDR) {
+          get_demo_image_source_from_flash();
+          if (get_dashboard_state()->is_master == 1) {
+            get_dashboard_state()->dash_buf->type = 0x0d;
+          } else {
+            get_dashboard_state()->dash_buf->type = 0x0c;
+          }
         }
-      }
-      file_type = 0;
-      file_buf_len = 0;
-      LAST_FILE_CRC = 0;
-      file_addr = 0;
-      continue;
-    case 0x17:
-      exit_running_task(gs, 0);
-      change_work_mode(1);
-      continue;
-    case 0x19:
-    case 0x1a:
-      force_sys = 1;
-      break;
-    case 0x11:
-      k_sleep(K_SECONDS(10));
-      change_work_mode(7);
-      /* fallthrough */
-    default:
-      G1_LOG_INF("ignore.\n");
-      break;
+        file_type = 0;
+        file_buf_len = 0;
+        LAST_FILE_CRC = 0;
+        file_addr = 0;
+        continue;
+      case 0x17:
+        exit_running_task(gs, 0);
+        change_work_mode(1);
+        continue;
+      case 0x19:
+      case 0x1a:
+        force_sys = 1;
+        break;
+      case 0x11:
+        k_sleep(K_SECONDS(10));
+        change_work_mode(7);
+        /* fallthrough */
+      default:
+        G1_LOG_INF("ignore.\n");
+        break;
     }
     do {
       start = k_uptime_get();
@@ -269,8 +261,7 @@ static void storage_commit_thread(void *p1, void *p2, void *p3)
   }
 }
 
-void storage_commit_request(int cmd, uint8_t sys_dirty)
-{
+void storage_commit_request(int cmd, uint8_t sys_dirty) {
   get_dashboard_state()->dashboard_cmd = cmd;
   if (sys_settings_dirty != sys_dirty && sys_settings_dirty == 0) {
     sys_settings_dirty = sys_dirty;
@@ -278,13 +269,10 @@ void storage_commit_request(int cmd, uint8_t sys_dirty)
   k_sem_give(&get_dashboard_state()->dashboard_position_sem);
 }
 
-void start_flash_storage_threads(struct GlassesState *gs)
-{
+void start_flash_storage_threads(struct GlassesState *gs) {
   k_sem_init(&flash_ops_sem, 0, 20);
-  k_thread_create(&flash_ops_thread_data, flash_ops_stack,
-      K_THREAD_STACK_SIZEOF(flash_ops_stack), flash_ops_thread, gs, NULL, NULL,
-      K_PRIO_COOP(4), 0, K_NO_WAIT);
-  k_thread_create(&storage_commit_thread_data, storage_commit_stack,
-      K_THREAD_STACK_SIZEOF(storage_commit_stack), storage_commit_thread, gs,
-      NULL, NULL, K_PRIO_COOP(5), 0, K_NO_WAIT);
+  k_thread_create(&flash_ops_thread_data, flash_ops_stack, K_THREAD_STACK_SIZEOF(flash_ops_stack), flash_ops_thread, gs,
+                  NULL, NULL, K_PRIO_COOP(4), 0, K_NO_WAIT);
+  k_thread_create(&storage_commit_thread_data, storage_commit_stack, K_THREAD_STACK_SIZEOF(storage_commit_stack),
+                  storage_commit_thread, gs, NULL, NULL, K_PRIO_COOP(5), 0, K_NO_WAIT);
 }

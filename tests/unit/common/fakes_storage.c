@@ -10,8 +10,7 @@
 uint8_t g1_fake_flash_image[G1_FAKE_FLASH_SIZE];
 
 DEFINE_FAKE_VALUE_FUNC(int, g1_fake_flash_read, struct GlassesState *, uint32_t, void *, size_t);
-DEFINE_FAKE_VALUE_FUNC(int, g1_fake_flash_write, struct GlassesState *, uint32_t, const void *,
-           size_t);
+DEFINE_FAKE_VALUE_FUNC(int, g1_fake_flash_write, struct GlassesState *, uint32_t, const void *, size_t);
 DEFINE_FAKE_VALUE_FUNC(int, g1_fake_flash_erase, struct GlassesState *, uint32_t, size_t);
 
 DEFINE_FAKE_VALUE_FUNC(int, flash_settings_read, uint32_t, void *, size_t);
@@ -27,13 +26,11 @@ __weak uint32_t LAST_FILE_CRC;
 /* GlassesState->store.write: 0, a store with room for every setting */
 FAKE_VALUE_FUNC(int, g1_fake_store_write, const char *, const void *, size_t);
 
-static bool in_range(uint32_t addr, size_t len)
-{
+static bool in_range(uint32_t addr, size_t len) {
   return addr <= G1_FAKE_FLASH_SIZE && len <= G1_FAKE_FLASH_SIZE - addr;
 }
 
-static int ram_read(struct GlassesState *state, uint32_t addr, void *buf, size_t len)
-{
+static int ram_read(struct GlassesState *state, uint32_t addr, void *buf, size_t len) {
   ARG_UNUSED(state);
   if (!in_range(addr, len)) {
     return -EINVAL;
@@ -43,8 +40,7 @@ static int ram_read(struct GlassesState *state, uint32_t addr, void *buf, size_t
 }
 
 /* NOR: a write only clears bits */
-static int ram_write(struct GlassesState *state, uint32_t addr, const void *buf, size_t len)
-{
+static int ram_write(struct GlassesState *state, uint32_t addr, const void *buf, size_t len) {
   const uint8_t *bytes = buf;
 
   ARG_UNUSED(state);
@@ -57,8 +53,7 @@ static int ram_write(struct GlassesState *state, uint32_t addr, const void *buf,
   return 0;
 }
 
-static int ram_erase(struct GlassesState *state, uint32_t addr, size_t len)
-{
+static int ram_erase(struct GlassesState *state, uint32_t addr, size_t len) {
   ARG_UNUSED(state);
   if (!in_range(addr, len)) {
     return -EINVAL;
@@ -67,8 +62,7 @@ static int ram_erase(struct GlassesState *state, uint32_t addr, size_t len)
   return 0;
 }
 
-static int settings_read_default(uint32_t addr, void *buf, size_t len)
-{
+static int settings_read_default(uint32_t addr, void *buf, size_t len) {
   return ram_read(NULL, addr, buf, len);
 }
 
@@ -76,8 +70,7 @@ static int settings_read_default(uint32_t addr, void *buf, size_t len)
  * Rewrites the sector at addr with data unless it already starts with it; pad_sector writes the
  * whole sector, zero-padded. Data longer than a sector or a sector out of range is -EINVAL.
  */
-static int rewrite_sector(uint32_t addr, const void *data, size_t len, bool pad_sector)
-{
+static int rewrite_sector(uint32_t addr, const void *data, size_t len, bool pad_sector) {
   static uint8_t sector[G1_FAKE_FLASH_SECTOR];
   int ret;
 
@@ -100,18 +93,15 @@ static int rewrite_sector(uint32_t addr, const void *data, size_t len, bool pad_
   return ret;
 }
 
-static int settings_write_default(uint32_t addr, const void *data, size_t len)
-{
+static int settings_write_default(uint32_t addr, const void *data, size_t len) {
   return rewrite_sector(addr, data, len, true);
 }
 
-static int font_write_default(uint32_t addr, const void *data, size_t len)
-{
+static int font_write_default(uint32_t addr, const void *data, size_t len) {
   return rewrite_sector(addr, data, len, false);
 }
 
-static int whitelist_write_default(uint32_t addr, const uint8_t *data, uint32_t size)
-{
+static int whitelist_write_default(uint32_t addr, const uint8_t *data, uint32_t size) {
   uint8_t pages = (size >> 12) + 1;
   int16_t last = size - (pages - 1) * G1_FAKE_FLASH_SECTOR;
   int ret = 0;
@@ -125,8 +115,7 @@ static int whitelist_write_default(uint32_t addr, const uint8_t *data, uint32_t 
   return ret;
 }
 
-static void fakes_storage_reset(bool keep_media)
-{
+static void fakes_storage_reset(bool keep_media) {
   struct GlassesState *state = get_dashboard_state();
 
   if (!keep_media) {

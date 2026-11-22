@@ -2,23 +2,23 @@
  * PDM microphone capture (derived from the Zephyr dmic sample), LC3 encoding
  * of the captured blocks and the DMIC message queue.
  */
+#include <hal/nrf_pdm.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zephyr/kernel.h>
+#include <zephyr/audio/dmic.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
-#include <zephyr/audio/dmic.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <hal/nrf_pdm.h>
 
 #include "lc3.h"
 
-#include "g1_log.h"
-#include "sensors_audio.h"
 #include "../ble/ble_ancs.h"
 #include "../production_test/production_test.h"
 #include "../utils/common_utils.h"
+#include "g1_log.h"
+#include "sensors_audio.h"
 
 #define DMIC_DEV  DEVICE_DT_GET(DT_NODELABEL(pdm0))
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
@@ -28,14 +28,13 @@
 #define AUDIO_FLASH_START 0x400000
 #define AUDIO_FLASH_END   0x410000
 
-#define MAX_SAMPLE_RATE  16000
-#define SAMPLE_BIT_WIDTH 16
-#define BYTES_PER_SAMPLE sizeof(int16_t)
-#define READ_TIMEOUT     1000
-#define BLOCK_SIZE(_sample_rate, _number_of_channels) \
-  (BYTES_PER_SAMPLE * (_sample_rate / 10) * _number_of_channels)
-#define MAX_BLOCK_SIZE BLOCK_SIZE(MAX_SAMPLE_RATE, 1)
-#define BLOCK_COUNT    10
+#define MAX_SAMPLE_RATE                               16000
+#define SAMPLE_BIT_WIDTH                              16
+#define BYTES_PER_SAMPLE                              sizeof(int16_t)
+#define READ_TIMEOUT                                  1000
+#define BLOCK_SIZE(_sample_rate, _number_of_channels) (BYTES_PER_SAMPLE * (_sample_rate / 10) * _number_of_channels)
+#define MAX_BLOCK_SIZE                                BLOCK_SIZE(MAX_SAMPLE_RATE, 1)
+#define BLOCK_COUNT                                   10
 
 #define LC3_FRAME_US    10000
 #define LC3_SAMPLE_RATE 16000
@@ -61,8 +60,7 @@ struct dmic_msg {
   uint8_t data[DMIC_MSG_SIZE];
 };
 
-int init_dmic_msgq(void)
-{
+int init_dmic_msgq(void) {
   int ret = k_msgq_alloc_init(&dmic_msgq, DMIC_MSG_SIZE, DMIC_MSGQ_LEN);
 
   if (ret) {
@@ -71,8 +69,7 @@ int init_dmic_msgq(void)
   return ret;
 }
 
-int clean_dmic_msgq(void)
-{
+int clean_dmic_msgq(void) {
   int ret = k_msgq_cleanup(&dmic_msgq);
 
   if (ret) {
@@ -81,8 +78,7 @@ int clean_dmic_msgq(void)
   return ret;
 }
 
-int enqueue_dmic(void *msg)
-{
+int enqueue_dmic(void *msg) {
   struct dmic_msg data = {0};
   uint32_t used = dmic_msgq.used_msgs;
   int ret;
@@ -99,13 +95,11 @@ int enqueue_dmic(void *msg)
   return ret;
 }
 
-uint32_t get_dmic_num_messages(void)
-{
+uint32_t get_dmic_num_messages(void) {
   return dmic_msgq.used_msgs;
 }
 
-int dequeue_dmic(void *msg)
-{
+int dequeue_dmic(void *msg) {
   struct dmic_msg data = {0};
   int ret;
 
@@ -118,8 +112,7 @@ int dequeue_dmic(void *msg)
   return ret;
 }
 
-void app_codec_lc3_test(void *pcm, int len)
-{
+void app_codec_lc3_test(void *pcm, int len) {
   const struct device *flash_dev = FLASH_DEV;
   unsigned int enc_size = lc3_encoder_size(LC3_FRAME_US, LC3_SAMPLE_RATE);
   uint16_t frame_size = lc3_frame_samples(LC3_FRAME_US, LC3_SAMPLE_RATE) * 2;
@@ -137,8 +130,8 @@ void app_codec_lc3_test(void *pcm, int len)
   } else {
     encoder = lc3_setup_encoder(LC3_FRAME_US, LC3_SAMPLE_RATE, 0, enc_mem);
     for (int i = 0; i < frames; i++) {
-      ret = lc3_encode(encoder, LC3_PCM_FORMAT_S16, (uint8_t *)pcm + i * frame_size, 1,
-           LC3_FRAME_BYTES, out + i * LC3_FRAME_BYTES);
+      ret = lc3_encode(encoder, LC3_PCM_FORMAT_S16, (uint8_t *)pcm + i * frame_size, 1, LC3_FRAME_BYTES,
+                       out + i * LC3_FRAME_BYTES);
       if (ret) {
         G1_LOG_ERR("lc3_encode did not return zero %d\n", ret);
         break;
@@ -148,13 +141,11 @@ void app_codec_lc3_test(void *pcm, int len)
     if (ret == 0) {
       if (get_pt_test_mode() == 1) {
         if (audio_flash_offset < AUDIO_FLASH_END) {
-          ret = flash_write(flash_dev, audio_flash_offset, out,
-                frames * LC3_FRAME_BYTES);
+          ret = flash_write(flash_dev, audio_flash_offset, out, frames * LC3_FRAME_BYTES);
           if (ret) {
             G1_LOG_ERR("Flash write failed! %d\n\n", ret);
           } else {
-            G1_LOG_ERR("Flash write to addr 0x%x\n\n",
-                 audio_flash_offset);
+            G1_LOG_ERR("Flash write to addr 0x%x\n\n", audio_flash_offset);
             audio_flash_offset += frames * LC3_FRAME_BYTES;
           }
         }
@@ -162,8 +153,7 @@ void app_codec_lc3_test(void *pcm, int len)
         int64_t ts = 0;
 
         get_wall_clock_ms(&ts);
-        G1_LOG_INF("send audio stream data to storage thread,timestemp = %lld\n",
-             ts);
+        G1_LOG_INF("send audio stream data to storage thread,timestemp = %lld\n", ts);
         sendAudioStram2Cache(out);
       } else {
         enqueue_dmic(out);
@@ -182,16 +172,14 @@ void app_codec_lc3_test(void *pcm, int len)
   }
 }
 
-uint8_t dmic_get_stop_state(void)
-{
+uint8_t dmic_get_stop_state(void) {
   if (get_dashboard_state()->is_master == 1) {
     return dmic_stop_state;
   }
   return 0;
 }
 
-int dmic_stream_stop(void)
-{
+int dmic_stream_stop(void) {
   if (dmic_stop_state != 1) {
     if (get_pt_test_mode() == 1 || get_dashboard_state()->is_master == 1) {
       dmic_stop_state = 1;
@@ -200,8 +188,7 @@ int dmic_stream_stop(void)
   return 0;
 }
 
-int dmic_stream_pause(int pause)
-{
+int dmic_stream_pause(int pause) {
   if (get_dashboard_state()->is_master == 1) {
     if (pause) {
       dmic_stop_state = 2;
@@ -217,14 +204,12 @@ int dmic_stream_pause(int pause)
  * ret = -1 itself (after logging the driver's error code), so the success/"flash full" paths
  * return 0.
  */
-static int do_pdm_transfer(const struct device *dmic_dev)
-{
+static int do_pdm_transfer(const struct device *dmic_dev) {
   void *buffer = NULL;
   uint32_t size;
   int ret;
 
-  if (get_pt_test_mode() == 1 && get_dashboard_state()->mic_nocompress == 1 &&
-      !device_is_ready(FLASH_DEV)) {
+  if (get_pt_test_mode() == 1 && get_dashboard_state()->mic_nocompress == 1 && !device_is_ready(FLASH_DEV)) {
     G1_LOG_ERR(" [%s] device not ready.\n", FLASH_DEV->name);
     return -1;
   }
@@ -254,8 +239,7 @@ static int do_pdm_transfer(const struct device *dmic_dev)
   return ret;
 }
 
-int dmic_stream_start(void)
-{
+int dmic_stream_start(void) {
   struct ble_context *ble = get_ble_context();
   const struct device *const dmic_dev = DMIC_DEV;
   int ret = 0;
@@ -277,23 +261,24 @@ int dmic_stream_start(void)
           .mem_slab = &dmic_mem_slab,
         };
         cfg = (struct dmic_cfg){
-          .io = {
-            .min_pdm_clk_freq = 1000000,
-            .max_pdm_clk_freq = 3500000,
-            .min_pdm_clk_dc = 40,
-            .max_pdm_clk_dc = 60,
-          },
+          .io =
+            {
+              .min_pdm_clk_freq = 1000000,
+              .max_pdm_clk_freq = 3500000,
+              .min_pdm_clk_dc = 40,
+              .max_pdm_clk_dc = 60,
+            },
           .streams = &stream,
-          .channel = {
-            .req_num_streams = 1,
-          },
+          .channel =
+            {
+              .req_num_streams = 1,
+            },
         };
 
         cfg.channel.req_num_chan = 1;
         cfg.channel.req_chan_map_lo = dmic_build_channel_map(0, 0, PDM_CHAN_LEFT);
         cfg.streams[0].pcm_rate = MAX_SAMPLE_RATE;
-        cfg.streams[0].block_size =
-          BLOCK_SIZE(cfg.streams[0].pcm_rate, cfg.channel.req_num_chan);
+        cfg.streams[0].block_size = BLOCK_SIZE(cfg.streams[0].pcm_rate, cfg.channel.req_num_chan);
 
         if (get_pt_test_mode() == 1) {
           ret = erase_audio_buffer();
@@ -329,11 +314,9 @@ int dmic_stream_start(void)
               ret = -1;
               break;
             }
-            if (dmic_stop_state == 0 && get_pt_test_mode() == 0 &&
-                k_msgq_num_used_get(&dmic_msgq) != 0) {
-              if (ble->receiver_thd_is_running != 0 ||
-                  k_sem_count_get(&ble->rx_sem) != 0) {
-                uint8_t cmd[3] = { 0 };
+            if (dmic_stop_state == 0 && get_pt_test_mode() == 0 && k_msgq_num_used_get(&dmic_msgq) != 0) {
+              if (ble->receiver_thd_is_running != 0 || k_sem_count_get(&ble->rx_sem) != 0) {
+                uint8_t cmd[3] = {0};
 
                 cmd[0] = 0xf1;
                 cmd[2] = 0xcc;
@@ -360,8 +343,7 @@ int dmic_stream_start(void)
   return ret;
 }
 
-int erase_audio_buffer(void)
-{
+int erase_audio_buffer(void) {
   int ret = flash_erase(FLASH_DEV, AUDIO_FLASH_START, AUDIO_FLASH_END - AUDIO_FLASH_START);
 
   if (ret) {

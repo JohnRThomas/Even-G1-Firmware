@@ -5,12 +5,10 @@
 #include "notif_test.h"
 
 /* the apps of the 0x04_whitelist vectors */
-static const char *const log_ids[] = {"nodomain.freeyourgadget.gadgetb", "com.discord",
-              "com.google.android.gm"};
+static const char *const log_ids[] = {"nodomain.freeyourgadget.gadgetb", "com.discord", "com.google.android.gm"};
 static const char *const log_names[] = {"Gadgetbridge", "Discord", "Gmail"};
 
-static void assert_log_record(void)
-{
+static void assert_log_record(void) {
   const struct app_whitelist *record = (const void *)get_app_whitelist_info();
 
   zassert_equal(record->call_enable, 1);
@@ -25,30 +23,26 @@ static void assert_log_record(void)
   }
 }
 
-static void send_log_whitelist(void)
-{
+static void send_log_whitelist(void) {
   g1_send_vector("0x04_whitelist_chunk1");
   g1_send_vector("0x04_whitelist_chunk2");
 }
 
-ZTEST(notifications, test_0x04_two_chunks_reply_cb_then_c9)
-{
+ZTEST(notifications, test_0x04_two_chunks_reply_cb_then_c9) {
   g1_send_vector("0x04_whitelist_chunk1");
   expect_only_frame("04 cb");
   g1_send_vector("0x04_whitelist_chunk2");
   expect_only_frame("04 c9");
 }
 
-ZTEST(notifications, test_0x04_whitelist_is_in_use_after_the_last_chunk)
-{
+ZTEST(notifications, test_0x04_whitelist_is_in_use_after_the_last_chunk) {
   send_log_whitelist();
 
   assert_log_record();
   zassert_equal(is_on_whitelist_by_identifier("com.discord"), 2);
 }
 
-ZTEST(notifications, test_0x04_whitelist_is_written_to_flash_in_the_record_layout)
-{
+ZTEST(notifications, test_0x04_whitelist_is_written_to_flash_in_the_record_layout) {
   const uint8_t *record = &g1_fake_flash_image[WHITELIST_FLASH_ADDR];
 
   send_log_whitelist();
@@ -65,8 +59,7 @@ ZTEST(notifications, test_0x04_whitelist_is_written_to_flash_in_the_record_layou
   expect_fill(record + 2 + 3 * 56, 0x15e2 - (2 + 3 * 56), 0, "record after the 3 apps");
 }
 
-ZTEST(notifications, test_0x2e_reads_the_stored_whitelist_back_in_17_byte_parts)
-{
+ZTEST(notifications, test_0x2e_reads_the_stored_whitelist_back_in_17_byte_parts) {
   static char text[0x1800];
   size_t len = 0;
   int count;
@@ -84,15 +77,12 @@ ZTEST(notifications, test_0x2e_reads_the_stored_whitelist_back_in_17_byte_parts)
     const uint8_t *frame = g1_frame_peek(index, &frame_len);
 
     zassert_equal(frame[0], 0x2e, "frame %d", index);
-    zassert_equal(frame[1], count, "frame %d count %u, %d frames", index, frame[1],
-            count);
+    zassert_equal(frame[1], count, "frame %d count %u, %d frames", index, frame[1], count);
     zassert_equal(frame[2], index, "frame %d index %u", index, frame[2]);
     if (index + 1 < count) {
-      zassert_equal(frame_len, 20, "frame %d is %u bytes", index,
-              (unsigned int)frame_len);
+      zassert_equal(frame_len, 20, "frame %d is %u bytes", index, (unsigned int)frame_len);
     } else {
-      zassert_true(frame_len >= 3 && frame_len < 20, "last frame %u bytes",
-             (unsigned int)frame_len);
+      zassert_true(frame_len >= 3 && frame_len < 20, "last frame %u bytes", (unsigned int)frame_len);
     }
     memcpy(text + len, frame + 3, frame_len - 3);
     len += frame_len - 3;
@@ -110,17 +100,13 @@ ZTEST(notifications, test_0x2e_reads_the_stored_whitelist_back_in_17_byte_parts)
   zassert_true(cJSON_IsTrue(cJSON_GetObjectItem(app, "enable")), "%s", text);
   list = cJSON_GetObjectItem(app, "list");
   zassert_equal(cJSON_GetArraySize(list), 3, "%s", text);
-  expect_str(cJSON_GetObjectItem(cJSON_GetArrayItem(list, 0), "id")->valuestring,
-       "nodomain.freeyourgadget.gadgetb");
-  expect_str(cJSON_GetObjectItem(cJSON_GetArrayItem(list, 1), "name")->valuestring,
-       "Discord");
-  expect_str(cJSON_GetObjectItem(cJSON_GetArrayItem(list, 2), "id")->valuestring,
-       "com.google.android.gm");
+  expect_str(cJSON_GetObjectItem(cJSON_GetArrayItem(list, 0), "id")->valuestring, "nodomain.freeyourgadget.gadgetb");
+  expect_str(cJSON_GetObjectItem(cJSON_GetArrayItem(list, 1), "name")->valuestring, "Discord");
+  expect_str(cJSON_GetObjectItem(cJSON_GetArrayItem(list, 2), "id")->valuestring, "com.google.android.gm");
   cJSON_Delete(root);
 }
 
-ZTEST(notifications, test_0x04_whitelist_is_loaded_from_flash_after_a_reboot)
-{
+ZTEST(notifications, test_0x04_whitelist_is_loaded_from_flash_after_a_reboot) {
   send_log_whitelist();
 
   g1_unit_reboot();
@@ -130,8 +116,7 @@ ZTEST(notifications, test_0x04_whitelist_is_loaded_from_flash_after_a_reboot)
 }
 
 /* the app resends it at every settings sync */
-ZTEST(notifications, test_0x04_same_whitelist_again_is_not_rewritten)
-{
+ZTEST(notifications, test_0x04_same_whitelist_again_is_not_rewritten) {
   send_log_whitelist();
   g1_frames_clear();
 
@@ -142,8 +127,7 @@ ZTEST(notifications, test_0x04_same_whitelist_again_is_not_rewritten)
   zassert_equal(write_whitelist_to_flash_fake.call_count, 1);
 }
 
-ZTEST(notifications, test_0x04_failed_flash_write_replies_ca)
-{
+ZTEST(notifications, test_0x04_failed_flash_write_replies_ca) {
   G1_FAKE_RETURN(write_whitelist_to_flash, -EIO);
 
   send_log_whitelist();
@@ -154,11 +138,9 @@ ZTEST(notifications, test_0x04_failed_flash_write_replies_ca)
   printk("\n"); /* the store failure log line has no newline */
 }
 
-ZTEST(notifications, test_0x04_whitelist_missing_a_key_replies_ca_and_keeps_the_flash)
-{
-  static const char json[] =
-    "{\"calendar_enable\":true,\"call_enable\":true,\"ios_mail_enable\":true,"
-    "\"app\":{\"list\":[],\"enable\":true}}";
+ZTEST(notifications, test_0x04_whitelist_missing_a_key_replies_ca_and_keeps_the_flash) {
+  static const char json[] = "{\"calendar_enable\":true,\"call_enable\":true,\"ios_mail_enable\":true,"
+                             "\"app\":{\"list\":[],\"enable\":true}}";
   uint8_t pkt[200] = {0x04, 1, 0};
 
   send_log_whitelist();

@@ -1,6 +1,6 @@
 /* sensors_audio/ext_flash.c: the GlassesState flash API, its power hooks and its mutex. */
-#include "harness.h"
 #include "drivers.h"
+#include "harness.h"
 
 #include "sensors_audio/ext_flash.c"
 
@@ -8,8 +8,7 @@
 FAKE_VOID_FUNC(ext_flash_power_up);
 FAKE_VOID_FUNC(ext_flash_power_down);
 
-static void ext_flash_before(void *fixture)
-{
+static void ext_flash_before(void *fixture) {
   ARG_UNUSED(fixture);
   RESET_FAKE(ext_flash_power_up);
   RESET_FAKE(ext_flash_power_down);
@@ -19,14 +18,12 @@ ZTEST_SUITE(ext_flash, NULL, NULL, ext_flash_before, NULL, NULL);
 
 static const uint8_t zeros[4];
 
-static struct GlassesState *gs(void)
-{
+static struct GlassesState *gs(void) {
   return g1_state();
 }
 
 /* clears what ext_flash_api_init() installs, then runs it */
-static int init_flash_api(void)
-{
+static int init_flash_api(void) {
   gs()->flash_read = NULL;
   gs()->flash_write = NULL;
   gs()->flash_erase = NULL;
@@ -35,8 +32,7 @@ static int init_flash_api(void)
 }
 
 /* 32 MiB / 4 KiB pages */
-ZTEST(ext_flash, test_api_init_installs_the_wrappers_and_the_page_count)
-{
+ZTEST(ext_flash, test_api_init_installs_the_wrappers_and_the_page_count) {
   zassert_equal(init_flash_api(), 0);
 
   zassert_equal_ptr(gs()->flash_read, ext_flash_read);
@@ -46,8 +42,7 @@ ZTEST(ext_flash, test_api_init_installs_the_wrappers_and_the_page_count)
   zassert_equal_ptr(ext_flash_dev, G1_NOR_DEV);
 }
 
-ZTEST(ext_flash, test_api_init_without_the_flash_returns_minus_one_and_installs_nothing)
-{
+ZTEST(ext_flash, test_api_init_without_the_flash_returns_minus_one_and_installs_nothing) {
   ext_flash_dev = NULL;
   g1_device_set_ready(G1_NOR_DEV, false);
 
@@ -60,9 +55,8 @@ ZTEST(ext_flash, test_api_init_without_the_flash_returns_minus_one_and_installs_
   zassert_is_null(ext_flash_dev);
 }
 
-ZTEST(ext_flash, test_write_lands_at_its_address_and_reads_back_unaligned)
-{
-  static const uint8_t data[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+ZTEST(ext_flash, test_write_lands_at_its_address_and_reads_back_unaligned) {
+  static const uint8_t data[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
   uint8_t buf[10];
 
   zassert_equal(gs()->flash_write(gs(), 0x1004, data, sizeof(data)), 0);
@@ -71,8 +65,7 @@ ZTEST(ext_flash, test_write_lands_at_its_address_and_reads_back_unaligned)
   expect_bytes(buf, sizeof(buf), "ff 11 22 33 44 55 66 77 88 ff");
 }
 
-ZTEST(ext_flash, test_erase_clears_whole_sectors_only)
-{
+ZTEST(ext_flash, test_erase_clears_whole_sectors_only) {
   uint8_t *mem = g1_nor_mem(0x1fff, 0x1002);
 
   memset(mem, 0x00, 0x1002);
@@ -84,8 +77,7 @@ ZTEST(ext_flash, test_erase_clears_whole_sectors_only)
   zassert_equal(mem[0x1001], 0x00, "byte after the sector");
 }
 
-ZTEST(ext_flash, test_driver_errors_are_returned_unchanged)
-{
+ZTEST(ext_flash, test_driver_errors_are_returned_unchanged) {
   uint8_t buf[4];
 
   g1_nor_fail(G1_NOR_READ, 1, -ETIMEDOUT);
@@ -100,19 +92,16 @@ ZTEST(ext_flash, test_driver_errors_are_returned_unchanged)
 static int reads_at_power_up;
 static int reads_at_power_down;
 
-static void power_up_probe(void)
-{
+static void power_up_probe(void) {
   reads_at_power_up = g1_nor_stats()->calls[G1_NOR_READ];
 }
 
-static void power_down_probe(void)
-{
+static void power_down_probe(void) {
   reads_at_power_down = g1_nor_stats()->calls[G1_NOR_READ];
 }
 
 /* module_mask bit 4: the flash module */
-ZTEST(ext_flash, test_power_hooks_wrap_each_access_while_the_flash_module_is_off)
-{
+ZTEST(ext_flash, test_power_hooks_wrap_each_access_while_the_flash_module_is_off) {
   uint8_t buf[4];
 
   gs()->module_mask &= ~BIT(4);
@@ -129,8 +118,7 @@ ZTEST(ext_flash, test_power_hooks_wrap_each_access_while_the_flash_module_is_off
   zassert_equal(ext_flash_power_down_fake.call_count, 3);
 }
 
-ZTEST(ext_flash, test_power_hooks_are_skipped_while_the_flash_module_is_on)
-{
+ZTEST(ext_flash, test_power_hooks_are_skipped_while_the_flash_module_is_on) {
   uint8_t buf[4];
 
   zassert_true(gs()->module_mask & BIT(4));
@@ -145,9 +133,8 @@ ZTEST(ext_flash, test_power_hooks_are_skipped_while_the_flash_module_is_on)
 
 static int writer_ret;
 
-static void writer_entry(void *arg, void *unused1, void *unused2)
-{
-  static const uint8_t data[4] = { 0xa5, 0xa5, 0xa5, 0xa5 };
+static void writer_entry(void *arg, void *unused1, void *unused2) {
+  static const uint8_t data[4] = {0xa5, 0xa5, 0xa5, 0xa5};
 
   ARG_UNUSED(arg);
   ARG_UNUSED(unused1);
@@ -155,8 +142,7 @@ static void writer_entry(void *arg, void *unused1, void *unused2)
   writer_ret = gs()->flash_write(gs(), 0x4000, data, sizeof(data));
 }
 
-ZTEST(ext_flash, test_an_access_waits_for_the_flash_mutex)
-{
+ZTEST(ext_flash, test_an_access_waits_for_the_flash_mutex) {
   k_tid_t writer;
 
   writer_ret = 1;

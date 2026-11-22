@@ -10,8 +10,7 @@ DEFINE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, int,
 
 struct g1_pkt_log g1_sync_to_slave_log;
 
-static int sync_to_slave_default(struct GlassesState *state, int cmd, void *data, size_t len)
-{
+static int sync_to_slave_default(struct GlassesState *state, int cmd, void *data, size_t len) {
   sync_to_slave_Fake *fake = &sync_to_slave_fake;
 
   ARG_UNUSED(state);
@@ -27,8 +26,7 @@ static int sync_to_slave_default(struct GlassesState *state, int cmd, void *data
   return fake->return_val_seq[fake->return_val_seq_len - 1];
 }
 
-static void fakes_ipc_reset(bool keep_media)
-{
+static void fakes_ipc_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
 
   RESET_FAKE(sync_to_slave);

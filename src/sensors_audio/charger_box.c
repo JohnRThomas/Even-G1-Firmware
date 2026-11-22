@@ -1,11 +1,11 @@
 /*
  * nPM1300 charger register helpers and the charging-case (NFC box) status flags.
  */
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
-#include <zephyr/drivers/regulator.h>
 #include <zephyr/drivers/mfd/npm1300.h>
+#include <zephyr/drivers/regulator.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
 #include "g1_log.h"
@@ -24,9 +24,9 @@ struct regulator_npm1300_config {
 #define PMIC_LDO2    DEVICE_DT_GET(DT_NODELABEL(pmic_ldo2))
 #define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
 
-#define CHGR_BASE           0x03
-#define CHGR_OFFSET_EN_SET  0x04
-#define CHGR_OFFSET_VTERM   0x0C
+#define CHGR_BASE            0x03
+#define CHGR_OFFSET_EN_SET   0x04
+#define CHGR_OFFSET_VTERM    0x0C
 #define CHGR_OFFSET_CHG_STAT 0x34
 
 uint8_t nfc_box_status[3];
@@ -34,8 +34,7 @@ static uint8_t in_box_last;
 static uint8_t lid_closed_last;
 static uint8_t charging_last;
 
-int change_termination_voltage(void)
-{
+int change_termination_voltage(void) {
   /* VTERM = 4.20 V */
   if (mfd_npm1300_reg_write(NPM_MFD(PMIC_LDO2), CHGR_BASE, CHGR_OFFSET_VTERM, 8) < 0) {
     printk("Could not change termination voltage to 4.2V\n");
@@ -44,8 +43,7 @@ int change_termination_voltage(void)
   return 0;
 }
 
-int enable_charger(void)
-{
+int enable_charger(void) {
   if (mfd_npm1300_reg_write(NPM_MFD(PMIC_LDO2), CHGR_BASE, CHGR_OFFSET_EN_SET, 1) < 0) {
     printk("Could not enable charger\n");
     return -1;
@@ -54,8 +52,7 @@ int enable_charger(void)
 }
 
 /* returns 1 while charging, 0 when charging completed / trickle */
-int set_charger_status(void)
-{
+int set_charger_status(void) {
   uint8_t status = 0;
   bool trickle, cc, cv;
 
@@ -73,16 +70,14 @@ int set_charger_status(void)
   return !cv;
 }
 
-uint8_t get_box_status_by_type(uint8_t type)
-{
+uint8_t get_box_status_by_type(uint8_t type) {
   if (type > 2) {
     return 0xfe;
   }
   return nfc_box_status[type];
 }
 
-void set_box_status(uint8_t type, uint8_t status)
-{
+void set_box_status(uint8_t type, uint8_t status) {
   if (type > 2) {
     return;
   }
@@ -93,8 +88,7 @@ void set_box_status(uint8_t type, uint8_t status)
   }
 }
 
-int is_in_box(void)
-{
+int is_in_box(void) {
   uint8_t status = nfc_box_status[0];
 
   if (in_box_last != status) {
@@ -108,8 +102,7 @@ int is_in_box(void)
   return status;
 }
 
-uint8_t is_box_lid_closed(void)
-{
+uint8_t is_box_lid_closed(void) {
   uint8_t status = nfc_box_status[1];
 
   if (lid_closed_last != status) {
@@ -119,8 +112,7 @@ uint8_t is_box_lid_closed(void)
   return status;
 }
 
-uint8_t is_box_charging(void)
-{
+uint8_t is_box_charging(void) {
   uint8_t status = nfc_box_status[2];
 
   if (charging_last != status) {
@@ -130,8 +122,7 @@ uint8_t is_box_charging(void)
   return status;
 }
 
-void init_box_status(void)
-{
+void init_box_status(void) {
   nfc_box_status[0] = 0;
   nfc_box_status[1] = 0;
   nfc_box_status[2] = 0;

@@ -3,46 +3,52 @@
  * 0x22 status, head up: 22 0A 00 00 01 <unread> <low power> <mode> <pane> <page>;
  * tap: 22 08 00 00 02 <mode> <pane> <page>.
  */
-#include "fakes.h"
 #include "ble/ble_proto.h"
 #include "dashboard/dashboard.h"
+#include "fakes.h"
 #include "notify/notify.h"
 
 #define F5_FRAME_LEN       21
 #define PROXY_MSG_DATA_MAX 20
 
-enum { MODE_FULL = 0, MODE_DUAL = 1, MODE_MINIMAL = 2 };
-enum { PANE_NOTES = 0, PANE_STOCK = 1, PANE_NEWS = 2, PANE_CALENDAR = 3, PANE_MAP = 4,
-       PANE_EMPTY = 5 };
+enum {
+  MODE_FULL = 0,
+  MODE_DUAL = 1,
+  MODE_MINIMAL = 2
+};
+enum {
+  PANE_NOTES = 0,
+  PANE_STOCK = 1,
+  PANE_NEWS = 2,
+  PANE_CALENDAR = 3,
+  PANE_MAP = 4,
+  PANE_EMPTY = 5
+};
 
 static int responses_sent;
 
 /* as proxy_thread.c: the master writes the newest queued reply, once, to the phone */
-static int forward_response(void)
-{
+static int forward_response(void) {
   int last = g1_esb_response_log.count - 1;
 
   if (g1_state()->is_master == G1_ROLE_SLAVE) {
     return 0;
   }
   if (last >= responses_sent) {
-    g1_ble()->write(g1_esb_response_log.data[last],
-        MIN(g1_esb_response_log.len[last], PROXY_MSG_DATA_MAX));
+    g1_ble()->write(g1_esb_response_log.data[last], MIN(g1_esb_response_log.len[last], PROXY_MSG_DATA_MAX));
     responses_sent = g1_esb_response_log.count;
   }
   return 0;
 }
 
-static void pages(uint8_t notes, uint8_t stocks, uint8_t news, uint8_t calendar)
-{
+static void pages(uint8_t notes, uint8_t stocks, uint8_t news, uint8_t calendar) {
   notes_index = notes;
   stocks_index = stocks;
   news_index = news;
   calendar_index = calendar;
 }
 
-static void events_before(void *fixture)
-{
+static void events_before(void *fixture) {
   ARG_UNUSED(fixture);
   send_response_data_to_ble_fake.custom_fake = forward_response;
   responses_sent = 0;
@@ -53,8 +59,7 @@ static void events_before(void *fixture)
 
 ZTEST_SUITE(events, NULL, NULL, events_before, NULL, NULL);
 
-static void report(uint8_t id, uint8_t arg)
-{
+static void report(uint8_t id, uint8_t arg) {
   uint8_t evt[3] = {0xf5, id, arg};
 
   zassert_equal(deal_event_to_phone(g1_ble(), evt), 0, "event 0x%02x", id);
@@ -63,8 +68,7 @@ static void report(uint8_t id, uint8_t arg)
 /* ---- 0xF5 ---- */
 
 /* Byte 2 of the packet (CB) is not payload: sent as 00. */
-ZTEST(events, test_events_without_payload_are_f5_id_and_zeros_21_bytes)
-{
+ZTEST(events, test_events_without_payload_are_f5_id_and_zeros_21_bytes) {
   static const uint8_t ids[] = {
     0x00, /* double tap */
     0x01, /* single tap */
@@ -76,13 +80,11 @@ ZTEST(events, test_events_without_payload_are_f5_id_and_zeros_21_bytes)
     0x07, /* not worn */
     0x08, /* lid open */
     0x0b, /* lid closed */
-    0x0c, 0x0d, 0x10,
-    0x11, /* BLE paired */
+    0x0c, 0x0d, 0x10, 0x11, /* BLE paired */
     0x13, 0x14, 0x15, 0x16, /* onboarding */
     0x17, /* long press held */
     0x18, /* long press released */
-    0x19, 0x1a, 0x1b, 0x1c, 0x1d,
-    0x1e, /* dashboard open */
+    0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, /* dashboard open */
     0x1f, /* dashboard close */
     0x20, /* translate double tap */
   };
@@ -96,8 +98,7 @@ ZTEST(events, test_events_without_payload_are_f5_id_and_zeros_21_bytes)
   expect_no_frame();
 }
 
-ZTEST(events, test_charging_event_0x09_carries_the_charging_flag)
-{
+ZTEST(events, test_charging_event_0x09_carries_the_charging_flag) {
   report(0x09, 1);
   expect_frame_padded("f5 09 01", F5_FRAME_LEN);
   report(0x09, 0);
@@ -105,16 +106,13 @@ ZTEST(events, test_charging_event_0x09_carries_the_charging_flag)
 }
 
 /* 93..96 % are spread over 94..99 so 100 is reported only when the gauge reads 100. */
-ZTEST(events, test_battery_event_0x0a_reports_the_level)
-{
+ZTEST(events, test_battery_event_0x0a_reports_the_level) {
   static const struct {
     uint8_t level, soc_flag, reported;
   } rows[] = {
-    {0x00, 0, 0x00}, {0x01, 0, 0x01}, {0x32, 0, 0x32}, {0x56, 0, 0x56},
-    {0x58, 0, 0x58}, {0x5c, 0, 0x5c}, {0x5d, 0, 0x5e}, {0x5d, 1, 0x5f},
-    {0x5e, 0, 0x60}, {0x5e, 1, 0x61}, {0x5f, 0, 0x62}, {0x5f, 1, 0x62},
-    {0x60, 0, 0x63}, {0x60, 1, 0x63}, {0x61, 0, 0x64}, {0x63, 1, 0x64},
-    {0x64, 0, 0x64},
+    {0x00, 0, 0x00}, {0x01, 0, 0x01}, {0x32, 0, 0x32}, {0x56, 0, 0x56}, {0x58, 0, 0x58}, {0x5c, 0, 0x5c},
+    {0x5d, 0, 0x5e}, {0x5d, 1, 0x5f}, {0x5e, 0, 0x60}, {0x5e, 1, 0x61}, {0x5f, 0, 0x62}, {0x5f, 1, 0x62},
+    {0x60, 0, 0x63}, {0x60, 1, 0x63}, {0x61, 0, 0x64}, {0x63, 1, 0x64}, {0x64, 0, 0x64},
   };
   char hex[16];
 
@@ -123,14 +121,12 @@ ZTEST(events, test_battery_event_0x0a_reports_the_level)
     g1_state()->battery_soc_flag = rows[row].soc_flag;
     report(0x0a, 0);
     snprintf(hex, sizeof(hex), "f5 0a %02x", rows[row].reported);
-    expect_frame_msg(hex, F5_FRAME_LEN, "level 0x%02x soc flag %u", rows[row].level,
-         rows[row].soc_flag);
+    expect_frame_msg(hex, F5_FRAME_LEN, "level 0x%02x soc flag %u", rows[row].level, rows[row].soc_flag);
   }
   expect_no_frame();
 }
 
-ZTEST(events, test_battery_event_ignores_the_charging_byte_of_the_packet)
-{
+ZTEST(events, test_battery_event_ignores_the_charging_byte_of_the_packet) {
   g1_state()->battery_left = 0x32;
   g1_ble()->charging = 1;
 
@@ -139,8 +135,7 @@ ZTEST(events, test_battery_event_ignores_the_charging_byte_of_the_packet)
   expect_frame_padded("f5 0a 32", F5_FRAME_LEN);
 }
 
-ZTEST(events, test_case_charging_event_0x0e_carries_get_pt_level_flag)
-{
+ZTEST(events, test_case_charging_event_0x0e_carries_get_pt_level_flag) {
   get_pt_level_flag_fake.return_val = 1;
   report(0x0e, PKCS7_PACK_MORE);
   expect_frame_padded("f5 0e 01", F5_FRAME_LEN);
@@ -151,8 +146,7 @@ ZTEST(events, test_case_charging_event_0x0e_carries_get_pt_level_flag)
   zassert_equal(get_pt_level_flag_fake.call_count, 2);
 }
 
-ZTEST(events, test_case_battery_event_0x0f_carries_get_pt_level)
-{
+ZTEST(events, test_case_battery_event_0x0f_carries_get_pt_level) {
   get_pt_level_fake.return_val = 0x28;
   report(0x0f, PKCS7_PACK_MORE);
   expect_frame_padded("f5 0f 28", F5_FRAME_LEN);
@@ -162,8 +156,7 @@ ZTEST(events, test_case_battery_event_0x0f_carries_get_pt_level)
   expect_frame_padded("f5 0f 64", F5_FRAME_LEN);
 }
 
-ZTEST(events, test_brightness_event_0x12_carries_the_panel_brightness_level)
-{
+ZTEST(events, test_brightness_event_0x12_carries_the_panel_brightness_level) {
   g1_state()->panel.panel_brightness_level = 6;
   report(0x12, PKCS7_PACK_MORE);
   expect_frame_padded("f5 12 06", F5_FRAME_LEN);
@@ -178,35 +171,28 @@ ZTEST(events, test_brightness_event_0x12_carries_the_panel_brightness_level)
  * <cmd> C9 <seq> <kept count> <kept index>, seq from esb_down_id for 0x0D, else esb_up_id.
  * Each test reports the event and expects the ack as the only frame.
  */
-#define DEFERRED_ACK_TEST(name, event, down_id, up_id, total, index, ack)                          \
-  ZTEST(events, test_deferred_ack_##name)                                                    \
-  {                                                                                          \
-    g1_state()->esb_down_id = (down_id);                                               \
-    g1_state()->esb_up_id = (up_id);                                                   \
-    deferred_text_ack_total = (total);                                                 \
-    deferred_text_ack_idx = (index);                                                   \
-    report((event), PKCS7_PACK_MORE);                                                  \
-    expect_only_frame_padded((ack), F5_FRAME_LEN);                                     \
+#define DEFERRED_ACK_TEST(name, event, down_id, up_id, total, index, ack)                                              \
+  ZTEST(events, test_deferred_ack_##name) {                                                                            \
+    g1_state()->esb_down_id = (down_id);                                                                               \
+    g1_state()->esb_up_id = (up_id);                                                                                   \
+    deferred_text_ack_total = (total);                                                                                 \
+    deferred_text_ack_idx = (index);                                                                                   \
+    report((event), PKCS7_PACK_MORE);                                                                                  \
+    expect_only_frame_padded((ack), F5_FRAME_LEN);                                                                     \
   }
-DEFERRED_ACK_TEST(0xf0_is_0d_c9_seq_count_index_from_esb_down_id, 0xf0, 0x01, 0x77, 1, 0,
-      "0d c9 01 01 00")
-DEFERRED_ACK_TEST(0xf1_is_0f_c9_seq_count_index_from_esb_up_id, 0xf1, 0x77, 0x02, 1, 0,
-      "0f c9 02 01 00")
-DEFERRED_ACK_TEST(0xf2_is_4e_c9_seq_count_index_from_esb_up_id, 0xf2, 0x77, 0x2a, 3, 2,
-      "4e c9 2a 03 02")
+DEFERRED_ACK_TEST(0xf0_is_0d_c9_seq_count_index_from_esb_down_id, 0xf0, 0x01, 0x77, 1, 0, "0d c9 01 01 00")
+DEFERRED_ACK_TEST(0xf1_is_0f_c9_seq_count_index_from_esb_up_id, 0xf1, 0x77, 0x02, 1, 0, "0f c9 02 01 00")
+DEFERRED_ACK_TEST(0xf2_is_4e_c9_seq_count_index_from_esb_up_id, 0xf2, 0x77, 0x2a, 3, 2, "4e c9 2a 03 02")
 
-ZTEST(events, test_deferred_acks_clear_the_kept_count_and_index)
-{
+ZTEST(events, test_deferred_acks_clear_the_kept_count_and_index) {
   static const uint8_t ids[] = {0xf0, 0xf1, 0xf2};
 
   for (size_t index = 0; index < ARRAY_SIZE(ids); index++) {
     deferred_text_ack_total = 5;
     deferred_text_ack_idx = 4;
     report(ids[index], PKCS7_PACK_MORE);
-    zassert_equal(deferred_text_ack_total, 0, "after 0x%02x: total %u", ids[index],
-            deferred_text_ack_total);
-    zassert_equal(deferred_text_ack_idx, 0, "after 0x%02x: idx %u", ids[index],
-            deferred_text_ack_idx);
+    zassert_equal(deferred_text_ack_total, 0, "after 0x%02x: total %u", ids[index], deferred_text_ack_total);
+    zassert_equal(deferred_text_ack_idx, 0, "after 0x%02x: idx %u", ids[index], deferred_text_ack_idx);
   }
 
   g1_frames_clear();
@@ -215,8 +201,7 @@ ZTEST(events, test_deferred_acks_clear_the_kept_count_and_index)
   expect_frame_padded("0d c9 09 00 00", F5_FRAME_LEN);
 }
 
-ZTEST(events, test_f5_packet_from_the_work_thread_is_sent_through_the_dispatcher)
-{
+ZTEST(events, test_f5_packet_from_the_work_thread_is_sent_through_the_dispatcher) {
   g1_state()->battery_left = 0x64;
 
   g1_send_hex("f5 06 cb");
@@ -228,15 +213,13 @@ ZTEST(events, test_f5_packet_from_the_work_thread_is_sent_through_the_dispatcher
 
 /* ---- 0x22 ---- */
 
-static void dashboard(uint8_t mode, uint8_t pane)
-{
+static void dashboard(uint8_t mode, uint8_t pane) {
   g1_state()->dashboard_ts->disp_mode = mode;
   g1_state()->dashboard_ts->area = pane;
   _dashboard_prv_data.pane_mode = pane;
 }
 
-static void messages(int count, int read)
-{
+static void messages(int count, int read) {
   memset(g_arrMsgContent, 0, sizeof(g_arrMsgContent));
   for (int slot = 0; slot < count; slot++) {
     strcpy(g_arrMsgContent[slot].app_identifier, "com.example.chat");
@@ -253,8 +236,7 @@ struct page_row {
 };
 
 /* sets up each row's dashboard and expects the status frame send_status() sends */
-static void expect_page_rows(int (*send_status)(void), const struct page_row *rows, size_t count)
-{
+static void expect_page_rows(int (*send_status)(void), const struct page_row *rows, size_t count) {
   for (unsigned int row = 0; row < count; row++) {
     dashboard(rows[row].mode, rows[row].pane);
     pages(rows[row].notes, rows[row].stocks, rows[row].news, rows[row].calendar);
@@ -263,8 +245,7 @@ static void expect_page_rows(int (*send_status)(void), const struct page_row *ro
   }
 }
 
-ZTEST(events, test_head_up_status_is_22_0a_with_unread_low_power_mode_pane_and_page)
-{
+ZTEST(events, test_head_up_status_is_22_0a_with_unread_low_power_mode_pane_and_page) {
   dashboard(MODE_DUAL, PANE_CALENDAR);
   messages(5, 0);
 
@@ -274,8 +255,7 @@ ZTEST(events, test_head_up_status_is_22_0a_with_unread_low_power_mode_pane_and_p
   zassert_equal(send_response_data_to_ble_fake.call_count, 1);
 }
 
-ZTEST(events, test_head_up_unread_count_leaves_out_read_messages)
-{
+ZTEST(events, test_head_up_unread_count_leaves_out_read_messages) {
   dashboard(MODE_DUAL, PANE_MAP);
   messages(6, 2);
 
@@ -284,8 +264,7 @@ ZTEST(events, test_head_up_unread_count_leaves_out_read_messages)
   expect_frame("22 0a 00 00 01 04 00 01 04 00");
 }
 
-ZTEST(events, test_head_up_reports_low_power)
-{
+ZTEST(events, test_head_up_reports_low_power) {
   dashboard(MODE_DUAL, PANE_MAP);
   g1_state()->dashboard_ts->low_power = 1;
 
@@ -294,8 +273,7 @@ ZTEST(events, test_head_up_reports_low_power)
   expect_frame("22 0a 00 00 01 00 01 01 04 00");
 }
 
-ZTEST(events, test_head_up_reports_the_mode_pane_and_page)
-{
+ZTEST(events, test_head_up_reports_the_mode_pane_and_page) {
   static const struct page_row rows[] = {
     {MODE_FULL, PANE_NOTES, 0, 0, 0, 0, "22 0a 00 00 01 00 00 00 00 01"},
     {MODE_FULL, PANE_NOTES, 2, 0, 0, 0, "22 0a 00 00 01 00 00 00 00 03"},
@@ -312,8 +290,7 @@ ZTEST(events, test_head_up_reports_the_mode_pane_and_page)
   expect_page_rows(send_message_count_to_app, rows, ARRAY_SIZE(rows));
 }
 
-ZTEST(events, test_head_up_empty_pane_in_minimal_mode_has_page_0)
-{
+ZTEST(events, test_head_up_empty_pane_in_minimal_mode_has_page_0) {
   dashboard(MODE_MINIMAL, PANE_EMPTY);
   pages(1, 1, 1, 1);
   messages(4, 0);
@@ -323,8 +300,7 @@ ZTEST(events, test_head_up_empty_pane_in_minimal_mode_has_page_0)
   expect_frame("22 0a 00 00 01 04 00 02 05 00");
 }
 
-ZTEST(events, test_head_up_status_is_not_sent_by_the_slave)
-{
+ZTEST(events, test_head_up_status_is_not_sent_by_the_slave) {
   g1_unit_set_role(G1_ROLE_SLAVE);
   dashboard(MODE_DUAL, PANE_CALENDAR);
 
@@ -334,8 +310,7 @@ ZTEST(events, test_head_up_status_is_not_sent_by_the_slave)
   zassert_equal(g1_esb_response_log.count, 0);
 }
 
-ZTEST(events, test_tap_status_is_22_08_with_mode_pane_and_page)
-{
+ZTEST(events, test_tap_status_is_22_08_with_mode_pane_and_page) {
   dashboard(MODE_DUAL, PANE_CALENDAR);
   messages(5, 0);
 
@@ -345,8 +320,7 @@ ZTEST(events, test_tap_status_is_22_08_with_mode_pane_and_page)
   zassert_equal(send_response_data_to_ble_fake.call_count, 1);
 }
 
-ZTEST(events, test_tap_reports_the_mode_pane_and_page)
-{
+ZTEST(events, test_tap_reports_the_mode_pane_and_page) {
   static const struct page_row rows[] = {
     {MODE_DUAL, PANE_CALENDAR, 0, 0, 0, 0, "22 08 00 00 02 01 03 01"},
     {MODE_DUAL, PANE_CALENDAR, 0, 0, 0, 1, "22 08 00 00 02 01 03 02"},
@@ -362,8 +336,7 @@ ZTEST(events, test_tap_reports_the_mode_pane_and_page)
   expect_page_rows(sync_dashboard_key_event_to_app, rows, ARRAY_SIZE(rows));
 }
 
-ZTEST(events, test_tap_status_is_not_sent_by_the_slave)
-{
+ZTEST(events, test_tap_status_is_not_sent_by_the_slave) {
   g1_unit_set_role(G1_ROLE_SLAVE);
   dashboard(MODE_DUAL, PANE_CALENDAR);
 

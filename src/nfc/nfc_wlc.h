@@ -7,9 +7,9 @@
 #ifndef G1_NFC_WLC_H_
 #define G1_NFC_WLC_H_
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /*
  * ---- NDEF library (ST RFAL NDEF: st_errno.h, ndef_buffer.h, ndef_record.h,
@@ -20,12 +20,12 @@
 /* st_errno.h */
 typedef uint16_t ReturnCode;
 
-#define ERR_NONE    ((ReturnCode)0U)
-#define ERR_NOMEM    ((ReturnCode)1U)
-#define ERR_PARAM    ((ReturnCode)7U)
-#define ERR_PROTO    ((ReturnCode)11U)
-#define ERR_INTERNAL    ((ReturnCode)12U)
-#define ERR_NOT_IMPLEMENTED  ((ReturnCode)15U)
+#define ERR_NONE            ((ReturnCode)0U)
+#define ERR_NOMEM           ((ReturnCode)1U)
+#define ERR_PARAM           ((ReturnCode)7U)
+#define ERR_PROTO           ((ReturnCode)11U)
+#define ERR_INTERNAL        ((ReturnCode)12U)
+#define ERR_NOT_IMPLEMENTED ((ReturnCode)15U)
 
 /* ndef_buffer.h */
 typedef struct {
@@ -46,40 +46,42 @@ typedef struct {
 #define ndefBufferIsInvalid(buf) (((buf)->buffer == NULL) && ((buf)->length != 0U))
 
 /* nfc_utils.h */
-#define GETU32(a) (((uint32_t)(a)[0] << 24) | ((uint32_t)(a)[1] << 16) | \
-       ((uint32_t)(a)[2] << 8) | ((uint32_t)(a)[3]))
+#define GETU32(a) (((uint32_t)(a)[0] << 24) | ((uint32_t)(a)[1] << 16) | ((uint32_t)(a)[2] << 8) | ((uint32_t)(a)[3]))
 #define ST_MEMCPY memcpy
 
 /* ndef_record.h */
-#define NDEF_RECORD_HEADER_LEN    7U
-#define NDEF_SHORT_RECORD_LENGTH_MAX  255U
+#define NDEF_RECORD_HEADER_LEN       7U
+#define NDEF_SHORT_RECORD_LENGTH_MAX 255U
 
-#define NDEF_TNF_EMPTY      0U
-#define NDEF_TNF_RTD_WELL_KNOWN_TYPE  1U
-#define NDEF_TNF_MASK      7U
+#define NDEF_TNF_EMPTY               0U
+#define NDEF_TNF_RTD_WELL_KNOWN_TYPE 1U
+#define NDEF_TNF_MASK                7U
 
-#define ndefHeader(MB, ME, CF, SR, IL, TNF) \
-  ((((MB) & 1U) << 7U) | (((ME) & 1U) << 6U) | (((CF) & 1U) << 5U) | \
-   (((SR) & 1U) << 4U) | (((IL) & 1U) << 3U) | ((uint8_t)(TNF) & NDEF_TNF_MASK))
+#define ndefHeader(MB, ME, CF, SR, IL, TNF)                                                                            \
+  ((((MB) & 1U) << 7U) | (((ME) & 1U) << 6U) | (((CF) & 1U) << 5U) | (((SR) & 1U) << 4U) | (((IL) & 1U) << 3U) |       \
+   ((uint8_t)(TNF) & NDEF_TNF_MASK))
 
-#define ndefHeaderSR(record)    (((record)->header & 0x10U) >> 4)
-#define ndefHeaderIL(record)    (((record)->header & 0x08U) >> 3)
-#define ndefHeaderTNF(record)    ((record)->header & NDEF_TNF_MASK)
+#define ndefHeaderSR(record)  (((record)->header & 0x10U) >> 4)
+#define ndefHeaderIL(record)  (((record)->header & 0x08U) >> 3)
+#define ndefHeaderTNF(record) ((record)->header & NDEF_TNF_MASK)
 
-#define ndefHeaderSetMB(record)    ((record)->header |= (1U << 7))
-#define ndefHeaderSetME(record)    ((record)->header |= (1U << 6))
-#define ndefHeaderSetIL(record)    ((record)->header |= (1U << 3))
-#define ndefHeaderSetTNF(record, value)  ((record)->header |= (uint8_t)(value) & NDEF_TNF_MASK)
+#define ndefHeaderSetMB(record)         ((record)->header |= (1U << 7))
+#define ndefHeaderSetME(record)         ((record)->header |= (1U << 6))
+#define ndefHeaderSetIL(record)         ((record)->header |= (1U << 3))
+#define ndefHeaderSetTNF(record, value) ((record)->header |= (uint8_t)(value) & NDEF_TNF_MASK)
 
-#define ndefHeaderClearMB(record)  ((record)->header &= 0x7FU)
-#define ndefHeaderClearME(record)  ((record)->header &= 0xBFU)
-#define ndefHeaderClearIL(record)  ((record)->header &= 0xF7U)
+#define ndefHeaderClearMB(record) ((record)->header &= 0x7FU)
+#define ndefHeaderClearME(record) ((record)->header &= 0xBFU)
+#define ndefHeaderClearIL(record) ((record)->header &= 0xF7U)
 
-#define ndefHeaderSetValueSR(record, value) \
-  do { (record)->header &= 0xEFU; (record)->header |= (((uint8_t)(value)) & 1U) << 4; } while (0)
+#define ndefHeaderSetValueSR(record, value)                                                                            \
+  do {                                                                                                                 \
+    (record)->header &= 0xEFU;                                                                                         \
+    (record)->header |= (((uint8_t)(value)) & 1U) << 4;                                                                \
+  } while (0)
 
-#define ndefHeaderIsSetSR(record)  (ndefHeaderSR(record) == 1U)
-#define ndefHeaderIsSetIL(record)  (ndefHeaderIL(record) == 1U)
+#define ndefHeaderIsSetSR(record) (ndefHeaderSR(record) == 1U)
+#define ndefHeaderIsSetIL(record) (ndefHeaderIL(record) == 1U)
 
 typedef struct ndefTypeStruct ndefType;
 typedef struct ndefMessageStruct ndefMessage;
@@ -107,8 +109,8 @@ struct ndefMessageStruct {
   ndefMessageInfo info;
 };
 
-#define ndefMessageGetFirstRecord(message)  (((message) == NULL) ? NULL : (message)->record)
-#define ndefMessageGetNextRecord(record)  (((record) == NULL) ? NULL : (record)->next)
+#define ndefMessageGetFirstRecord(message) (((message) == NULL) ? NULL : (message)->record)
+#define ndefMessageGetNextRecord(record)   (((record) == NULL) ? NULL : (record)->next)
 
 /* ndef_type_wlc.h */
 typedef struct {
@@ -153,14 +155,14 @@ typedef struct {
   uint8_t errorInfoTemperature;
 } ndefTypeRtdWlcListenCtl;
 
-#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_BATTERY_LEVEL_MASK    0x01U
-#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_POWER_MASK    0x02U
-#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_VOLTAGE_MASK    0x04U
-#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_CURRENT_MASK    0x08U
-#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_TEMPERATURE_BATTERY_MASK  0x10U
+#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_BATTERY_LEVEL_MASK       0x01U
+#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_POWER_MASK       0x02U
+#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_VOLTAGE_MASK     0x04U
+#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_CURRENT_MASK     0x08U
+#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_TEMPERATURE_BATTERY_MASK 0x10U
 #define NDEF_WLC_STATUSINFO_CONTROLBYTE1_TEMPERATURE_WLCL_MASK    0x20U
-#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RFU_MASK      0x40U
-#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_CONTROL_BYTE_2_MASK    0x80U
+#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_RFU_MASK                 0x40U
+#define NDEF_WLC_STATUSINFO_CONTROLBYTE1_CONTROL_BYTE_2_MASK      0x80U
 
 /* ndef_types.h */
 typedef enum {
@@ -214,8 +216,7 @@ ReturnCode ndefRecordDecode(const ndefConstBuffer *bufPayload, ndefRecord *recor
 ReturnCode ndefRecordEncodeHeader(const ndefRecord *record, ndefBuffer *bufHeader);
 ReturnCode ndefRecordEncode(const ndefRecord *record, ndefBuffer *bufRecord);
 uint32_t ndefRecordGetPayloadLength(const ndefRecord *record);
-const uint8_t *ndefRecordGetPayloadItem(const ndefRecord *record, ndefConstBuffer *bufPayloadItem,
-          bool begin);
+const uint8_t *ndefRecordGetPayloadItem(const ndefRecord *record, ndefConstBuffer *bufPayloadItem, bool begin);
 
 /* ndef_message.c */
 ReturnCode ndefMessageGetInfo(const ndefMessage *message, ndefMessageInfo *info);
@@ -234,18 +235,18 @@ ReturnCode ndefRtdWlcStatusInfoToRecord(const ndefType *type, ndefRecord *record
 
 /* ---- type 5 tag (lib_NDEF tagtype5_wrapper.c) ---- */
 
-#define NDEF_OK      0
-#define NDEF_ERROR    (-1)
-#define NDEF_ERROR_MEMORY_TAG  (-2)
-#define NDEF_ERROR_NOT_FORMATED  (-5)
+#define NDEF_OK                 0
+#define NDEF_ERROR              (-1)
+#define NDEF_ERROR_MEMORY_TAG   (-2)
+#define NDEF_ERROR_NOT_FORMATED (-5)
 
-#define NFCT5_MAGICNUMBER_E1_CCFILE  0xE1
-#define NFCT5_MAGICNUMBER_E2_CCFILE  0xE2
-#define NFCT5_EXTENDED_CCFILE    0x00
-#define NFCT5_NDEF_MSG_TLV    0x03
-#define NFCT5_PROPRIETARY_TLV    0xFD
-#define NFCT5_TERMINATOR_TLV    0xFE
-#define NFCT5_3_BYTES_L_TLV    0xFF
+#define NFCT5_MAGICNUMBER_E1_CCFILE 0xE1
+#define NFCT5_MAGICNUMBER_E2_CCFILE 0xE2
+#define NFCT5_EXTENDED_CCFILE       0x00
+#define NFCT5_NDEF_MSG_TLV          0x03
+#define NFCT5_PROPRIETARY_TLV       0xFD
+#define NFCT5_TERMINATOR_TLV        0xFE
+#define NFCT5_3_BYTES_L_TLV         0xFF
 
 typedef enum {
   TT5_NO_NDEF = 0,

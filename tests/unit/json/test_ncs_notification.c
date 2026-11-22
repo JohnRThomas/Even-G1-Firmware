@@ -7,8 +7,7 @@ static struct notif_msg msg;
 static char json_buf[2048];
 
 /* 0xaa shows cleared vs untouched */
-static void parse(const char *json)
-{
+static void parse(const char *json) {
   zassert_true(strlen(json) < sizeof(json_buf));
   strcpy(json_buf, json);
   memset(&msg, 0xaa, sizeof(msg));
@@ -17,8 +16,7 @@ static void parse(const char *json)
 
 #define EXPECT_ZERO_FIELD(field) expect_fill(&msg.field, sizeof(msg.field), 0, #field)
 
-ZTEST(json, test_ncs_official_app_payload_fills_every_field)
-{
+ZTEST(json, test_ncs_official_app_payload_fills_every_field) {
   g1_clock_set_date(1762899959);
 
   parse("{\"ncs_notification\":{\"msg_id\":413,\"action\":0,"
@@ -47,8 +45,7 @@ ZTEST(json, test_ncs_official_app_payload_fills_every_field)
   expect_fill(msg.message + 33, sizeof(msg.message) - 33, 0, "message tail");
 }
 
-ZTEST(json, test_ncs_strings_longer_than_31_bytes_are_cut_to_31_and_terminated)
-{
+ZTEST(json, test_ncs_strings_longer_than_31_bytes_are_cut_to_31_and_terminated) {
   parse("{\"ncs_notification\":{"
         "\"app_identifier\":\"com.example.averyveryverylongpackagename\","
         "\"title\":\"TITLE-0123456789abcdefghijklmnopqrstuv\","
@@ -62,8 +59,7 @@ ZTEST(json, test_ncs_strings_longer_than_31_bytes_are_cut_to_31_and_terminated)
   zassert_equal(msg.title[31], 0);
 }
 
-ZTEST(json, test_ncs_message_longer_than_255_bytes_is_cut_to_255_and_terminated)
-{
+ZTEST(json, test_ncs_message_longer_than_255_bytes_is_cut_to_255_and_terminated) {
   static char json[512];
   static char text[301];
   static char want[256];
@@ -74,9 +70,7 @@ ZTEST(json, test_ncs_message_longer_than_255_bytes_is_cut_to_255_and_terminated)
   text[300] = 0;
   memcpy(want, text, 255);
   want[255] = 0;
-  snprintf(json, sizeof(json),
-     "{\"ncs_notification\":{\"message\":\"%s\",\"date\":\"2025-11-11 14:25:59\"}}",
-     text);
+  snprintf(json, sizeof(json), "{\"ncs_notification\":{\"message\":\"%s\",\"date\":\"2025-11-11 14:25:59\"}}", text);
 
   parse(json);
 
@@ -85,18 +79,15 @@ ZTEST(json, test_ncs_message_longer_than_255_bytes_is_cut_to_255_and_terminated)
   expect_str(msg.date, "2025-11-11 14:25:59");
 }
 
-ZTEST(json, test_ncs_date_longer_than_31_bytes_is_cut_to_31_and_terminated)
-{
+ZTEST(json, test_ncs_date_longer_than_31_bytes_is_cut_to_31_and_terminated) {
   parse("{\"ncs_notification\":{\"action\":0,"
         "\"date\":\"2025-11-11 14:25:59 GMT-08:00 Pacific Standard Time\"}}");
 
-  zassert_equal(msg.date[31], 0, "date[31] is 0x%02x, field not terminated",
-          (uint8_t)msg.date[31]);
+  zassert_equal(msg.date[31], 0, "date[31] is 0x%02x, field not terminated", (uint8_t)msg.date[31]);
   zassert_mem_equal(msg.date, "2025-11-11 14:25:59 GMT-08:00 P", 31);
 }
 
-ZTEST(json, test_ncs_missing_keys_leave_zeros)
-{
+ZTEST(json, test_ncs_missing_keys_leave_zeros) {
   g1_clock_set_date(1762899959);
 
   parse("{\"ncs_notification\":{}}");
@@ -124,8 +115,7 @@ ZTEST(json, test_ncs_missing_keys_leave_zeros)
   zassert_equal(msg.action, 0);
 }
 
-ZTEST(json, test_ncs_msg_id_and_action_numbers_are_stored)
-{
+ZTEST(json, test_ncs_msg_id_and_action_numbers_are_stored) {
   parse("{\"ncs_notification\":{\"msg_id\":2147483647,\"action\":2}}");
 
   zassert_equal(msg.uid, 0x7fffffffu);
@@ -137,15 +127,13 @@ ZTEST(json, test_ncs_msg_id_and_action_numbers_are_stored)
 }
 
 /* 0x4C clears by the u32 id */
-ZTEST(json, test_ncs_msg_id_above_int32_max_is_stored_as_u32)
-{
+ZTEST(json, test_ncs_msg_id_above_int32_max_is_stored_as_u32) {
   parse("{\"ncs_notification\":{\"msg_id\":3000000000}}");
 
   zassert_equal(msg.uid, 3000000000u, "uid 0x%08x", msg.uid);
 }
 
-ZTEST(json, test_ncs_incoming_call_sets_start_show_time_to_the_receive_date)
-{
+ZTEST(json, test_ncs_incoming_call_sets_start_show_time_to_the_receive_date) {
   g1_clock_set_date(1762899959);
 
   parse("{\"ncs_notification\":{\"msg_id\":20,\"action\":0,"
@@ -161,8 +149,7 @@ ZTEST(json, test_ncs_incoming_call_sets_start_show_time_to_the_receive_date)
 }
 
 /* raw UTF-8, no \u escapes */
-ZTEST(json, test_ncs_utf8_title_and_message_from_the_unicode_log_are_copied_byte_exact)
-{
+ZTEST(json, test_ncs_utf8_title_and_message_from_the_unicode_log_are_copied_byte_exact) {
   parse("{\"ncs_notification\":{\"msg_id\":732,\"action\":0,"
         "\"app_identifier\":\"com.hasmetd.notificationnotes\","
         "\"title\":\"\xec\x83\x9d\",\"subtitle\":\"\","
@@ -177,8 +164,7 @@ ZTEST(json, test_ncs_utf8_title_and_message_from_the_unicode_log_are_copied_byte
   expect_str(msg.display_name, "Notification Notes");
 }
 
-ZTEST(json, test_ncs_utf8_title_cut_does_not_split_a_character)
-{
+ZTEST(json, test_ncs_utf8_title_cut_does_not_split_a_character) {
   static const char syllable[] = "\xec\x83\x9d"; /* 생 */
   static char json[256];
   static char title[34];
@@ -198,8 +184,7 @@ ZTEST(json, test_ncs_utf8_title_cut_does_not_split_a_character)
 }
 
 /* the message keeps the 0xaa fill of parse() */
-ZTEST(json, test_ncs_invalid_json_or_missing_node_leaves_the_message_untouched)
-{
+ZTEST(json, test_ncs_invalid_json_or_missing_node_leaves_the_message_untouched) {
   static const struct {
     const char *what;
     const char *json;
@@ -211,9 +196,8 @@ ZTEST(json, test_ncs_invalid_json_or_missing_node_leaves_the_message_untouched)
     {"bare word", "ncs_notification"},
     {"empty text", ""},
     {"JSON without the node", "{\"msg_id\":413,\"title\":\"Even G1_87\"}"},
-    {"whitelist JSON",
-     "{\"calendar_enable\":true,\"call_enable\":true,\"msg_enable\":true,"
-     "\"ios_mail_enable\":true,\"app\":{\"list\":[],\"enable\":true}}"},
+    {"whitelist JSON", "{\"calendar_enable\":true,\"call_enable\":true,\"msg_enable\":true,"
+                       "\"ios_mail_enable\":true,\"app\":{\"list\":[],\"enable\":true}}"},
   };
 
   for (size_t row = 0; row < ARRAY_SIZE(rows); row++) {
@@ -222,8 +206,7 @@ ZTEST(json, test_ncs_invalid_json_or_missing_node_leaves_the_message_untouched)
   }
 }
 
-ZTEST(json, test_ncs_null_title_is_treated_as_missing)
-{
+ZTEST(json, test_ncs_null_title_is_treated_as_missing) {
   parse("{\"ncs_notification\":{\"msg_id\":5,\"title\":null,\"message\":\"m\"}}");
 
   EXPECT_ZERO_FIELD(title);

@@ -5,12 +5,12 @@
 #ifndef G1_PRODUCTION_TEST_H_
 #define G1_PRODUCTION_TEST_H_
 
-#include <stdint.h>
+#include <glasses_state.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <zephyr/kernel.h>
+#include <stdint.h>
 #include <zephyr/device.h>
-#include <glasses_state.h>
+#include <zephyr/kernel.h>
 
 /* communication channel of the production-test protocol */
 enum pt_comm_type {
@@ -20,8 +20,7 @@ enum pt_comm_type {
 };
 
 /* response frame: [cmd][1][3][payload len][payload...] */
-typedef int (*pt_cmd_handler_t)(const uint8_t *req, uint32_t req_len, uint8_t **resp,
-        uint8_t *resp_len, void *arg);
+typedef int (*pt_cmd_handler_t)(const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg);
 
 struct pt_cmd {
   uint8_t cmd;
@@ -35,8 +34,7 @@ int comm_read(int type, void *ctx, uint8_t **data, uint32_t *len);
 /* production_test.c */
 extern const struct pt_cmd pt_cmd_table[48];
 extern struct k_sem mic_transm_sem;             /* mic_transm_thread trigger */
-int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp,
-      uint8_t *resp_len, void *arg);
+int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg);
 int pt_resp_checksum(uint8_t **resp, uint8_t *resp_len);
 int64_t set_pt_deadline(void);                   /* pt_timeout_ms = uptime + 10 s */
 void mic_transm_thread(void *p1, void *p2, void *p3);

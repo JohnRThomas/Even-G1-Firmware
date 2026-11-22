@@ -3,17 +3,16 @@
  * head-angle threshold calculation and the fusion thread (head-up /
  * bow-head gesture detection, motion/still detection).
  */
-#include <string.h>
 #include <math.h>
 #include <stdlib.h>
-#include <zephyr/kernel.h>
+#include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 
 #include <g1_log.h>
 
-#include "imu_fusion.h"
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
 #include "../main.h"
@@ -21,9 +20,10 @@
 #include "../production_test/production_test.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
+#include "imu_fusion.h"
 
-#define IMU_FUSION_STACK_SIZE  0x700
-#define IMU_FUSION_PRIORITY  (-11)
+#define IMU_FUSION_STACK_SIZE 0x700
+#define IMU_FUSION_PRIORITY   (-11)
 
 K_THREAD_STACK_DEFINE(imu_fusion_stack, IMU_FUSION_STACK_SIZE);
 static struct k_thread imu_fusion_thread_data;
@@ -44,7 +44,7 @@ struct imu_motion {
   float accum[3];
 };
 
-static const float imu_motion_thr[3] = { 0.2f, 0.15f, 0.15f };
+static const float imu_motion_thr[3] = {0.2f, 0.15f, 0.15f};
 
 static int imu_last_div = 300;
 static int imu_angle_threshold = 150;
@@ -71,13 +71,10 @@ struct imu_lookup_msg {
   uint8_t status;
 };
 
-void send_dashboard_lock_info(void)
-{
-  if (atomic_test_bit(&dashboard_lock_requested, 1) &&
-      !atomic_test_bit(&dashboard_head_up_opened, 1)) {
-    if (!atomic_test_bit(&dashboard_lock_reported, 1) &&
-        atomic_test_bit(&dashboard_lock_requested, 1)) {
-      struct imu_lookup_msg msg = { .cmd = 0x0650, .action = 1, .status = 1 };
+void send_dashboard_lock_info(void) {
+  if (atomic_test_bit(&dashboard_lock_requested, 1) && !atomic_test_bit(&dashboard_head_up_opened, 1)) {
+    if (!atomic_test_bit(&dashboard_lock_reported, 1) && atomic_test_bit(&dashboard_lock_requested, 1)) {
+      struct imu_lookup_msg msg = {.cmd = 0x0650, .action = 1, .status = 1};
 
       send_response_data_to_msgqueue(&msg, sizeof(msg));
       send_response_data_to_ble();
@@ -86,14 +83,13 @@ void send_dashboard_lock_info(void)
   }
 }
 
-int update_head_up_thresholds(struct imu_ctx *c)
-{
+int update_head_up_thresholds(struct imu_ctx *c) {
   int offset;
   int scaled;
   int t;
 
-  if (c->ref != imu_last_ref || c->level != imu_last_level || c->wear != imu_last_wear ||
-      c->div != imu_last_div || c->base != imu_last_base) {
+  if (c->ref != imu_last_ref || c->level != imu_last_level || c->wear != imu_last_wear || c->div != imu_last_div ||
+      c->base != imu_last_base) {
     imu_last_ref = c->ref;
     imu_last_level = c->level;
     imu_last_wear = c->wear;
@@ -132,15 +128,13 @@ int update_head_up_thresholds(struct imu_ctx *c)
   return imu_angle_threshold;
 }
 
-static void imu_fusion_set(struct imu_ctx *c, uint32_t val)
-{
+static void imu_fusion_set(struct imu_ctx *c, uint32_t val) {
   if (c->sample_period_ms != val) {
     c->sample_period_ms = val;
   }
 }
 
-int update_imu_mode(struct imu_ctx *c, uint8_t mode)
-{
+int update_imu_mode(struct imu_ctx *c, uint8_t mode) {
   int retry;
   int ret;
 
@@ -157,28 +151,28 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode)
   c->dev = DEVICE_DT_GET(DT_NODELABEL(lsm6dso));
 
   switch (mode) {
-  case 1:
-    c->odr.val1 = 12;
-    c->odr.val2 = 0;
-    break;
-  case 2:
-    c->odr.val1 = 26;
-    c->odr.val2 = 0;
-    break;
-  case 0:
-    c->odr.val1 = 0;
-    c->odr.val2 = 0;
-    break;
+    case 1:
+      c->odr.val1 = 12;
+      c->odr.val2 = 0;
+      break;
+    case 2:
+      c->odr.val1 = 26;
+      c->odr.val2 = 0;
+      break;
+    case 0:
+      c->odr.val1 = 0;
+      c->odr.val2 = 0;
+      break;
   }
 
   for (retry = 1;;) {
-    ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ,
-              SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
+    ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
     if (ret >= 0) {
       break;
     }
     G1_LOG_WRN("c->imu_fusion: Cannot set sampling frequency for accelerometer ret %d "
-         "retry_time %d.\n\n", ret, retry);
+               "retry_time %d.\n\n",
+               ret, retry);
     if (++retry <= 20) {
       k_sleep(K_MSEC(5));
     } else {
@@ -192,8 +186,7 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode)
   }
 
   for (retry = 1;;) {
-    ret = sensor_attr_set(c->dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY,
-              &c->odr);
+    ret = sensor_attr_set(c->dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
     if (ret >= 0) {
       break;
     }
@@ -210,18 +203,15 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode)
   return 0;
 }
 
-static int imu_fusion_deinit(struct imu_ctx *c)
-{
+static int imu_fusion_deinit(struct imu_ctx *c) {
   return 0;
 }
 
-static int imu_fusion_get(struct imu_ctx *c)
-{
+static int imu_fusion_get(struct imu_ctx *c) {
   return 0;
 }
 
-int register_imu_funsion_context(struct imu_ctx *c)
-{
+int register_imu_funsion_context(struct imu_ctx *c) {
   c->init_cb = imu_fusion_init;
   c->deinit_cb = imu_fusion_deinit;
   c->get_cb = imu_fusion_get;
@@ -231,8 +221,7 @@ int register_imu_funsion_context(struct imu_ctx *c)
   return 0;
 }
 
-static int imu_fusion_init(struct imu_ctx *c)
-{
+static int imu_fusion_init(struct imu_ctx *c) {
   int ret;
 
   if (c->inited) {
@@ -246,19 +235,16 @@ static int imu_fusion_init(struct imu_ctx *c)
 
   c->odr.val1 = (is_master() != 1) ? 0 : 52;
   c->odr.val2 = 0;
-  ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY,
-            &c->odr);
+  ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
   if (ret < 0) {
-    G1_LOG_WRN("c->imu_fusion: Cannot set sampling frequency for accelerometer ret %d.\n\n",
-         ret);
+    G1_LOG_WRN("c->imu_fusion: Cannot set sampling frequency for accelerometer ret %d.\n\n", ret);
     return -3;
   }
 
   is_master();
   c->odr.val1 = 0;
   c->odr.val2 = 0;
-  ret = sensor_attr_set(c->dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY,
-            &c->odr);
+  ret = sensor_attr_set(c->dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
   if (ret < 0) {
     G1_LOG_WRN("c->imu_fusion: Cannot set sampling frequency for gyro.\n\n");
     return -4;
@@ -271,15 +257,14 @@ static int imu_fusion_init(struct imu_ctx *c)
   c->thread_running = 1;
   update_head_up_thresholds(c);
 
-  k_thread_create(&imu_fusion_thread_data, imu_fusion_stack, IMU_FUSION_STACK_SIZE, imu_fusion_thread, c,
-      NULL, NULL, IMU_FUSION_PRIORITY, 0, K_NO_WAIT);
+  k_thread_create(&imu_fusion_thread_data, imu_fusion_stack, IMU_FUSION_STACK_SIZE, imu_fusion_thread, c, NULL, NULL,
+                  IMU_FUSION_PRIORITY, 0, K_NO_WAIT);
 
   return 0;
 }
 
 /* Head-up ("look up") / bow-head gesture detection. */
-static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, float *angles)
-{
+static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, float *angles) {
   struct GlassesState *gs = CONTAINER_OF(c, struct GlassesState, imu);
   struct esb_sync_pkt *sync = &gs->sync;
   int retry;
@@ -320,23 +305,22 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
         if (sync->screen_id != 0 || pitch < imu_level_pitch) {
           screen_switch_busy = 1;
           if (BLE_DEBUG) {
-            ble_printk("look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
-                 sync->screen_id, pitch, c->thr_low, c->level);
+            ble_printk(
+              "look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
+              sync->screen_id, pitch, c->thr_low, c->level);
           } else {
-            printk("look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
-                   sync->screen_id, pitch, c->thr_low, c->level);
+            printk(
+              "look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
+              sync->screen_id, pitch, c->thr_low, c->level);
           }
           retry = 101;
           while (!get_dashboard_state()->message_mode && push_msg_syncing && --retry) {
             k_sleep(K_MSEC(10));
           }
           report_event_to_phone(2);
-          if (sync->screen_id == 9 || sync->screen_id == 12 ||
-              sync->screen_id == 10 || sync->screen_id == 11 ||
-              sync->screen_id == 5 || sync->screen_id == 4 ||
-              sync->screen_id == 7 || sync->screen_id == 14 ||
-              sync->screen_id == 15 || sync->screen_id == 16 ||
-              sync->screen_id == 20 || sync->screen_id == 17 ||
+          if (sync->screen_id == 9 || sync->screen_id == 12 || sync->screen_id == 10 || sync->screen_id == 11 ||
+              sync->screen_id == 5 || sync->screen_id == 4 || sync->screen_id == 7 || sync->screen_id == 14 ||
+              sync->screen_id == 15 || sync->screen_id == 16 || sync->screen_id == 20 || sync->screen_id == 17 ||
               sync->screen_id == 18 || sync->screen_id == 19) {
             c->mode = 2;
             screen_switch_busy = 0;
@@ -345,8 +329,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
           if (!get_dashboard_startup_mode()) {
             if (atomic_test_bit(&dashboard_lock_requested, 1)) {
               if (!atomic_test_bit(&dashboard_head_up_opened, 1)) {
-                if (!atomic_test_bit(&dashboard_lock_reported, 1) &&
-                    atomic_test_bit(&dashboard_lock_requested, 1)) {
+                if (!atomic_test_bit(&dashboard_lock_reported, 1) && atomic_test_bit(&dashboard_lock_requested, 1)) {
                   struct imu_lookup_msg msg = {
                     .cmd = 0x0650,
                     .action = 1,
@@ -386,10 +369,9 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
     }
     report_event_to_phone(3);
     c->mode = 1;
-    if (sync->screen_id == 9 || sync->screen_id == 12 || sync->screen_id == 10 ||
-        sync->screen_id == 11 || sync->screen_id == 7 || sync->screen_id == 14 ||
-        sync->screen_id == 15 || sync->screen_id == 16 || sync->screen_id == 20 ||
-        sync->screen_id == 17 || sync->screen_id == 18 || sync->screen_id == 19 ||
+    if (sync->screen_id == 9 || sync->screen_id == 12 || sync->screen_id == 10 || sync->screen_id == 11 ||
+        sync->screen_id == 7 || sync->screen_id == 14 || sync->screen_id == 15 || sync->screen_id == 16 ||
+        sync->screen_id == 20 || sync->screen_id == 17 || sync->screen_id == 18 || sync->screen_id == 19 ||
         sync->screen_id == 4 || is_persist_task_active(gs, sync->screen_id)) {
       screen_switch_busy = 0;
       return;
@@ -398,7 +380,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
     if (sync->screen_id == 1) {
       sync_to_slave(gs, 8, NULL, 0);
     } else if ((!gs->message_mode || cur_message_show_state() != 1) && !get_dashboard_startup_mode() &&
-         !gs->dashboard_ts->dashboard_hold) {
+               !gs->dashboard_ts->dashboard_hold) {
       sync_to_slave(gs, 1, NULL, 0);
     }
     if (!gs->message_mode && !get_dashboard_startup_mode() && !gs->dashboard_ts->dashboard_hold) {
@@ -423,8 +405,7 @@ level_check:
 }
 
 /* Motion / still detection on the yaw/pitch/roll angles. */
-static void imu_motion_detect(float *angles)
-{
+static void imu_motion_detect(float *angles) {
   float diff[3];
   float out[3];
   int moved;
@@ -436,65 +417,64 @@ static void imu_motion_detect(float *angles)
   memset(out, 0, sizeof(out));
 
   switch (imu_motion.state) {
-  case 0:
-    moved = 0;
-    for (i = 0; i < 3; i++) {
-      if (fabsf(diff[i]) > imu_motion_thr[i]) {
-        int s = (diff[i] > 0) ? 1 : -1;
+    case 0:
+      moved = 0;
+      for (i = 0; i < 3; i++) {
+        if (fabsf(diff[i]) > imu_motion_thr[i]) {
+          int s = (diff[i] > 0) ? 1 : -1;
 
-        if (imu_motion.sign[i] == s) {
-          moved++;
-        }
-        imu_motion.sign[i] = s;
-      }
-    }
-    if (moved) {
-      if (imu_motion.move_cnt == 0) {
-        memcpy(imu_motion.start, angles, 3 * sizeof(float));
-        imu_motion.move_cnt = 1;
-      } else if (++imu_motion.move_cnt > 4) {
-        imu_motion.state = 1;
-      }
-    }
-    break;
-  case 1: {
-    float delta[3];
-
-    for (i = 0; i < 3; i++) {
-      delta[i] = angles[i] - imu_motion.start[i];
-      if (fabsf(delta[i]) > 180.0f) {
-        if (delta[i] > 0) {
-          delta[i] -= 360.0f;
-        } else {
-          delta[i] += 360.0f;
+          if (imu_motion.sign[i] == s) {
+            moved++;
+          }
+          imu_motion.sign[i] = s;
         }
       }
-      out[i] = imu_motion.accum[i] + delta[i];
+      if (moved) {
+        if (imu_motion.move_cnt == 0) {
+          memcpy(imu_motion.start, angles, 3 * sizeof(float));
+          imu_motion.move_cnt = 1;
+        } else if (++imu_motion.move_cnt > 4) {
+          imu_motion.state = 1;
+        }
+      }
+      break;
+    case 1: {
+      float delta[3];
+
+      for (i = 0; i < 3; i++) {
+        delta[i] = angles[i] - imu_motion.start[i];
+        if (fabsf(delta[i]) > 180.0f) {
+          if (delta[i] > 0) {
+            delta[i] -= 360.0f;
+          } else {
+            delta[i] += 360.0f;
+          }
+        }
+        out[i] = imu_motion.accum[i] + delta[i];
+      }
+      if (fabsf(diff[0]) > 0.1f || fabsf(diff[1]) > 0.1f || fabsf(diff[2]) > 0.1f) {
+        imu_motion.still_cnt = 0;
+      } else if (++imu_motion.still_cnt > 4) {
+        imu_motion.state = 2;
+        memcpy(imu_motion.accum, out, sizeof(out));
+      }
+      break;
     }
-    if (fabsf(diff[0]) > 0.1f || fabsf(diff[1]) > 0.1f || fabsf(diff[2]) > 0.1f) {
+    case 2:
+      imu_motion.move_cnt = 0;
       imu_motion.still_cnt = 0;
-    } else if (++imu_motion.still_cnt > 4) {
-      imu_motion.state = 2;
-      memcpy(imu_motion.accum, out, sizeof(out));
-    }
-    break;
-  }
-  case 2:
-    imu_motion.move_cnt = 0;
-    imu_motion.still_cnt = 0;
-    memset(imu_motion.sign, 0, sizeof(imu_motion.sign));
-    imu_motion.state = 0;
-    break;
+      memset(imu_motion.sign, 0, sizeof(imu_motion.sign));
+      imu_motion.state = 0;
+      break;
   }
 
   memcpy(imu_motion.prev, angles, 3 * sizeof(float));
 }
 
-static void imu_fusion_thread(void *p1, void *p2, void *p3)
-{
+static void imu_fusion_thread(void *p1, void *p2, void *p3) {
   struct imu_ctx *c = p1;
   struct GlassesState *gs;
-  float angles[3] = { 0 };
+  float angles[3] = {0};
   struct sensor_value accel[3];
   struct sensor_value gyro[3];
   float ax, ay, az, gx, gy, gz, dt;

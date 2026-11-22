@@ -6,8 +6,7 @@ static struct notif_msg msg;
 
 /* ---- push_message ---- */
 
-ZTEST(notifications, test_push_message_appends_to_the_queue_from_slot_10)
-{
+ZTEST(notifications, test_push_message_appends_to_the_queue_from_slot_10) {
   make_msg(&msg, 1, "com.discord", "first");
   zassert_equal(push_message(&msg), PUSH_FIRST + 1);
   make_msg(&msg, 2, "com.discord", "second");
@@ -20,8 +19,7 @@ ZTEST(notifications, test_push_message_appends_to_the_queue_from_slot_10)
   zassert_equal(slots_used(0, MSG_NORMAL_NUM), 0);
 }
 
-ZTEST(notifications, test_push_message_refuses_a_held_new_uid_and_an_unknown_update)
-{
+ZTEST(notifications, test_push_message_refuses_a_held_new_uid_and_an_unknown_update) {
   make_msg(&msg, 7, "com.discord", "first");
   zassert_equal(push_message(&msg), PUSH_FIRST + 1);
 
@@ -35,8 +33,7 @@ ZTEST(notifications, test_push_message_refuses_a_held_new_uid_and_an_unknown_upd
   expect_str(g_arrMsgContent[PUSH_FIRST].title, "first");
 }
 
-ZTEST(notifications, test_find_push_message_by_uid_looks_at_the_free_queue_entries_only)
-{
+ZTEST(notifications, test_find_push_message_by_uid_looks_at_the_free_queue_entries_only) {
   put_slot(0, 5, "com.discord", T0, 0, 0);
   put_slot(PUSH_FIRST, 6, "com.discord", T0, 0, 0);
   put_slot(PUSH_FIRST + 1, 7, "com.discord", T0, 0, 0);
@@ -50,8 +47,7 @@ ZTEST(notifications, test_find_push_message_by_uid_looks_at_the_free_queue_entri
 
 /* ---- confirm_message ---- */
 
-ZTEST(notifications, test_confirm_message_moves_the_queue_head_to_the_first_free_shown_slot)
-{
+ZTEST(notifications, test_confirm_message_moves_the_queue_head_to_the_first_free_shown_slot) {
   g1_clock_set_date(T0);
   put_slot(0, 1, "com.discord", T0 - 60, 0, 0);
   put_slot(PUSH_FIRST, 11, "com.discord", T0 - 5, 0, 0);
@@ -71,8 +67,7 @@ ZTEST(notifications, test_confirm_message_moves_the_queue_head_to_the_first_free
   zassert_equal(g1_state()->unread_msg_num, 2);
 }
 
-ZTEST(notifications, test_confirm_message_ignores_another_uid_and_an_unsynced_head)
-{
+ZTEST(notifications, test_confirm_message_ignores_another_uid_and_an_unsynced_head) {
   put_slot(PUSH_FIRST, 11, "com.discord", T0, 0, 0);
   g_msg_num_push = PUSH_FIRST + 1;
 
@@ -85,8 +80,7 @@ ZTEST(notifications, test_confirm_message_ignores_another_uid_and_an_unsynced_he
   zassert_equal(slots_used(0, MSG_NORMAL_NUM), 0);
 }
 
-ZTEST(notifications, test_confirm_message_with_10_shown_drops_the_oldest)
-{
+ZTEST(notifications, test_confirm_message_with_10_shown_drops_the_oldest) {
   for (int slot = 0; slot < MSG_NORMAL_NUM; slot++) {
     put_slot(slot, slot + 1, "com.discord", T0, 0, 0);
   }
@@ -96,15 +90,13 @@ ZTEST(notifications, test_confirm_message_with_10_shown_drops_the_oldest)
   confirm_synced_head(11);
 
   for (int slot = 0; slot < MSG_NORMAL_NUM; slot++) {
-    zassert_equal(g_arrMsgContent[slot].uid, slot + 2, "slot %d uid %u", slot,
-            g_arrMsgContent[slot].uid);
+    zassert_equal(g_arrMsgContent[slot].uid, slot + 2, "slot %d uid %u", slot, g_arrMsgContent[slot].uid);
     zassert_equal(g_arrMsgContent[slot].pos, slot);
   }
   zassert_equal(g1_state()->unread_msg_num, MSG_NORMAL_NUM);
 }
 
-ZTEST(notifications, test_confirm_message_action_1_updates_the_shown_message)
-{
+ZTEST(notifications, test_confirm_message_action_1_updates_the_shown_message) {
   put_slot(0, 1, "com.discord", T0, 0, 0);
   put_slot(1, 2, "com.discord", T0, 0, 0);
   put_slot(PUSH_FIRST, 2, "com.discord", T0, 0, 0);
@@ -120,8 +112,7 @@ ZTEST(notifications, test_confirm_message_action_1_updates_the_shown_message)
   zassert_equal(slots_used(0, MSG_NORMAL_NUM), 2);
 }
 
-ZTEST(notifications, test_confirm_message_on_the_master_drops_a_uid_already_shown)
-{
+ZTEST(notifications, test_confirm_message_on_the_master_drops_a_uid_already_shown) {
   put_slot(0, 5, "com.discord", T0, 0, 0);
   put_slot(PUSH_FIRST, 5, "com.discord", T0, 0, 0);
   g_msg_num_push = PUSH_FIRST + 1;
@@ -132,8 +123,7 @@ ZTEST(notifications, test_confirm_message_on_the_master_drops_a_uid_already_show
   zassert_equal(slots_used(PUSH_FIRST, MSG_TOTAL_NUM), 0);
 }
 
-ZTEST(notifications, test_confirm_message_after_dropping_a_duplicate_the_next_message_is_the_head)
-{
+ZTEST(notifications, test_confirm_message_after_dropping_a_duplicate_the_next_message_is_the_head) {
   put_slot(0, 5, "com.discord", T0, 0, 0);
   put_slot(PUSH_FIRST, 5, "com.discord", T0, 0, 0);
   g_msg_num_push = PUSH_FIRST + 1;
@@ -148,8 +138,7 @@ ZTEST(notifications, test_confirm_message_after_dropping_a_duplicate_the_next_me
 
 /* ---- count_unread_messages ---- */
 
-ZTEST(notifications, test_count_unread_messages_counts_unread_up_to_the_first_empty_slot)
-{
+ZTEST(notifications, test_count_unread_messages_counts_unread_up_to_the_first_empty_slot) {
   put_slot(0, 1, "com.discord", T0, 0, 0);
   put_slot(1, 2, "com.discord", T0, T0, 1);
   put_slot(2, 3, "com.discord", T0, 0, 0);
@@ -159,16 +148,14 @@ ZTEST(notifications, test_count_unread_messages_counts_unread_up_to_the_first_em
   zassert_equal(count_messages(), 3);
 }
 
-ZTEST(notifications, test_count_unread_messages_is_0_without_messages)
-{
+ZTEST(notifications, test_count_unread_messages_is_0_without_messages) {
   zassert_equal(count_unread_messages(), 0);
   zassert_equal(count_messages(), 0);
 }
 
 /* ---- clear_timeout_message ---- */
 
-ZTEST(notifications, test_clear_timeout_read_message_stays_message_stay_time_seconds)
-{
+ZTEST(notifications, test_clear_timeout_read_message_stays_message_stay_time_seconds) {
   static const uint8_t stay_times[] = {6, 15};
 
   for (size_t row = 0; row < ARRAY_SIZE(stay_times); row++) {
@@ -180,18 +167,15 @@ ZTEST(notifications, test_clear_timeout_read_message_stays_message_stay_time_sec
 
     g1_clock_set_date(T0 + stay);
     clear_timeout_message(0);
-    zassert_equal(g_arrMsgContent[0].uid, 1, "stay time %u: dropped after %u s", stay,
-            stay);
+    zassert_equal(g_arrMsgContent[0].uid, 1, "stay time %u: dropped after %u s", stay, stay);
 
     g1_clock_set_date(T0 + stay + 1);
     clear_timeout_message(0);
-    zassert_equal(slots_used(0, MSG_NORMAL_NUM), 0, "stay time %u: kept after %u s",
-            stay, stay + 1);
+    zassert_equal(slots_used(0, MSG_NORMAL_NUM), 0, "stay time %u: kept after %u s", stay, stay + 1);
   }
 }
 
-ZTEST(notifications, test_clear_timeout_unread_message_is_kept)
-{
+ZTEST(notifications, test_clear_timeout_unread_message_is_kept) {
   g1_state()->message_stay_time = 6;
   put_slot(0, 1, "com.discord", T0, 0, 0);
 
@@ -202,8 +186,7 @@ ZTEST(notifications, test_clear_timeout_unread_message_is_kept)
   zassert_equal(g1_state()->unread_msg_num, 1);
 }
 
-ZTEST(notifications, test_clear_timeout_incoming_call_goes_5_s_after_it_was_shown)
-{
+ZTEST(notifications, test_clear_timeout_incoming_call_goes_5_s_after_it_was_shown) {
   g1_state()->message_stay_time = 60;
   put_slot(0, 1, "com.android.phone_incall", T0, T0, 0);
 
@@ -216,8 +199,7 @@ ZTEST(notifications, test_clear_timeout_incoming_call_goes_5_s_after_it_was_show
   zassert_equal(slots_used(0, MSG_NORMAL_NUM), 0, "call kept after 6 s");
 }
 
-ZTEST(notifications, test_clear_timeout_force_drops_a_read_message_at_once)
-{
+ZTEST(notifications, test_clear_timeout_force_drops_a_read_message_at_once) {
   g1_state()->message_stay_time = 60;
   g1_clock_set_date(T0);
   put_slot(0, 1, "com.discord", T0 - 3, T0 - 1, 1);
@@ -230,8 +212,7 @@ ZTEST(notifications, test_clear_timeout_force_drops_a_read_message_at_once)
   zassert_equal(g1_state()->unread_msg_num, 1);
 }
 
-ZTEST(notifications, test_clear_timeout_force_drops_every_read_message_at_once)
-{
+ZTEST(notifications, test_clear_timeout_force_drops_every_read_message_at_once) {
   g1_state()->message_stay_time = 60;
   g1_clock_set_date(T0);
   put_slot(0, 1, "com.discord", T0 - 3, T0 - 1, 1);
@@ -245,8 +226,7 @@ ZTEST(notifications, test_clear_timeout_force_drops_every_read_message_at_once)
   zassert_equal(g1_state()->unread_msg_num, 1);
 }
 
-ZTEST(notifications, test_clear_timeout_moves_the_remaining_messages_up_in_order)
-{
+ZTEST(notifications, test_clear_timeout_moves_the_remaining_messages_up_in_order) {
   g1_state()->message_stay_time = 6;
   put_slot(0, 1, "com.discord", T0 - 30, 0, 0);
   put_slot(1, 2, "com.discord", T0 - 20, T0 - 10, 1);
@@ -265,8 +245,7 @@ ZTEST(notifications, test_clear_timeout_moves_the_remaining_messages_up_in_order
 
 /* ---- mark_cur_message_read ---- */
 
-ZTEST(notifications, test_mark_cur_message_read_marks_it_and_starts_its_stay_time)
-{
+ZTEST(notifications, test_mark_cur_message_read_marks_it_and_starts_its_stay_time) {
   put_slot(0, 1, "com.discord", T0 - 30, 0, 0);
   g1_state()->unread_msg_num = 1;
   g_curShowMsgIdx = 0;
@@ -279,8 +258,7 @@ ZTEST(notifications, test_mark_cur_message_read_marks_it_and_starts_its_stay_tim
   zassert_equal(g1_state()->unread_msg_num, 0);
 }
 
-ZTEST(notifications, test_mark_cur_message_read_leaves_a_read_message_alone)
-{
+ZTEST(notifications, test_mark_cur_message_read_leaves_a_read_message_alone) {
   put_slot(0, 1, "com.discord", T0 - 30, T0 - 10, 1);
   g_curShowMsgIdx = 0;
   g1_clock_set_date(T0);
@@ -292,14 +270,12 @@ ZTEST(notifications, test_mark_cur_message_read_leaves_a_read_message_alone)
 
 /* ---- parse_message_type ---- */
 
-static uint8_t type_of(const char *app)
-{
+static uint8_t type_of(const char *app) {
   put_slot(0, 1, app, T0, 0, 0);
   return parse_message_type(0);
 }
 
-ZTEST(notifications, test_parse_message_type_android_packages)
-{
+ZTEST(notifications, test_parse_message_type_android_packages) {
   zassert_equal(type_of("com.android.phone_missed"), 1);
   zassert_equal(type_of("com.android.phone_incall"), 2);
   zassert_equal(type_of("com.android.even_sms"), 0);
@@ -313,8 +289,7 @@ ZTEST(notifications, test_parse_message_type_android_packages)
   zassert_equal(type_of("com.google.Gmail"), 5, "iOS mail on an Android phone");
 }
 
-ZTEST(notifications, test_parse_message_type_ios_packages)
-{
+ZTEST(notifications, test_parse_message_type_ios_packages) {
   g1_state()->phone_is_ios = 1;
 
   zassert_equal(type_of("com.apple.mobilephone_missed"), 1);

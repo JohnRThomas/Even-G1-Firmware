@@ -13,14 +13,12 @@
 #define QN_BLOCK      0x50f    /* sizeof(struct quicknote_ctx) */
 #define QN_QUEUE      20       /* QUICKNOTE_QUEUE_DEPTH */
 
-static struct quicknote_item *note(int slot)
-{
+static struct quicknote_item *note(int slot) {
   return &g1_state()->quicknote->notes[slot - 1];
 }
 
 /* sends a note in one packet: total 1, index 1, flag 01 (note present) */
-static void qn_send(uint8_t seq, uint8_t slot, const char *title, const char *text)
-{
+static void qn_send(uint8_t seq, uint8_t slot, const char *title, const char *text) {
   size_t title_len = strlen(title);
   size_t text_len = strlen(text);
   uint8_t pkt[96];
@@ -32,15 +30,13 @@ static void qn_send(uint8_t seq, uint8_t slot, const char *title, const char *te
   g1_send(pkt, g1_put_chunk(pkt, 0x1e, seq, 0x03, 1, 1, payload, 5 + title_len + text_len));
 }
 
-static void run_store(void)
-{
+static void run_store(void) {
   while (getQuickNoteQueueNum() != 0) {
     QuickNoteStoreHandler();
   }
 }
 
-ZTEST(features, test_0x1e_notes_transcript_empty_slot_3)
-{
+ZTEST(features, test_0x1e_notes_transcript_empty_slot_3) {
   note(3)->valid = 1;
   strcpy(note(3)->title, "old");
 
@@ -52,8 +48,7 @@ ZTEST(features, test_0x1e_notes_transcript_empty_slot_3)
   zassert_equal(getQuickNoteQueueNum(), 1);
 }
 
-ZTEST(features, test_0x1e_note_is_stored_in_its_slot_and_queued_for_flash)
-{
+ZTEST(features, test_0x1e_note_is_stored_in_its_slot_and_queued_for_flash) {
   g1_send_vector("0x1e_quicknote_add");
 
   expect_frame("1e 20 00 11 03 01 00 01 00 00");
@@ -64,8 +59,7 @@ ZTEST(features, test_0x1e_note_is_stored_in_its_slot_and_queued_for_flash)
   zassert_equal(getQuickNoteQueueNum(), 1);
 }
 
-ZTEST(features, test_0x1e_note_in_slot_4_is_stored)
-{
+ZTEST(features, test_0x1e_note_in_slot_4_is_stored) {
   qn_send(0x12, 4, "four", "last slot");
 
   expect_frame("1e 1b 00 12 03 01 00 01 00 00");
@@ -74,8 +68,7 @@ ZTEST(features, test_0x1e_note_in_slot_4_is_stored)
   feat_expect_field(note(4)->text, QN_TEXT, "last slot");
 }
 
-ZTEST(features, test_0x1e_title_of_0x28_chars_is_stored_whole)
-{
+ZTEST(features, test_0x1e_title_of_0x28_chars_is_stored_whole) {
   char title[0x28 + 1];
 
   memset(title, 'T', 0x28);
@@ -87,8 +80,7 @@ ZTEST(features, test_0x1e_title_of_0x28_chars_is_stored_whole)
   expect_frame("1e 3a 00 13 03 01 00 01 00 00");
 }
 
-ZTEST(features, test_0x1e_title_of_0x29_chars_is_cut_to_keep_a_terminator)
-{
+ZTEST(features, test_0x1e_title_of_0x29_chars_is_cut_to_keep_a_terminator) {
   char title[0x29 + 1];
 
   memset(title, 'T', 0x29);
@@ -99,8 +91,7 @@ ZTEST(features, test_0x1e_title_of_0x29_chars_is_cut_to_keep_a_terminator)
   zassert_equal(strnlen(note(2)->title, QN_TITLE), 0x28);
 }
 
-ZTEST(features, test_0x1e_note_in_slot_5_is_rejected)
-{
+ZTEST(features, test_0x1e_note_in_slot_5_is_rejected) {
   feat_guard_block(&g1_state()->quicknote, QN_BLOCK, 0x200, 0x200);
 
   qn_send(0x15, 5, "five", "too many");
@@ -109,11 +100,9 @@ ZTEST(features, test_0x1e_note_in_slot_5_is_rejected)
   expect_frame("1e 1a 00 15 03 01 00 01 00 01");
 }
 
-ZTEST(features, test_0x1e_multi_packet_note_in_slot_5_is_rejected_without_writing)
-{
+ZTEST(features, test_0x1e_multi_packet_note_in_slot_5_is_rejected_without_writing) {
   /* total 2, index 1, slot 5, title "t" */
-  uint8_t pkt[] = {0x1e, 0x00, 0x00, 0x16, 0x03, 0x02, 0x00, 0x01, 0x00,
-       0x05, 0x01, 0x01, 't', 'a', 'b', 'c'};
+  uint8_t pkt[] = {0x1e, 0x00, 0x00, 0x16, 0x03, 0x02, 0x00, 0x01, 0x00, 0x05, 0x01, 0x01, 't', 'a', 'b', 'c'};
 
   feat_guard_block(&g1_state()->quicknote, QN_BLOCK, 0x200, 0x200);
 
@@ -123,10 +112,8 @@ ZTEST(features, test_0x1e_multi_packet_note_in_slot_5_is_rejected_without_writin
   feat_expect_guard_intact();
 }
 
-ZTEST(features, test_0x1e_multi_packet_text_longer_than_the_note_is_refused)
-{
-  uint8_t pkt[0x100] = {0x1e, 0x00, 0x00, 0x17, 0x03, 0x03, 0x00, 0x01, 0x00,
-            0x01, 0x01, 0x01, 't'};
+ZTEST(features, test_0x1e_multi_packet_text_longer_than_the_note_is_refused) {
+  uint8_t pkt[0x100] = {0x1e, 0x00, 0x00, 0x17, 0x03, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 't'};
 
   g1_send(pkt, feat_set_len16(pkt, 16));
   memset(&pkt[9], 'x', sizeof(pkt) - 9);
@@ -140,8 +127,7 @@ ZTEST(features, test_0x1e_multi_packet_text_longer_than_the_note_is_refused)
   zassert_equal(note(1)->valid, 0);
 }
 
-ZTEST(features, test_0x1e_note_survives_a_reboot_through_flash)
-{
+ZTEST(features, test_0x1e_note_survives_a_reboot_through_flash) {
   char title[QN_TITLE];
   char text[QN_TEXT];
 
@@ -162,8 +148,7 @@ ZTEST(features, test_0x1e_note_survives_a_reboot_through_flash)
   feat_expect_field(text, QN_TEXT, "Oh wow");
 }
 
-ZTEST(features, test_quicknote_store_keeps_four_notes_apart)
-{
+ZTEST(features, test_quicknote_store_keeps_four_notes_apart) {
   static const char *const titles[4] = {"one", "two", "three", "four"};
   char title[QN_TITLE];
   char text[QN_TEXT];
@@ -174,16 +159,13 @@ ZTEST(features, test_quicknote_store_keeps_four_notes_apart)
   run_store();
 
   for (int index = 0; index < 4; index++) {
-    zassert_equal(g1_fake_flash_image[QN_FLASH + index * QN_FLASH_NOTE], QN_MAGIC,
-            "slot %d", index + 1);
-    zassert_equal(getQuickNoteDataFromFlash(index, title, QN_TITLE, text, QN_TEXT), 0,
-            "slot %d", index + 1);
+    zassert_equal(g1_fake_flash_image[QN_FLASH + index * QN_FLASH_NOTE], QN_MAGIC, "slot %d", index + 1);
+    zassert_equal(getQuickNoteDataFromFlash(index, title, QN_TITLE, text, QN_TEXT), 0, "slot %d", index + 1);
     feat_expect_field(title, QN_TITLE, titles[index]);
   }
 }
 
-ZTEST(features, test_0x1e_empty_note_deletes_the_flash_copy)
-{
+ZTEST(features, test_0x1e_empty_note_deletes_the_flash_copy) {
   char title[QN_TITLE];
   char text[QN_TEXT];
 
@@ -199,8 +181,7 @@ ZTEST(features, test_0x1e_empty_note_deletes_the_flash_copy)
   zassert_equal(getQuickNoteDataFromFlash(0, title, QN_TITLE, text, QN_TEXT), -1);
 }
 
-ZTEST(features, test_quicknote_store_refuses_index_4)
-{
+ZTEST(features, test_quicknote_store_refuses_index_4) {
   char title[QN_TITLE];
   char text[QN_TEXT];
 
@@ -217,19 +198,16 @@ ZTEST(features, test_quicknote_store_refuses_index_4)
   feat_expect_field(title, QN_TITLE, "slot 4");
 }
 
-ZTEST(features, test_quicknote_store_queue_holds_20_requests)
-{
+ZTEST(features, test_quicknote_store_queue_holds_20_requests) {
   for (int request = 0; request < QN_QUEUE; request++) {
-    zassert_equal(upgradeQuickNoteDataToFlash(request % 4), 0, "request %d",
-            request + 1);
+    zassert_equal(upgradeQuickNoteDataToFlash(request % 4), 0, "request %d", request + 1);
   }
   zassert_equal(getQuickNoteQueueNum(), QN_QUEUE);
   zassert_equal(deleteQuickNoteData(0), -1, "request 21");
   zassert_equal(getQuickNoteQueueNum(), QN_QUEUE);
 }
 
-ZTEST(features, test_quicknote_store_skips_an_unchanged_note)
-{
+ZTEST(features, test_quicknote_store_skips_an_unchanged_note) {
   g1_send_vector("0x1e_quicknote_add");
   run_store();
   zassert_equal(g1_fake_flash_write_fake.call_count, 1);
@@ -239,8 +217,7 @@ ZTEST(features, test_quicknote_store_skips_an_unchanged_note)
   zassert_equal(g1_fake_flash_write_fake.call_count, 1, "rewritten without a change");
 }
 
-ZTEST(features, test_0x51_enable_starts_the_quick_note_task)
-{
+ZTEST(features, test_0x51_enable_starts_the_quick_note_task) {
   struct prompt_info *ts = g1_state()->ts_info;
   int64_t now;
 
@@ -257,8 +234,7 @@ ZTEST(features, test_0x51_enable_starts_the_quick_note_task)
   expect_frame_padded("51 06 00 2a 01 c9", 20);
 }
 
-ZTEST(features, test_0x51_disable_clears_enable)
-{
+ZTEST(features, test_0x51_disable_clears_enable) {
   g1_send_hex("51 06 00 2a 02 01");
   g1_send_hex("51 06 00 2b 02 00");
 
@@ -268,8 +244,7 @@ ZTEST(features, test_0x51_disable_clears_enable)
   expect_frame_padded("51 06 00 2b 02 c9", 20);
 }
 
-ZTEST(features, test_0x51_sub_above_2_or_wrong_length_is_rejected)
-{
+ZTEST(features, test_0x51_sub_above_2_or_wrong_length_is_rejected) {
   g1_send_hex("51 06 00 2c 03 01");
   g1_send_hex("51 07 00 2d 01 01");
 

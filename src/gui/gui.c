@@ -6,9 +6,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 
-#include "gui.h"
 #include "../fonts/font_bitmap.h"
 #include "../panel_display/panel.h"
+#include "gui.h"
 #include "gui_fade_mask.h"
 
 int gui_font_kerning(uint16_t cur, uint16_t next);
@@ -29,19 +29,16 @@ static uint16_t dyn_frame_cnt;
 static uint16_t dyn_frame_idx;
 static uint16_t dyn_loop_cnt;
 
-atomic_val_t gui_flags_get(void)
-{
+atomic_val_t gui_flags_get(void) {
   return atomic_get(&gui_flags);
 }
 
-int set_frame_buffer(uint8_t **fb)
-{
+int set_frame_buffer(uint8_t **fb) {
   frame_buffer = fb;
   return 0;
 }
 
-int gui_screen_clear(void)
-{
+int gui_screen_clear(void) {
   G1_LOG_INF("exec screen clear command....\n");
 
   if (!get_jdb_panel_context()->init_done) {
@@ -53,8 +50,7 @@ int gui_screen_clear(void)
   return 0;
 }
 
-int gui_area_clear(int x_start, int y_start, int x_end, int y_end)
-{
+int gui_area_clear(int x_start, int y_start, int x_end, int y_end) {
   G1_LOG_INF("exec area clear command....\n");
 
   if (!get_jdb_panel_context()->init_done) {
@@ -64,38 +60,33 @@ int gui_area_clear(int x_start, int y_start, int x_end, int y_end)
 
   _clean_fb_data(get_dashboard_state()->panel.panel_buffer, 0, x_start, y_start, x_end, y_end);
   _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-        x_start, y_start, x_end, y_end);
+                          x_start, y_start, x_end, y_end);
   return 0;
 }
 
-int set_showing_notification_on_gui(void)
-{
+int set_showing_notification_on_gui(void) {
   atomic_or(&gui_flags, GUI_FLAG_NOTIFICATION_SHOWING);
   return 0;
 }
 
-int clear_showing_notification_on_gui(void)
-{
+int clear_showing_notification_on_gui(void) {
   atomic_and(&gui_flags, ~GUI_FLAG_NOTIFICATION_SHOWING);
   return 0;
 }
 
-int gui_dynamic_bitmap_reset(void)
-{
+int gui_dynamic_bitmap_reset(void) {
   dyn_frame_cnt = 0;
   dyn_frame_idx = 0;
   dyn_loop_cnt = 0;
   return 0;
 }
 
-int gui_icon_area_clear(int x, int y)
-{
+int gui_icon_area_clear(int x, int y) {
   _clean_fb_data(frame_buffer, 0, x, y, x + 40, y + 40);
   return 0;
 }
 
-int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8_t loop)
-{
+int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8_t loop) {
   int w = 0, h = 0;
   const uint8_t *data = NULL;
   uint8_t frames;
@@ -111,8 +102,8 @@ int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8
   }
   copy_to_frame_buffer(frame_buffer, data + h * ((w * dyn_frame_idx) / 2), w / 2, h, x, y);
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x, y, x + w, y + h);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x, y,
+                            x + w, y + h);
   }
 
   if (dyn_frame_idx < dyn_frame_cnt - 1) {
@@ -127,8 +118,7 @@ int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8
   return 0;
 }
 
-int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, int no_draw)
-{
+int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, int no_draw) {
   const uint8_t *data;
   int w = 0, h = 0;
 
@@ -143,8 +133,8 @@ int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, in
     data = get_small_glyph_bitmap((uint8_t)id, 0x120);
     copy_to_frame_buffer(frame_buffer, data, 12, 24, x, y);
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x, y, x + 24, y + 24);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x,
+                              y, x + 24, y + 24);
     }
   } else {
     if (resource_manger_get(4, id, &w, &h, &data, NULL) < 0) {
@@ -156,15 +146,14 @@ int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, in
     }
     copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y);
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x, y, w + 2 + x, y + h);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x,
+                              y, w + 2 + x, y + h);
     }
   }
   return 0;
 }
 
-int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level)
-{
+int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level) {
   int w, h;
   const uint8_t *data;
   size_t size;
@@ -192,21 +181,18 @@ int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level)
   }
   copy_to_frame_buffer(frame_buffer, buf, w / 2, h, x, y);
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x, y, w + 2 + x, y + h);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x, y,
+                            w + 2 + x, y + h);
   }
   return 0;
 }
 
-int gui_text_state_reset(void)
-{
+int gui_text_state_reset(void) {
   return 0;
 }
 
-int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-     uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-     int no_draw)
-{
+int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                 uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw) {
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
@@ -252,8 +238,7 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
           x_off = w + gui_font_kerning(code[-1], code[0]);
           line_w = x_off;
         } else {
-          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
-                   y0 + y_off);
+          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[-1], code[0]) + w;
         }
       } else if (ret == -1 && (c == '\r' || c == '\n')) {
@@ -282,8 +267,8 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
     }
 
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
@@ -292,10 +277,9 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
   return 0;
 }
 
-int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, int y0, int x1,
-          int y1, uint32_t max_lines, uint16_t split_code, int effect,
-          gui_effect_cb_t cb, int no_draw)
-{
+int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
+                                  uint32_t max_lines, uint16_t split_code, int effect, gui_effect_cb_t cb,
+                                  int no_draw) {
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
@@ -351,8 +335,7 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
           x_off = gui_font_kerning(code[-1], code[0]) + w;
           line_w = x_off;
         } else {
-          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
-                   y0 + y_off);
+          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[-1], code[0]) + w;
         }
       } else if (ret == -1 && (c == '\r' || c == '\n')) {
@@ -381,8 +364,8 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
     }
 
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
@@ -392,10 +375,8 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
   return 0;
 }
 
-int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-        int no_draw)
-{
+int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                          uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw) {
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
@@ -440,12 +421,10 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
               k--;
               ch = *p;
               if (resource_manger_get(font, ch, &w, &h, &data, NULL) < 0) {
-                G1_LOG_WRN("truncate can not find [%d]0x%x font resource\n",
-                     k, ch);
+                G1_LOG_WRN("truncate can not find [%d]0x%x font resource\n", k, ch);
               } else {
                 x_off -= w + gui_font_kerning(p[0], p[1]);
-                _clean_fb_data(frame_buffer, 0, x0 + x_off, y0 + y_off,
-                         x0 + x_off + w, y0 + y_off + h);
+                _clean_fb_data(frame_buffer, 0, x0 + x_off, y0 + y_off, x0 + x_off + w, y0 + y_off + h);
               }
             }
             if (k == 0) {
@@ -462,8 +441,7 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
                 glyph[n] &= text_grey_level;
               }
             }
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
-                     y0 + y_off);
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
             break;
           }
           y_off += h;
@@ -474,8 +452,7 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
           x_off = w + gui_font_kerning(code[0], code[1]);
           line_w = x_off;
         } else {
-          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
-                   y0 + y_off);
+          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[0], code[1]) + w;
         }
       } else if (ret == -1 && (c == '\r' || c == '\n')) {
@@ -501,8 +478,8 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
     }
 
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
@@ -511,10 +488,9 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
   return 0;
 }
 
-int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, int y0, int x1,
-           int y1, uint32_t max_lines, uint8_t dark_lines, int effect,
-           gui_effect_cb_t cb, int no_draw)
-{
+int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
+                                   uint32_t max_lines, uint8_t dark_lines, int effect, gui_effect_cb_t cb,
+                                   int no_draw) {
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
@@ -540,8 +516,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
         memcpy(glyph, data, h * (w / 2));
         line_w += w + gui_font_kerning(code[-1], code[0]);
         /* dimmed by the line the glyph lands on, the next one when it wraps */
-        if (dark_lines != 0 &&
-            lines + (line_w > (uint32_t)(x1 - x0)) < dark_lines) {
+        if (dark_lines != 0 && lines + (line_w > (uint32_t)(x1 - x0)) < dark_lines) {
           for (int k = 0; k < h * (w / 2); k++) {
             glyph[k] &= text_grey_level;
           }
@@ -562,8 +537,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
           x_off = w + gui_font_kerning(code[-1], code[0]);
           line_w = x_off;
         } else {
-          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
-                   y0 + y_off);
+          copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[-1], code[0]) + w;
         }
       } else if (ret == -1 && (c == '\r' || c == '\n')) {
@@ -592,8 +566,8 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
     }
 
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
@@ -603,9 +577,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
 }
 
 int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
-      uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-      int no_draw)
-{
+                        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw) {
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
@@ -675,13 +647,11 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
             if (y_off >= y1 - y0) {
               break;
             }
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start,
-                     y0 + y_off);
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start, y0 + y_off);
             x_off = gui_font_kerning(code[-1], code[0]) + w;
             line_w = x_off;
           } else {
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h,
-                     x_start + x_off, y0 + y_off);
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start + x_off, y0 + y_off);
             x_off += gui_font_kerning(code[-1], code[0]) + w;
           }
         }
@@ -715,8 +685,8 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
     }
 
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
@@ -725,10 +695,8 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
   return 0;
 }
 
-int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-           uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-           int no_draw)
-{
+int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                             uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw) {
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
@@ -800,13 +768,11 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
             if (y_off >= (uint32_t)(y1 - y0)) {
               break;
             }
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start,
-                     y0 + y_off);
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start, y0 + y_off);
             x_off = gui_font_kerning(code[-1], code[0]) + w;
             line_w = x_off;
           } else {
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h,
-                     x_start + x_off, y0 + y_off);
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start + x_off, y0 + y_off);
             x_off += gui_font_kerning(code[-1], code[0]) + w;
           }
         }
@@ -840,8 +806,8 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
     }
 
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
@@ -850,10 +816,8 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
   return 0;
 }
 
-int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-        uint32_t max_lines, uint32_t dark_cnt, int effect, gui_effect_cb_t cb,
-        int no_draw)
-{
+int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                          uint32_t dark_cnt, int effect, gui_effect_cb_t cb, int no_draw) {
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *codes = utf8_to_unicode_buf(str, &count);
@@ -889,7 +853,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
           }
 
           if (line_w > (uint32_t)width / 2 && lines < max_lines - 1) {
-            const uint16_t split_chars[5] = { ' ', ',', '.', '?', '!' };
+            const uint16_t split_chars[5] = {' ', ',', '.', '?', '!'};
             int k;
 
             for (k = 0; k < 5; k++) {
@@ -898,8 +862,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
               }
             }
             if (k < 5 && c != 0) {
-              const uint16_t end_chars[7] = { ' ', ',', '.', '?', '!',
-                      '\r', '\n' };
+              const uint16_t end_chars[7] = {' ', ',', '.', '?', '!', '\r', '\n'};
               uint32_t start = i + 1;
               uint32_t end;
 
@@ -931,16 +894,14 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
                   }
                   if (end == i) {
                     G1_LOG_WRN("!!! end_split_character_index == start_split_character_index\n");
-                  } else if (wide == 0 ||
-                       (float)wide / (float)(end - i) < 0.5f) {
+                  } else if (wide == 0 || (float)wide / (float)(end - i) < 0.5f) {
                     int gw = 0, gh = 0;
                     const uint8_t *gdata;
                     uint16_t *p = code;
                     int len = line_w;
 
                     for (uint32_t n = i; n <= end; n++, p++) {
-                      if (resource_manger_get(font, *p, &gw, &gh,
-                            &gdata, NULL) == 0) {
+                      if (resource_manger_get(font, *p, &gw, &gh, &gdata, NULL) == 0) {
                         len += gui_font_kerning(p[0], p[1]) + gw;
                       }
                       if ((uint32_t)len > (uint32_t)width) {
@@ -971,8 +932,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
             x_off = gui_font_kerning(code[0], code[1]) + w;
             line_w = x_off;
           } else {
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off,
-                     y0 + y_off);
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
             x_off += gui_font_kerning(code[0], code[1]) + w;
           }
         }
@@ -1005,8 +965,8 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
     }
 
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
@@ -1016,17 +976,16 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
 }
 
 /* advanced UTF draw commands: 4, 5, 6 and 8 (reset) are accepted and have no effect */
-int gui_utf_adv_draw_configure(struct gui_utf_adv_cfg cfg)
-{
+int gui_utf_adv_draw_configure(struct gui_utf_adv_cfg cfg) {
   switch (cfg.cmd) {
-  case 4:
-  case 5:
-  case 6:
-  case 8:
-    break;
-  default:
-    G1_LOG_ERR("unkonown adv command\n");
-    break;
+    case 4:
+    case 5:
+    case 6:
+    case 8:
+      break;
+    default:
+      G1_LOG_ERR("unkonown adv command\n");
+      break;
   }
   return -1;
 }
@@ -1034,21 +993,18 @@ int gui_utf_adv_draw_configure(struct gui_utf_adv_cfg cfg)
 /* ---------------------------------------------------------------------------
  * small helpers
  */
-int gui_dynamic_bitmap_reset_thunk(void)
-{
+int gui_dynamic_bitmap_reset_thunk(void) {
   return gui_dynamic_bitmap_reset();
 }
 
-int64_t abs_diff_u64(int64_t a, int64_t b)
-{
+int64_t abs_diff_u64(int64_t a, int64_t b) {
   if (a >= b) {
     return a - b;
   }
   return b - a;
 }
 
-int gui_utf_adv_draw_reset(void)
-{
+int gui_utf_adv_draw_reset(void) {
   struct gui_utf_adv_cfg cfg;
 
   cfg.cmd = 8;
@@ -1056,8 +1012,7 @@ int gui_utf_adv_draw_reset(void)
 }
 
 /* horizontal text origin: the stored x shift plus the panel's per-eye offset */
-int gui_screen_x_offset(void)
-{
+int gui_screen_x_offset(void) {
   /* an unset canvas (both 0) gets both defaults, so x and y may be read in either order */
   if (get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) {
     get_dashboard_state()->canvas_x = 32;
@@ -1069,8 +1024,7 @@ int gui_screen_x_offset(void)
 }
 
 /* vertical text origin (display height setting, clamped to 4..64) */
-int gui_screen_y_offset(void)
-{
+int gui_screen_y_offset(void) {
   if (get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) {
     get_dashboard_state()->canvas_x = 32;
     get_dashboard_state()->canvas_y = 32;
@@ -1083,9 +1037,8 @@ int gui_screen_y_offset(void)
   return get_dashboard_state()->canvas_y;
 }
 
-int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0, int x1, int y1,
-      uint32_t max_lines, uint32_t dark_cnt)
-{
+int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0, int x1, int y1, uint32_t max_lines,
+                             uint32_t dark_cnt) {
   if (gui_screen_y_offset() <= 32) {
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
       _clean_fb_data(frame_buffer, 0, x0, y0 + 27, x1, y1 + 27);
@@ -1094,11 +1047,10 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
     gui_utf_draw(0, str, 0, x0, y0 + 27, x1, y1 + 27, max_lines, dark_cnt, 0, NULL, 0);
     set_showing_notification_on_gui();
     for (int i = 0; i < 9; i++) {
-      const int offs[9] = { 3, 6, 9, 12, 15, 18, 21, 24, 27 };
+      const int offs[9] = {3, 6, 9, 12, 15, 18, 21, 24, 27};
 
-      _reflash_fb_data_to_lcd_ex(get_dashboard_state()->panel.current_row,
-               get_dashboard_state()->panel.current_column, x0, y0, x1, y1,
-               offs[i]);
+      _reflash_fb_data_to_lcd_ex(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 x0, y0, x1, y1, offs[i]);
     }
     copy_frame_buffer_rows(frame_buffer, x0, y0, x0, y0 + 27, 27, x1 - x0);
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
@@ -1113,11 +1065,10 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
     gui_utf_draw(0, str, 0, x0, y0, x1, y1, max_lines, dark_cnt, 0, NULL, 0);
     set_showing_notification_on_gui();
     for (int i = 0; i < 9; i++) {
-      const int offs[9] = { -27, -21, -18, -15, -12, -9, -6, -3, 0 };
+      const int offs[9] = {-27, -21, -18, -15, -12, -9, -6, -3, 0};
 
-      _reflash_fb_data_to_lcd_ex(get_dashboard_state()->panel.current_row,
-               get_dashboard_state()->panel.current_column, x0, y0, x1, y1,
-               offs[i]);
+      _reflash_fb_data_to_lcd_ex(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                 x0, y0, x1, y1, offs[i]);
     }
     if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
       _clean_fb_data(frame_buffer, 0, x0, y0 - 27, x1, y0);
@@ -1126,96 +1077,91 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
   return 0;
 }
 
-int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode,
-       bool is_24h)
-{
-  struct g1_date date = { 0 };
+int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool is_24h) {
+  struct g1_date date = {0};
   size_t len;
   const uint8_t *data;
   int w, h;
   int x;
 
   timestamp_to_date(ts, &date);
-  char buf[16] = { 0 };
+  char buf[16] = {0};
 
   if (is_24h) {
-    sprintf(buf, "%d%d%s%d%d", date.hour / 10, date.hour % 10, ":", date.minute / 10,
-      date.minute % 10);
+    sprintf(buf, "%d%d%s%d%d", date.hour / 10, date.hour % 10, ":", date.minute / 10, date.minute % 10);
   } else {
     if (date.hour > 12) {
       date.hour -= 12;
     } else if (date.hour == 0) {
       date.hour = 12;
     }
-    sprintf(buf, "%d%d%s%d%d", date.hour / 10, date.hour % 10, ":", date.minute / 10,
-      date.minute % 10);
+    sprintf(buf, "%d%d%s%d%d", date.hour / 10, date.hour % 10, ":", date.minute / 10, date.minute % 10);
   }
   len = strlen(buf);
 
   switch (mode) {
-  case 0:
-    gui_utf_draw(0, buf, 0, x0, y0, x1, y1, 1, 0, 0, NULL, 0);
-    break;
-  case 3:
-    gui_utf_draw(0, buf, 3, x0, y0, x1, y1, 1, 0, 0, NULL, 0);
-    break;
-  case 1:
-    if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
-    }
-    x = x0;
-    for (int i = 0; i < len; i++) {
-      data = NULL;
-      if (resource_manger_get(1, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 ||
-          data == NULL) {
-        G1_LOG_WRN("The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
-             (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
-      } else {
-        copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
-        x += w + 6;
+    case 0:
+      gui_utf_draw(0, buf, 0, x0, y0, x1, y1, 1, 0, 0, NULL, 0);
+      break;
+    case 3:
+      gui_utf_draw(0, buf, 3, x0, y0, x1, y1, 1, 0, 0, NULL, 0);
+      break;
+    case 1:
+      if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+        _clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
       }
-    }
-    if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
-    }
-    break;
-  case 2:
-    if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
-    }
-    x = x0;
-    for (int i = 0; i < len; i++) {
-      data = NULL;
-      if (resource_manger_get(2, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 ||
-          data == NULL) {
-        G1_LOG_WRN("The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
-             (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
-      } else {
-        copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
-        if (buf[i + 1] != ':') {
-          x += w + 2;
+      x = x0;
+      for (int i = 0; i < len; i++) {
+        data = NULL;
+        if (resource_manger_get(1, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 || data == NULL) {
+          G1_LOG_WRN(
+            "The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
+            (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
         } else {
-          x += w + 7;
-        }
-        if (buf[i] == ':') {
-          x += 7;
+          copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
+          x += w + 6;
         }
       }
-    }
-    if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-      _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-            get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
-    }
-    break;
-  default:
-    break;
+      if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+        _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                x0, y0, x1, y1);
+      }
+      break;
+    case 2:
+      if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+        _clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
+      }
+      x = x0;
+      for (int i = 0; i < len; i++) {
+        data = NULL;
+        if (resource_manger_get(2, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 || data == NULL) {
+          G1_LOG_WRN(
+            "The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
+            (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
+        } else {
+          copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
+          if (buf[i + 1] != ':') {
+            x += w + 2;
+          } else {
+            x += w + 7;
+          }
+          if (buf[i] == ':') {
+            x += 7;
+          }
+        }
+      }
+      if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+        _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                                x0, y0, x1, y1);
+      }
+      break;
+    default:
+      break;
   }
   return 0;
 }
 
-int gui_screen_fade_out(void)
-{
+int gui_screen_fade_out(void) {
   for (int step = 0; step < 8; step++) {
     for (int row = 0; row < GUI_FB_ROWS; row++) {
       for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
@@ -1224,16 +1170,15 @@ int gui_screen_fade_out(void)
         }
       }
     }
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH, 199);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,
+                            GUI_SCREEN_WIDTH, 199);
     k_busy_wait(5000);
   }
   gui_screen_clear();
   return 0;
 }
 
-int hide_icon_notification_on_gui(void)
-{
+int hide_icon_notification_on_gui(void) {
   for (int step = 0; step < 8; step++) {
     for (int row = 0; row < 199; row++) {
       for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
@@ -1242,16 +1187,14 @@ int hide_icon_notification_on_gui(void)
         }
       }
     }
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH, 199);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0, 0,
+                            GUI_SCREEN_WIDTH, 199);
   }
   gui_screen_clear();
   return 0;
 }
 
-int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, uint8_t percent,
-         int unused)
-{
+int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, uint8_t percent, int unused) {
   uint8_t color;
   int pct;
   int col;
@@ -1277,16 +1220,14 @@ int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, u
     fb[y0 + i][col] = color;
   }
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x0 - 6, y0, x1 + 6, y1);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                            x0 - 6, y0, x1 + 6, y1);
   }
   gui_bmp_bitmap_draw(0x17, x0 - 4, pct * (y1 - y0 - 13) / 100 + y0, 0, 0, 0);
   return 0;
 }
 
-int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segments, uint8_t gap,
-          uint8_t percent)
-{
+int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segments, uint8_t gap, uint8_t percent) {
   int width, bar_width, fill;
   int seg_num, pct;
   uint8_t pix;
@@ -1363,14 +1304,13 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
   }
 
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                            y0, x1, y1);
   }
   return 0;
 }
 
-int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color)
-{
+int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color) {
   uint8_t **fb;
   int n;
 
@@ -1397,7 +1337,7 @@ int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t 
     for (int i = 0; i < n; i++) {
       uint8_t bits = bmp[k++];
       uint8_t pix = 0;
-      uint8_t out[4] = { 0 };
+      uint8_t out[4] = {0};
 
       for (int b = 0; b < 8; b++) {
         if ((bits >> b) & 1) {
@@ -1414,22 +1354,20 @@ int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t 
       }
       /* clipped at the right edge of the row */
       if (x_byte + i * 4 < GUI_FB_ROW_BYTES) {
-        memcpy(&fb[y0 + r][x_byte + i * 4], out,
-               MIN(4, GUI_FB_ROW_BYTES - (x_byte + i * 4)));
+        memcpy(&fb[y0 + r][x_byte + i * 4], out, MIN(4, GUI_FB_ROW_BYTES - (x_byte + i * 4)));
       }
     }
   }
 
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x0 - 2, y0, x1 + 2, y1);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                            x0 - 2, y0, x1 + 2, y1);
   }
   return 0;
 }
 
-int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, const uint8_t *bmp2,
-        uint8_t color1, uint8_t color2)
-{
+int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, const uint8_t *bmp2, uint8_t color1,
+                          uint8_t color2) {
   uint8_t **fb;
   int n;
 
@@ -1457,7 +1395,7 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
       uint8_t bits2 = bmp2[k];
       k++;
       uint8_t pix = 0;
-      uint8_t out[4] = { 0 };
+      uint8_t out[4] = {0};
 
       for (int b = 0; b < 8; b++) {
         if ((bits1 >> b) & 1) {
@@ -1484,14 +1422,13 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
   }
 
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                            y0, x1, y1);
   }
   return 0;
 }
 
-int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color)
-{
+int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t color) {
   uint8_t **fb;
   int n;
 
@@ -1513,7 +1450,7 @@ int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp,
     for (int i = 0; i < n; i++) {
       uint8_t bits = bmp[k++];
       uint8_t pix = 0;
-      uint8_t out[4] = { 0 };
+      uint8_t out[4] = {0};
 
       for (int b = 0; b < 8; b++) {
         if ((bits >> b) & 1) {
@@ -1535,20 +1472,18 @@ int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp,
   }
 
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x0 - 2, y0, x1 + 2, y1);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
+                            x0 - 2, y0, x1 + 2, y1);
   }
   return 0;
 }
 
-int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y)
-{
+int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y) {
   int w = 0, h = 0;
   const uint8_t *data = NULL;
 
   if (x > 640 || y > 480) {
-    G1_LOG_ERR("gui_4bit_bitmap_override parampter overstep!!! stop draw bitmap !!! x= %d,y= %d\n",
-         x, y);
+    G1_LOG_ERR("gui_4bit_bitmap_override parampter overstep!!! stop draw bitmap !!! x= %d,y= %d\n", x, y);
     return -1;
   }
   if (resource_manger_get(4, id, &w, &h, &data, NULL) < 0) {
@@ -1558,14 +1493,13 @@ int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y)
 
   or_to_frame_buffer(frame_buffer, data, w, h, x, y);
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x, y, w + x, h + y);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x, y,
+                            w + x, h + y);
   }
   return 0;
 }
 
-int gui_font_kerning(uint16_t cur, uint16_t next)
-{
+int gui_font_kerning(uint16_t cur, uint16_t next) {
   int n = 0;
 
   for (int i = 0; i < font26_glyph_count; i++) {
@@ -1582,8 +1516,7 @@ int gui_font_kerning(uint16_t cur, uint16_t next)
   return n;
 }
 
-int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, int *out_w)
-{
+int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, int *out_w) {
   int w = 0, h = 0;
   const uint8_t *data = NULL;
   size_t len = strlen(str);
@@ -1615,8 +1548,8 @@ int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, i
   }
 
   if (gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
-    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
-          get_dashboard_state()->panel.current_column, x0, y0, x1, y1);
+    _reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
+                            y0, x1, y1);
   }
   if (out_w != NULL) {
     *out_w = x - x0;

@@ -8,8 +8,7 @@
  * accumulate_elapsed_seconds() slots survive the harness reset, so tests restart theirs;
  * reference 0 means never started, so no test starts at uptime 0.
  */
-static void util_before(void *fixture)
-{
+static void util_before(void *fixture) {
   ARG_UNUSED(fixture);
   g1_clock_advance_ms(1000);
 }
@@ -19,21 +18,16 @@ ZTEST_SUITE(util, NULL, NULL, util_before, NULL, NULL);
 /* reveng CRC catalogue: the check values are the CRCs of this input */
 static const uint8_t crc_check[] = "123456789";
 
-ZTEST(util, test_crc16_usb_matches_catalogue_check_value)
-{
-  zassert_equal(crc16_usb(0xffff, crc_check, 9), 0xb4c8, "got 0x%04x",
-          crc16_usb(0xffff, crc_check, 9));
+ZTEST(util, test_crc16_usb_matches_catalogue_check_value) {
+  zassert_equal(crc16_usb(0xffff, crc_check, 9), 0xb4c8, "got 0x%04x", crc16_usb(0xffff, crc_check, 9));
 }
 
 /* reflect(init) ^ xorout */
-ZTEST(util, test_crc16_usb_of_empty_input_is_0)
-{
-  zassert_equal(crc16_usb(0xffff, crc_check, 0), 0x0000, "got 0x%04x",
-          crc16_usb(0xffff, crc_check, 0));
+ZTEST(util, test_crc16_usb_of_empty_input_is_0) {
+  zassert_equal(crc16_usb(0xffff, crc_check, 0), 0x0000, "got 0x%04x", crc16_usb(0xffff, crc_check, 0));
 }
 
-ZTEST(util, test_crc16_generic_matches_catalogue_check_values)
-{
+ZTEST(util, test_crc16_generic_matches_catalogue_check_values) {
   static const struct {
     const char *name;
     uint16_t poly, init, xorout;
@@ -53,23 +47,21 @@ ZTEST(util, test_crc16_generic_matches_catalogue_check_values)
   };
 
   for (size_t row = 0; row < ARRAY_SIZE(models); row++) {
-    uint16_t got = crc16_generic(models[row].init, models[row].poly, models[row].xorout,
-               models[row].refin, models[row].refout, crc_check, 9);
+    uint16_t got = crc16_generic(models[row].init, models[row].poly, models[row].xorout, models[row].refin,
+                                 models[row].refout, crc_check, 9);
 
-    zassert_equal(got, models[row].check, "%s: got 0x%04x, catalogue check 0x%04x",
-            models[row].name, got, models[row].check);
+    zassert_equal(got, models[row].check, "%s: got 0x%04x, catalogue check 0x%04x", models[row].name, got,
+                  models[row].check);
   }
 }
 
 /* CRC-32/XZ, catalogue check value */
-ZTEST(util, test_crc32_matches_crc32_xz_check_value)
-{
+ZTEST(util, test_crc32_matches_crc32_xz_check_value) {
   zassert_equal(crc32(0, crc_check, 9), 0xcbf43926u, "got 0x%08x", crc32(0, crc_check, 9));
 }
 
 /* zlib.crc32() over address + data in one pass */
-ZTEST(util, test_crc32_chained_over_bitmap_address_and_data_equals_one_pass_crc32_xz)
-{
+ZTEST(util, test_crc32_chained_over_bitmap_address_and_data_equals_one_pass_crc32_xz) {
   static const uint8_t addr[4] = {0x00, 0x1c, 0x00, 0x00};
   static uint8_t data[0x1123];
   uint32_t crc;
@@ -86,16 +78,13 @@ ZTEST(util, test_crc32_chained_over_bitmap_address_and_data_equals_one_pass_crc3
 }
 
 /* an end packet right after a full block */
-ZTEST(util, test_crc32_of_zero_bytes_leaves_the_crc_unchanged)
-{
+ZTEST(util, test_crc32_of_zero_bytes_leaves_the_crc_unchanged) {
   zassert_equal(crc32(0, crc_check, 0), 0u, "got 0x%08x", crc32(0, crc_check, 0));
-  zassert_equal(crc32(0x1ee59b97u, crc_check, 0), 0x1ee59b97u, "got 0x%08x",
-          crc32(0x1ee59b97u, crc_check, 0));
+  zassert_equal(crc32(0x1ee59b97u, crc_check, 0), 0x1ee59b97u, "got 0x%08x", crc32(0x1ee59b97u, crc_check, 0));
 }
 
 /* rle_decode() of src[0..len) into 0xee-filled dst returns decoded_len; dst starts with want */
-static void expect_rle_decode(const uint8_t *src, uint32_t len, int decoded_len, const char *want)
-{
+static void expect_rle_decode(const uint8_t *src, uint32_t len, int decoded_len, const char *want) {
   uint8_t want_bytes[16];
   int want_len = g1_hex(want, want_bytes, sizeof(want_bytes));
   uint8_t dst[16];
@@ -108,52 +97,44 @@ static void expect_rle_decode(const uint8_t *src, uint32_t len, int decoded_len,
   expect_bytes(dst, want_len, want);
 }
 
-ZTEST(util, test_rle_decode_expands_count_value_pairs)
-{
+ZTEST(util, test_rle_decode_expands_count_value_pairs) {
   static const uint8_t src[] = {0x03, 0xaa, 0x01, 0x55, 0x02, 0x00};
 
   expect_rle_decode(src, sizeof(src), 6, "aa aa aa 55 00 00 ee");
 }
 
-ZTEST(util, test_rle_decode_zero_count_pair_writes_nothing)
-{
+ZTEST(util, test_rle_decode_zero_count_pair_writes_nothing) {
   static const uint8_t src[] = {0x00, 0xaa, 0x02, 0x55};
 
   expect_rle_decode(src, sizeof(src), 2, "55 55 ee");
 }
 
-ZTEST(util, test_rle_decode_zero_length_input_writes_nothing)
-{
+ZTEST(util, test_rle_decode_zero_length_input_writes_nothing) {
   static const uint8_t src[] = {0x04, 0xaa};
 
   expect_rle_decode(src, 0, 0, "ee ee ee ee ee ee ee ee");
 }
 
 /* odd len: the trailing count has no value; the fourth byte keeps src[len] in bounds */
-ZTEST(util, test_rle_decode_ignores_trailing_count_without_value)
-{
+ZTEST(util, test_rle_decode_ignores_trailing_count_without_value) {
   static const uint8_t src[] = {0x02, 0x11, 0x04, 0x77};
 
   expect_rle_decode(src, 3, 2, "11 11 ee ee ee ee ee");
 }
 
-static void expect_date(uint32_t ts, int year, int month, int day, int hour, int minute,
-      int second)
-{
+static void expect_date(uint32_t ts, int year, int month, int day, int hour, int minute, int second) {
   struct g1_date got;
 
   memset(&got, 0xff, sizeof(got));
   timestamp_to_date(ts, &got);
 
-  zassert_true(got.year == year && got.month == month && got.day == day && got.hour == hour &&
-           got.minute == minute && got.second == second,
-         "%u: got %04u-%02u-%02u %02u:%02u:%02u, want %04d-%02d-%02d %02d:%02d:%02d",
-         ts, got.year, got.month, got.day, got.hour, got.minute, got.second, year,
-         month, day, hour, minute, second);
+  zassert_true(got.year == year && got.month == month && got.day == day && got.hour == hour && got.minute == minute &&
+                 got.second == second,
+               "%u: got %04u-%02u-%02u %02u:%02u:%02u, want %04d-%02d-%02d %02d:%02d:%02d", ts, got.year, got.month,
+               got.day, got.hour, got.minute, got.second, year, month, day, hour, minute, second);
 }
 
-ZTEST(util, test_date_of_timestamp)
-{
+ZTEST(util, test_date_of_timestamp) {
   expect_date(0, 1970, 1, 1, 0, 0, 0);
   expect_date(978307200u, 2001, 1, 1, 0, 0, 0); /* 2000 has 366 days */
   expect_date(1677628799u, 2023, 2, 28, 23, 59, 59);
@@ -170,26 +151,22 @@ ZTEST(util, test_date_of_timestamp)
 }
 
 /* 2000 is a leap year (divisible by 400) */
-ZTEST(util, test_date_leap_day_2000_02_29)
-{
+ZTEST(util, test_date_leap_day_2000_02_29) {
   expect_date(951782400u, 2000, 2, 29, 0, 0, 0);
 }
 
-ZTEST(util, test_date_last_day_of_2000)
-{
+ZTEST(util, test_date_last_day_of_2000) {
   expect_date(978307199u, 2000, 12, 31, 23, 59, 59);
 }
 
-static void expect_weekday(uint32_t ts, const char *want)
-{
+static void expect_weekday(uint32_t ts, const char *want) {
   const char *got = get_weekday_name(ts);
 
   zassert_not_null(got, "%u: NULL", ts);
   zassert_true(strcmp(got, want) == 0, "%u: got \"%s\", want \"%s\"", ts, got, want);
 }
 
-ZTEST(util, test_weekday_name_of_timestamp)
-{
+ZTEST(util, test_weekday_name_of_timestamp) {
   expect_weekday(0, "Thursday");
   expect_weekday(1704067199u, "Sunday"); /* the day changes at UTC midnight */
   expect_weekday(1704067200u, "Monday");
@@ -197,8 +174,7 @@ ZTEST(util, test_weekday_name_of_timestamp)
   expect_weekday(1709251200u, "Friday");
 }
 
-ZTEST(util, test_weekday_names_of_one_week_sunday_to_saturday)
-{
+ZTEST(util, test_weekday_names_of_one_week_sunday_to_saturday) {
   static const char *const names[7] = {
     "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
   };
@@ -209,8 +185,7 @@ ZTEST(util, test_weekday_names_of_one_week_sunday_to_saturday)
 }
 
 /* inputs are exact in binary */
-static void expect_2dp(float val, const char *want)
-{
+static void expect_2dp(float val, const char *want) {
   char buf[16];
   int len;
 
@@ -218,28 +193,25 @@ static void expect_2dp(float val, const char *want)
   len = format_float_2dp(val, buf);
 
   zassert_true(len >= 0 && len < (int)sizeof(buf), "%s: returned length %d", want, len);
-  zassert_true(len == (int)strlen(want) && memcmp(buf, want, len) == 0,
-         "got \"%.*s\" (length %d), want \"%s\"", len, buf, len, want);
+  zassert_true(len == (int)strlen(want) && memcmp(buf, want, len) == 0, "got \"%.*s\" (length %d), want \"%s\"", len,
+               buf, len, want);
 }
 
-ZTEST(util, test_format_float_2dp_positive_values_get_plus_sign_and_two_decimals)
-{
+ZTEST(util, test_format_float_2dp_positive_values_get_plus_sign_and_two_decimals) {
   expect_2dp(1.25f, "+1.25");
   expect_2dp(10.5f, "+10.50");
   expect_2dp(100.25f, "+100.25");
   expect_2dp(179.75f, "+179.75");
 }
 
-ZTEST(util, test_format_float_2dp_values_below_one_get_a_leading_zero)
-{
+ZTEST(util, test_format_float_2dp_values_below_one_get_a_leading_zero) {
   expect_2dp(0.5f, "+0.50");
   expect_2dp(0.25f, "+0.25");
   expect_2dp(0.09375f, "+0.09");
   expect_2dp(0.0625f, "+0.06");
 }
 
-ZTEST(util, test_format_float_2dp_negative_values_get_minus_sign)
-{
+ZTEST(util, test_format_float_2dp_negative_values_get_minus_sign) {
   expect_2dp(-1.25f, "-1.25");
   expect_2dp(-0.25f, "-0.25");
   expect_2dp(-0.0625f, "-0.06");
@@ -248,19 +220,16 @@ ZTEST(util, test_format_float_2dp_negative_values_get_minus_sign)
 }
 
 /* rounds to the nearest hundredth (C11 %.2f) */
-ZTEST(util, test_format_float_2dp_rounds_to_nearest_hundredth)
-{
+ZTEST(util, test_format_float_2dp_rounds_to_nearest_hundredth) {
   expect_2dp(1.2890625f, "+1.29");
   expect_2dp(-1.2890625f, "-1.29");
 }
 
-ZTEST(util, test_format_float_2dp_zero_is_plus_0_00)
-{
+ZTEST(util, test_format_float_2dp_zero_is_plus_0_00) {
   expect_2dp(0.0f, "+0.00");
 }
 
-ZTEST(util, test_uint32_to_little_endian_writes_4_bytes_lsb_first)
-{
+ZTEST(util, test_uint32_to_little_endian_writes_4_bytes_lsb_first) {
   uint8_t buf[6];
   int ret;
 
@@ -271,13 +240,11 @@ ZTEST(util, test_uint32_to_little_endian_writes_4_bytes_lsb_first)
   expect_bytes(buf, 6, "78 56 34 12 ee ee");
 }
 
-ZTEST(util, test_uint32_to_little_endian_null_buffer_returns_0)
-{
+ZTEST(util, test_uint32_to_little_endian_null_buffer_returns_0) {
   zassert_equal(uint32_to_little_endian(NULL, 0x12345678u), 0);
 }
 
-ZTEST(util, test_elapsed_restart_adds_nothing)
-{
+ZTEST(util, test_elapsed_restart_adds_nothing) {
   uint32_t total = 7;
 
   g1_clock_advance_ms(5000);
@@ -286,8 +253,7 @@ ZTEST(util, test_elapsed_restart_adds_nothing)
   zassert_equal(total, 7, "total %u", total);
 }
 
-ZTEST(util, test_elapsed_adds_whole_seconds_since_restart)
-{
+ZTEST(util, test_elapsed_adds_whole_seconds_since_restart) {
   uint32_t total = 100;
 
   accumulate_elapsed_seconds(&total, 1, 1);
@@ -297,8 +263,7 @@ ZTEST(util, test_elapsed_adds_whole_seconds_since_restart)
   zassert_equal(total, 102, "total %u", total);
 }
 
-ZTEST(util, test_elapsed_carries_the_sub_second_remainder)
-{
+ZTEST(util, test_elapsed_carries_the_sub_second_remainder) {
   uint32_t total = 0;
 
   accumulate_elapsed_seconds(&total, 1, 1);
@@ -319,8 +284,7 @@ ZTEST(util, test_elapsed_carries_the_sub_second_remainder)
   zassert_equal(total, 4, "after 4000 ms: total %u", total);
 }
 
-ZTEST(util, test_elapsed_less_than_one_second_adds_nothing)
-{
+ZTEST(util, test_elapsed_less_than_one_second_adds_nothing) {
   uint32_t total = 0;
 
   accumulate_elapsed_seconds(&total, 2, 1);
@@ -330,8 +294,7 @@ ZTEST(util, test_elapsed_less_than_one_second_adds_nothing)
   zassert_equal(total, 0, "total %u", total);
 }
 
-ZTEST(util, test_elapsed_restart_discards_time_since_the_previous_reference)
-{
+ZTEST(util, test_elapsed_restart_discards_time_since_the_previous_reference) {
   uint32_t total = 0;
 
   accumulate_elapsed_seconds(&total, 1, 1);
@@ -343,8 +306,7 @@ ZTEST(util, test_elapsed_restart_discards_time_since_the_previous_reference)
   zassert_equal(total, 1, "total %u", total);
 }
 
-ZTEST(util, test_elapsed_slots_are_independent)
-{
+ZTEST(util, test_elapsed_slots_are_independent) {
   uint32_t total0 = 0;
   uint32_t total2 = 0;
 
@@ -360,8 +322,7 @@ ZTEST(util, test_elapsed_slots_are_independent)
 }
 
 /* slot 3 is used only here */
-ZTEST(util, test_elapsed_first_call_on_a_never_used_slot_only_starts_counting)
-{
+ZTEST(util, test_elapsed_first_call_on_a_never_used_slot_only_starts_counting) {
   uint32_t total = 0;
 
   g1_clock_advance_ms(7000);
@@ -383,15 +344,13 @@ static const struct {
   {"abc", "90 01 50 98 3c d2 4f b0 d6 96 3f 7d 28 e1 7f 72"},
   {"message digest", "f9 6b 69 7d 7c b7 93 8d 52 5a 2f 31 aa f1 61 d0"},
   {"abcdefghijklmnopqrstuvwxyz", "c3 fc d3 d7 61 92 e4 00 7d fb 49 6c ca 67 e1 3b"},
-  {"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
-   "d1 74 ab 98 d2 77 d9 f5 a5 61 1c 2c 9f 41 9d 9f"},
+  {"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", "d1 74 ab 98 d2 77 d9 f5 a5 61 1c 2c 9f 41 9d 9f"},
   {"1234567890123456789012345678901234567890123456789012345678901234567890"
    "1234567890",
    "57 ed f4 a2 2b e3 c9 55 ac 49 da 2e 21 07 b6 7a"},
 };
 
-ZTEST(util, test_md5_matches_rfc1321_vectors)
-{
+ZTEST(util, test_md5_matches_rfc1321_vectors) {
   for (size_t row = 0; row < ARRAY_SIZE(rfc1321_suite); row++) {
     const char *msg = rfc1321_suite[row].msg;
     uint8_t out[17];
@@ -407,8 +366,7 @@ ZTEST(util, test_md5_matches_rfc1321_vectors)
 }
 
 /* the third piece completes the first 64-byte block */
-ZTEST(util, test_md5_incremental_updates_across_a_block_boundary_give_the_rfc_digest)
-{
+ZTEST(util, test_md5_incremental_updates_across_a_block_boundary_give_the_rfc_digest) {
   const unsigned char *msg = (const unsigned char *)rfc1321_suite[6].msg;
   mbedtls_md5_context ctx;
   uint8_t out[16];
