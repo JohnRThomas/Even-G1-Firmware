@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <zephyr/sys/util.h>
-#include <zephyr/toolchain.h>
 
 #include "../gui/gui.h"
 #include "font_bitmap.h"
@@ -31,19 +30,6 @@ const uint8_t *font_ascii_lookup(uint8_t c, int w, int h, uint8_t *cell) {
     memcpy(cell + (top + row) * w, glyph + row * glyph_w, MIN(glyph_w, w));
   }
   return cell;
-}
-
-/*
- * ASCII glyph of a w x h font: there is no ASCII table, so the result is the
- * glyph offset from a NULL base (arg is unused).
- */
-const uint8_t *font_ascii_get_glyph(uint16_t digit, int w, int h, int arg) {
-  ARG_UNUSED(arg);
-  if (digit >= 0x20 && digit < 0x80) {
-    /* NOLINTNEXTLINE(performance-no-int-to-ptr) */
-    return (const uint8_t *)((digit - 0x20) * (w * h));
-  }
-  return NULL;
 }
 
 int check_printable_code(uint32_t code) {

@@ -85,6 +85,15 @@ ZTEST(features, test_0x07_debug_string_5_starts_a_countdown) {
   expect_only_frame_padded("07 c9", 20);
 }
 
+/* four digits and no second '@' fill the minutes buffer; they are the minutes, enable stays 0 */
+ZTEST(features, test_0x07_debug_string_5_takes_four_minute_digits_and_no_more) {
+  g1_send((const uint8_t *)"#5@1234", 7);
+
+  zassert_equal(cd()->seconds, 1234 * 60 + 3610, "seconds %u", cd()->seconds);
+  zassert_equal(cd()->enabled, 0);
+  expect_only_frame_padded("07 c9", 20);
+}
+
 /* small_buf still holds an earlier packet; none of its bytes may be taken for the countdown */
 ZTEST(features, test_0x07_packet_shorter_than_6_bytes_is_refused) {
   static const uint8_t earlier[] = {0x50, 0x06, 0x00, 0x00, 0x01, 0x01};

@@ -121,6 +121,16 @@ ZTEST(gui, test_truncate_draw_short_text_has_no_ellipsis) {
   zassert_true(gui_test_fb_matches_saved());
 }
 
+/* font 1 has the digits and ':' only; the third digit is past the 60 px box */
+ZTEST(gui, test_truncate_draw_missing_ellipsis_glyph_is_named_in_warning) {
+  BLE_DEBUG = 1; /* log lines go to the g1_printk_line() capture */
+  zassert_equal(gui_utf_draw_truncate(0, "235", 1, 40, 20, 100, 60, 1, 0, 0, NULL, 0), 0);
+
+  zassert_equal(g1_printk_count(), 2);
+  expect_str(g1_printk_line(0), "gui_utf_draw_truncate(): end line x0=52\n");
+  expect_str(g1_printk_line(1), "gui_utf_draw_truncate(): can not find 0x2026 font resource\n");
+}
+
 ZTEST(gui, test_middle_draw_centres_each_line) {
   gui_utf_draw_middle(0, "Centered\nsecond line", 0, 40, 20, 360, 100, 3, 0, 0, NULL, 0);
   gui_expect_golden("middle", GUI_PBM, 32, 16, 336, 88);
@@ -194,4 +204,51 @@ ZTEST(gui, test_scroll_line_high_origin_replaces_line) {
   zassert_equal(reflash_fb_data_to_lcd_ex_fake.call_count, 9);
   zassert_mem_equal(reflash_fb_data_to_lcd_ex_fake.arg6_history, steps, sizeof(steps));
   gui_expect_golden("scroll_line_high", GUI_PBM, 32, 24, 276, 100);
+}
+
+/* a control character is skipped: no glyph and no advance, the rest of the string is drawn */
+ZTEST(gui, test_string_draw_skips_leading_control_character) {
+  static const struct {
+    int font;
+    const char *text;
+    const char *printable;
+    int width;
+  } strings[] = {
+    /* font 3 ASCII advances by the glyph width + 3 */
+    {3, "\n12", "12", 4 + 3 + 12 + 3},
+    {3, "\x1f-7", "-7", 6 + 3 + 12 + 3},
+    /* other fonts by the glyph width + gui_font_kerning() */
+    {0, "\tAB", "AB", 12 + 2 + 10 + 1},
+  };
+
+  for (size_t row = 0; row < ARRAY_SIZE(strings); row++) {
+    int font = strings[row].font;
+    int width = -1;
+
+    gui_test_fb_reset();
+    zassert_equal(gui_string_draw(font, strings[row].printable, 40, 20, 300, 60, &width), 0, "row %zu", row);
+    zassert_equal(width, strings[row].width, "row %zu: \"%s\" is %d wide", row, strings[row].printable, width);
+    zassert_true(gui_test_lit(40, 20, 40 + width, 46) > 0, "row %zu: nothing drawn", row);
+    gui_test_fb_save_and_reset();
+
+    width = -1;
+    zassert_equal(gui_string_draw(font, strings[row].text, 40, 20, 300, 60, &width), 0, "row %zu", row);
+    zassert_equal(width, strings[row].width, "row %zu: width %d", row, width);
+    zassert_true(gui_test_fb_matches_saved(), "row %zu: not drawn like \"%s\"", row, strings[row].printable);
+  }
+}
+
+/* no glyph lookup for a control character inside a string: the only log line is the skip */
+ZTEST(gui, test_string_draw_skips_control_character_inside_string) {
+  int width = -1;
+
+  BLE_DEBUG = 1; /* log lines go to the g1_printk_line() capture */
+  zassert_equal(gui_string_draw(3, "1\t2", 40, 20, 300, 60, &width), 0);
+
+  zassert_equal(g1_printk_count(), 1);
+  expect_str(g1_printk_line(0), "gui_string_draw(): non-ascii characters\n");
+  zassert_equal(width, 4 + 3 + 12 + 3);
+  gui_test_fb_save_and_reset();
+  gui_string_draw(3, "12", 40, 20, 300, 60, NULL);
+  zassert_true(gui_test_fb_matches_saved(), "not drawn like \"12\"");
 }

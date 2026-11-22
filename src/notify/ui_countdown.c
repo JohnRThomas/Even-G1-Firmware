@@ -32,6 +32,11 @@ void countdown_tick(struct countdown_ts_context *cd) {
   }
 }
 
+/* One character of the remaining time: a 12 x 36 ASCII cell at byte column x. */
+static void draw_countdown_char(uint8_t **fb, int code, int x) {
+  copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(code, 12, 36), 12, 36, x, 12);
+}
+
 int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg) {
   uint8_t **fb = panel->panel_buffer;
   struct GlassesState *state = get_dashboard_state();
@@ -54,17 +59,17 @@ int draw_template_countdown_page(struct jbd_panel_context *panel, void *arg) {
   } else {
     x = 12;
     if (hours) {
-      copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(hours / 10, 15, 36, 0), 15, 36, 32, 12);
-      copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(hours % 10, 15, 36, 0), 15, 36, 47, 12);
-      copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(10, 15, 36, 0), 15, 36, 62, 12);
+      draw_countdown_char(fb, '0' + (int)(hours / 10), 32);
+      draw_countdown_char(fb, '0' + (int)(hours % 10), 47);
+      draw_countdown_char(fb, ':', 62);
       x = 57;
     }
     mins = remain / 60;
-    copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(mins / 10, 15, 36, 0), 15, 36, x + 20, 12);
-    copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(mins % 10, 15, 36, 0), 15, 36, x + 35, 12);
-    copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(10, 15, 36, 0), 15, 36, x + 50, 12);
-    copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(secs / 10, 15, 36, 0), 15, 36, x + 65, 12);
-    copy_to_frame_buffer_raw(fb, font_ascii_get_glyph(secs % 10, 15, 36, 0), 15, 36, x + 80, 12);
+    draw_countdown_char(fb, '0' + (int)(mins / 10), x + 20);
+    draw_countdown_char(fb, '0' + (int)(mins % 10), x + 35);
+    draw_countdown_char(fb, ':', x + 50);
+    draw_countdown_char(fb, '0' + (int)(secs / 10), x + 65);
+    draw_countdown_char(fb, '0' + (int)(secs % 10), x + 80);
   }
   if (timer->state >= 2) {
     copy_to_frame_buffer_raw(fb, get_small_glyph_bitmap(12, 288), 12, 24, 226, 20);

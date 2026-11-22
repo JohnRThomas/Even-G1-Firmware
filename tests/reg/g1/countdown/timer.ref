@@ -14,11 +14,11 @@ action(B, phone_on(hb=0),
        recv(B, "F5 11"),
        within=8, label="phone_on")
 
-# 5 s timer: acknowledged, the hourglass is up on both lenses
+# 5 s timer: acknowledged, the hourglass and the remaining time, 00:05, are up on both lenses
 action(B, send('07 05 00 00 00 01'),
        recv(B, "07 C9"),
-       # countdown hourglass
-       display(B, settles_to("countdown_hourglass")),
+       # countdown hourglass, 00:05
+       display(B, settles_to("countdown_0005")),
        within=1)
 wait(4.8)
 # the app's keep-alive, about 5 s after the timer's start, is answered with the status
@@ -30,12 +30,12 @@ expect(display(S, settles_to("countdown_bell")),
        display(M, shows("countdown_bell")),
        within=3)
 
-# 90 s timer: acknowledged, the hourglass again
+# 90 s timer: acknowledged, the hourglass again, with 01:30
 wait(1.7)
 action(B, send('07 5A 00 00 00 01'),
        recv(B, "07 C9"),
-       # countdown hourglass
-       display(B, settles_to("countdown_hourglass")),
+       # countdown hourglass, 01:30
+       display(B, settles_to("countdown_0130")),
        within=1)
 
 # cancel: acknowledged, both lenses blank (the master after flashing the bell)

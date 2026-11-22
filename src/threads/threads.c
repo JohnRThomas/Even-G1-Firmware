@@ -1207,8 +1207,18 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
           state->imu.mode = 2;
         }
         change_work_mode(2);
-        /* the vendor guards this with "mode != 9 || mode != 10 || mode != 11 || mode != 16 || mode != 20",
-         * which is always true */
+        /*
+         * TODO: the vendor guards this give with
+         * "mode != 9 || mode != 10 || mode != 11 || mode != 16 || mode != 20", which is always true; "&&" was
+         * probably meant (no wake-up on the teleprompter, navigation, translate, dashboard data and Even AI
+         * screens). Left off: no sync_to_slave() caller sends command 2, so this case never runs and the change
+         * cannot be tried on the simulator.
+         *
+         * if (state->dashboard_mode != 9 && state->dashboard_mode != 10 && state->dashboard_mode != 11 &&
+         *     state->dashboard_mode != 16 && state->dashboard_mode != 20) {
+         *   k_sem_give(&state->sem_2);
+         * }
+         */
         k_sem_give(&state->sem_2);
         screen_switch_busy = 0;
         break;

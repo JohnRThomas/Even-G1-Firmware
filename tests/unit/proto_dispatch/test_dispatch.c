@@ -134,17 +134,22 @@ ZTEST(proto_dispatch, test_0x23_c_followed_by_more_text_is_not_an_unpair) {
 }
 
 /* The hook's app is put on the whitelist: an unlisted one is announced with F6 frames as well. */
-ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path) {
-  const struct notif_msg *msg = (const struct notif_msg *)&g1_ble()->tx_buf[4];
-  int count;
-
+static void whitelist_hook_app(void) {
   zassert_equal(parse_app_white_list_json("{\"calendar_enable\":true,\"call_enable\":true,\"msg_enable\":true,"
                                           "\"ios_mail_enable\":true,\"app\":{\"list\":["
                                           "{\"id\":\"com.tencent.xin\",\"name\":\"WeChat\"}],\"enable\":true}}"),
                 1);
-  g1_send((const uint8_t *)"#1@title@msg", strlen("#1@title@msg"));
+}
 
-  count = g1_frame_count();
+/* the notification the hook's 0x4B chunks were parsed into */
+static const struct notif_msg *hook_notification(void) {
+  return (const struct notif_msg *)&g1_ble()->tx_buf[4];
+}
+
+/* Pops the replies to the hook's 0x4B chunks, CB for each but the last, which gets C9; returns their number. */
+static int expect_notification_replies(void) {
+  int count = g1_frame_count();
+
   zassert_true(count >= 2, "%d reply frames", count);
   for (int index = 0; index < count; index++) {
     size_t len;
@@ -154,8 +159,17 @@ ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path) {
     zassert_true(len >= 2 && frame[0] == 0x4b, "frame %d: %02x", index, frame[0]);
     zassert_equal(frame[1], want, "chunk %d of %d: status %02x, want %02x", index + 1, count, frame[1], want);
   }
-  expect_str(msg->title, "title");
-  expect_str(msg->message, "msg");
+  g1_frames_clear();
+  return count;
+}
+
+ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path) {
+  whitelist_hook_app();
+  g1_send((const uint8_t *)"#1@title@msg", strlen("#1@title@msg"));
+
+  expect_notification_replies();
+  expect_str(hook_notification()->title, "title");
+  expect_str(hook_notification()->message, "msg");
 }
 
 ZTEST(proto_dispatch, test_0x23_1_without_second_at_stays_inside_the_packet) {
@@ -176,6 +190,91 @@ ZTEST(proto_dispatch, test_0x23_1_long_title_and_message_are_cut) {
 
 ZTEST(proto_dispatch, test_0x23_cmd_with_long_command_number_stays_inside_the_buffer) {
   g1_send((const uint8_t *)"#cmd@123456789@1", strlen("#cmd@123456789@1"));
+}
+
+/* Leaves fill in the stack below the caller, where the uninitialised locals of its next call are. */
+static __noinline void stack_fill(uint8_t fill) {
+  volatile uint8_t area[8192];
+
+  for (size_t index = 0; index < sizeof(area); index++) {
+    area[index] = fill;
+  }
+}
+
+/* #cmd@75@<title>#<message> sends the notification of "#1@<title>@<message>". */
+ZTEST(proto_dispatch, test_0x23_cmd_75_title_ends_at_the_hash) {
+  static const char text[] = "#cmd@75@Title#Message";
+
+  whitelist_hook_app();
+  stack_fill('~');
+  g1_send((const uint8_t *)text, strlen(text));
+
+  expect_notification_replies();
+  expect_str(hook_notification()->title, "Title");
+  expect_str(hook_notification()->message, "Message");
+}
+
+/* A '#' that is not in the text must not be taken for the separator. */
+ZTEST(proto_dispatch, test_0x23_cmd_75_without_a_hash_is_an_unknown_put) {
+  static const char text[] = "#cmd@75@no separator";
+
+  stack_fill('#');
+  g1_send((const uint8_t *)text, strlen(text));
+
+  expect_only_frame_bytes(error_reply(0x23, "error put req."), 20);
+}
+
+/* "#1@" cuts its title to 31 characters: the same notification in as many chunks. */
+ZTEST(proto_dispatch, test_0x23_cmd_75_title_longer_than_31_characters_is_cut) {
+  char cut[32];
+  char text[128];
+  int chunks;
+  int got;
+
+  memset(cut, 't', sizeof(cut) - 1);
+  cut[sizeof(cut) - 1] = '\0';
+  whitelist_hook_app();
+  snprintf(text, sizeof(text), "#1@%s@msg", cut);
+  g1_send((const uint8_t *)text, strlen(text));
+  chunks = expect_notification_replies();
+
+  snprintf(text, sizeof(text), "#cmd@75@%s%s#msg", cut, cut);
+  g1_send((const uint8_t *)text, strlen(text));
+
+  got = expect_notification_replies();
+  zassert_equal(got, chunks, "%d chunks, \"#1@\" sent %d", got, chunks);
+  expect_str(hook_notification()->title, cut);
+  expect_str(hook_notification()->message, "msg");
+}
+
+/* The hook keeps 127 characters of the text after "#cmd@75@": here "title#" and 121 of the 241 'm'. */
+ZTEST(proto_dispatch, test_0x23_cmd_75_text_longer_than_127_characters_is_cut) {
+  char text[255];
+  char want[122];
+
+  memset(text, 'm', sizeof(text));
+  memcpy(text, "#cmd@75@title#", strlen("#cmd@75@title#"));
+  memset(want, 'm', sizeof(want) - 1);
+  want[sizeof(want) - 1] = '\0';
+  whitelist_hook_app();
+
+  g1_send((const uint8_t *)text, sizeof(text));
+
+  expect_notification_replies();
+  expect_str(hook_notification()->title, "title");
+  expect_str(hook_notification()->message, want);
+}
+
+ZTEST(proto_dispatch, test_0x23_cmd_75_hash_past_the_127_kept_characters_is_an_unknown_put) {
+  char text[255];
+
+  memset(text, 't', sizeof(text));
+  memcpy(text, "#cmd@75@", strlen("#cmd@75@"));
+  text[strlen("#cmd@75@") + 127] = '#';
+
+  g1_send((const uint8_t *)text, sizeof(text));
+
+  expect_only_frame_bytes(error_reply(0x23, "error put req."), 20);
 }
 
 ZTEST(proto_dispatch, test_0x23_t_replies_200_bytes_of_build_info) {
@@ -238,9 +337,28 @@ ZTEST(proto_dispatch, test_0x23_256_byte_packet_is_read_inside_the_buffer) {
   expect_error_reply(0x23, "error put req.");
 }
 
+static struct {
+  int init;
+  int deinit;
+  int flash;
+  struct spi_master_ctx *deinit_ctx;
+} spi_calls;
+
 static int spi_init_stub(struct spi_master_ctx *ctx) {
   ARG_UNUSED(ctx);
+  spi_calls.init++;
   return 0;
+}
+
+static int spi_deinit_stub(struct spi_master_ctx *ctx) {
+  spi_calls.deinit++;
+  spi_calls.deinit_ctx = ctx;
+  return 0;
+}
+
+static void flash_hook_stub(struct flash_ops *ops) {
+  ARG_UNUSED(ops);
+  spi_calls.flash++;
 }
 
 ZTEST(proto_dispatch, test_0x23_j_does_not_call_an_unset_flash_callback) {
@@ -249,6 +367,32 @@ ZTEST(proto_dispatch, test_0x23_j_does_not_call_an_unset_flash_callback) {
 
   g1_send_hex("23 6a 31");
   expect_frame_padded("69 6e 69 74 20 66 6c 61 73 68", 20);
+}
+
+/* "#j0" shuts the SPI master down and leaves the flash hook alone; "#j1" runs init_cb and the hook. */
+ZTEST(proto_dispatch, test_0x23_j_0_deinits_the_spi_master_and_j_1_inits_it) {
+  static const uint8_t deinit_reply[20] = "deinit flash";
+  static const uint8_t init_reply[20] = "init flash";
+
+  memset(&spi_calls, 0, sizeof(spi_calls));
+  g1_state()->spi.init_cb = spi_init_stub;
+  g1_state()->spi.deinit_cb = spi_deinit_stub;
+  g1_state()->flash_ops.fn = flash_hook_stub;
+
+  g1_send_hex("23 6a 30");
+
+  zassert_equal(spi_calls.deinit, 1, "deinit_cb called %d times", spi_calls.deinit);
+  zassert_equal_ptr(spi_calls.deinit_ctx, &g1_state()->spi);
+  zassert_equal(spi_calls.init, 0, "init_cb called %d times", spi_calls.init);
+  zassert_equal(spi_calls.flash, 0, "flash hook called %d times", spi_calls.flash);
+  expect_only_frame_bytes(deinit_reply, sizeof(deinit_reply));
+
+  g1_send_hex("23 6a 31");
+
+  zassert_equal(spi_calls.init, 1, "init_cb called %d times", spi_calls.init);
+  zassert_equal(spi_calls.flash, 1, "flash hook called %d times", spi_calls.flash);
+  zassert_equal(spi_calls.deinit, 1, "deinit_cb called %d times", spi_calls.deinit);
+  expect_only_frame_bytes(init_reply, sizeof(init_reply));
 }
 
 /* "#2@" in an app name must not turn a whitelist chunk into a head-up. */

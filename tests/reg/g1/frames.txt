@@ -95,7 +95,8 @@ teleprompter_resumed        3b6c19ff0b5d   # the frame seen first after the resu
 teleprompter_scrolled_on    799f18d8b5a3   # the frame after that: scrolled on from where it stopped
 
 # countdown
-countdown_hourglass         ec2c62092c9f   # the hourglass, while a countdown timer runs
+countdown_0005              8475d53ec60f   # the hourglass and 00:05, a 5 s countdown timer at its start
+countdown_0130              9f23588dbc45   # the hourglass and 01:30, a 90 s countdown timer at its start
 countdown_bell              a1d54ca83354   # the bell, when the countdown has run out
 
 # quicknote
