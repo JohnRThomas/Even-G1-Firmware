@@ -34,8 +34,6 @@
 #define PANEL_FB_STRIDE (PANEL_WIDTH / 2)          /* 4 bpp */
 #define PANEL_FB_SIZE   (PANEL_FB_ROWS * PANEL_FB_STRIDE)
 
-#define LP_JBD_BIT BIT(8)
-
 /* jbd_panel.c */
 void set_brightness_to_panel_reg(uint8_t level);
 void wr_lum_and_cur_reg(uint16_t lum_value, uint8_t cur_value);

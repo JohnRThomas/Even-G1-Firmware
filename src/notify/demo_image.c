@@ -15,6 +15,7 @@
 #include "../panel_display/panel.h"
 #include "demo_image.h"
 #include "glasses_state.h"
+#include "ui_event.h"
 
 #define DEMO_IMAGE_FLASH_ADDR 0x180000
 #define DEMO_IMAGE_SIZE       0x3ebe
@@ -261,12 +262,12 @@ void demo_image_next(void) {
   }
 }
 
-int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   int w;
   int h;
 
-  if (event == 2) {
+  if (event == UI_EVT_EXIT) {
     gui_screen_clear();
     demo_x = -1;
     demo_y = -1;

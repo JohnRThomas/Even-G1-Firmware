@@ -44,11 +44,11 @@ int clearSettingStorageQueue(void) {
   return ret;
 }
 
-int upgradeAppLanguageInfoToFlash(uint8_t language) {
+int upgradeAppLanguageInfoToFlash(enum language language) {
   struct setting_msg msg = {
     .cmd = SETTING_CMD_LANGUAGE,
     .len = 1,
-    .value = language,
+    .value = (uint8_t)language,
   };
 
   if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT) != 0) {
@@ -149,12 +149,12 @@ uint8_t getAppLanguageInfofromFlash(void) {
     G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
     return 0;
   }
-  if ((rec.magic == SETTING_MAGIC) && (rec.language != 0xff)) {
+  if ((rec.magic == SETTING_MAGIC) && ((uint8_t)rec.language != 0xff)) {
     CURRENT_LANGUAGE.language = rec.language;
   } else {
-    CURRENT_LANGUAGE.language = 2;
+    CURRENT_LANGUAGE.language = LANGUAGE_ENGLISH;
   }
-  return CURRENT_LANGUAGE.language;
+  return (uint8_t)CURRENT_LANGUAGE.language;
 }
 
 uint8_t getDashboardStartUpModeInfofromFlash(void) {
@@ -179,7 +179,7 @@ uint8_t getDashboardStartUpModeInfofromFlash(void) {
   return CURRENT_LANGUAGE.startup_mode;
 }
 
-uint8_t get_current_language(void) {
+enum language get_current_language(void) {
   return CURRENT_LANGUAGE.language;
 }
 
@@ -218,12 +218,12 @@ int SettingStoreHandler(void) {
     case SETTING_CMD_LANGUAGE:
       value = msg.value;
       G1_LOG_INF("start setting  parameter check. language type = %d\n", value);
-      if ((value < 1) || (value > 25)) {
+      if ((value < (uint8_t)LANGUAGE_FIRST) || (value > (uint8_t)LANGUAGE_LAST)) {
         G1_LOG_ERR("Setting Task received error language parameters.\n");
         ret = -1;
         break;
       }
-      if (CURRENT_LANGUAGE.language == value) {
+      if (CURRENT_LANGUAGE.language == (enum language)value) {
         G1_LOG_INF("Setting Task received same language parameters.drop it ..\n");
         ret = -1;
         break;
@@ -240,7 +240,7 @@ int SettingStoreHandler(void) {
         break;
       }
       rec.magic = SETTING_MAGIC;
-      rec.language = value;
+      rec.language = (enum language)value;
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), SETTING_FLASH_ADDR, 0x1000);
       if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
@@ -274,7 +274,7 @@ int SettingStoreHandler(void) {
         break;
       }
       rec.magic = SETTING_MAGIC;
-      rec.language = 2;
+      rec.language = LANGUAGE_ENGLISH;
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), SETTING_FLASH_ADDR, 0x1000);
       if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
@@ -293,7 +293,7 @@ int SettingStoreHandler(void) {
         break;
       }
       G1_LOG_INF("App language clean success.\n");
-      CURRENT_LANGUAGE.language = 2;
+      CURRENT_LANGUAGE.language = LANGUAGE_ENGLISH;
       break;
     case SETTING_CMD_STARTUP_MODE:
       value = msg.value;

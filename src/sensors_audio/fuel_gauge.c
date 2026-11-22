@@ -11,14 +11,13 @@
 #include "nrf_fuel_gauge.h"
 
 #include "../aw9320x/aw9320x.h"
+#include "../ble/ble_cmd.h"
 #include "../production_test/production_test.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "sensors_audio.h"
-
-#define DISPLAY_MODE_ABNORMAL_TEMP 0x0c
 
 static int64_t fuel_gauge_ref_time;
 static float fg_last_soc;
@@ -180,20 +179,19 @@ int fuel_gauge_update(const struct device *charger) {
   get_dashboard_state()->battery_temp = (uint8_t)temp;
   get_dashboard_state()->battery_temp_x100 = (int16_t)(temp * 100.0f);
 
-  if (((temp >= 60.0f) && (temp < 120.0f)) || ((temp >= -50.0f) && (temp <= -20.0f))) {
-    if (get_dashboard_state()->display_mode != DISPLAY_MODE_ABNORMAL_TEMP) {
-      report_event_to_phone(4);
-      if (get_dashboard_state()->is_master == 1) {
-        sync_to_slave(get_dashboard_state(), 4, NULL, 0);
-        exit_running_task(get_dashboard_state(), 0);
-      } else {
-        sync_to_master(get_dashboard_state(), 8, NULL, 0);
-      }
-      get_dashboard_state()->display_mode = DISPLAY_MODE_ABNORMAL_TEMP;
-      exit_running_task(get_dashboard_state(), 1);
-      G1_LOG_ERR("#############################Abnormal "
-                 "temperature################################\n\n");
+  if ((((temp >= 60.0f) && (temp < 120.0f)) || ((temp >= -50.0f) && (temp <= -20.0f))) &&
+      (get_dashboard_state()->display_mode != DISPLAY_MODE_NOT_DISTURB)) {
+    report_event_to_phone(BLE_EVT_NOT_DISTURB_ENTER);
+    if (get_dashboard_state()->is_master == 1) {
+      sync_to_slave(get_dashboard_state(), SYNC_CMD_NOT_DISTURB_ENTER, NULL, 0);
+      exit_running_task(get_dashboard_state(), 0);
+    } else {
+      sync_to_master(get_dashboard_state(), SLAVE_CMD_NOT_DISTURB_ENTER, NULL, 0);
     }
+    get_dashboard_state()->display_mode = DISPLAY_MODE_NOT_DISTURB;
+    exit_running_task(get_dashboard_state(), 1);
+    G1_LOG_ERR("#############################Abnormal "
+               "temperature################################\n\n");
   }
   return 0;
 }

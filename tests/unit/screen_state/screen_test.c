@@ -9,9 +9,9 @@
 /* the screen handlers are static */
 #include "threads/message_task.c"
 
-DEFINE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, int, const void *, size_t);
+DEFINE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, enum sync_cmd, const void *, size_t);
 /* send_msg_key_to_master() only */
-DEFINE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, int, const void *, size_t);
+DEFINE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, enum slave_cmd, const void *, size_t);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, get_glasses_ble_status);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, count_unread_messages);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, count_messages);
@@ -33,7 +33,7 @@ int g1_fake_msg_bad_index;
 struct GlassesState *gs;
 uint8_t *const msg_timeout_flag_ptr = &msg_timeout_flag;
 
-static int sync_to_slave_logged(struct GlassesState *state, int cmd, const void *data, size_t len) {
+static int sync_to_slave_logged(struct GlassesState *state, enum sync_cmd cmd, const void *data, size_t len) {
   uint8_t pkt[1 + 4] = {(uint8_t)cmd};
   size_t data_len = (data && len) ? MIN(len, 4) : 0; /* sync_data holds 4 bytes */
 

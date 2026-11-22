@@ -15,7 +15,8 @@ DEFINE_FAKE_VALUE_FUNC(int, display_DelayClose, int);
 
 DEFINE_FAKE_VOID_FUNC(exit_running_task, struct GlassesState *, int);
 DEFINE_FAKE_VOID_FUNC(exit_running_task_keep_status, struct GlassesState *, int);
-DEFINE_FAKE_VALUE_FUNC(int, update_persist_task_status, struct GlassesState *, int, int);
+DEFINE_FAKE_VALUE_FUNC(enum task_status, update_persist_task_status, struct GlassesState *, enum screen_id,
+                       enum task_status);
 DEFINE_FAKE_VALUE_FUNC(bool, is_idle);
 FAKE_VOID_FUNC(set_msg_timeout_flag);
 __weak uint8_t msg_busy;

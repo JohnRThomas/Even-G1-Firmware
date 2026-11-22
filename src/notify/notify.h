@@ -14,11 +14,10 @@
 
 #include "g1_date.h"
 #include "g1_log.h"
+#include "ui_event.h"
 
 #define MSG_NORMAL_NUM 10   /* g_arrMsgContent[0..9]: shown messages */
 #define MSG_TOTAL_NUM  20   /* g_arrMsgContent[10..19]: push queue */
-
-#define PKCS7_PACK_DONE 0xc9
 
 /* GlassesState->schedule_notif */
 struct schedule_notif {
@@ -66,11 +65,11 @@ void app_list_init(void);
 int parse_ncs_notification(const char *json, struct notif_msg *msg);
 
 /* ui_notification.c */
-int panel_related(struct jbd_panel_context *panel, int idx, void *arg);
+int panel_related(struct jbd_panel_context *panel, enum screen_id idx, void *arg);
 void draw_message(uint8_t unread, struct notif_msg *msg);
 void set_hide_icon_on_exit(void);
 void set_particle_pending(void);
-int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 
 /* ui_template.c */
 void dump_template_gyro_info(void *arg);

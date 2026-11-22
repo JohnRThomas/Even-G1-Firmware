@@ -27,13 +27,13 @@ DEFINE_FAKE_VALUE_FUNC(uint8_t, get_pt_test_mode);
 DEFINE_FAKE_VOID_FUNC(set_test_mode, uint8_t);
 
 DEFINE_FAKE_VOID_FUNC(system_reboot_delayed);
-DEFINE_FAKE_VALUE_FUNC(uint8_t, get_wear_state_event);
+DEFINE_FAKE_VALUE_FUNC(enum ble_event, get_wear_state_event);
 DEFINE_FAKE_VALUE_FUNC(int, trigger_imu_state_change, const void *, struct GlassesState *, bool);
-DEFINE_FAKE_VOID_FUNC(report_event_to_phone, int);
+DEFINE_FAKE_VOID_FUNC(report_event_to_phone, enum ble_event);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, get_dashboard_startup_mode);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, cur_message_show_state);
-DEFINE_FAKE_VALUE_FUNC(int, display_close_screen, int);
-__weak uint8_t last_ble_cmd = 0xff;
+DEFINE_FAKE_VALUE_FUNC(int, display_close_screen, enum screen_id);
+__weak enum ble_event last_ble_cmd = BLE_EVT_NONE;
 __weak uint8_t msg_array_busy;
 __weak uint8_t deferred_text_ack_cmd;
 __weak uint8_t deferred_text_ack_idx;
@@ -60,7 +60,7 @@ DEFINE_FAKE_VOID_FUNC(set_brightness_to_panel_reg_in_running, uint8_t);
 __weak uint32_t JDB_PANEL_ID;
 
 /* 0: get_string() falls back to English */
-FAKE_VALUE_FUNC(uint8_t, get_current_language);
+FAKE_VALUE_FUNC(enum language, get_current_language);
 /* harness reset zeroes it */
 __weak struct app_setting CURRENT_LANGUAGE;
 
@@ -120,7 +120,7 @@ static void fakes_misc_reset(bool keep_media) {
   RESET_FAKE(get_dashboard_startup_mode);
   RESET_FAKE(cur_message_show_state);
   RESET_FAKE(display_close_screen);
-  last_ble_cmd = 0xff;
+  last_ble_cmd = BLE_EVT_NONE;
   msg_array_busy = 0;
   deferred_text_ack_cmd = 0;
   deferred_text_ack_idx = 0;

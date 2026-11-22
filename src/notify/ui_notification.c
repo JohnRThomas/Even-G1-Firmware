@@ -22,11 +22,7 @@
 #include "g1_date.h"
 #include "g1_log.h"
 #include "notify.h"
-
-#define LANGUAGE_FRENCH  5
-#define LANGUAGE_GERMAN  6
-#define LANGUAGE_SPANISH 7
-#define LANGUAGE_ITALIAN 14
+#include "ui_event.h"
 
 #define SECONDS_PER_MIN  60
 #define SECONDS_PER_HOUR 3600
@@ -36,7 +32,7 @@ typedef int (*ui_task_fn)(struct jbd_panel_context *panel, void *arg);
 typedef void (*ui_pre_fn)(void *arg);
 
 struct ui_task {
-  uint32_t id;
+  enum screen_id id;
   uint32_t has_pre;
   ui_task_fn task;
   ui_pre_fn pre;
@@ -44,17 +40,17 @@ struct ui_task {
 
 static int last_uid = -1;
 static struct ui_task ui_task_table[] = {
-  {13, 0, draw_template_gyro_page, dump_template_gyro_info},
-  {2, 0, draw_template_countdown_page, NULL},
-  {3, 0, draw_template_dashboard_page, NULL},
-  {4, 0, draw_template_notification_page, NULL},
-  {5, 0, draw_template_new_message_page, NULL},
-  {6, 0, draw_template_dashboard_page, NULL},
-  {7, 0, draw_template_bitmap_page, NULL},
-  {8, 0, draw_template_schedule_page, NULL},
-  {9, 0, draw_template_teleprompter_page, NULL},
-  {10, 0, draw_template_navigation_page, NULL},
-  {11, 0, draw_template_translate_screen, NULL},
+  {SCREEN_GYRO, 0, draw_template_gyro_page, dump_template_gyro_info},
+  {SCREEN_COUNTDOWN, 0, draw_template_countdown_page, NULL},
+  {SCREEN_DEMO_IMAGE, 0, draw_template_dashboard_page, NULL},
+  {SCREEN_NOTIFICATION, 0, draw_template_notification_page, NULL},
+  {SCREEN_NEW_MESSAGE, 0, draw_template_new_message_page, NULL},
+  {SCREEN_DASHBOARD, 0, draw_template_dashboard_page, NULL},
+  {SCREEN_BITMAP, 0, draw_template_bitmap_page, NULL},
+  {SCREEN_SCHEDULE, 0, draw_template_schedule_page, NULL},
+  {SCREEN_TELEPROMPTER, 0, draw_template_teleprompter_page, NULL},
+  {SCREEN_NAVIGATION, 0, draw_template_navigation_page, NULL},
+  {SCREEN_TRANSLATE, 0, draw_template_translate_screen, NULL},
 };
 
 static uint8_t last_idx = 0xff;
@@ -63,19 +59,19 @@ static uint8_t last_num = 0xff;
 static uint8_t hide_icon_on_exit;
 static uint8_t particle_pending;
 
-int panel_related(struct jbd_panel_context *panel, int idx, void *arg) {
+int panel_related(struct jbd_panel_context *panel, enum screen_id idx, void *arg) {
   if (!CONTAINER_OF(panel, struct GlassesState, panel)->panel_on) {
     return -1;
   }
   panel->current_row = 0;
   panel->current_column = 176;
-  if (idx != 7) {
+  if (idx != SCREEN_BITMAP) {
     /* called without an argument (clear_cb takes the panel) */
     // cppcheck-suppress [misra-c2012-11.1] ; clear_cb is called without its argument here
     ((void (*)(void))panel->clear_cb)();
   }
-  if ((idx >= 1) && (idx <= (int)ARRAY_SIZE(ui_task_table))) {
-    struct ui_task *t = &ui_task_table[idx - 1];
+  if (((int)idx >= 1) && ((int)idx <= (int)ARRAY_SIZE(ui_task_table))) {
+    struct ui_task *t = &ui_task_table[(int)idx - 1];
 
     if (t->has_pre && t->pre) {
       t->pre(arg);
@@ -93,7 +89,7 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
   uint32_t now = get_date();
   uint32_t diff = now - recv_time;
   uint32_t elapsed;
-  uint8_t lang;
+  enum language lang;
 
   memset(buf, 0, 32);
   elapsed = ((int)diff < 0) ? 0U : diff;
@@ -410,13 +406,13 @@ void set_particle_pending(void) {
   particle_pending = 1;
 }
 
-int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   struct notif_msg *msg = NULL;
   uint8_t idx;
   uint8_t num;
 
   ARG_UNUSED(arg);
-  if (event == 2) {
+  if (event == UI_EVT_EXIT) {
     BLE_PRINTK("ui_ancs_notificaton_task exit !");
     last_idx = 0xff;
     last_num = 0xff;
@@ -430,7 +426,7 @@ int ui_ancs_notificaton_task(struct jbd_panel_context *panel, void *arg, int eve
     msg_busy = 0;
     return 0;
   }
-  if (event == 0) {
+  if (event == UI_EVT_REFRESH) {
     return 0;
   }
   idx = get_cur_show_msg_idx();

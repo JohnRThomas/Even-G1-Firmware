@@ -20,7 +20,7 @@
 
 /* BLE request header as handed over by the SPI/BLE protocol layer */
 struct ble_req {
-  uint8_t req_type;
+  uint8_t req_type; /* enum ble_cmd */
   uint8_t sub;
   uint8_t pad_02[2];
   union {
@@ -34,9 +34,7 @@ struct ble_req {
   };
 };
 
-#define BLE_REQ_FW_READ  3
-#define BLE_RESP_OK      0xc9
-#define BLE_RESP_INVALID 0xca
+#define BLE_REQ_FW_READ 3
 
 #define BLE_HEAD_UP_ANGLE_MAX 60
 
@@ -103,7 +101,7 @@ static bool process_fw_read(uint32_t addr, uint32_t total, uint8_t *out) {
 
 int master_process_put_req(struct GlassesState *state, struct ble_req *head, uint8_t *out, uint32_t len) {
   uint8_t *data = head->data;
-  uint8_t req;
+  enum ble_cmd req;
   uint8_t v;
 
   if (head->sub == BLE_REQ_FW_READ) {
@@ -116,15 +114,15 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
     return (int)total;
   }
 
-  req = head->req_type;
-  if ((req >= 0x01) && (req <= 0x27)) {
+  req = (enum ble_cmd)head->req_type;
+  if ((req >= BLE_CMD_PUT_FIRST) && (req <= BLE_CMD_PUT_LAST)) {
     uint8_t arg;
     uint32_t ts;
 
     switch (req) {
       case BLE_CMD_BRIGHTNESS_SET:
         if (data[0] > BLE_BRIGHTNESS_LEVEL_MAX) {
-          out[0] = BLE_RESP_INVALID;
+          out[0] = BLE_RESP_ERR;
           return 1;
         }
         if ((state->panel.panel_brightness_level != data[0]) || (state->opt3007_context.auto_brightness != data[1])) {
@@ -145,48 +143,49 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
       case BLE_CMD_SILENT_MODE_SET:
         v = data[0];
         arg = data[1];
-        if ((v >= 10) && (v <= 12)) {
-          uint8_t cur = state->display_mode;
+        if ((v >= (uint8_t)DISPLAY_MODE_NORMAL) && (v <= (uint8_t)DISPLAY_MODE_NOT_DISTURB)) {
+          enum display_mode cur = state->display_mode;
 
-          if (v == cur) {
+          if ((enum display_mode)v == cur) {
             break;
           }
           if (state->is_master == 1) {
-            if (cur != 12) {
-              if (v == 12) {
+            if (cur != DISPLAY_MODE_NOT_DISTURB) {
+              if (v == (uint8_t)DISPLAY_MODE_NOT_DISTURB) {
                 request_not_disturb_bitmap(0);
               }
-            } else if ((v != 12) && (arg != 1)) {
+            } else if ((v != (uint8_t)DISPLAY_MODE_NOT_DISTURB) && (arg != 1)) {
               show_not_disturb_bitmap(1);
             } else {
               /* nothing to do */
             }
-          } else if ((state->is_master == 2) && (cur == 12) && (v != 12) && (arg != 1)) {
+          } else if ((state->is_master == 2) && (cur == DISPLAY_MODE_NOT_DISTURB) &&
+                     (v != (uint8_t)DISPLAY_MODE_NOT_DISTURB) && (arg != 1)) {
             show_not_disturb_bitmap(1);
           } else {
             /* nothing to do */
           }
-          state->display_mode = v;
+          state->display_mode = (enum display_mode)v;
           notify_dashboard(state, head);
-          if (!state->imu_busy && (v == 11)) {
+          if (!state->imu_busy && (v == (uint8_t)DISPLAY_MODE_ALWAYS_ON)) {
             state->imu_event = 3;
             k_sem_give(&state->imu_sem);
             return 0;
           }
           break;
         }
-        out[0] = BLE_RESP_INVALID;
+        out[0] = BLE_RESP_ERR;
         return 1;
       case BLE_CMD_DEBUG_CONTROL:
         v = data[0];
         arg = data[1];
-        if (v == 1) {
+        if ((enum ble_debug_control_sub)v == DEBUG_CONTROL_SUB_IMU_STATE) {
           trigger_imu_state_change("debug-ble", state, arg != 0);
-        } else if (v == 2) {
+        } else if ((enum ble_debug_control_sub)v == DEBUG_CONTROL_SUB_LOG_LEVEL) {
           LOG_LEVEL = arg;
           printk("log_level_set=%d", arg);
-        } else if (v == 3) {
-          state->dashboard_mode = arg;
+        } else if ((enum ble_debug_control_sub)v == DEBUG_CONTROL_SUB_DASHBOARD_MODE) {
+          state->dashboard_mode = (enum screen_id)arg;
         } else {
           /* nothing to do */
         }
@@ -200,7 +199,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
         notify_dashboard(state, head);
         out[0] = BLE_RESP_OK;
         if (state->countdown_ts->enabled) {
-          update_persist_task_status(state, 2, 2);
+          update_persist_task_status(state, SCREEN_COUNTDOWN, TASK_RUNNING);
         }
         return 1;
       case BLE_CMD_TELEPROMPTER_INFO:
@@ -209,7 +208,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
           memset(state->teleprompter, 0, sizeof(struct teleprompter_info));
         }
         if (data[1]) {
-          update_persist_task_status(state, 9, 2);
+          update_persist_task_status(state, SCREEN_TELEPROMPTER, TASK_RUNNING);
         }
         return 0;
       case BLE_CMD_TRANSLATE_SRC_TEXT:
@@ -221,8 +220,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
           state->translate_src->data[0] = 10;
         }
         out[0] = BLE_RESP_OK;
-        if (state->task_status->task != 11U) {
-          update_persist_task_status(state, 11, 2);
+        if (state->task_status->task != (uint32_t)SCREEN_TRANSLATE) {
+          update_persist_task_status(state, SCREEN_TRANSLATE, TASK_RUNNING);
         }
         return 1;
       case BLE_CMD_TRANSLATE_DST_TEXT:
@@ -234,8 +233,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
           state->translate_dst->data[0] = 10;
         }
         out[0] = BLE_RESP_OK;
-        if (state->task_status->task != 11U) {
-          update_persist_task_status(state, 11, 2);
+        if (state->task_status->task != (uint32_t)SCREEN_TRANSLATE) {
+          update_persist_task_status(state, SCREEN_TRANSLATE, TASK_RUNNING);
         }
         return 1;
       case BLE_CMD_HEAD_UP_ACTION_SET:
@@ -248,7 +247,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
         v = data[0];
         arg = data[1];
         if (v > BLE_HEAD_UP_ANGLE_MAX) {
-          out[0] = BLE_RESP_INVALID;
+          out[0] = BLE_RESP_ERR;
           return 1;
         }
         if ((state->imu.level != v) || (state->imu.wear != arg)) {
@@ -262,12 +261,12 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
         G1_LOG_ERR("BLE_REQ_PUT_NOTIFY_EN enable:%d\n", v);
         set_ancs_enable(v);
         break;
-      case 0x11:
+      case BLE_CMD_SHIP_MODE:
         state->dashboard_cmd = 7;
         k_sem_give(&state->dashboard_position_sem);
         return 0;
       case BLE_CMD_HARDWARE_SET:
-        if (data[4] != 2) {
+        if ((enum ble_hw_sub)data[4] != HW_SUB_HEIGHT_DEPTH) {
           return 0;
         }
         G1_LOG_WRN("ble recv raster_config_info:enable is %d, raster_height_gear is %d, canvas_distance_gear is %d\n",
@@ -280,7 +279,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
         state->raster_height_cfg[0] = 1;
         state->panel.raster_height_offset = data[6];
         state->panel.canvas_distance_gear = data[7];
-        update_persist_task_status(state, 15, 2);
+        update_persist_task_status(state, SCREEN_RASTER_HEIGHT, TASK_RUNNING);
         return 0;
       default:
         return 0;
@@ -288,11 +287,11 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
     out[0] = BLE_RESP_OK;
     return 1;
   }
-  if ((req >= 0x29) && (req <= 0x45)) {
+  if ((req >= BLE_CMD_GET_FIRST) && (req <= BLE_CMD_GET_LAST)) {
     switch (req) {
       case BLE_CMD_SILENT_MODE_GET:
-        out[0] = state->display_mode;
-        out[1] = get_wear_state_event();
+        out[0] = (uint8_t)state->display_mode;
+        out[1] = (uint8_t)get_wear_state_event();
         return 2;
       case BLE_CMD_ANTI_SHAKE_GET:
         out[0] = state->imu.dof3_enable;
@@ -353,7 +352,7 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
       default:
         return 0;
     }
-  } else if ((req >= 0x47) && (req <= 0x56)) {
+  } else if ((req >= BLE_CMD_POST_FIRST) && (req <= BLE_CMD_POST_LAST)) {
     switch (req) {
       case BLE_CMD_NOTIFICATION_SEND:
         return post_notification_cmd_response(state, (uint8_t *)head, (uint8_t *)&state->sync, (uint8_t *)head, data,
@@ -381,8 +380,8 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
           state->dash_buf->data[0] = 10;
         }
         out[0] = BLE_RESP_OK;
-        if (state->task_status->task != 16U) {
-          update_persist_task_status(state, 16, 2);
+        if (state->task_status->task != (uint32_t)SCREEN_EVEN_AI) {
+          update_persist_task_status(state, SCREEN_EVEN_AI, TASK_RUNNING);
         }
         return 1;
       case BLE_CMD_NOTIFICATION_CLEAR:

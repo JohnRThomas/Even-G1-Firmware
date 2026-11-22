@@ -10,6 +10,7 @@
 #define G1_GLASSES_STATE_H_
 
 #include "../ahrs/ahrs.h"
+#include "../ble/ble_cmd.h"
 #include <nrfx_spim.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -23,17 +24,160 @@ struct GlassesState;
 /* pointees of the per-feature context pointers, defined by their owners */
 struct schedule_notif;
 
+/*
+ * Screen id: the UI application that owns the displays (GlassesState->dashboard_mode).  The
+ * master sends it to the slave in every sync package; a persist task is named by the id of
+ * its screen (struct msg_status).  screen_task_dispatch() runs the screen's state machine,
+ * ui_task_handler() its page.
+ */
+enum screen_id {
+  SCREEN_IDLE = 0,
+  SCREEN_WAIT_BLOW_HEAD = 1,   /* displays off until the head comes down again */
+  SCREEN_COUNTDOWN = 2,        /* countdown timer */
+  SCREEN_DEMO_IMAGE = 3,       /* demo image of the production test and the silent mode */
+  SCREEN_NOTIFICATION = 4,     /* a notification's text */
+  SCREEN_NEW_MESSAGE = 5,      /* "new message" hint */
+  SCREEN_DASHBOARD = 6,
+  SCREEN_BITMAP = 7,           /* "do not disturb" bitmap */
+  SCREEN_SCHEDULE = 8,         /* schedule reminder */
+  SCREEN_TELEPROMPTER = 9,
+  SCREEN_NAVIGATION = 10,
+  SCREEN_TRANSLATE = 11,
+  SCREEN_QUICKNOTE = 12,
+  SCREEN_GYRO = 13,            /* yaw / pitch / roll read-out */
+  SCREEN_ONBOARDING = 14,
+  SCREEN_RASTER_HEIGHT = 15,   /* raster height / canvas distance adjustment */
+  SCREEN_EVEN_AI = 16,
+  SCREEN_SET_IMU_PITCH = 17,   /* head-up angle calibration */
+  SCREEN_PROMPT_INFO = 18,
+  SCREEN_TRANSCRIBE_INFO = 19,
+  SCREEN_EVEN_AI_V2_INFO = 20,
+} __packed;
+BUILD_ASSERT(sizeof(enum screen_id) == 1);
+
+/*
+ * Language of the glasses' own texts (CURRENT_LANGUAGE.language): the id the phone sends with
+ * Language Set (0x3D), data[5].  Translate Control (0x1C) names its two languages with the same ids.
+ * Only the first seven and Italian have string tables (get_string_in_language()); the others are
+ * known by the two-letter codes of the translate screen.
+ */
+enum language {
+  LANGUAGE_CHINESE = 1,
+  LANGUAGE_ENGLISH = 2,
+  LANGUAGE_JAPANESE = 3,
+  LANGUAGE_KOREAN = 4,
+  LANGUAGE_FRENCH = 5,
+  LANGUAGE_GERMAN = 6,
+  LANGUAGE_SPANISH = 7,
+  LANGUAGE_RUSSIAN = 8,
+  LANGUAGE_DUTCH = 9,
+  LANGUAGE_NORWEGIAN = 10,
+  LANGUAGE_DANISH = 11,
+  LANGUAGE_SWEDISH = 12,
+  LANGUAGE_FINNISH = 13,
+  LANGUAGE_ITALIAN = 14,
+  LANGUAGE_ARABIC = 15,
+  LANGUAGE_HINDI = 16,
+  LANGUAGE_BENGALI = 17,
+  LANGUAGE_CANTONESE = 18, /* "HK" */
+  LANGUAGE_POLISH = 19,
+  LANGUAGE_CZECH = 20,
+  LANGUAGE_TURKISH = 21,
+  LANGUAGE_PORTUGUESE = 22,
+  LANGUAGE_UKRAINIAN = 23, /* "UK" */
+  LANGUAGE_GREEK = 24,     /* "EL" */
+  LANGUAGE_HUNGARIAN = 25,
+
+  /* the ids the setting store accepts */
+  LANGUAGE_FIRST = LANGUAGE_CHINESE,
+  LANGUAGE_LAST = LANGUAGE_HUNGARIAN,
+} __packed;
+BUILD_ASSERT(sizeof(enum language) == 1);
+
 /* ------------------------------------------------------------------ ESB */
+
+/*
+ * Sync command: what the master's sync package (struct esb_sync_pkt.hdr.cmd, sent by sync_to_slave()) asks
+ * the slave arm to do.  The vendor's SYNC_DISPLAY_CMD_* set.
+ */
+enum sync_cmd {
+  SYNC_CMD_DATA = 0,                  /* the package's screen data: draw it */
+  SYNC_CMD_SUSPEND = 1,               /* displays off */
+  SYNC_CMD_RESUME = 2,                /* displays on again; no sender */
+  SYNC_CMD_SHIPMODE = 3,              /* battery empty: power off */
+  SYNC_CMD_NOT_DISTURB_ENTER = 4,     /* silent mode on */
+  SYNC_CMD_NOT_DISTURB_EXIT = 5,      /* silent mode off */
+  SYNC_CMD_SUBCMD = 6,                /* arg[0] names a feature's command, arg[1..] are its arguments */
+  SYNC_CMD_MESSAGE_SIGNAL = 7,        /* sync_message_signal_to_slave(): arg[0] is the signal */
+  SYNC_CMD_EXIT_TASK = 8,             /* close the running screen; arg[0] != 0 also expires the shown message */
+  SYNC_CMD_CONFIRM_NOTIFY_FIRST = 10, /* first half of the notification arg[0..3] (uid) arrived; the vendor's
+                                       * SYNC_DISPLAY_CMD_COMFIRM_NOTIFY_FIRST */
+  SYNC_CMD_CONFIRM_NOTIFY_END = 11,   /* second half arrived: the notification is complete */
+  SYNC_CMD_STATUS = 12,               /* only the package's status fields, nothing to draw; arg[0] == 11 adds the
+                                       * canvas distance and raster height gears */
+  SYNC_CMD_EVEN_AI_START = 13,        /* open the Even AI screen */
+  SYNC_CMD_EVEN_AI_MIC_ON = 14,       /* Even AI: the app opened the microphone */
+  SYNC_CMD_EVEN_AI_MIC_OFF = 15,      /* Even AI: the microphone was stopped */
+  SYNC_CMD_EVEN_AI_NETWORK_ERROR = 16,
+  SYNC_CMD_EVEN_AI_SHOW_IMAGE = 17,   /* Even AI: show the uploaded image */
+  SYNC_CMD_EVEN_AI_SHOW_TEXT = 18,    /* Even AI: show the text alone */
+  SYNC_CMD_NONE = 19,                 /* no command: sync_to_slave()'s last command before the first one */
+} __packed;
+BUILD_ASSERT(sizeof(enum sync_cmd) == 1);
+
+/*
+ * Slave command: what a package of the slave arm (struct esb_pkt.cmd, sent by sync_to_master()) tells the
+ * master.
+ */
+enum slave_cmd {
+  SLAVE_CMD_STATUS = 1,              /* the package's status fields only, sent periodically */
+  SLAVE_CMD_EXIT_TASK = 4,           /* double tap on the slave arm: close the running screen */
+  SLAVE_CMD_SHIPMODE = 5,            /* battery empty: power off */
+  SLAVE_CMD_QUICKNOTE_LONGPRESS = 6, /* subcmd 1: long press began, 0: it ended */
+  SLAVE_CMD_DOUBLE_CLICK = 7,        /* double tap on the slave arm that opens or closes the dashboard */
+  SLAVE_CMD_NOT_DISTURB_ENTER = 8,   /* silent mode on */
+  SLAVE_CMD_NOT_DISTURB_EXIT = 9,    /* silent mode off */
+  SLAVE_CMD_MSG_KEY = 10,            /* send_msg_key_to_master(): tap on the slave arm for the messages */
+  SLAVE_CMD_NOTIFY_FIRST = 12,       /* carries the first half of a notification (struct notif_msg) */
+  SLAVE_CMD_NOTIFY_END = 13,         /* carries the second half */
+  SLAVE_CMD_SUBCMD = 14,             /* subcmd names a feature's command, value is its argument */
+  SLAVE_CMD_EVEN_AI_START = 15,      /* the slave arm asks to open Even AI */
+  SLAVE_CMD_EVEN_AI_MIC_OFF = 16,    /* Even AI: the slave arm asks to stop the microphone */
+  SLAVE_CMD_EVEN_AI_V2_ACTION = 17,  /* Even AI v2: EVENAI_ACTION_LONG_PRESS_REQUEST and its action status */
+} __packed;
+BUILD_ASSERT(sizeof(enum slave_cmd) == 1);
+
+/*
+ * Head attitude found by the IMU thread (struct imu_ctx.mode).  The master sends it to the slave in
+ * every sync package (hdr.dir); the navigation screen keeps its own copy.
+ */
+enum imu_attitude {
+  IMU_ATTITUDE_BOW_HEAD = 1, /* the head is down */
+  IMU_ATTITUDE_LOOK_UP = 2,  /* the head is up at the wake-up angle */
+} __packed;
+BUILD_ASSERT(sizeof(enum imu_attitude) == 1);
 
 /* first byte of every ESB package */
 struct esb_hdr {
-  uint8_t cmd: 6;
-  uint8_t dir: 2;
+  uint8_t cmd: 6;                          /* in a sync package: enum sync_cmd */
+  uint8_t dir: 2;                          /* in a sync package: enum imu_attitude */
 };
 
+/*
+ * Status of the persist task (struct msg_status.status): update_persist_task_status() sets it, the master
+ * sends it to the slave in every sync package.
+ */
+enum task_status {
+  TASK_NONE = 0,    /* after boot, until the screen state machine has entered idle */
+  TASK_STOP = 1,
+  TASK_RUNNING = 2,
+  TASK_PAUSE = 3,
+} __packed;
+BUILD_ASSERT(sizeof(enum task_status) == 1);
+
 struct msg_status {
-  uint32_t task;
-  uint8_t status;
+  uint32_t task;                           /* enum screen_id of the persist task */
+  enum task_status status;
 } __packed;
 
 struct fw_ver {
@@ -45,7 +189,7 @@ struct fw_ver {
 /* sync package sent by the master */
 struct esb_sync_pkt {
   struct esb_hdr hdr;
-  uint8_t screen_id;                       /* dashboard_mode */
+  enum screen_id screen_id;                /* GlassesState->dashboard_mode */
   uint16_t canvas_x;
   uint16_t canvas_y;
   uint8_t package_id;
@@ -60,7 +204,7 @@ struct esb_sync_pkt {
 
 /* peer status package */
 struct esb_pkt {
-  uint8_t cmd;                             /* cmd | 0x80 */
+  uint8_t cmd;                             /* enum slave_cmd | 0x80 */
   struct fw_ver ver;
   uint8_t battery;
   uint8_t f_05[7];
@@ -76,6 +220,22 @@ struct esb_pkt {
   uint8_t seq;
 } __packed;
 
+/*
+ * Secondary pane of the dashboard, the vendor's "custom display area": what the full and the dual
+ * dashboard show beside the clock.  The phone chooses it with Dashboard Set (0x06) sub-command
+ * PANE_MODE and names it again in the data of every pane (struct dashboard_ts_context.area); the page
+ * gets it as db_info.pane_mode and reports it in the Status (0x22) packets.  Any other value the
+ * phone sends leaves the pane empty.
+ */
+enum dashboard_pane {
+  DASHBOARD_PANE_NOTES = 0,    /* quick notes */
+  DASHBOARD_PANE_STOCK = 1,
+  DASHBOARD_PANE_NEWS = 2,
+  DASHBOARD_PANE_CALENDAR = 3,
+  DASHBOARD_PANE_MAP = 4,      /* citywalk canvas */
+} __packed;
+BUILD_ASSERT(sizeof(enum dashboard_pane) == 1);
+
 /* reception buffer (GlassesState->ui), read per page */
 struct db_info {
   uint8_t pad_00[4];
@@ -88,7 +248,7 @@ struct db_info {
   uint8_t low_power;                            /* 1 = show the 0x42 icon */
   uint8_t pad_61[4];
   uint8_t display_mode;
-  uint8_t pane_mode;
+  enum dashboard_pane pane_mode;
   uint8_t calendar_disp_mode;
   uint8_t pad_68;
   uint8_t stocks_disp_mode;
@@ -177,7 +337,7 @@ union screen_payload {
     uint8_t running;
     uint8_t direction;
     uint8_t pad_02[5];
-    uint8_t imu_action_status;
+    enum imu_attitude imu_action_status;
     uint16_t pos_x;                  /* position on the panoramic map */
     uint16_t pos_y;
     uint8_t pad_0c;
@@ -210,10 +370,29 @@ struct dash_data_buf {
   uint16_t len;
 } __packed;
 
+/*
+ * What the Even AI v2 page shows (struct evenai_buf.sub; the page reads it as ui.gui.ui_action), with
+ * action_status as its detail.  The phone sets WAKEUP with Even AI (0x54) mode 1 and LISTEN .. COMMAND
+ * with the text sub-commands of the same numbers; the two long press values are the glasses' own.
+ */
+enum evenai_action {
+  EVENAI_ACTION_NONE = 0,               /* nothing to show yet: the page does not open */
+  EVENAI_ACTION_WAKEUP = 1,
+  EVENAI_ACTION_LISTEN = 2,
+  EVENAI_ACTION_ANSWER = 3,
+  EVENAI_ACTION_COMMAND = 4,
+  EVENAI_ACTION_LONG_PRESS_REQUEST = 6, /* touchpad of the slave arm held: the slave sends it to the master
+                                         * (SLAVE_CMD_EVEN_AI_V2_ACTION), which answers with LONG_PRESS on
+                                         * both arms; action_status 1: no phone, 2: phone connected */
+  EVENAI_ACTION_LONG_PRESS = 7,         /* the long press page: "Bluetooth disconnected" (action_status 1) or
+                                         * "Even AI listening... / Release to Finish Recording" (2) */
+} __packed;
+BUILD_ASSERT(sizeof(enum evenai_action) == 1);
+
 /* GlassesState->evenai_buf (cmd 0x54) */
 struct evenai_buf {
   uint8_t state;
-  uint8_t sub;
+  enum evenai_action sub;
   uint8_t wakeup_arg;
   uint8_t action_status;
   uint8_t scroll_line;
@@ -358,7 +537,7 @@ struct jbd_panel_context {
   panel_cb_t resume_cb;
   panel_cb_t off_cb;
   panel_cb_t on_cb;
-  int (*default_task)(struct jbd_panel_context *c, int screen_id, void *ctx);
+  int (*default_task)(struct jbd_panel_context *c, enum screen_id screen_id, void *ctx);
   void (*draw_image_cb)(struct jbd_panel_context *c);
   void *(*clear_cb)(struct jbd_panel_context *c);
   int (*set_brightness_cb)(struct jbd_panel_context *c, uint8_t level);
@@ -393,7 +572,7 @@ struct jbd_panel_context {
 
 /* imu_fusion_context (GlassesState->imu) */
 struct imu_ctx {
-  uint8_t mode;
+  enum imu_attitude mode;
   uint32_t on;
   int thr_low;
   int thr_high;
@@ -463,7 +642,7 @@ struct dashboard_ts_context {
   uint8_t pad_63;
   uint8_t retained_c;
   uint8_t disp_mode;
-  uint8_t area;                            /* custom display area */
+  enum dashboard_pane area;                /* custom display area */
   uint8_t sched_mode;
   uint8_t sched_num;
   uint8_t stocks_mode;
@@ -529,7 +708,7 @@ struct nav_info {
   uint8_t direction;
   uint8_t f_02[4];
   uint8_t updated;                         /* phone alive */
-  uint8_t imu_action_status;
+  enum imu_attitude imu_action_status;
   uint16_t x;
   uint16_t y;
   uint8_t f_0c;
@@ -540,7 +719,7 @@ struct nav_info {
   char speed[0x18];
   uint8_t panoramic;
   uint8_t arrived;
-  uint8_t type;
+  enum ble_navigation_sub type;
   uint8_t sync_id;
   uint32_t map_size;
   char prompt[0x40];
@@ -608,6 +787,34 @@ struct quicknote_ctx {
 
 #define HORIZ_PITCH_CFG_SIZE 2
 
+/*
+ * Display mode (GlassesState->display_mode, struct usr_settings.display_mode), the vendor's "Global
+ * Working Mode": when the displays may come on.  The phone sets it with Silent Mode Set (0x03) and
+ * reads it with Silent Mode Get (0x2B, the vendor's BLE_REQ_GET_DISPLAY_MODE); a triple tap toggles
+ * between NORMAL and NOT_DISTURB.  The "#d" debug command stores any number.
+ */
+enum display_mode {
+  DISPLAY_MODE_NORMAL = 10,
+  DISPLAY_MODE_ALWAYS_ON = 11,   /* the head counts as up all the time and a message stays for a year: the
+                                  * production test's mode, never kept over a boot */
+  DISPLAY_MODE_NOT_DISTURB = 12, /* silent mode; also entered when the battery is too hot or cold */
+} __packed;
+BUILD_ASSERT(sizeof(enum display_mode) == 1);
+
+/* bits of GlassesState->module_mask: what the work mode has switched on (update_work_module()) */
+enum work_module {
+  WORK_MODULE_TOUCH = 0x001,
+  WORK_MODULE_DMIC = 0x002,
+  WORK_MODULE_RESERVED = 0x008,   /* switched with the work modes; nothing in firmware 1.6.6 reads it */
+  WORK_MODULE_EXT_FLASH = 0x010,
+  WORK_MODULE_IMU = 0x020,
+  WORK_MODULE_ESB = 0x040,
+  WORK_MODULE_BLE = 0x080,
+  WORK_MODULE_PANEL = 0x100,      /* global_system_suspend() / _resume(); the vendor's LP_JBD_BIT */
+  WORK_MODULE_NFC = 0x400,
+  WORK_MODULE_SHIPMODE = 0x800,
+};
+
 struct GlassesState {
   uint8_t is_master;                       /* 1 master (left), 2 slave */
   uint8_t work_mode;                       /* 1 / 8: busy / 9 */
@@ -637,7 +844,7 @@ struct GlassesState {
     struct esb_sync_pkt sync;        /* last sync package */
     struct {
       struct esb_hdr sync_hdr;
-      uint8_t dashboard_mode; /* = sync.screen_id */
+      enum screen_id dashboard_mode; /* = sync.screen_id: the running screen */
       uint16_t sync_canvas_x;
       uint16_t sync_canvas_y;
       uint8_t sync_seq;
@@ -652,8 +859,8 @@ struct GlassesState {
   };
   uint8_t esb_up_seq;
   uint8_t esb_down_seq;
-  uint8_t esb_dir;
-  uint8_t esb_screen_id;
+  enum imu_attitude esb_dir;               /* head attitude of the last sync package */
+  enum screen_id esb_screen_id;
   union {
     struct {
       uint16_t v;
@@ -719,7 +926,7 @@ struct GlassesState {
   uint8_t panel_on;
   uint8_t screen_on;
   uint8_t imu_event;
-  uint8_t display_mode;
+  enum display_mode display_mode;          /* 0xff after a blank user settings record */
 
   /* per-feature contexts */
   struct dashboard_ts_context *dashboard_ts;
@@ -747,13 +954,14 @@ struct GlassesState {
   int (*flash_write)(struct GlassesState *gs, uint32_t addr, const void *buf, size_t len);
   int (*flash_erase)(struct GlassesState *gs, uint32_t addr, size_t len);
   struct local_store store;
-  int dashboard_cmd;
+  int dashboard_cmd;                       /* what the storage commit thread saves: the enum ble_cmd that changed
+                                            * the setting, 0 the user settings only, or a value of no command */
   int first_enter_flag;
   struct msg_status *task_status;
   uint8_t bt_state;
   uint8_t pending;                         /* refresh flags */
   uint8_t sync_ack;
-  uint16_t module_mask;                    /* bit 7: BLE connected to the app */
+  uint16_t module_mask;                    /* enum work_module bits */
   int64_t last_sync_ts;
   uint8_t phone_is_ios;
   union {

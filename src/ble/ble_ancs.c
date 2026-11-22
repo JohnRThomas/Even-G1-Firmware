@@ -21,7 +21,6 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
-#include <zephyr/sys/util_macro.h>
 #include <zephyr/toolchain.h>
 
 #include "../main.h"
@@ -32,6 +31,7 @@
 #include "../threads/threads.h"
 #include "../utils/common_utils.h"
 #include "ble_ancs.h"
+#include "ble_cmd.h"
 #include "ble_proto.h"
 #include "g1_log.h"
 #include "glasses_state.h"
@@ -513,12 +513,17 @@ static int enqueue_ancs(const struct notif_msg *data) {
 
 /* the dashboard is not in a mode that suppresses notifications */
 #define ANCS_NOTIF_MODE_ALLOWED()                                                                                      \
-  ((get_dashboard_state()->dashboard_mode != 11) && (get_dashboard_state()->dashboard_mode != 10) &&                   \
-   (get_dashboard_state()->dashboard_mode != 9) && (get_dashboard_state()->dashboard_mode != 12) &&                    \
-   (get_dashboard_state()->dashboard_mode != 16) && (get_dashboard_state()->dashboard_mode != 20) &&                   \
-   (get_dashboard_state()->dashboard_mode != 14) && (get_dashboard_state()->dashboard_mode != 15) &&                   \
-   (get_dashboard_state()->dashboard_mode != 17) && (get_dashboard_state()->dashboard_mode != 18) &&                   \
-   (get_dashboard_state()->dashboard_mode != 19))
+  ((get_dashboard_state()->dashboard_mode != SCREEN_TRANSLATE) &&                                                      \
+   (get_dashboard_state()->dashboard_mode != SCREEN_NAVIGATION) &&                                                     \
+   (get_dashboard_state()->dashboard_mode != SCREEN_TELEPROMPTER) &&                                                   \
+   (get_dashboard_state()->dashboard_mode != SCREEN_QUICKNOTE) &&                                                      \
+   (get_dashboard_state()->dashboard_mode != SCREEN_EVEN_AI) &&                                                        \
+   (get_dashboard_state()->dashboard_mode != SCREEN_EVEN_AI_V2_INFO) &&                                                \
+   (get_dashboard_state()->dashboard_mode != SCREEN_ONBOARDING) &&                                                     \
+   (get_dashboard_state()->dashboard_mode != SCREEN_RASTER_HEIGHT) &&                                                  \
+   (get_dashboard_state()->dashboard_mode != SCREEN_SET_IMU_PITCH) &&                                                  \
+   (get_dashboard_state()->dashboard_mode != SCREEN_PROMPT_INFO) &&                                                    \
+   (get_dashboard_state()->dashboard_mode != SCREEN_TRANSCRIBE_INFO))
 
 /* wait while the ESB link is busy */
 static inline void ancs_wait_esb_idle(void) {
@@ -869,7 +874,7 @@ static void format_ancs_date(uint8_t *s) {
 }
 
 static void recv_ble_data(struct ble_context *ctx) {
-  uint8_t hdr[4] = {0x4b, 0, 0, 0};
+  uint8_t hdr[4] = {BLE_CMD_NOTIFICATION_SEND, 0, 0, 0};
   struct notif_msg data;
 
   memset(&data, 0, sizeof(data));
@@ -921,7 +926,7 @@ static void ble_ancs_data_req_thread(void *p1, void *p2, void *p3) {
     while ((get_dashboard_state()->work_mode == 1) || (get_dashboard_state()->work_mode == 8)) {
       k_sleep(K_MSEC(5000));
     }
-    if (!(get_dashboard_state()->module_mask & BIT(7))) {
+    if (!(get_dashboard_state()->module_mask & (uint16_t)WORK_MODULE_BLE)) {
       k_msleep(1000);
       continue;
     }

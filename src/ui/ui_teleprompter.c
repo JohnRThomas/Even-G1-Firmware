@@ -19,6 +19,7 @@
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "ui.h"
+#include "ui_event.h"
 
 #define TELEPROMPTER_DISPLAY_IDLE          0
 #define TELEPROMPTER_DISPLAY_COUNTDOWN     1
@@ -55,7 +56,7 @@ void teleprompter_state_reset(void) {
   memset(&tpm_thread_prv, 0, sizeof(tpm_thread_prv));
 }
 
-int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   struct tpm_thread_prv_data *tp = &tpm_thread_prv;
@@ -389,7 +390,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         G1_LOG_INF("bluetooth connect is break,Send Stop Teleprompter command to slave.\n");
         stop_cmd[0] = 0x03;
         stop_cmd[1] = 0x01;
-        if (sync_to_slave(get_dashboard_state(), 6, stop_cmd, 2) > 4999) {
+        if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, stop_cmd, 2) > 4999) {
           G1_LOG_ERR("SYNC TO Slave failed...,don't exec teleprompter exit action,master auto exit...\n");
           break;
         }

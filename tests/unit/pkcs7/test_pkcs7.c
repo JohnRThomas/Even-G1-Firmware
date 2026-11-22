@@ -32,7 +32,7 @@ static int hex_len(const char *hex) {
 /* dst starts with the bytes of hex; a macro, so a failure names the test's line */
 #define expect_dst(hex) expect_bytes(dst, hex_len(hex), hex)
 
-typedef int (*parse_fn)(uint8_t *origin_data, const uint8_t *req, uint16_t req_len);
+typedef enum ble_resp (*parse_fn)(uint8_t *origin_data, const uint8_t *req, uint16_t req_len);
 
 static void expect_parse(parse_fn parse, const char *name, const char *hex, int want) {
   uint8_t req[256];
@@ -57,101 +57,101 @@ static void expect_msg(const char *hex, int want) {
  */
 
 ZTEST(pkcs7, test_single_chunk_replies_c9_and_copies_the_payload) {
-  expect_pack("04 01 00 7b 7d", PKCS7_PACK_DONE);
+  expect_pack("04 01 00 7b 7d", BLE_RESP_OK);
   expect_dst("7b 7d 7e");
 
   reset_dst();
-  expect_msg("4b 00 01 00 7b 7d", PKCS7_PACK_DONE);
+  expect_msg("4b 00 01 00 7b 7d", BLE_RESP_OK);
   expect_dst("7b 7d 7e");
 }
 
 ZTEST(pkcs7, test_in_order_chunks_reply_cb_then_c9_and_concatenate) {
-  expect_pack("04 03 00 41 42", PKCS7_PACK_MORE);
-  expect_pack("04 03 01 43", PKCS7_PACK_MORE);
-  expect_pack("04 03 02 44 45", PKCS7_PACK_DONE);
+  expect_pack("04 03 00 41 42", BLE_RESP_MORE);
+  expect_pack("04 03 01 43", BLE_RESP_MORE);
+  expect_pack("04 03 02 44 45", BLE_RESP_OK);
   expect_dst("41 42 43 44 45 7e");
 
   reset_dst();
-  expect_msg("4b 00 03 00 41 42", PKCS7_PACK_MORE);
-  expect_msg("4b 00 03 01 43", PKCS7_PACK_MORE);
-  expect_msg("4b 00 03 02 44 45", PKCS7_PACK_DONE);
+  expect_msg("4b 00 03 00 41 42", BLE_RESP_MORE);
+  expect_msg("4b 00 03 01 43", BLE_RESP_MORE);
+  expect_msg("4b 00 03 02 44 45", BLE_RESP_OK);
   expect_dst("41 42 43 44 45 7e");
 }
 
 ZTEST(pkcs7, test_index_0_restarts_at_offset_0) {
-  expect_pack("04 03 00 41 42", PKCS7_PACK_MORE);
-  expect_pack("04 03 01 43 44", PKCS7_PACK_MORE);
-  expect_pack("04 02 00 58", PKCS7_PACK_MORE);
-  expect_pack("04 02 01 59", PKCS7_PACK_DONE);
+  expect_pack("04 03 00 41 42", BLE_RESP_MORE);
+  expect_pack("04 03 01 43 44", BLE_RESP_MORE);
+  expect_pack("04 02 00 58", BLE_RESP_MORE);
+  expect_pack("04 02 01 59", BLE_RESP_OK);
   expect_dst("58 59");
 
   reset_dst();
-  expect_msg("4b 00 03 00 41 42", PKCS7_PACK_MORE);
-  expect_msg("4b 00 03 01 43 44", PKCS7_PACK_MORE);
-  expect_msg("4b 00 02 00 58", PKCS7_PACK_MORE);
-  expect_msg("4b 00 02 01 59", PKCS7_PACK_DONE);
+  expect_msg("4b 00 03 00 41 42", BLE_RESP_MORE);
+  expect_msg("4b 00 03 01 43 44", BLE_RESP_MORE);
+  expect_msg("4b 00 02 00 58", BLE_RESP_MORE);
+  expect_msg("4b 00 02 01 59", BLE_RESP_OK);
   expect_dst("58 59");
 }
 
 ZTEST(pkcs7, test_index_0_takes_the_new_command_and_message_id) {
-  expect_pack("04 03 00 41", PKCS7_PACK_MORE);
-  expect_pack("05 02 00 31", PKCS7_PACK_MORE);
-  expect_pack("05 02 01 32", PKCS7_PACK_DONE);
+  expect_pack("04 03 00 41", BLE_RESP_MORE);
+  expect_pack("05 02 00 31", BLE_RESP_MORE);
+  expect_pack("05 02 01 32", BLE_RESP_OK);
   expect_dst("31 32 7e");
 
   reset_dst();
-  expect_msg("4b 01 03 00 41", PKCS7_PACK_MORE);
-  expect_msg("4c 02 02 00 31", PKCS7_PACK_MORE);
-  expect_msg("4c 02 02 01 32", PKCS7_PACK_DONE);
+  expect_msg("4b 01 03 00 41", BLE_RESP_MORE);
+  expect_msg("4c 02 02 00 31", BLE_RESP_MORE);
+  expect_msg("4c 02 02 01 32", BLE_RESP_OK);
   expect_dst("31 32 7e");
 }
 
 ZTEST(pkcs7, test_command_change_mid_sequence_replies_ca_and_writes_nothing) {
-  expect_pack("04 03 00 41", PKCS7_PACK_MORE);
-  expect_pack("05 03 01 42", PKCS7_PACK_ERR);
+  expect_pack("04 03 00 41", BLE_RESP_MORE);
+  expect_pack("05 03 01 42", BLE_RESP_ERR);
   expect_dst("41 7e");
 
   reset_dst();
-  expect_msg("4b 00 03 00 41", PKCS7_PACK_MORE);
-  expect_msg("4c 00 03 01 42", PKCS7_PACK_ERR);
+  expect_msg("4b 00 03 00 41", BLE_RESP_MORE);
+  expect_msg("4c 00 03 01 42", BLE_RESP_ERR);
   expect_dst("41 7e");
 }
 
 ZTEST(pkcs7, test_msg_message_id_change_mid_sequence_replies_ca_and_writes_nothing) {
-  expect_msg("4b 01 03 00 41", PKCS7_PACK_MORE);
-  expect_msg("4b 02 03 01 42", PKCS7_PACK_ERR);
+  expect_msg("4b 01 03 00 41", BLE_RESP_MORE);
+  expect_msg("4b 02 03 01 42", BLE_RESP_ERR);
   expect_dst("41 7e");
 }
 
 ZTEST(pkcs7, test_request_shorter_than_the_header_replies_ca) {
-  expect_pack("", PKCS7_PACK_ERR);
-  expect_pack("04", PKCS7_PACK_ERR);
-  expect_pack("04 01", PKCS7_PACK_ERR);
+  expect_pack("", BLE_RESP_ERR);
+  expect_pack("04", BLE_RESP_ERR);
+  expect_pack("04 01", BLE_RESP_ERR);
   expect_fill(dst, SENTINEL_LEN, SENTINEL, "dst");
 
-  expect_msg("", PKCS7_PACK_ERR);
-  expect_msg("4b", PKCS7_PACK_ERR);
-  expect_msg("4b 00", PKCS7_PACK_ERR);
-  expect_msg("4b 00 01", PKCS7_PACK_ERR);
+  expect_msg("", BLE_RESP_ERR);
+  expect_msg("4b", BLE_RESP_ERR);
+  expect_msg("4b 00", BLE_RESP_ERR);
+  expect_msg("4b 00 01", BLE_RESP_ERR);
   expect_fill(dst, SENTINEL_LEN, SENTINEL, "dst");
 }
 
 ZTEST(pkcs7, test_header_only_chunk_is_accepted) {
-  expect_pack("04 02 00", PKCS7_PACK_MORE);
-  expect_pack("04 02 01 41", PKCS7_PACK_DONE);
+  expect_pack("04 02 00", BLE_RESP_MORE);
+  expect_pack("04 02 01 41", BLE_RESP_OK);
   expect_dst("41 7e");
 
   reset_dst();
-  expect_msg("4b 00 02 00", PKCS7_PACK_MORE);
-  expect_msg("4b 00 02 01 41", PKCS7_PACK_DONE);
+  expect_msg("4b 00 02 00", BLE_RESP_MORE);
+  expect_msg("4b 00 02 01 41", BLE_RESP_OK);
   expect_dst("41 7e");
 }
 
 ZTEST(pkcs7, test_null_request_replies_ca) {
-  zassert_equal(parse_receiver_pack_pkcs7(dst, NULL, 5), PKCS7_PACK_ERR);
+  zassert_equal(parse_receiver_pack_pkcs7(dst, NULL, 5), BLE_RESP_ERR);
   expect_fill(dst, SENTINEL_LEN, SENTINEL, "dst");
 
-  zassert_equal(parse_receiver_msg_pack_pkcs7(dst, NULL, 6), PKCS7_PACK_ERR);
+  zassert_equal(parse_receiver_msg_pack_pkcs7(dst, NULL, 6), BLE_RESP_ERR);
   expect_fill(dst, SENTINEL_LEN, SENTINEL, "dst");
 }
 
@@ -159,8 +159,8 @@ ZTEST(pkcs7, test_null_destination_replies_ca) {
   static const uint8_t pack[] = {0x04, 0x01, 0x00, 0x41};
   static const uint8_t msg[] = {0x4b, 0x00, 0x01, 0x00, 0x41};
 
-  zassert_equal(parse_receiver_pack_pkcs7(NULL, pack, sizeof(pack)), PKCS7_PACK_ERR);
-  zassert_equal(parse_receiver_msg_pack_pkcs7(NULL, msg, sizeof(msg)), PKCS7_PACK_ERR);
+  zassert_equal(parse_receiver_pack_pkcs7(NULL, pack, sizeof(pack)), BLE_RESP_ERR);
+  zassert_equal(parse_receiver_msg_pack_pkcs7(NULL, msg, sizeof(msg)), BLE_RESP_ERR);
 }
 
 /* dst has a guard after the buffer */
@@ -173,25 +173,25 @@ ZTEST(pkcs7, test_pack_chunk_overrunning_the_whitelist_buffer_is_rejected) {
   for (int idx = 0; idx < 34; idx++) {
     req[2] = idx;
     got = parse_receiver_pack_pkcs7(dst, req, sizeof(req));
-    zassert_equal(got, PKCS7_PACK_MORE, "chunk %d (fits): 0x%02x", idx, got);
+    zassert_equal(got, BLE_RESP_MORE, "chunk %d (fits): 0x%02x", idx, got);
   }
 
   req[2] = 34;
   got = parse_receiver_pack_pkcs7(dst, req, sizeof(req));
 
   expect_fill(dst + WHITELIST_BUF_SIZE, GUARD_SIZE, SENTINEL, "guard");
-  zassert_equal(got, PKCS7_PACK_ERR, "chunk 34 (ends at %d): 0x%02x", 35 * 180, got);
+  zassert_equal(got, BLE_RESP_ERR, "chunk 34 (ends at %d): 0x%02x", 35 * 180, got);
 }
 
 /* resent after a lost reply */
 ZTEST(pkcs7, test_pack_duplicated_chunk_index_is_not_appended_twice) {
   uint8_t req[] = {0x04, 0x03, 0x01, 0x42};
 
-  expect_pack("04 03 00 41", PKCS7_PACK_MORE);
-  expect_pack("04 03 01 42", PKCS7_PACK_MORE);
+  expect_pack("04 03 00 41", BLE_RESP_MORE);
+  expect_pack("04 03 01 42", BLE_RESP_MORE);
   /* its reply is not asserted */
   parse_receiver_pack_pkcs7(dst, req, sizeof(req));
-  expect_pack("04 03 02 43", PKCS7_PACK_DONE);
+  expect_pack("04 03 02 43", BLE_RESP_OK);
   expect_dst("41 42 43 7e");
 }
 
@@ -205,25 +205,25 @@ ZTEST(pkcs7, test_msg_chunk_overrunning_the_notification_buffer_is_rejected) {
   for (int idx = 0; idx < 11; idx++) {
     req[3] = idx;
     got = parse_receiver_msg_pack_pkcs7(dst, req, sizeof(req));
-    zassert_equal(got, PKCS7_PACK_MORE, "chunk %d (fits): 0x%02x", idx, got);
+    zassert_equal(got, BLE_RESP_MORE, "chunk %d (fits): 0x%02x", idx, got);
   }
 
   req[3] = 11;
   got = parse_receiver_msg_pack_pkcs7(dst, req, sizeof(req));
 
   expect_fill(dst + NCS_BUF_SIZE, GUARD_SIZE, SENTINEL, "guard");
-  zassert_equal(got, PKCS7_PACK_ERR, "chunk 11 (ends at %d): 0x%02x", 12 * 180, got);
+  zassert_equal(got, BLE_RESP_ERR, "chunk 11 (ends at %d): 0x%02x", 12 * 180, got);
 }
 
 /* resent after a lost reply */
 ZTEST(pkcs7, test_msg_duplicated_chunk_index_is_not_appended_twice) {
   uint8_t req[] = {0x4b, 0x00, 0x03, 0x01, 0x42};
 
-  expect_msg("4b 00 03 00 41", PKCS7_PACK_MORE);
-  expect_msg("4b 00 03 01 42", PKCS7_PACK_MORE);
+  expect_msg("4b 00 03 00 41", BLE_RESP_MORE);
+  expect_msg("4b 00 03 01 42", BLE_RESP_MORE);
   /* its reply is not asserted */
   parse_receiver_msg_pack_pkcs7(dst, req, sizeof(req));
-  expect_msg("4b 00 03 02 43", PKCS7_PACK_DONE);
+  expect_msg("4b 00 03 02 43", BLE_RESP_OK);
   expect_dst("41 42 43 7e");
 }
 
@@ -238,7 +238,8 @@ static void send_a0_pattern(int len) {
   uint8_t data[64];
 
   g1_fill_pattern(data, len, 0xa0);
-  zassert_equal(subcontracing_send_data_pkcs7(data, len, 0x4b, send_to_frames), 0, "%d bytes", len);
+  zassert_equal(subcontracing_send_data_pkcs7(data, len, BLE_CMD_NOTIFICATION_SEND, send_to_frames), 0, "%d bytes",
+                len);
 }
 
 /* the last frame is padded with N bytes of value N, 1 <= N <= 17 */
@@ -273,7 +274,7 @@ ZTEST(pkcs7, test_send_180_bytes_is_11_frames_the_last_padded_with_7_bytes_of_0x
   uint8_t data[180];
 
   g1_fill_pattern(data, sizeof(data), 0);
-  zassert_equal(subcontracing_send_data_pkcs7(data, sizeof(data), 0x4b, send_to_frames), 0);
+  zassert_equal(subcontracing_send_data_pkcs7(data, sizeof(data), BLE_CMD_NOTIFICATION_SEND, send_to_frames), 0);
 
   expect_frame("4b 0b 00 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10");
   expect_frame("4b 0b 01 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f 20 21");
@@ -296,10 +297,10 @@ ZTEST(pkcs7, test_sent_frames_reassemble_to_the_message_and_its_padding) {
 
   len = g1_frame_pop(frame, sizeof(frame));
   zassert_equal(len, 20, "frame 0 length %d", len);
-  zassert_equal(parse_receiver_pack_pkcs7(dst, frame, len), PKCS7_PACK_MORE);
+  zassert_equal(parse_receiver_pack_pkcs7(dst, frame, len), BLE_RESP_MORE);
   len = g1_frame_pop(frame, sizeof(frame));
   zassert_equal(len, 20, "frame 1 length %d", len);
-  zassert_equal(parse_receiver_pack_pkcs7(dst, frame, len), PKCS7_PACK_DONE);
+  zassert_equal(parse_receiver_pack_pkcs7(dst, frame, len), BLE_RESP_OK);
 
   expect_dst("a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b0 b1"
              " 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 7e");

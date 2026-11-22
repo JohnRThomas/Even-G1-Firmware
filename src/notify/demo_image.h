@@ -4,6 +4,7 @@
 
 #include <glasses_state.h>
 #include <stdint.h>
+#include <ui_event.h>
 #include <zephyr/toolchain.h>
 
 struct bmp_file_header {
@@ -34,7 +35,7 @@ extern uint8_t *line_buf; /* heap line buffer */
 void get_demo_image_source_from_flash(void);
 void demo_image_select(uint8_t idx);
 void demo_image_next(void);
-int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 int draw_template_new_message_page(struct jbd_panel_context *panel, void *arg);
 
 #endif /* G1_DEMO_IMAGE_H_ */

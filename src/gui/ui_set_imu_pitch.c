@@ -10,11 +10,12 @@
 #include "../panel_display/panel.h"
 #include "g1_log.h"
 #include "gui.h"
+#include "ui_event.h"
 
 #define IMU_PITCH_STEP_MAX 2
 
 static struct {
-  uint8_t state;
+  enum ui_page_state state;
   uint8_t entered;
   uint8_t last_step;
 } imu_pitch_ui;
@@ -48,15 +49,15 @@ static int set_imu_pitch_reflash(void) {
   return 0;
 }
 
-int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, int event) {
+int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   get_dashboard_state();
   set_frame_buffer(ctx->panel_buffer);
   set_showing_notification_on_gui();
 
   switch (imu_pitch_ui.state) {
-    case 0:
-      if (event == 1) {
+    case UI_PAGE_INIT:
+      if (event == UI_EVT_ENTER) {
         if (imu_pitch_ui.entered) {
           return 0;
         }
@@ -66,7 +67,7 @@ int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, int event) {
         memset(&imu_pitch_ui, 0, sizeof(imu_pitch_ui));
         imu_pitch_ui.entered = 1;
         gui_dynamic_bitmap_reset();
-        imu_pitch_ui.state = 1;
+        imu_pitch_ui.state = UI_PAGE_RUNNING;
         clear_showing_notification_on_gui();
 
         /* fade in */
@@ -86,7 +87,7 @@ int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, int event) {
                                  0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
-      } else if (event == 2) {
+      } else if (event == UI_EVT_EXIT) {
         G1_LOG_INF("set_imu_pitch process received exit packet ...\n");
         gui_screen_clear();
         gui_utf_adv_draw_reset();
@@ -95,10 +96,10 @@ int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, int event) {
         /* nothing to do */
       }
       break;
-    case 1:
-      if (event == 1) {
+    case UI_PAGE_RUNNING:
+      if (event == UI_EVT_ENTER) {
         set_imu_pitch_reflash();
-      } else if (event == 2) {
+      } else if (event == UI_EVT_EXIT) {
         G1_LOG_INF("set_imu_pitch process received exit packet ...\n");
         gui_screen_fade_out();
         gui_utf_adv_draw_reset();

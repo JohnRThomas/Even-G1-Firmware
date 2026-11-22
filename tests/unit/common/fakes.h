@@ -44,7 +44,8 @@ DECLARE_FAKE_VOID_FUNC(ancs_delete_notification, uint32_t);
 DECLARE_FAKE_VALUE_FUNC(int, display_DelayClose, int);
 DECLARE_FAKE_VOID_FUNC(exit_running_task, struct GlassesState *, int);
 DECLARE_FAKE_VOID_FUNC(exit_running_task_keep_status, struct GlassesState *, int);
-DECLARE_FAKE_VALUE_FUNC(int, update_persist_task_status, struct GlassesState *, int, int);
+DECLARE_FAKE_VALUE_FUNC(enum task_status, update_persist_task_status, struct GlassesState *, enum screen_id,
+                        enum task_status);
 DECLARE_FAKE_VALUE_FUNC(bool, is_idle);
 DECLARE_FAKE_VOID_FUNC(cleanCalenadrIndex);
 DECLARE_FAKE_VOID_FUNC(cleanNewsIndex);
@@ -67,7 +68,7 @@ DECLARE_FAKE_VOID_FUNC(jbd_clear_cache_sync, uint8_t);
 DECLARE_FAKE_VALUE_FUNC(int, SendDashBoardStartupModeInfoToSlave, uint8_t);
 DECLARE_FAKE_VALUE_FUNC(int, SendDoubleTapCustomizeToSlave, uint8_t);
 DECLARE_FAKE_VALUE_FUNC(int, SendLongpressTapCustomizeToSlave, uint8_t);
-DECLARE_FAKE_VALUE_FUNC(int, SendSystemLanguageInfoToSlave, uint8_t);
+DECLARE_FAKE_VALUE_FUNC(int, SendSystemLanguageInfoToSlave, enum language);
 DECLARE_FAKE_VALUE_FUNC(int, send_response_data_to_msgqueue, const void *, uint32_t);
 extern struct g1_pkt_log g1_esb_response_log;
 DECLARE_FAKE_VALUE_FUNC(int, send_response_data_to_ble);
@@ -78,8 +79,8 @@ DECLARE_FAKE_VALUE_FUNC(int, g1_fake_ipc_send, const void *, size_t);
  * ipc: sync_to_slave() logs the data and returns the ack wait in ms (0 = at once; >= 3000 counts
  * as failed).
  */
-DECLARE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, int, const void *, size_t);
-DECLARE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, int, const void *, size_t);
+DECLARE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, enum sync_cmd, const void *, size_t);
+DECLARE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, enum slave_cmd, const void *, size_t);
 extern struct g1_pkt_log g1_sync_to_slave_log;
 
 /* misc: production test, threads, main.c, sensors and panel */
@@ -88,12 +89,12 @@ DECLARE_FAKE_VALUE_FUNC(uint8_t, get_pt_level_flag);
 DECLARE_FAKE_VALUE_FUNC(uint8_t, get_pt_test_mode);
 DECLARE_FAKE_VOID_FUNC(set_test_mode, uint8_t);
 DECLARE_FAKE_VOID_FUNC(system_reboot_delayed);
-DECLARE_FAKE_VALUE_FUNC(uint8_t, get_wear_state_event);
+DECLARE_FAKE_VALUE_FUNC(enum ble_event, get_wear_state_event);
 DECLARE_FAKE_VALUE_FUNC(int, trigger_imu_state_change, const void *, struct GlassesState *, bool);
-DECLARE_FAKE_VOID_FUNC(report_event_to_phone, int);
+DECLARE_FAKE_VOID_FUNC(report_event_to_phone, enum ble_event);
 DECLARE_FAKE_VALUE_FUNC(uint8_t, get_dashboard_startup_mode);
 DECLARE_FAKE_VALUE_FUNC(uint8_t, cur_message_show_state);
-DECLARE_FAKE_VALUE_FUNC(int, display_close_screen, int);
+DECLARE_FAKE_VALUE_FUNC(int, display_close_screen, enum screen_id);
 extern uint8_t deferred_text_ack_cmd;
 extern uint8_t deferred_text_ack_idx;
 extern uint8_t deferred_text_ack_total;

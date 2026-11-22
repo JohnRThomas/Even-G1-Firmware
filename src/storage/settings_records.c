@@ -156,7 +156,7 @@ int save_usr_settings(struct GlassesState *gs, int unused) {
   ARG_UNUSED(unused);
   struct usr_settings s = {0};
 
-  s.display_mode = gs->display_mode;
+  s.display_mode = (uint8_t)gs->display_mode;
   s.wakeup_angle = gs->imu.level;
   s.brightness_level = gs->panel.panel_brightness_level;
   s.dof3_enable = gs->imu.dof3_enable;
@@ -183,7 +183,7 @@ int save_usr_settings(struct GlassesState *gs, int unused) {
 }
 
 int clear_user_settings(struct GlassesState *gs) {
-  gs->display_mode = 10;
+  gs->display_mode = DISPLAY_MODE_NORMAL;
   gs->panel.panel_brightness_level = 0x15;
   gs->imu.dof3_enable = 1;
   gs->imu.div = 400;
@@ -220,7 +220,7 @@ int load_usr_setting(struct GlassesState *gs) {
     return -1;
   }
   G1_LOG_WRN("read user settings success!\n");
-  gs->display_mode = s.display_mode;
+  gs->display_mode = (enum display_mode)s.display_mode;
   gs->panel.panel_brightness_level = s.brightness_level;
   gs->imu.level = s.wakeup_angle;
   gs->imu.dof3_enable = s.dof3_enable;
@@ -243,7 +243,7 @@ int load_usr_setting(struct GlassesState *gs) {
   gs->dashboard_ts->date_format = s.date_format;
   gs->panel.brightness_percent = s.brightness_percent;
   gs->f_1246_pair = s.longpress_head_up_mic;
-  if ((gs->display_mode == 0xff) && (gs->imu.dof3_enable == 0xff)) {
+  if (((uint8_t)gs->display_mode == 0xff) && (gs->imu.dof3_enable == 0xff)) {
     clear_user_settings(gs);
   }
   if (gs->panel.raster_height_offset > 8) {
@@ -252,8 +252,8 @@ int load_usr_setting(struct GlassesState *gs) {
   if ((gs->panel.canvas_distance_gear == 0) || (gs->panel.canvas_distance_gear > 9)) {
     gs->panel.canvas_distance_gear = 3;
   }
-  if (gs->display_mode == 11) {
-    gs->display_mode = 10;
+  if (gs->display_mode == DISPLAY_MODE_ALWAYS_ON) {
+    gs->display_mode = DISPLAY_MODE_NORMAL;
     save_usr_settings(gs, 0);
   }
   if (test_mode > 1) {
@@ -262,12 +262,12 @@ int load_usr_setting(struct GlassesState *gs) {
   set_test_mode(test_mode);
   if (get_pt_test_mode() == 1) {
     gs->opt3007_context.auto_brightness = 0;
-    gs->display_mode = 11;
+    gs->display_mode = DISPLAY_MODE_ALWAYS_ON;
     gs->panel.panel_brightness_level = 0x15;
     gs->panel.raster_height_offset = 3;
     gs->panel.canvas_distance_gear = 3;
   } else {
-    gs->display_mode = 10;
+    gs->display_mode = DISPLAY_MODE_NORMAL;
   }
   if ((uint32_t)gs->imu.base == 0xffffffffU) {
     gs->imu.base = 0;

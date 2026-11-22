@@ -42,8 +42,8 @@ static int count_ui_calls(const char *page, int event) {
 
 /* each page stand-in logs its call and returns page_result */
 #define UI_PAGE(page)                                                                                                  \
-  int page(struct jbd_panel_context *panel, void *arg, int event) {                                                    \
-    ui_log(#page, event, panel, arg);                                                                                  \
+  int page(struct jbd_panel_context *panel, void *arg, enum ui_event event) {                                          \
+    ui_log(#page, (int)event, panel, arg);                                                                             \
     return page_result;                                                                                                \
   }
 
@@ -65,7 +65,7 @@ UI_PAGE(ui_prompt_info_task)
 UI_PAGE(ui_transcribe_info_task)
 
 /* the panel's default task gets the screen id where the pages get the event */
-static int default_task(struct jbd_panel_context *panel, int screen_id, void *ctx) {
+static int default_task(struct jbd_panel_context *panel, enum screen_id screen_id, void *ctx) {
   ui_log("default_task", screen_id, panel, ctx);
   return 0;
 }
@@ -116,7 +116,7 @@ static struct GlassesState *display_start_running(uint8_t id) {
 
   gs->sync.screen_id = id;
   display_reflash_screen(id);
-  zassert_equal(disp_state.state, 1, "screen %d did not start", id);
+  zassert_equal(disp_state.state, DISP_STATE_RUNNING, "screen %d did not start", id);
   ui_call_count = 0;
   RESET_FAKE(jbd_clear_cache_sync);
   return gs;
@@ -140,7 +140,7 @@ ZTEST(display_thread, test_reflash_screen_from_idle_enters_that_screen_page) {
   zassert_equal_ptr(ui_calls[0].panel, &gs->panel);
   zassert_equal_ptr(ui_calls[0].arg, &gs->sync);
   zassert_equal(last_ui_screen_id, 6);
-  zassert_equal(disp_state.state, 1, "running");
+  zassert_equal(disp_state.state, DISP_STATE_RUNNING, "running");
   zassert_equal(disp_state.screen_id, 6);
 }
 
@@ -167,7 +167,7 @@ ZTEST(display_thread, test_reflash_with_invalid_marker_byte_opens_nothing) {
   g1_clock_advance_ms(200);
 
   zassert_equal(ui_call_count, 0, "%d page calls", ui_call_count);
-  zassert_equal(disp_state.state, 0, "still idle");
+  zassert_equal(disp_state.state, DISP_STATE_IDLE, "still idle");
 }
 
 ZTEST(display_thread, test_payload_longer_than_10_bytes_is_rejected) {
@@ -237,7 +237,7 @@ ZTEST(display_thread, test_input_master_close_and_power_messages_reach_the_runni
   expect_ui_call(1, "ui_DashBoard_task", UI_EVT_MASTER_CLOSE);
   expect_ui_call(2, "ui_DashBoard_task", UI_EVT_LOW_POWER);
   expect_ui_call(3, "ui_DashBoard_task", UI_EVT_POWER_RESUME);
-  zassert_equal(disp_state.state, 1, "still running");
+  zassert_equal(disp_state.state, DISP_STATE_RUNNING, "still running");
 }
 
 ZTEST(display_thread, test_queued_reflashes_are_each_handled_without_refresh_in_between) {
@@ -274,7 +274,7 @@ ZTEST(display_thread, test_opening_another_screen_exits_the_running_one_first) {
   expect_ui_call(0, "ui_DashBoard_task", UI_EVT_EXIT);
   expect_ui_call(1, "ui_teleprompter_task", UI_EVT_ENTER);
   zassert_equal(disp_state.screen_id, 9);
-  zassert_equal(disp_state.state, 1);
+  zassert_equal(disp_state.state, DISP_STATE_RUNNING);
 }
 
 /* ---- close ---- */
@@ -289,7 +289,7 @@ ZTEST(display_thread, test_close_screen_exits_the_page_and_clears_the_panel) {
   expect_ui_call(0, "ui_DashBoard_task", UI_EVT_EXIT);
   zassert_equal(jbd_clear_cache_sync_fake.call_count, 1);
   zassert_equal(jbd_clear_cache_sync_fake.arg0_val, 0);
-  zassert_equal(disp_state.state, 0, "idle");
+  zassert_equal(disp_state.state, DISP_STATE_IDLE, "idle");
   expect_fill(gs->ui.buf, sizeof(gs->ui.buf), 0, "ui.buf");
 
   g1_clock_advance_ms(300);
@@ -312,7 +312,7 @@ ZTEST(display_thread, test_close_screen_0_does_nothing) {
   g1_clock_advance_ms(1);
 
   zassert_equal(count_ui_calls("ui_DashBoard_task", UI_EVT_EXIT), 0);
-  zassert_equal(disp_state.state, 1, "still running");
+  zassert_equal(disp_state.state, DISP_STATE_RUNNING, "still running");
 }
 
 ZTEST(display_thread, test_close_while_idle_exits_the_named_page) {
@@ -322,7 +322,7 @@ ZTEST(display_thread, test_close_while_idle_exits_the_named_page) {
 
   zassert_equal(ui_call_count, 1);
   expect_ui_call(0, "ui_teleprompter_task", UI_EVT_EXIT);
-  zassert_equal(disp_state.state, 0);
+  zassert_equal(disp_state.state, DISP_STATE_IDLE);
 }
 
 ZTEST(display_thread, test_closing_a_different_screen_id_exits_the_running_page) {
@@ -330,7 +330,7 @@ ZTEST(display_thread, test_closing_a_different_screen_id_exits_the_running_page)
 
   display_close_screen(9);
 
-  zassert_equal(disp_state.state, 0, "dispatcher idle");
+  zassert_equal(disp_state.state, DISP_STATE_IDLE, "dispatcher idle");
   zassert_equal(count_ui_calls("ui_DashBoard_task", UI_EVT_EXIT), 1, "running dashboard page got no EXIT");
 }
 
@@ -342,7 +342,7 @@ ZTEST(display_thread, test_screen_id_0_while_running_closes_the_screen_without_a
 
   zassert_equal(jbd_clear_cache_sync_fake.call_count, 1);
   zassert_equal(jbd_clear_cache_sync_fake.arg0_val, 0);
-  zassert_equal(disp_state.state, 0);
+  zassert_equal(disp_state.state, DISP_STATE_IDLE);
   zassert_equal(ui_call_count, 0, "%d page calls", ui_call_count);
 
   g1_clock_advance_ms(300);
@@ -375,7 +375,7 @@ ZTEST(display_thread, test_delay_close_leaves_closing_to_the_page_refreshes) {
                count_ui_calls("ui_QuickNote_task", UI_EVT_REFRESH));
   zassert_equal(count_ui_calls("ui_QuickNote_task", UI_EVT_EXIT), 0);
   zassert_equal(jbd_clear_cache_sync_fake.call_count, 0);
-  zassert_equal(disp_state.state, 1, "still running");
+  zassert_equal(disp_state.state, DISP_STATE_RUNNING, "still running");
   zassert_false(k_timer_remaining_get(&display_timer) > 0, "display_timer running");
 }
 

@@ -19,6 +19,7 @@
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "ui.h"
+#include "ui_event.h"
 
 #define NAV_MAP_RAW_SIZE 0x1210
 
@@ -270,7 +271,7 @@ void nav_draw_route_generating(void) {
   gui_utf_draw(0, get_string(0x47), 0, X0 + 0x24, Y0 + 0x37, X0 + 0x21c, Y0 + 0x6d, 2, 0, 0, NULL, 0);
 }
 
-int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_navigation_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   const uint8_t *nav = gs->ui.buf;
@@ -278,8 +279,8 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
   set_frame_buffer(panel->panel_buffer);
   set_showing_notification_on_gui();
 
-  switch (nav_prv.state) {
-    case 0:
+  switch ((enum nav_state)nav_prv.state) {
+    case NAV_STATE_INIT:
       G1_LOG_INF("ENTER NAVIGATION INIT status ....\n");
       if (event == UI_EVT_EXIT) {
         G1_LOG_INF("running exit command..\n");
@@ -307,7 +308,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           nav_draw_route_generating();
         }
         if ((nav_prv.synced == 1) && (nav_overview_map_ready == 1) && (nav_panoramic_map_ready == 1)) {
-          nav_prv.state = 1;
+          nav_prv.state = (uint32_t)NAV_STATE_RUNNING;
           nav_panoramic_drawn = 0;
           G1_LOG_INF("switch NAVIGATION_RUNNING_STATUS .....\n");
           gui_screen_clear();
@@ -341,7 +342,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
         {
           uint8_t cmd[2] = {6, 1};
 
-          if (sync_to_slave(get_dashboard_state(), 6, cmd, 2) < 5000) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, cmd, 2) < 5000) {
             goto abnormal;
           }
         }
@@ -355,7 +356,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
       G1_LOG_INF("Received exit command from master, exit teleprompter mode\n");
       goto abnormal;
 
-    case 1:
+    case NAV_STATE_RUNNING:
       if (event == UI_EVT_EXIT) {
         break;
       }
@@ -378,10 +379,10 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
 
         if (nav_prv.arrived == 2) {
           G1_LOG_INF("received arrived complte command\n");
-          nav_prv.state = 3;
+          nav_prv.state = (uint32_t)NAV_STATE_ARRIVED;
           gui_screen_clear();
 
-          uint32_t x = (get_current_language() == 6) ? 0xaa : 0xc4;
+          uint32_t x = (get_current_language() == LANGUAGE_GERMAN) ? 0xaa : 0xc4;
 
           // cppcheck-suppress [misra-c2012-10.4] ; int offset plus unsigned x, passed as an int
           gui_utf_draw(0, gs->ui.nav_arrived.text, 0, X0 + x, Y0 + 0x3c, X0 + 0x23f, Y0 + 0x57, 2, 0, 0, NULL, 0);
@@ -390,7 +391,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           nav_prv.timeout = 5000;
         } else if (nav_prv.arrived == 1) {
           G1_LOG_INF("received arrived command,draw arrived page\n");
-          if (nav_prv.imu_action == 2) {
+          if (nav_prv.imu_action == IMU_ATTITUDE_LOOK_UP) {
             G1_LOG_INF("navigation arrived 2 rst reflash, "
                        "navigation_panoramic_map_display reflash\n");
             navigation_panoramic_map_display(nav);
@@ -403,7 +404,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
             gui_bitmps_merge_draw(X0 + 0x1b6, Y0, X0 + 0x240, Y0 + 0x88, nav_map_bitmaps[0], nav_map_bitmaps[1], 2,
                                   0xf);
 
-            uint32_t x = (get_current_language() == 6) ? 0xe8 : 0xc4;
+            uint32_t x = (get_current_language() == LANGUAGE_GERMAN) ? 0xe8 : 0xc4;
 
             // cppcheck-suppress [misra-c2012-10.4] ; int offset plus unsigned x, passed as an int
             gui_utf_draw(0, gs->ui.nav_arrived.text, 0, X0 + x, Y0 + 0x3c, X0 + 0x1e4, Y0 + 0x57, 2, 0, 0, NULL, 0);
@@ -411,7 +412,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
             nav_prv.overview_shown = 1;
             NAV_DRAW_CLOCK();
           }
-        } else if (nav_prv.imu_action == 2) {
+        } else if (nav_prv.imu_action == IMU_ATTITUDE_LOOK_UP) {
           G1_LOG_INF("navigation_panoramic_map_display reflash\n");
           navigation_panoramic_map_display(nav);
         } else {
@@ -452,7 +453,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
         {
           uint8_t cmd[2] = {6, 1};
 
-          if (sync_to_slave(get_dashboard_state(), 6, cmd, 2) < 5000) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, cmd, 2) < 5000) {
             goto abnormal;
           }
         }
@@ -466,7 +467,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
       G1_LOG_INF("Received exit command from master, exit teleprompter mode\n");
       goto abnormal;
 
-    case 2:
+    case NAV_STATE_ABNORMAL_EXIT:
       G1_LOG_WRN("running navigation DISPLAY ABNORMAL EXIT STATUS.\n");
       if (abs_diff_u64(k_uptime_get(), nav_prv.ts) > 8000) {
         G1_LOG_WRN("The navigation automatically shuts down due to disconnection.\n");
@@ -482,7 +483,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
       G1_LOG_INF("received exit command,clear screen...\n");
       break;
 
-    case 3:
+    case NAV_STATE_ARRIVED:
       if (event != UI_EVT_EXIT) {
         if ((event == UI_EVT_ENTER) && (get_dashboard_state()->is_master == 1)) {
           send_response_data_to_ble();
@@ -507,7 +508,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
   return 0;
 
 abnormal:
-  nav_prv.state = 2;
+  nav_prv.state = (uint32_t)NAV_STATE_ABNORMAL_EXIT;
   nav_prv.ts = k_uptime_get();
   gui_screen_clear();
   gui_bmp_bitmap_draw(0x3f, X0, Y0 + 0x3a, 0, 0, 0);

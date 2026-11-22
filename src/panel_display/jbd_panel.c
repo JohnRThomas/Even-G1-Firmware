@@ -105,7 +105,7 @@ static int panel_off(struct jbd_panel_context *c) {
 
 static int panel_resume(struct jbd_panel_context *c) {
   c->spi_callbacks = PANEL_SPI(c);
-  if (!(CONTAINER_OF(c, struct GlassesState, panel)->module_mask & LP_JBD_BIT)) {
+  if (!(CONTAINER_OF(c, struct GlassesState, panel)->module_mask & (uint16_t)WORK_MODULE_PANEL)) {
     G1_LOG_ERR("panel_resume exit due to LP_JBD_BIT\n");
     return -1;
   }

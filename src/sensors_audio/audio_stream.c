@@ -41,19 +41,14 @@ enum audio_stream_cmd {
   AUDIO_STREAM_DELETE = 4,
 };
 
-enum voice_block_state {
-  VOICE_BLOCK_FREE = 0,
-  VOICE_BLOCK_USED = 2,
-};
-
 struct audio_stream_msg {
-  uint8_t cmd;
+  enum audio_stream_cmd cmd;
   int16_t len;
   uint8_t data[AUDIO_STREAM_MSG_DATA];
 };
 
 struct voice_block {
-  uint32_t state;
+  uint32_t state;              /* VOICE_BLOCK_FREE / VOICE_BLOCK_USED */
   uint32_t start_addr;
   uint32_t end_addr;
   int32_t timestamp;
@@ -118,7 +113,7 @@ static void delVoiceBlock(uint8_t num) {
   VOICE_MGR->magic = VOICE_MANAGER_MAGIC;
   VOICE_MGR->reserved = 0;
   if (num <= VOICE_BLOCK_NUM) {
-    VOICE_MGR->blocks[num - 1].state = VOICE_BLOCK_FREE;
+    VOICE_MGR->blocks[num - 1].state = (uint32_t)VOICE_BLOCK_FREE;
     VOICE_MGR->blocks[num - 1].timestamp = 0;
     G1_LOG_INF("success delete voice block num.(%d)\n", num);
   } else {
@@ -181,7 +176,7 @@ int startAudioStreamRecord(void) {
     G1_LOG_ERR("start up audio record failed\r\n\n");
     exit_quicknote[0] = 1;
     exit_quicknote[1] = 0;
-    sync_to_slave(get_dashboard_state(), 6, exit_quicknote, sizeof(exit_quicknote));
+    sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, exit_quicknote, sizeof(exit_quicknote));
     display_DelayClose(10000);
     G1_LOG_ERR("because startup auido record failed,exit quicknote ....\n");
     return -1;
@@ -361,7 +356,7 @@ int audioStreamFileManagerHandler(void) {
                      "recovery mechanism\n");
           uint8_t exit_quicknote[2] = {1, 0};
 
-          sync_to_slave(get_dashboard_state(), 6, exit_quicknote, sizeof(exit_quicknote));
+          sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, exit_quicknote, sizeof(exit_quicknote));
           display_DelayClose(10000);
           stop = 1;
         } else {
@@ -420,7 +415,7 @@ int audioStreamFileManagerHandler(void) {
         }
         VOICE_MGR->magic = VOICE_MANAGER_MAGIC;
         VOICE_MGR->reserved = 0;
-        VOICE_MGR->blocks[audio_block_num].state = VOICE_BLOCK_USED;
+        VOICE_MGR->blocks[audio_block_num].state = (uint32_t)VOICE_BLOCK_USED;
         VOICE_MGR->blocks[audio_block_num].start_addr = (audio_block_num * VOICE_BLOCK_SIZE) + VOICE_BLOCK_BASE;
         VOICE_MGR->blocks[audio_block_num].end_addr = (audio_block_num * VOICE_BLOCK_SIZE) + VOICE_BLOCK_BASE +
                                                       (audio_sector_count * VOICE_SECTOR_SIZE) + audio_cache_offset;

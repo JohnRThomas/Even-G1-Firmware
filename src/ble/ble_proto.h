@@ -20,11 +20,6 @@
 
 #include "ble_cmd.h"
 
-/* pkcs7 packet reassembly results */
-#define PKCS7_PACK_DONE 0xc9 /* last packet received */
-#define PKCS7_PACK_ERR  0xca
-#define PKCS7_PACK_MORE 0xcb /* more packets follow */
-
 /* destination buffers of parse_receiver_pack_pkcs7() and parse_receiver_msg_pack_pkcs7() */
 #define PKCS7_PACK_BUF_SIZE     0x1800
 #define PKCS7_MSG_PACK_BUF_SIZE 0x800
@@ -48,7 +43,7 @@
 
 /* request header handed to ble_process_req_dispatch() */
 struct ble_req_hdr {
-  uint8_t cmd;
+  uint8_t cmd; /* enum ble_cmd */
   uint8_t source;
   uint16_t len;
 };
@@ -135,15 +130,15 @@ extern uint8_t panoramic_map_buf[PANORAMIC_MAP_SIZE]; /* panoramic map / citywal
 
 /* ---- ble_proto.c ---- */
 int spim_transfer(struct ble_context *ctx, uint8_t *buf, uint32_t len);
-int parse_receiver_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint16_t req_len);
-int parse_receiver_msg_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint16_t req_len);
+enum ble_resp parse_receiver_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint16_t req_len);
+enum ble_resp parse_receiver_msg_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint16_t req_len);
 int ble_process_req_dispatch(struct ble_context *ctx, struct ble_req_hdr *hdr, uint8_t *data);
 int start_ble_work_thread(struct ble_context *ctx);
 int send_dmic_msg(struct ble_context *ctx);
 int send_debug_msg(struct ble_context *ctx);
 int deal_event_to_phone(struct ble_context *ctx, const uint8_t *evt);
 typedef void (*ble_send_fn_t)(uint8_t *buf, uint32_t len);
-int subcontracing_send_data_pkcs7(const uint8_t *data, int len, uint8_t cmd, ble_send_fn_t send);
+int subcontracing_send_data_pkcs7(const uint8_t *data, int len, enum ble_cmd cmd, ble_send_fn_t send);
 void ble_handle_rx_data(uint8_t *data, uint32_t len, int dump);
 
 #endif /* G1_BLE_PROTO_H_ */

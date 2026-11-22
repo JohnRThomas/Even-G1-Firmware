@@ -27,19 +27,19 @@ extern uint8_t fuel_gauge_stuck;          /* battery level stuck flag */
 extern uint8_t can_enter_low_power;
 extern uint8_t screen_switch_busy;          /* head gesture in progress */
 extern uint8_t push_msg_syncing;
-extern uint8_t last_ble_cmd;          /* pending 0xf5 event to phone (0xff: none) */
-extern uint8_t deferred_text_ack_cmd;
+extern enum ble_event last_ble_cmd;          /* pending 0xf5 event to phone */
+extern uint8_t deferred_text_ack_cmd;          /* enum ble_cmd, 0: none */
 extern uint8_t deferred_text_ack_idx;
 extern uint8_t deferred_text_ack_total;
 void update_activity_time(void);
 void exit_running_task(struct GlassesState *state, int notify);
 uint8_t get_wearing_state(void);
-uint8_t get_wear_state_event(void);
+enum ble_event get_wear_state_event(void);
 uint8_t get_glasses_ble_status(void);
 const struct device *get_charger_device(void);
-int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t len);
-unsigned int sync_to_master(struct GlassesState *state, int cmd, const void *data, size_t len);
-void report_event_to_phone(int cmd);
+int sync_to_slave(struct GlassesState *state, enum sync_cmd cmd, const void *data, size_t len);
+unsigned int sync_to_master(struct GlassesState *state, enum slave_cmd cmd, const void *data, size_t len);
+void report_event_to_phone(enum ble_event cmd);
 void exit_running_task_keep_status(struct GlassesState *state, int notify);
 void exit_temp_task(struct GlassesState *state, int flag);
 void exit_silent_mode(void);
@@ -71,20 +71,20 @@ int global_system_resume(struct GlassesState *state);
 
 /* task_status.c */
 extern uint8_t task_status_lock;
-uint8_t is_persist_task_active(struct GlassesState *state, int mode);
+uint8_t is_persist_task_active(struct GlassesState *state, enum screen_id mode);
 int is_task_running(const struct GlassesState *state);
-int update_persist_task_status(struct GlassesState *state, int task, int status);
-int update_temp_task_status(struct GlassesState *state, int task, int status);
+enum task_status update_persist_task_status(struct GlassesState *state, enum screen_id task, enum task_status status);
+enum task_status update_temp_task_status(struct GlassesState *state, enum screen_id task, enum task_status status);
 int update_persist_task_status_to_idle(struct GlassesState *state);
 int update_persist_task_status_to_wait_blow_head(struct GlassesState *state);
-bool task_uses_mic(int task);
+bool task_uses_mic(enum screen_id task);
 bool is_idle(void);
 
 /* message_task.c */
 extern uint8_t msg_busy;
 void set_msg_timeout_flag(void);
 uint8_t take_msg_timeout_flag(void);
-uint32_t get_msg_stay_time(int type, uint32_t def);
+uint32_t get_msg_stay_time(enum display_mode type, uint32_t def);
 int sync_message_signal_to_slave(uint8_t signal);
 int send_msg_key_to_master(void);
 void handle_msg_touch_key(void);

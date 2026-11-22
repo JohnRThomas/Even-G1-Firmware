@@ -17,29 +17,23 @@
 #include "../gui/gui.h"
 #include "../main.h"
 #include "g1_log.h"
-
-/* events passed to the ui_*_task() handlers (display_thread.h) */
-#define UI_EVT_REFRESH      0
-#define UI_EVT_ENTER        1
-#define UI_EVT_EXIT         2
-#define UI_EVT_DELAY_CLOSE  3
-#define UI_EVT_INPUT        4
-#define UI_EVT_MASTER_CLOSE 5
-#define UI_EVT_LOW_POWER    6
-#define UI_EVT_POWER_RESUME 7
-
-#define LANGUAGE_FRENCH  5
-#define LANGUAGE_GERMAN  6
-#define LANGUAGE_SPANISH 7
-#define LANGUAGE_ITALIAN 14
+#include "ui_event.h"
 
 /* canvas origin (depends on the panel position settings) */
 #define X0 gui_screen_x_offset()
 #define Y0 gui_screen_y_offset()
 
+/* state of the navigation page (struct nav_prv_data.state) */
+enum nav_state {
+  NAV_STATE_INIT = 0,          /* waiting for the first sync with the phone and for both maps */
+  NAV_STATE_RUNNING = 1,       /* the vendor's NAVIGATION_RUNNING_STATUS */
+  NAV_STATE_ABNORMAL_EXIT = 2, /* the phone stopped answering: "service lost" for 8 s, then the page closes */
+  NAV_STATE_ARRIVED = 3,
+};
+
 /* navigation private data, shared by the navigation task and the navigation_*_display() functions */
 struct nav_prv_data {
-  uint32_t state;                  /* 0 init, 1 running, 2 abnormal exit, 3 arrived */
+  uint32_t state;                  /* enum nav_state */
   uint8_t panoramic_shown;
   uint8_t overview_shown;
   uint8_t synced;                  /* init sync with the phone done */
@@ -49,7 +43,7 @@ struct nav_prv_data {
   uint8_t arrived_cleared;
   int64_t timeout;        /* auto exit delay after arrival */
   int64_t arrived_ts;
-  uint8_t imu_action;              /* 2 = panoramic map */
+  enum imu_attitude imu_action;    /* head up: panoramic map */
   uint8_t sync_cnt;       /* heart beat counter */
   int64_t ts;
 };
@@ -59,24 +53,24 @@ extern uint8_t quicknote_result_shown;
 void dmic_record_start(void);
 void quicknote_stop_record(void);
 void quicknote_timeout_reset(void);
-int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 int day_of_week(int year, int month, int day); /* day of week (Zeller) */
 void draw_countdown_running_status(uint8_t **fb, void *arg, int a, int b, int c);
 int draw_template_bitmap_page(struct jbd_panel_context *panel, void *arg);
 
 /* ui_even_ai.c */
 extern uint8_t even_ai_scrolling;
-int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 
 /* ui_bitmap.c */
-int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 void show_not_disturb_bitmap(uint8_t mode);
 int sync_not_disturb_bitmap(uint8_t mode);
 void request_not_disturb_bitmap(uint8_t mode);
 
 /* ui_teleprompter.c */
 void teleprompter_state_reset(void);
-int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 int draw_template_teleprompter_page(struct jbd_panel_context *panel, void *arg);
 
 /* ui_navigation_map.c */
@@ -91,12 +85,12 @@ void navigation_panoramic_map_display(const uint8_t *nav);
 int draw_template_navigation_page(struct jbd_panel_context *panel, void *arg);
 void nav_draw_service_lost(void);
 void nav_draw_route_generating(void);
-int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_navigation_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 
 /* ui_translate.c */
 int draw_template_translate_screen(struct jbd_panel_context *panel, void *arg);
 void translate_draw_hint_page(int which);
-int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_translate_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 
 /* ui_onboarding.c */
 extern uint8_t onboarding_shown_sub_step;             /* onboarding sub-step shown (slave_display_thread) */
@@ -105,7 +99,7 @@ void onboarding_request_redraw(void);
 void onboarding_draw_static_page(void);
 void onboarding_draw_animated_page(void);
 void onboarding_check_step_finished(void);
-int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 struct ble_req_hdr;
 int onboarding_ble_process(struct GlassesState *gs, const struct ble_req_hdr *hdr, const uint8_t *req, uint8_t *rsp);
 int onboarding_sync_data(const uint8_t *data, uint32_t len);
@@ -113,6 +107,6 @@ void onboarding_deactivate(void);
 
 /* ui_raster_height.c */
 void cal_panel_canvas_coord(int *horizontal_offset, int *vertical_offset);
-int ui_raster_height_task(struct jbd_panel_context *panel, void *arg, int event);
+int ui_raster_height_task(struct jbd_panel_context *panel, void *arg, enum ui_event event);
 
 #endif /* G1_UI_H_ */

@@ -25,14 +25,14 @@ enum proxy_msg_type {
 #define PROXY_MSG_DATA_MAX 20
 
 struct proxy_msg {
-  uint8_t type;
+  enum proxy_msg_type type;
   uint16_t len;
   uint8_t data[PROXY_MSG_DATA_MAX];
 };
 
 /* QuickNote voice block table at ext flash 0x400000 (see audio_stream.c) */
 struct proxy_voice_block {
-  uint32_t state;              /* 2 = recorded */
+  uint32_t state;              /* VOICE_BLOCK_FREE / VOICE_BLOCK_USED */
   uint32_t start_addr;
   uint32_t end_addr;
   int32_t timestamp;
@@ -54,7 +54,7 @@ int sendAudioStreamFileToApp(uint8_t cmd, uint8_t block);
 void proxy_thread_handler(void *p1, void *p2, void *p3);
 int requestAudioInfoToApp(uint8_t cmd);
 int SendPowerInfoToSlave(uint8_t on);
-int SendSystemLanguageInfoToSlave(uint8_t lang);
+int SendSystemLanguageInfoToSlave(enum language lang);
 int SendDashBoardStartupModeInfoToSlave(uint8_t mode);
 int SlaveDoubleClickEventInject(void);
 int SendDoubleTapCustomizeToSlave(uint8_t mode);

@@ -9,6 +9,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/toolchain.h>
 
+#include "../ble/ble_cmd.h"
 #include "../ble/ble_proto.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
@@ -84,7 +85,7 @@ static int send_notifi_app_white_list_app(struct ble_context *ctx, const char *a
   i = 0;
   while (i < total) {
     memset(&pkt[3], 0, 18);
-    pkt[0] = 0xf6;
+    pkt[0] = BLE_CMD_WHITELIST_APP_ADD;
     uint8_t n = (i < (total - 1)) ? 17 : last;
 
     pkt[1] = total;
@@ -138,7 +139,7 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, co
     strncpy(state->schedule_notif->title, (char *)data + 0x54, 16);
     strncpy(state->schedule_notif->desc, (char *)data + 0x94, 0x96);
     state->schedule_notif->ts = 0;
-    if (state->dashboard_mode == 0) {
+    if (state->dashboard_mode == SCREEN_IDLE) {
       state->schedule_notif_pending = 1;
     }
     G1_LOG_INF("schedule_notif#title:%s, desc:%s, ts:%d, date:%s\n", state->schedule_notif->title,
@@ -208,18 +209,18 @@ void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, 
     }
   }
   if (ncs_buf != NULL) {
-    int ret = parse_receiver_msg_pack_pkcs7((uint8_t *)ncs_buf, data, tx[2]);
+    enum ble_resp ret = parse_receiver_msg_pack_pkcs7((uint8_t *)ncs_buf, data, tx[2]);
 
-    rsp[1] = ret;
+    rsp[1] = (uint8_t)ret;
     rsp[2] = data[1];
-    if (ret == PKCS7_PACK_DONE) {
+    if (ret == BLE_RESP_OK) {
       if (parse_ncs_notification(ncs_buf, msg) == 0) {
         G1_LOG_INF("ncs data receive okay !\n\n");
         *(uint16_t *)&tx[2] = sizeof(struct notif_msg);
         spim_transfer(ctx, resp, 8);
-        rsp[1] = PKCS7_PACK_DONE;
+        rsp[1] = BLE_RESP_OK;
       } else {
-        rsp[1] = PKCS7_PACK_ERR;
+        rsp[1] = BLE_RESP_ERR;
       }
       free(ncs_buf);
       ncs_buf = NULL;
@@ -240,7 +241,7 @@ int get_notification_counts_cmd_response(const struct GlassesState *state, uint8
 
 void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, uint8_t *rsp) {
   spim_transfer(ctx, buf, 1);
-  rsp[1] = 0xc9;
+  rsp[1] = BLE_RESP_OK;
   rsp[2] = *buf;
   G1_LOG_INF("BLE_REQ_GET_ESB_CHANNEL: %d\n", rsp[2]);
   ctx->write(rsp, 0x14);
@@ -455,7 +456,7 @@ void confirm_message(uint32_t uid) {
     duplicate = true;
     goto drop_head;
   }
-  if (get_dashboard_state()->dashboard_mode != 4) {
+  if (get_dashboard_state()->dashboard_mode != SCREEN_NOTIFICATION) {
     clear_timeout_message(0);
   }
   count = count_messages();
@@ -521,7 +522,7 @@ drop_head:
     return;
   }
 
-  if (get_dashboard_state()->dashboard_mode != 4) {
+  if (get_dashboard_state()->dashboard_mode != SCREEN_NOTIFICATION) {
     clear_timeout_message(0);
   } else {
     get_dashboard_state()->unread_msg_num = count_unread_messages();
@@ -529,13 +530,13 @@ drop_head:
   if (action == 0) {
     uint8_t unread = find_last_read_message();
 
-    if (get_dashboard_state()->dashboard_mode == 4) {
+    if (get_dashboard_state()->dashboard_mode == SCREEN_NOTIFICATION) {
       if (unread != 0xff) {
         set_msg_timeout_flag();
       }
     } else if ((is_in_box() != 1) &&
-               ((get_dashboard_state()->dashboard_mode == 0) ||
-                (get_dashboard_state()->message_mode && get_dashboard_state()->dashboard_mode == 6)) &&
+               ((get_dashboard_state()->dashboard_mode == SCREEN_IDLE) ||
+                (get_dashboard_state()->message_mode && get_dashboard_state()->dashboard_mode == SCREEN_DASHBOARD)) &&
                cur_message_show_state() != 1) {
       msg_show_state = 1;
     } else {

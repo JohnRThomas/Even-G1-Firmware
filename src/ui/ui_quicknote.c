@@ -14,6 +14,7 @@
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "ui.h"
+#include "ui_event.h"
 
 /* quick note page private state */
 struct quicknote_prv_data {
@@ -49,10 +50,10 @@ void quicknote_timeout_reset(void) {
   quicknote_prv.timeout_cnt = 0;
 }
 
-int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
-  uint8_t lang = get_current_language();
+  enum language lang = get_current_language();
   struct quicknote_prv_data *qn = &quicknote_prv;
 
   set_frame_buffer(panel->panel_buffer);

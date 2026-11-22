@@ -20,7 +20,7 @@
 static struct {
   void *nfc;                       /* st25dv context */
   const struct device *uart;       /* lpuart */
-  uint8_t type;                    /* enum pt_comm_type */
+  enum pt_comm_type type;
 } pt_comm;
 
 #define PT_COMM_DEV() ((pt_comm.type == PT_COMM_NFC) ? pt_comm.nfc : (const void *)pt_comm.uart)

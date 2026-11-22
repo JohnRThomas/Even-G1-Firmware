@@ -1,11 +1,13 @@
 /*
  * UI page: raster height / canvas distance adjustment.
  */
+#include "../ble/ble_cmd.h"
 #include "../dashboard/dashboard.h"
 #include "../gui/gui.h"
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "ui.h"
+#include "ui_event.h"
 
 static int CURRENT_HORIZONTAL_OFFSET = -1;
 static int CURRENT_VERTICAL_OFFSET = -1;
@@ -62,7 +64,7 @@ void cal_panel_canvas_coord(int *horizontal_offset, int *vertical_offset) {
   }
 }
 
-int ui_raster_height_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_raster_height_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   int horizontal_offset = -1;
   int vertical_offset = -1;
 
@@ -83,7 +85,7 @@ int ui_raster_height_task(struct jbd_panel_context *panel, void *arg, int event)
       get_dashboard_state()->panel.current_column = vertical_offset;
       get_dashboard_state()->dashboard_ts->dashboard_on = 1;
       ui_DashBoard_task(panel, arg, UI_EVT_ENTER);
-      get_dashboard_state()->dashboard_cmd = 0x26;
+      get_dashboard_state()->dashboard_cmd = BLE_CMD_HARDWARE_SET;
       k_sem_give(&get_dashboard_state()->dashboard_position_sem);
     }
   }

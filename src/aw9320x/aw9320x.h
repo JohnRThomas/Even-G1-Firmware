@@ -23,41 +23,17 @@ extern "C" {
 typedef int32_t (*aw9320x_i2c_w_t)(uint8_t *, uint32_t);
 typedef int32_t (*aw9320x_i2c_r_t)(uint8_t *, uint8_t, uint8_t *, uint32_t);
 typedef void (*aw9320x_irq_init_t)(void (*)(void));
-typedef void (*aw9320x_create_thread_t)(void (*)(void));
-typedef void (*aw9320x_set_signal_t)(uint32_t);
-typedef uint32_t (*aw9320x_wait_signal_forever_t)(void);
 typedef void (*aw9320x_delay_t)(uint32_t);
-
-typedef void (*aw9320x_spp_write_t)(uint8_t *buf, uint16_t length);
-typedef void (*aw9320x_spp_init_t)(void (*)(uint8_t *, uint16_t));
 
 struct aw9320x_i2c_func {
   aw9320x_i2c_r_t i2c_r;
   aw9320x_i2c_w_t i2c_w;
 };
 
-struct aw9320x_spp_func {
-  aw9320x_spp_write_t spp_write;
-  aw9320x_spp_init_t spp_init;
-};
-
-struct aw9320x_thread_func {
-  aw9320x_create_thread_t create_thread;
-  aw9320x_set_signal_t set_signal;
-  aw9320x_wait_signal_forever_t wait_signal_forever;
-};
-
 struct aw9320x_func {
   struct aw9320x_i2c_func i2c_func;
   aw9320x_irq_init_t irq_init;
-#ifdef AW_OS_USED
-  struct aw9320x_thread_func irq_thread_func;
-#endif
   aw9320x_delay_t delay;
-#if defined(AW_SPP_USED) && defined(AW_OS_USED)
-  struct aw9320x_spp_func spp_func;
-  struct aw9320x_thread_func work_thread_func;
-#endif
 };
 #define AW_SPP_SEND_BUF_MAX_SIZE (255)
 #define AW_SPP_PACK_END_LEN      (10)
@@ -191,7 +167,7 @@ struct check_info {
 };
 
 struct aw_update_common {
-  uint8_t update_flag;
+  enum AW9320X_UPDATE_MODE update_flag;
   const uint8_t *w_bin_offset;
   uint32_t update_data_len;
   uint32_t flash_tr_start_addr;
@@ -267,11 +243,6 @@ struct aw_fw_load_info {
 #define AW_COMPARE_VERSION_LOAD (0)
 #define AW_DIRECT_LOAD          (1)
 #define AW9320X_SRAM_ERROR_CODE (0x1c00)
-enum AW9320X_FLASH_ADDR {
-  FLASH_ADDR_BOOT,
-  FLASH_ADDR_FW,
-};
-
 enum AW9320X_CMP_VAL {
   AW9320X_VER_EQUAL,
   AW9320X_VER_NOT_EQUAL,
@@ -290,37 +261,9 @@ enum AW_UPDATE_COMMAND {
   UPDATE_RESTORE_FLASHBT_CMD,
 };
 
-enum AW_UPDATE_COMMAND_ACK {
-  UPDATE_START_CMD_ACK = 0X01,
-  UPDATE_RANSFER_CMD_ACK,
-  UPDATE_STOP_CMD_ACK,
-  UPDATE_RESTORE_FLASHBT_CMD_ACK,
-};
-
 enum AW_FLASH_COMMAND {
   FLASH_ERASE_CHIP_CMD = 0X01,
   FLASH_ERASE_SECTOR_CMD,
-};
-
-enum AW_FLASH_COMMAND_ACK {
-  FLASH_ERASE_CHIP_CMD_ACK = 0X01,
-  FLASH_ERASE_SECTOR_CMD_ACK,
-};
-
-enum AW_QUERY_COMMAND {
-  QUERY_BT_VER_CMD = 0X01,
-  QUERY_BT_DATE_CMD,
-  QUERY_ERR_CODE_CMD,
-  QUERY_PST_CMD,
-  QUERY_CACHE_CMD,
-};
-
-enum AW_QUERY_COMMAND_ACK {
-  QUERY_BT_VER_CMD_ACK = 0X01,
-  QUERY_BT_DATE_CMD_ACK,
-  QUERY_ERR_CODE_CMD_ACK,
-  QUERY_PST_CMD_ACK,
-  QUERY_CACHE_CMD_ACK,
 };
 
 struct aw_soc_protocol {
@@ -341,7 +284,8 @@ struct aw_soc_protocol {
 #define AW9320X_DIFF_PROX_MIN (0)
 #define AW9320X_DIFF_PROX_MAX (1000000)
 
-enum aw9320x_err_code {
+/* status codes; the driver's functions return them negated */
+enum {
   AW_OK,
   AW_ERR,
   AW_ERR_IRQ_INIT,
@@ -349,21 +293,12 @@ enum aw9320x_err_code {
   AW_ERR_CHIPID,
 };
 
-enum aw_i2c_flags {
-  I2C_WR,
-  I2C_RD,
-};
-
-enum AW9320X_CHIP_ID_VALUE {
+/* values of REG_CHIPID */
+enum {
   AW93203CSR_CHIP_ID = 0x20223203,
   AW93205DNR_CHIP_ID = 0x20223205,
   AW93208CSR_CHIP_ID = 0x20223207,
   AW93208_CHIP_ID = 0x20226208,
-};
-
-enum recover_flag {
-  REG_UPDATE_RECOVER,
-  INIT_RECOVER,
 };
 
 enum AW9320X_OPERAION_MODE {
@@ -371,32 +306,6 @@ enum AW9320X_OPERAION_MODE {
   AW9320X_SLEEP_MODE,
   AW9320X_DEEPSLEEP_MODE,
   AW9320X_MODE_ERR,
-};
-
-enum AW9320X_UPDATE_FW_MODE {
-  AGREEMENT_UPDATE_FW,
-  REG_UPDATE_FW,
-};
-
-enum AW9320X_HOST_IRQ_STAT {
-  IRQ_ENABLE,
-  IRQ_DISABLE,
-};
-
-struct aw_channels_info {
-  uint8_t used;
-  uint32_t last_channel_info;
-  struct input_dev *input;
-  uint8_t name[20];
-};
-
-struct aw_awrw_info {
-  uint8_t rw_flag;
-  uint8_t addr_len;
-  uint8_t data_len;
-  uint8_t reg_num;
-  uint32_t i2c_tranfar_data_len;
-  uint8_t *p_i2c_tranfar_data;
 };
 
 enum AW_UPDATE_FW_STATE {
@@ -409,7 +318,8 @@ enum AW_UPDATE_FW_STATE {
   SEND_STOP_CMD,
 };
 
-enum AW_PROT_UPDATE_FW_DELAY_TIME {
+/* wait after each step of the protocol update, in ms */
+enum {
   SEND_UPDTAE_CMD_DELAY_MS = 1,
   SEND_START_CMD_DELAY_MS = 3,
   SEND_ERASE_SECTOR_CMD_DELAY_MS = 6,
@@ -419,7 +329,8 @@ enum AW_PROT_UPDATE_FW_DELAY_TIME {
   SEND_STOP_CMD_DELAY_MS = 25,
 };
 
-enum AW_PROT_RECV_LEN {
+/* length of the reply value of each step of the protocol update */
+enum {
   SEND_START_CMD_RECV_LEN = 8,
   SEND_ERASE_CHIP_CMD_RECV_LEN = 4,
   SEND_UPDATE_FW_CMD_RECV_LEN = 8,
@@ -454,7 +365,6 @@ enum AW_PROT_RECV_LEN {
 #define AW_SAR_DATA_LEN    (32) // data len : 32bits
 #define AW_CURVE_DATA_LEN  (48) // curve len : 32bits
 #define AW_COMM_CYCLE      (90)
-#define DATA_MAX_LEN       (512)
 #define AW_SPP_REG_MAX_NUM (10)
 #define SAR_REG_DATA_LEN   (4)
 #define SAR_APP_CURVE_CNT  (4)
@@ -489,123 +399,7 @@ enum AW_PROT_RECV_LEN {
 #define AW_ERASE_SECTOR_CNT              (64 - 1)
 #define AW9320X_CURVER_LEN               (12)
 
-enum aw9320x_bit {
-  AW_BIT0,
-  AW_BIT1,
-  AW_BIT2,
-  AW_BIT3,
-  AW_BIT7 = 7,
-  AW_BIT8 = 8,
-  AW_BIT16 = 16,
-  AW_BIT24 = 24,
-  AW_BIT28 = 28,
-  AW_BIT32 = 32,
-};
-
-enum {
-  AW_APP_CMD_GET_DEVICE_INFO = 0x00,
-  AW_APP_CMD_GET_CURVE_DATA = 0x01,
-  AW_APP_CMD_READ_REG = 0x02,
-  AW_APP_CMD_WRITE_REG = 0x03,
-  AW_APP_CMD_GET_ALGO_PARA = 0x04,
-  AW_APP_CMD_SET_ALGO_PARA = 0x05,
-  AW_APP_CMD_IRQ_STATE_INPUT = 0x06,
-  AW_APP_CMD_IRQ_EVENT_INPUT = 0x07,
-
-  AW_APP_CMD_OFFSET_CALI = 0xa0,
-  AW_APP_CMD_DIFF_TO_AIR = 0xa1,
-  AW_APP_CMD_DIFF_APPROACH = 0xa2,
-  AW_APP_CMD_SHORT_CIRCUIT = 0xa3,
-  AW_APP_CMD_SET_DIFF_TH = 0xa4,
-};
-
-typedef enum {
-  APK_VALID_DATA_HEADER = 3,
-  APK_VALID_DATA_HEADER_V1 = 4,
-  APK_HEADER = 0x3A,
-  OFFSET = 0x82,
-  NOISE,
-  SIGNAL_RAW_0,
-  SIGNAL_RAW_1,
-  VERIFY_0,
-  VERIFY_1,
-  DYNAMIC_CALI = 0x8C,
-  APK_END0 = 0x0D,
-  APK_END1 = 0x0A,
-} CALI_FLAG_T;
-
-enum aw9320x_word {
-  AW_BIT_0_1_EN = 0x03,
-  AW_ONE_BYTE_1 = 0xff,
-  AW_BIT_10_EN = 0x00000400,
-  AW_BIT_11_EN = 0x00000800,
-  AW_BIT_12_EN = 0x00001000,
-  AW_HALF_WORD_1 = 0xffff,
-  AW_THREE_BYTE_1 = 0xffffff,
-  AW_ONE_WORD_1 = 0xffffffffU,
-};
-
-typedef struct aw_app_prf {
-  uint8_t cmd;
-  uint8_t dat[DATA_MAX_LEN];
-  uint8_t len;
-} aw_app_prf_t;
-
-struct aw_bt_and_fw_info {
-  uint8_t update_flag;
-  uint32_t fw_bin_version;
-  uint32_t fw_version;
-  uint32_t fw_checksum;
-
-  uint32_t bt_version;
-  uint32_t bt_date;
-  uint32_t bt_checksum;
-  uint32_t bt_bin_version;
-};
-
 #define SLIDE_STORE_BIT (7)
-struct cap_event_status {
-  uint8_t single_click;
-  uint8_t double_click;
-  uint8_t triple_click;
-  uint8_t long_press;
-  uint8_t super_long_press;
-  uint8_t left_wareds;
-  uint8_t right_wareds;
-  uint8_t wear;
-  uint8_t up_wareds;
-  uint8_t down_wareds;
-  uint8_t event_backup1;
-  uint8_t event_backup2;
-
-  uint8_t irq_trigger;
-  uint8_t long_press_leave;
-  uint8_t prox_stat_th_0;
-  uint8_t prox_stat_th_1;
-  int32_t slide_distance;
-};
-
-enum AW93312_EVENT_LIST {
-  SINGLE_CLICK = 0,
-  DOUBLE_CLICK,
-  TRIPLE_CLICK,
-  LONG_PRESS,
-  SUPER_LONG_PRESS,
-  LEFT_WAREDS,
-  RIGHT_WAREDS,
-  WEAR,
-  UP_WAREDS,
-  DOWN_WAREDS,
-  EVENT_BACKUP1,
-  EVENT_BACKUP2,
-};
-
-enum aw9320x_irq_porx_position {
-  TRIGGER_FAR,
-  TRIGGER_TH0,
-  TRIGGER_TH1 = 0x03,
-};
-
 /* G1: wear state reported by the AW93203 interrupt status */
 typedef enum aw9320x_WEARING {
   UNKNOWN = 0,

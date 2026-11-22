@@ -217,10 +217,6 @@
 
 #define REG_NVR_CHIPID_ADDR 0x4190
 
-struct aw_reg_data {
-  unsigned char rw;
-  unsigned short reg;
-};
 /********************************************
  * Register Access
  *******************************************/

@@ -3,6 +3,7 @@
  * stores) and the storage commit thread (settings commit, file download
  * into the external flash).
  */
+#include "../ble/ble_cmd.h"
 #include "../main.h"
 #include "../notify/demo_image.h"
 #include "../sensors_audio/sensors_audio.h"
@@ -164,11 +165,11 @@ void try_to_save_file(struct GlassesState *gs) {
     if (addr == DEMO_IMAGE_ADDR) {
       file_type = addr;
       get_dashboard_state()->dash_buf->type = 0x0c;
-      if (get_dashboard_state()->task_status->task != 0x10U) {
+      if (get_dashboard_state()->task_status->task != (uint32_t)SCREEN_EVEN_AI) {
         if (gs->dash_buf->data[0] == 0) {
           gs->dash_buf->data[0] = 10;
         }
-        update_persist_task_status(get_dashboard_state(), 0x10, 2);
+        update_persist_task_status(get_dashboard_state(), SCREEN_EVEN_AI, TASK_RUNNING);
       }
     }
     memcpy(file_buf + file_buf_len, &msg.data[5], len - 5);
@@ -209,32 +210,32 @@ static void storage_commit_thread(void *p1, void *p2, void *p3) {
       try_to_save_file(gs);
       saved = true;
     }
-    if ((gs->dashboard_cmd == 0x15) || saved) {
+    if ((gs->dashboard_cmd == (int32_t)BLE_CMD_FILE_UPLOAD) || saved) {
       continue;
     }
     switch (gs->dashboard_cmd) {
-      case 1:
+      case BLE_CMD_BRIGHTNESS_SET:
         gs->store.write("brightness_level", &gs->panel.panel_brightness_level, sizeof(uint8_t));
         break;
-      case 2:
+      case BLE_CMD_ANTI_SHAKE_SET:
         gs->store.write("3dof_enable", &gs->imu.dof3_enable, sizeof(uint8_t));
         break;
-      case 3:
+      case BLE_CMD_SILENT_MODE_SET:
         gs->store.write("display_mode", &gs->display_mode, sizeof(uint8_t));
         break;
-      case 7:
+      case BLE_CMD_COUNTDOWN_TIMER:
         gs->store.write("countdown_ts", gs->countdown_ts, sizeof(struct countdown_ts_context));
         break;
-      case 6:
+      case BLE_CMD_DASHBOARD_SET:
         gs->store.write("dashboard_ts", gs->dashboard_ts, sizeof(struct dashboard_ts_context));
         break;
-      case 8:
+      case BLE_CMD_HEAD_UP_ACTION_SET:
         gs->store.write("user_sched_info", gs->user_sched_info, sizeof(struct user_schedule_context));
         break;
-      case 0x0b:
+      case BLE_CMD_HEAD_UP_ANGLE_SET:
         gs->store.write("wakeup_angle", &gs->imu.level, sizeof(uint8_t));
         break;
-      case 0x16:
+      case BLE_CMD_BITMAP_SHOW:
         if (file_type == DEMO_IMAGE_ADDR) {
           get_demo_image_source_from_flash();
           if (get_dashboard_state()->is_master == 1) {
@@ -248,7 +249,7 @@ static void storage_commit_thread(void *p1, void *p2, void *p3) {
         LAST_FILE_CRC = 0;
         file_addr = 0;
         continue;
-      case 0x17:
+      case BLE_CMD_UPGRADE_CONTROL:
         exit_running_task(gs, 0);
         change_work_mode(1);
         continue;
@@ -256,7 +257,7 @@ static void storage_commit_thread(void *p1, void *p2, void *p3) {
       case 0x1a:
         force_sys = 1;
         break;
-      case 0x11:
+      case BLE_CMD_SHIP_MODE:
         k_sleep(K_SECONDS(10));
         change_work_mode(7);
         /* fallthrough */

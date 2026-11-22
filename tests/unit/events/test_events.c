@@ -91,7 +91,7 @@ ZTEST(events, test_events_without_payload_are_f5_id_and_zeros_21_bytes) {
   char hex[8];
 
   for (size_t index = 0; index < ARRAY_SIZE(ids); index++) {
-    report(ids[index], PKCS7_PACK_MORE);
+    report(ids[index], BLE_RESP_MORE);
     snprintf(hex, sizeof(hex), "f5 %02x", ids[index]);
     expect_frame_padded(hex, F5_FRAME_LEN);
   }
@@ -137,32 +137,32 @@ ZTEST(events, test_battery_event_ignores_the_charging_byte_of_the_packet) {
 
 ZTEST(events, test_case_charging_event_0x0e_carries_get_pt_level_flag) {
   get_pt_level_flag_fake.return_val = 1;
-  report(0x0e, PKCS7_PACK_MORE);
+  report(0x0e, BLE_RESP_MORE);
   expect_frame_padded("f5 0e 01", F5_FRAME_LEN);
 
   get_pt_level_flag_fake.return_val = 0;
-  report(0x0e, PKCS7_PACK_MORE);
+  report(0x0e, BLE_RESP_MORE);
   expect_frame_padded("f5 0e 00", F5_FRAME_LEN);
   zassert_equal(get_pt_level_flag_fake.call_count, 2);
 }
 
 ZTEST(events, test_case_battery_event_0x0f_carries_get_pt_level) {
   get_pt_level_fake.return_val = 0x28;
-  report(0x0f, PKCS7_PACK_MORE);
+  report(0x0f, BLE_RESP_MORE);
   expect_frame_padded("f5 0f 28", F5_FRAME_LEN);
 
   get_pt_level_fake.return_val = 0x64;
-  report(0x0f, PKCS7_PACK_MORE);
+  report(0x0f, BLE_RESP_MORE);
   expect_frame_padded("f5 0f 64", F5_FRAME_LEN);
 }
 
 ZTEST(events, test_brightness_event_0x12_carries_the_panel_brightness_level) {
   g1_state()->panel.panel_brightness_level = 6;
-  report(0x12, PKCS7_PACK_MORE);
+  report(0x12, BLE_RESP_MORE);
   expect_frame_padded("f5 12 06", F5_FRAME_LEN);
 
   g1_state()->panel.panel_brightness_level = 0x0c;
-  report(0x12, PKCS7_PACK_MORE);
+  report(0x12, BLE_RESP_MORE);
   expect_frame_padded("f5 12 0c", F5_FRAME_LEN);
 }
 
@@ -177,7 +177,7 @@ ZTEST(events, test_brightness_event_0x12_carries_the_panel_brightness_level) {
     g1_state()->esb_up_id = (up_id);                                                                                   \
     deferred_text_ack_total = (total);                                                                                 \
     deferred_text_ack_idx = (index);                                                                                   \
-    report((event), PKCS7_PACK_MORE);                                                                                  \
+    report((event), BLE_RESP_MORE);                                                                                    \
     expect_only_frame_padded((ack), F5_FRAME_LEN);                                                                     \
   }
 DEFERRED_ACK_TEST(0xf0_is_0d_c9_seq_count_index_from_esb_down_id, 0xf0, 0x01, 0x77, 1, 0, "0d c9 01 01 00")
@@ -190,14 +190,14 @@ ZTEST(events, test_deferred_acks_clear_the_kept_count_and_index) {
   for (size_t index = 0; index < ARRAY_SIZE(ids); index++) {
     deferred_text_ack_total = 5;
     deferred_text_ack_idx = 4;
-    report(ids[index], PKCS7_PACK_MORE);
+    report(ids[index], BLE_RESP_MORE);
     zassert_equal(deferred_text_ack_total, 0, "after 0x%02x: total %u", ids[index], deferred_text_ack_total);
     zassert_equal(deferred_text_ack_idx, 0, "after 0x%02x: idx %u", ids[index], deferred_text_ack_idx);
   }
 
   g1_frames_clear();
   g1_state()->esb_down_id = 9;
-  report(0xf0, PKCS7_PACK_MORE);
+  report(0xf0, BLE_RESP_MORE);
   expect_frame_padded("0d c9 09 00 00", F5_FRAME_LEN);
 }
 

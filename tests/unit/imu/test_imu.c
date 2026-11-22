@@ -11,7 +11,7 @@
 
 /* what imu_fusion.c uses outside the common fakes */
 FAKE_VOID_FUNC(exit_temp_task, struct GlassesState *, int);
-FAKE_VALUE_FUNC(uint8_t, is_persist_task_active, struct GlassesState *, int);
+FAKE_VALUE_FUNC(uint8_t, is_persist_task_active, struct GlassesState *, enum screen_id);
 FAKE_VALUE_FUNC(int, get_work_mode);
 atomic_t dashboard_lock_requested;
 atomic_t dashboard_lock_reported;

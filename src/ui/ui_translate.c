@@ -14,6 +14,7 @@
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "ui.h"
+#include "ui_event.h"
 
 #define TRANS_LANG_NUM 25
 
@@ -23,7 +24,7 @@ static const char *trans_lang_name[TRANS_LANG_NUM] = {
 };
 
 static struct {
-  uint8_t state;
+  enum ui_page_state state;
   uint8_t entered;
   uint8_t suspend_en;
   uint16_t hour;                   /* last drawn clock */
@@ -66,20 +67,20 @@ int draw_template_translate_screen(struct jbd_panel_context *panel, void *arg) {
 }
 
 void translate_draw_hint_page(int which) {
-  uint8_t lang = get_current_language();
+  enum language lang = get_current_language();
   int x;
 
   gui_screen_clear();
   if (which == 0) {
     switch (lang) {
-      case 5:
+      case LANGUAGE_FRENCH:
         x = 0x7a;
         break;
-      case 6:
+      case LANGUAGE_GERMAN:
         x = 0x6e;
         break;
-      case 7:
-      case 14:
+      case LANGUAGE_SPANISH:
+      case LANGUAGE_ITALIAN:
         x = 0x7e;
         break;
       default:
@@ -90,16 +91,16 @@ void translate_draw_hint_page(int which) {
     gui_utf_draw(0, get_string(0x54), 0, X0 + x + 0x2c, Y0 + 0x36, X0 + 0x240, Y0 + 0x88, 3, 0, 0, NULL, 0);
   } else if (which == 1) {
     switch (lang) {
-      case 5:
+      case LANGUAGE_FRENCH:
         x = 0x38;
         break;
-      case 6:
+      case LANGUAGE_GERMAN:
         x = 0x28;
         break;
-      case 7:
+      case LANGUAGE_SPANISH:
         x = 0x32;
         break;
-      case 14:
+      case LANGUAGE_ITALIAN:
         x = 0x20;
         break;
       default:
@@ -113,7 +114,7 @@ void translate_draw_hint_page(int which) {
   }
 }
 
-int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_translate_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   int done = 0;
   struct GlassesState *gs = get_dashboard_state();
@@ -122,7 +123,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
   set_showing_notification_on_gui();
 
   switch (trans_ui.state) {
-    case 0:
+    case UI_PAGE_INIT:
       if (event == UI_EVT_ENTER) {
         if (trans_ui.entered) {
           return 0;
@@ -144,7 +145,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
         text_anim.f_18 = 0;
         text_anim.f_04 = 0;
         text_anim.f_10 = 0;
-        trans_ui.state = 1;
+        trans_ui.state = UI_PAGE_RUNNING;
         trans_ui.entered = 1;
         gui_dynamic_bitmap_reset();
         clear_showing_notification_on_gui();
@@ -192,7 +193,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
       gui_screen_clear();
       done = 1;
       break;
-    case 1:
+    case UI_PAGE_RUNNING:
       break;
     default:
       return 0;

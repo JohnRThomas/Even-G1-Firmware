@@ -13,11 +13,12 @@
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "ui.h"
+#include "ui_event.h"
 
 #define EVEN_AI_TEXT_MAX 0x1e0
 
 struct even_ai_prv_data {
-  uint8_t state;            /* 0 init, 1 running */
+  enum ui_page_state state;
   uint8_t entered;
 };
 
@@ -104,10 +105,10 @@ static void even_ai_reset(void) {
   memset(&even_ai_prv, 0, sizeof(even_ai_prv));
 }
 
-int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
-  uint8_t lang = get_current_language();
+  enum language lang = get_current_language();
   uint8_t **fb = panel->panel_buffer;
   const char *listening_str;
   const char *offline_str;
@@ -116,7 +117,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
     even_ai_page = -1;
   }
   switch (lang) {
-    case 4:
+    case LANGUAGE_KOREAN:
       listening_str = even_ai_strings[EVEN_AI_LISTENING_EN];
       offline_str = even_ai_strings[EVEN_AI_OFFLINE_KO];
       break;
@@ -145,7 +146,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
   set_showing_notification_on_gui();
 
   switch (even_ai_prv.state) {
-    case 0:
+    case UI_PAGE_INIT:
       if (event == UI_EVT_ENTER) {
         memset(even_ai_text, 0, sizeof(even_ai_text));
         G1_LOG_ERR("ENTER evenai INIT process...\n");
@@ -168,7 +169,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
         text_anim.f_04 = 0;
         text_anim.f_10 = 0;
         even_ai_prv.entered = 1;
-        even_ai_prv.state = 1;
+        even_ai_prv.state = UI_PAGE_RUNNING;
         gui_dynamic_bitmap_reset();
         clear_showing_notification_on_gui();
         for (int i = 0; i < 8; i++) {
@@ -220,7 +221,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
       }
       break;
 
-    case 1: {
+    case UI_PAGE_RUNNING: {
       const uint8_t *ai = &gs->ui.ai.status;
 
       if (event == UI_EVT_ENTER) {

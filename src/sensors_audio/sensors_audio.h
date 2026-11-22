@@ -65,6 +65,12 @@ int dmic_stream_start(void);
 int erase_audio_buffer(void);
 
 /* audio_stream.c */
+/* state of a QuickNote voice block in the manager sector of the ext flash (a 32-bit field there) */
+enum {
+  VOICE_BLOCK_FREE = 0,
+  VOICE_BLOCK_USED = 2,      /* holds a recording */
+};
+
 extern struct k_msgq audio_stream_msgq;
 int clearAudioMessageQueue(void);
 int sendAudioStram2Cache(const void *data);

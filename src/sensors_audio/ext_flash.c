@@ -8,25 +8,22 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/util_macro.h>
 
 #include "../main.h"
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "sensors_audio.h"
 
-#define EXT_FLASH_MODULE_ON BIT(4)
-
 /* power hooks of the flash module (main.c) */
 #define EXT_FLASH_POWER_ON(gs)                                                                                         \
   do {                                                                                                                 \
-    if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) {                                                                  \
+    if (!((gs)->module_mask & (uint16_t)WORK_MODULE_EXT_FLASH)) {                                                      \
       ext_flash_power_up();                                                                                            \
     }                                                                                                                  \
   } while (0)
 #define EXT_FLASH_POWER_OFF(gs)                                                                                        \
   do {                                                                                                                 \
-    if (!((gs)->module_mask & EXT_FLASH_MODULE_ON)) {                                                                  \
+    if (!((gs)->module_mask & (uint16_t)WORK_MODULE_EXT_FLASH)) {                                                      \
       ext_flash_power_down();                                                                                          \
     }                                                                                                                  \
   } while (0)

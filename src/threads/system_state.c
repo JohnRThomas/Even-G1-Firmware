@@ -26,7 +26,7 @@ int trigger_screen_state_change(const char *who, struct GlassesState *state, uin
 int set_imu_on_state(struct GlassesState *state, uint32_t on) {
   if (state->imu.on != on) {
     state->imu.on = on;
-    if ((state->display_mode == 10) && on && !state->imu_busy) {
+    if ((state->display_mode == DISPLAY_MODE_NORMAL) && on && !state->imu_busy) {
       state->imu_event = 1;
       k_sem_give(&state->imu_sem);
     }

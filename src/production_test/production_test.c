@@ -1478,13 +1478,13 @@ int pt_resp_checksum(uint8_t **resp, uint8_t *resp_len) {
   return 0;
 }
 
-int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len, void *arg) {
+int process_pt_protocol(enum pt_comm_type type, const uint8_t *req, uint32_t req_len, uint8_t **resp, uint8_t *resp_len,
+                        void *arg) {
   uint8_t hdr[12];
   uint8_t *p;
   int i;
   int ret = 0;
 
-  // cppcheck-suppress [misra-c2012-10.4] ; the transport type arrives as an int (see pt_comm.c)
   if ((req == NULL) || (req_len == 0U) || (resp == NULL) || (resp_len == NULL) || (type == PT_COMM_NONE)) {
     printk("process_pt_protocol para is error\n");
     return -1;
@@ -1508,10 +1508,8 @@ int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t 
     ret = 0;
   }
 
-  // cppcheck-suppress [misra-c2012-10.4] ; the transport type arrives as an int (see pt_comm.c)
   if (type == PT_COMM_NFC) {
     ret = pt_resp_checksum(resp, resp_len);
-    // cppcheck-suppress [misra-c2012-10.4] ; the transport type arrives as an int (see pt_comm.c)
   } else if (type == PT_COMM_UART) {
     uint8_t len = *resp_len;
 
@@ -1927,8 +1925,9 @@ void aging_charge_test(int interval) {
 
   if (aging_phase == 1) {
     if ((get_dashboard_state()->aging_elapsed_s >= 300U) &&
-        ((get_dashboard_state()->panel.init_done == 1U) || (get_dashboard_state()->dashboard_mode == 3) ||
-         (get_dashboard_state()->suspend_state == 0) || (line_buf != 0))) {
+        ((get_dashboard_state()->panel.init_done == 1U) ||
+         (get_dashboard_state()->dashboard_mode == SCREEN_DEMO_IMAGE) || (get_dashboard_state()->suspend_state == 0) ||
+         (line_buf != 0))) {
       enter_silent_mode();
     }
     if (get_dashboard_state()->battery_left > 96) {
@@ -1944,8 +1943,9 @@ void aging_charge_test(int interval) {
     int t;
     int i;
 
-    if ((get_dashboard_state()->panel.init_done != 1U) || (get_dashboard_state()->dashboard_mode != 3) ||
-        (get_dashboard_state()->suspend_state == 1) || (line_buf == 0)) {
+    if ((get_dashboard_state()->panel.init_done != 1U) ||
+        (get_dashboard_state()->dashboard_mode != SCREEN_DEMO_IMAGE) || (get_dashboard_state()->suspend_state == 1) ||
+        (line_buf == 0)) {
       exit_silent_mode();
     }
     if (get_dashboard_state()->battery_left <= 70) {
@@ -1994,8 +1994,9 @@ void aging_charge_test(int interval) {
       /* nothing to do */
     }
   } else {
-    if ((get_dashboard_state()->panel.init_done != 1U) || (get_dashboard_state()->dashboard_mode != 3) ||
-        (get_dashboard_state()->suspend_state == 1) || (line_buf == 0)) {
+    if ((get_dashboard_state()->panel.init_done != 1U) ||
+        (get_dashboard_state()->dashboard_mode != SCREEN_DEMO_IMAGE) || (get_dashboard_state()->suspend_state == 1) ||
+        (line_buf == 0)) {
       exit_silent_mode();
     }
   }

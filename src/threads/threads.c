@@ -5,6 +5,7 @@
 #include "threads.h"
 #include "../aw9320x/aw9320x.h"
 #include "../ble/ble_ancs.h"
+#include "../ble/ble_cmd.h"
 #include "../button/button.h"
 #include "../dashboard/dashboard.h"
 #include "../display/display_thread.h"
@@ -41,7 +42,9 @@
 #include <zephyr/toolchain.h>
 
 #define CHARGER_DEV DEVICE_DT_GET(DT_NODELABEL(pmic_charger))
-uint8_t deferred_text_ack_cmd;   /* 0x0d / 0x0f / 0x4e whose last-packet ack waits for the display refresh */
+/* enum ble_cmd of the text packet (translate source / translated text, Text Set) whose last-packet ack waits for the
+ * display refresh, 0: none */
+uint8_t deferred_text_ack_cmd;
 uint8_t deferred_text_ack_total;
 uint8_t deferred_text_ack_idx;
 uint8_t push_msg_syncing;
@@ -85,10 +88,10 @@ static int date_idx;
 static int date_cnt;
 static int sw0_low_count;
 
-uint8_t last_ble_cmd = 0xff;
-static uint8_t wear_state_event = 0xff;       /* last wear/case event sent (6/7/8/0x0b), GET 0x2B state code */
+enum ble_event last_ble_cmd = BLE_EVT_NONE;
+static enum ble_event wear_state_event = BLE_EVT_NONE; /* last wear/case event sent, GET 0x2B state code */
 uint8_t watchdog_enabled = 1;
-static uint8_t esb_last_cmd = 0x13;
+static enum sync_cmd esb_last_cmd = SYNC_CMD_NONE;
 static uint8_t last_bind_state = 0xff;
 static uint8_t last_box_soc = 0xff;
 static uint8_t last_box_status = 0xff;
@@ -152,7 +155,7 @@ void exit_running_task(struct GlassesState *state, int notify) {
     state->quicknote_show_info->enable = 0;
     changed = true;
   }
-  if (state->dashboard_mode == 6) {
+  if (state->dashboard_mode == SCREEN_DASHBOARD) {
     dmic_stream_stop();
     state->dashboard_ts->dashboard_on = 0;
     changed = true;
@@ -160,7 +163,7 @@ void exit_running_task(struct GlassesState *state, int notify) {
   if (state->dashboard_ts->exit_pending == 1) {
     state->dashboard_ts->exit_pending = 2;
   }
-  if (state->dashboard_mode == 4) {
+  if (state->dashboard_mode == SCREEN_NOTIFICATION) {
     changed = true;
   }
   if (state->onboarding->active) {
@@ -202,7 +205,7 @@ void exit_running_task(struct GlassesState *state, int notify) {
     return;
   }
   if (notify != 0) {
-    report_event_to_phone(0);
+    report_event_to_phone(BLE_EVT_DOUBLE_TAP);
   }
   update_persist_task_status_to_idle(state);
   if (get_dashboard_state()->sync_seq == 6) {
@@ -229,7 +232,7 @@ static void ble_msg_dispatch_thread(void *p1, void *p2, void *p3) {
   memset(state->dash_buf, 0, sizeof(struct dash_data_buf));
   memset(state->schedule_notif, 0, sizeof(struct schedule_notif));
   while (1) {
-    if (!(state->module_mask & BIT(7))) {
+    if (!(state->module_mask & (uint16_t)WORK_MODULE_BLE)) {
       k_msleep(1000);
       continue;
     }
@@ -283,7 +286,7 @@ uint8_t get_wearing_state(void) {
   return is_wearing;
 }
 
-uint8_t get_wear_state_event(void) {
+enum ble_event get_wear_state_event(void) {
   return wear_state_event;
 }
 
@@ -301,7 +304,7 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
         k_sem_take(&get_dashboard_state()->ble_context.tx_sem, K_FOREVER);
       }
       G1_LOG_ERR("EVENT_GLASS_HAS_FINISH_BIND\n");
-      report_event_to_phone(0x11);
+      report_event_to_phone(BLE_EVT_BIND_FINISHED);
       last_bind_state = 0xfe;
     }
     return;
@@ -312,9 +315,9 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
   if ((get_dashboard_state()->battery_voltage <= 0x82) && (get_dashboard_state()->battery_voltage > 0x50) &&
       (get_dashboard_state()->battery_current_ma > 0) && (get_dashboard_state()->battery_info[0] < 2) && !in_box) {
     if (get_dashboard_state()->is_master == 1) {
-      sync_to_slave(get_dashboard_state(), 3, NULL, 0);
+      sync_to_slave(get_dashboard_state(), SYNC_CMD_SHIPMODE, NULL, 0);
     } else {
-      sync_to_master(get_dashboard_state(), 5, NULL, 0);
+      sync_to_master(get_dashboard_state(), SLAVE_CMD_SHIPMODE, NULL, 0);
     }
     exit_running_task(get_dashboard_state(), 1);
     change_work_mode(7);
@@ -390,32 +393,32 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
     }
   }
   if (report) {
-    uint8_t evt;
+    enum ble_event evt;
 
     if ((last_bind_state == 0xff) || (get_dashboard_state()->ble_context.tx_sem.count == 2U)) {
       if (get_dashboard_state()->ble_context.tx_sem.count == 2U) {
         k_sem_take(&get_dashboard_state()->ble_context.tx_sem, K_FOREVER);
       }
       G1_LOG_ERR("EVENT_GLASS_HAS_FINISH_BIND\n");
-      report_event_to_phone(0x11);
+      report_event_to_phone(BLE_EVT_BIND_FINISHED);
       last_bind_state = 0xfe;
       return;
     }
 
     if (in_box != 0) {
       if (lid_closed != 0) {
-        evt = 0xb;
+        evt = BLE_EVT_IN_BOX_CLOSED;
         G1_LOG_ERR("EVENT_PUT_IN_GLASS_BOX_CLOSE\n");
       } else {
-        evt = 8;
+        evt = BLE_EVT_IN_BOX_OPEN;
         G1_LOG_ERR("EVENT_PUT_IN_GLASS_BOX_OPEN\n");
       }
     } else {
       if (wearing) {
-        evt = 6;
+        evt = BLE_EVT_WORN;
         G1_LOG_ERR("EVENT_ENTER_WARED\n");
       } else {
-        evt = 7;
+        evt = BLE_EVT_UNWORN_OUT_OF_BOX;
         G1_LOG_ERR("EVENT_UNWARED_OUTBOX\n");
       }
       last_box_soc = 0xff;
@@ -433,7 +436,7 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
     if ((last_battery != val) && (val <= 100)) {
       last_battery = val;
       G1_LOG_ERR("EVENT_STATE_BATTERY_PERCENT %d\n", val);
-      report_event_to_phone(10);
+      report_event_to_phone(BLE_EVT_BATTERY_PERCENT);
       return;
     }
 
@@ -450,7 +453,7 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
         charging_cnt = 0;
         get_dashboard_state()->ble_context.charging = val;
         last_charging = val;
-        report_event_to_phone(9);
+        report_event_to_phone(BLE_EVT_CHARGING);
         G1_LOG_ERR("EVENT_STATE_CHARGING %d\n", val);
       }
       return;
@@ -463,7 +466,7 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
           box_status_cnt = 0;
           last_box_status = val;
           G1_LOG_ERR("EVENT_GLASS_BOX_STATUS %d\n", val);
-          report_event_to_phone(0xe);
+          report_event_to_phone(BLE_EVT_BOX_STATUS);
         }
         G1_LOG_ERR("last_box_charging_status is %d, box_charging_status is %d\n", last_box_status, val);
         return;
@@ -473,7 +476,7 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
       if ((last_box_soc != val) && (val <= 100)) {
         last_box_soc = val;
         G1_LOG_ERR("EVENT_GLASS_BOX_SOC %d\n", val);
-        report_event_to_phone(0xf);
+        report_event_to_phone(BLE_EVT_BOX_SOC);
         return;
       }
       G1_LOG_ERR("last_box_soc is %d, box_soc is %d\n", last_box_soc, val);
@@ -492,7 +495,7 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
       return;
     }
     last_brightness = get_dashboard_state()->panel.panel_brightness_level;
-    report_event_to_phone(0x12);
+    report_event_to_phone(BLE_EVT_BRIGHTNESS_LEVEL);
   } else {
     last_bind_state = 0xff;
     last_box_soc = 0xff;
@@ -510,8 +513,8 @@ static void check_disp_onboarding(int force) {
     if (get_dashboard_state()->is_master == 1) {
       onboarding_deactivate();
     }
-  } else if ((get_dashboard_state()->task_status->task == 0U) && (get_dashboard_state()->dashboard_mode == 0) &&
-             (get_dashboard_state()->is_master == 1) &&
+  } else if ((get_dashboard_state()->task_status->task == (uint32_t)SCREEN_IDLE) &&
+             (get_dashboard_state()->dashboard_mode == SCREEN_IDLE) && (get_dashboard_state()->is_master == 1) &&
              (!is_ble_device_bound() || get_dashboard_state()->onboarding->in_progress)) {
     uint8_t data[3];
 
@@ -530,7 +533,7 @@ static void check_disp_onboarding(int force) {
       G1_LOG_ERR("ready to show onboarding...\n");
       onboarding_request_redraw();
       get_dashboard_state()->onboarding->active = 1;
-      update_persist_task_status(get_dashboard_state(), 0xe, 2);
+      update_persist_task_status(get_dashboard_state(), SCREEN_ONBOARDING, TASK_RUNNING);
       get_dashboard_state()->onboarding->saved_brightness = get_dashboard_state()->panel.panel_brightness_level;
       get_dashboard_state()->panel.panel_brightness_level = 42;
       ts = k_uptime_get();
@@ -548,22 +551,22 @@ static void check_disp_quicknote(void) {
 
     if (get_dashboard_state()->quicknote_show_info->longpress_req == 1) {
       get_dashboard_state()->quicknote_show_info->longpress_req = 0;
-      if (get_dashboard_state()->dashboard_mode == 12) {
+      if (get_dashboard_state()->dashboard_mode == SCREEN_QUICKNOTE) {
         G1_LOG_ERR("quicknote is running, exit this time\n");
         return;
       }
       data[0] = 1;
       data[1] = 1;
-      if (sync_to_slave(get_dashboard_state(), 6, data, 2) >= 5000) {
+      if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, data, 2) >= 5000) {
         G1_LOG_WRN("SYNC TO Slave failed...,don't exec quick note start function.\n");
       } else {
         exit_temp_task(get_dashboard_state(), 0);
-        get_dashboard_state()->esb_screen_id = 12;
+        get_dashboard_state()->esb_screen_id = SCREEN_QUICKNOTE;
         get_dashboard_state()->quicknote_show_info->enable = 1;
         get_dashboard_state()->quicknote_show_info->started_by_app = 0;
         get_dashboard_state()->quicknote_show_info->action = 7;
         memset(get_dashboard_state()->quicknote_show_info->data, 0, 0x14a);
-        update_persist_task_status(get_dashboard_state(), 12, 2);
+        update_persist_task_status(get_dashboard_state(), SCREEN_QUICKNOTE, TASK_RUNNING);
       }
     } else if (get_dashboard_state()->quicknote_show_info->longpress_req == 2) {
       int i;
@@ -572,7 +575,7 @@ static void check_disp_quicknote(void) {
       data[0] = 1;
       data[1] = 0;
       for (i = 1; i < 4; i++) {
-        if (sync_to_slave(get_dashboard_state(), 6, data, 2) >= 5000) {
+        if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, data, 2) >= 5000) {
           G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n", i);
         } else {
           display_DelayClose(10000);
@@ -588,18 +591,18 @@ static void check_disp_quicknote(void) {
 
     if (get_dashboard_state()->quicknote_show_info->longpress_req == 1) {
       get_dashboard_state()->quicknote_show_info->longpress_req = 0;
-      if (get_dashboard_state()->dashboard_mode == 12) {
+      if (get_dashboard_state()->dashboard_mode == SCREEN_QUICKNOTE) {
         G1_LOG_ERR("quicknote is running, exit this time\n");
         return;
       }
       data[0] = 1;
       data[1] = 0;
-      sync_to_master(get_dashboard_state(), 6, data, 2);
+      sync_to_master(get_dashboard_state(), SLAVE_CMD_QUICKNOTE_LONGPRESS, data, 2);
     } else if (get_dashboard_state()->quicknote_show_info->longpress_req == 2) {
       get_dashboard_state()->quicknote_show_info->longpress_req = 0;
       data[0] = 0;
       data[1] = 0;
-      sync_to_master(get_dashboard_state(), 6, data, 2);
+      sync_to_master(get_dashboard_state(), SLAVE_CMD_QUICKNOTE_LONGPRESS, data, 2);
     } else {
       /* nothing to do */
     }
@@ -738,7 +741,7 @@ void system_reboot_delayed(void) {
   config_watchdog_wait_reset();
 }
 
-int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t len) {
+int sync_to_slave(struct GlassesState *state, enum sync_cmd cmd, const void *data, size_t len) {
   uint8_t buf[0xfc] = {0};
   uint32_t date = state->dashboard_ts->ts;
   uint16_t wait = 0;
@@ -759,7 +762,7 @@ int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t 
       timeout = 500;
     } else {
       timeout = 5000;
-      if (cmd != 0) {
+      if (cmd != SYNC_CMD_DATA) {
         timeout = 3000;
       }
     }
@@ -772,47 +775,48 @@ int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t 
       busy++;
     }
     if (busy && (esb_last_cmd == cmd)) {
-      if (cmd != 0) {
+      if (cmd != SYNC_CMD_DATA) {
         G1_LOG_ERR("ESB send same type cmd %d, exit\n", cmd);
-        esb_last_cmd = 0;
+        esb_last_cmd = SYNC_CMD_DATA;
         skip = 1;
       }
-    } else if (esb_last_cmd == 1) {
-      if (cmd != 0) {
-        if ((cmd == 1) && (last_sync_wait < 500)) {
+    } else if (esb_last_cmd == SYNC_CMD_SUSPEND) {
+      if (cmd != SYNC_CMD_DATA) {
+        if ((cmd == SYNC_CMD_SUSPEND) && (last_sync_wait < 500)) {
           same = 1;
         }
       } else {
         G1_LOG_ERR("ESB send data after suspend cmd, ignore it.\n");
-        esb_last_cmd = 0;
+        esb_last_cmd = SYNC_CMD_DATA;
         skip = 1;
       }
-    } else if (cmd && (esb_last_cmd == cmd) && (cmd != 7) && ((cmd < 12) || (cmd > 16)) && (last_sync_wait < 500)) {
+    } else if ((cmd != SYNC_CMD_DATA) && (esb_last_cmd == cmd) && (cmd != SYNC_CMD_MESSAGE_SIGNAL) &&
+               ((cmd < SYNC_CMD_STATUS) || (cmd > SYNC_CMD_EVEN_AI_NETWORK_ERROR)) && (last_sync_wait < 500)) {
       same = 1;
     } else {
       /* nothing to do */
     }
     if (same != 0) {
       G1_LOG_ERR("ESB send same cmd, ignore it %d.\n", cmd);
-      esb_last_cmd = 0;
+      esb_last_cmd = SYNC_CMD_DATA;
       skip = 1;
     }
     if (!skip) {
       uint8_t seq;
-      uint8_t st;
+      enum imu_attitude st;
 
       esb_sending = 1;
-      if (cmd < 3) {
+      if (cmd <= SYNC_CMD_RESUME) {
         esb_last_cmd = cmd;
       }
       seq = state->sync_seq;
-      if (state->dashboard_mode == 10) {
+      if (state->dashboard_mode == SCREEN_NAVIGATION) {
         st = state->nav->imu_action_status;
       } else {
         st = state->imu.mode;
       }
       state->sync_seq = seq + 1;
-      state->sync_hdr = (struct esb_hdr){.cmd = cmd, .dir = st};
+      state->sync_hdr = (struct esb_hdr){.cmd = (uint8_t)cmd, .dir = (uint8_t)st};
       state->esb_hdr.dir = 1;
       state->sync_canvas_x = state->canvas_x;
       state->sync_canvas_y = state->panel.current_column + state->canvas_y;
@@ -831,20 +835,21 @@ int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t 
       memcpy(&buf[1], &state->esb_hdr, 11);
       memcpy(&buf[12], &state->sync, sizeof(struct esb_sync_pkt));
       state->sync_ack = 1;
-      if ((state->esb_screen_id != 6) && (state->esb_screen_id != 0) && (cmd == 0)) {
+      if ((state->esb_screen_id != SCREEN_DASHBOARD) && (state->esb_screen_id != SCREEN_IDLE) &&
+          (cmd == SYNC_CMD_DATA)) {
         if (state->esb_dir != state->imu.mode) {
           state->sync_seq = seq;
           G1_LOG_ERR("ESB send imu status is changed, ignore it.\n");
           skip = 1;
         }
         if (!skip) {
-          if (state->dashboard_mode == 16) {
+          if (state->dashboard_mode == SCREEN_EVEN_AI) {
             if ((state->esb_up_seq != state->esb_up_id) || state->esb_up_recving) {
               state->sync_seq = seq;
               G1_LOG_ERR("ESB send even ai is changed or receiving, ignore it.\n");
               skip = 1;
             }
-          } else if ((state->esb_dir == 2) && (state->esb_up_seq != state->esb_up_id)) {
+          } else if ((state->esb_dir == IMU_ATTITUDE_LOOK_UP) && (state->esb_up_seq != state->esb_up_id)) {
             state->sync_seq = seq;
             G1_LOG_ERR("ESB send up package is changed, ignore it.\n");
             skip = 1;
@@ -853,8 +858,8 @@ int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t 
           }
         }
         if (!skip) {
-          if (state->imu.mode != 2) {
-            if ((state->imu.mode == 1) && (state->esb_down_seq != state->esb_down_id)) {
+          if (state->imu.mode != IMU_ATTITUDE_LOOK_UP) {
+            if ((state->imu.mode == IMU_ATTITUDE_BOW_HEAD) && (state->esb_down_seq != state->esb_down_id)) {
               state->sync_seq = seq;
               G1_LOG_ERR("ESB send down package is changed, ignore it.\n");
               skip = 1;
@@ -867,13 +872,13 @@ int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t 
             /* nothing to do */
           }
         }
-        if (!skip && (state->imu.mode == 1) && state->esb_down_recving) {
+        if (!skip && (state->imu.mode == IMU_ATTITUDE_BOW_HEAD) && state->esb_down_recving) {
           state->sync_seq = seq;
           G1_LOG_ERR("ESB send down package is receiving, ignore it.\n");
           skip = 1;
         }
-        if (!skip && (state->esb_screen_id != state->dashboard_mode) && (state->dashboard_mode > 6) &&
-            (state->esb_screen_id > 6)) {
+        if (!skip && (state->esb_screen_id != state->dashboard_mode) && (state->dashboard_mode > SCREEN_DASHBOARD) &&
+            (state->esb_screen_id > SCREEN_DASHBOARD)) {
           state->sync_seq = seq;
           G1_LOG_ERR("ESB send package id is changed, ignore it.\n");
           skip = 1;
@@ -906,7 +911,7 @@ int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t 
   return wait;
 }
 
-unsigned int sync_to_master(struct GlassesState *state, int cmd, const void *data, size_t len) {
+unsigned int sync_to_master(struct GlassesState *state, enum slave_cmd cmd, const void *data, size_t len) {
   uint16_t wait = 0;
   int skip = 0;
   const struct fw_ver *ver = &state->fw_ver;
@@ -930,7 +935,7 @@ unsigned int sync_to_master(struct GlassesState *state, int cmd, const void *dat
   state->esb_pkt.ver.patch = ver->patch;
   memcpy(state->esb_pkt.mac, state->slave_mac, sizeof(state->esb_pkt.mac));
   state->esb_pkt.battery = state->battery_info[0];
-  if ((cmd == 12) || (cmd == 13)) {
+  if ((cmd == SLAVE_CMD_NOTIFY_FIRST) || (cmd == SLAVE_CMD_NOTIFY_END)) {
     esb_tx_buf[0] = 4;
     memcpy(&esb_tx_buf[1], &state->esb_pkt, sizeof(state->esb_pkt));
     memcpy(&esb_tx_buf[2], data, len);
@@ -940,7 +945,7 @@ unsigned int sync_to_master(struct GlassesState *state, int cmd, const void *dat
     if (data && len) {
       memcpy(state->esb_pkt.data, data, MIN(len, 2));
     }
-    if (cmd != 1) {
+    if (cmd != SLAVE_CMD_STATUS) {
       esb_tx_buf[0] = 4;
       memcpy(&esb_tx_buf[1], &state->esb_pkt, sizeof(state->esb_pkt));
     } else {
@@ -960,14 +965,14 @@ unsigned int sync_to_master(struct GlassesState *state, int cmd, const void *dat
   if (!skip) {
     while (state->sync_ack != 2) {
       if (++wait == 2000) {
-        if (cmd == 1) {
+        if (cmd == SLAVE_CMD_STATUS) {
           memset(&last_status_pkt, 0, sizeof(last_status_pkt));
         }
         break;
       }
       k_msleep(1);
     }
-    if ((cmd == 1) && (state->sync_ack == 2)) {
+    if ((cmd == SLAVE_CMD_STATUS) && (state->sync_ack == 2)) {
       memcpy(&last_status_pkt, &state->esb_pkt, sizeof(last_status_pkt));
     }
   }
@@ -992,12 +997,12 @@ static void sync_push_message(void) {
     switch (item->sync_state) {
       case 1:
         push_msg_syncing = 1;
-        if (sync_to_slave(get_dashboard_state(), 10, &item->uid, 4) < 3000) {
+        if (sync_to_slave(get_dashboard_state(), SYNC_CMD_CONFIRM_NOTIFY_FIRST, &item->uid, 4) < 3000) {
           set_msg_sync_state(item->pos, 2);
         }
         break;
       case 3:
-        if (sync_to_slave(get_dashboard_state(), 11, &item->uid, 4) < 3000) {
+        if (sync_to_slave(get_dashboard_state(), SYNC_CMD_CONFIRM_NOTIFY_END, &item->uid, 4) < 3000) {
           set_msg_sync_state(item->pos, 4);
           confirm_message(item->uid);
           push_msg_syncing = 0;
@@ -1010,7 +1015,7 @@ static void sync_push_message(void) {
     switch (item->sync_state) {
       case 0:
         push_msg_syncing = 1;
-        sync_to_master(get_dashboard_state(), 12, item, NOTIF_MSG_HALF);
+        sync_to_master(get_dashboard_state(), SLAVE_CMD_NOTIFY_FIRST, item, NOTIF_MSG_HALF);
         note_retry = 0;
         break;
       case 2:
@@ -1019,7 +1024,7 @@ static void sync_push_message(void) {
           set_msg_sync_state(item->pos, 0);
           push_msg_syncing = 0;
         } else {
-          sync_to_master(get_dashboard_state(), 13, (uint8_t *)item + NOTIF_MSG_HALF, NOTIF_MSG_HALF);
+          sync_to_master(get_dashboard_state(), SLAVE_CMD_NOTIFY_END, (uint8_t *)item + NOTIF_MSG_HALF, NOTIF_MSG_HALF);
         }
         break;
       default:
@@ -1030,21 +1035,21 @@ static void sync_push_message(void) {
   }
 }
 
-void report_event_to_phone(int cmd) {
+void report_event_to_phone(enum ble_event cmd) {
   struct ble_context *ctx = get_ble_context();
 
-  if ((cmd >= 0xf0) && (cmd <= 0xf2) && (last_ble_cmd != 0xff)) {
+  if ((cmd >= BLE_EVT_ACK_TRANSLATE_SRC_TEXT) && (cmd <= BLE_EVT_ACK_TEXT_SET) && (last_ble_cmd != BLE_EVT_NONE)) {
     return;
   }
   last_ble_cmd = cmd;
   if (ctx->receiver_thd_is_running || k_sem_count_get(&ctx->rx_sem)) {
     uint8_t buf[3];
 
-    buf[0] = 0xf5;
-    buf[1] = cmd;
-    buf[2] = 0xcb;
+    buf[0] = BLE_CMD_EVENT;
+    buf[1] = (uint8_t)cmd;
+    buf[2] = BLE_RESP_MORE;
     enqueue_bt_data(buf, 3);
-    last_ble_cmd = 0xff;
+    last_ble_cmd = BLE_EVT_NONE;
   } else if (!ctx->receiver_thd_is_running) {
     k_sem_give(&ctx->rx_sem);
     k_msleep(1);
@@ -1082,7 +1087,7 @@ void exit_running_task_keep_status(struct GlassesState *state, int notify) {
     changed = true;
     state->quicknote_show_info->enable = 0;
   }
-  if (state->dashboard_mode == 6) {
+  if (state->dashboard_mode == SCREEN_DASHBOARD) {
     dmic_stream_stop();
     state->dashboard_ts->dashboard_on = 0;
   }
@@ -1132,7 +1137,7 @@ void exit_running_task_keep_status(struct GlassesState *state, int notify) {
     return;
   }
   if (notify != 0) {
-    report_event_to_phone(0);
+    report_event_to_phone(BLE_EVT_DOUBLE_TAP);
   }
   memset(state->ui.buf, 0, sizeof(state->ui.buf));
 }
@@ -1141,16 +1146,16 @@ void exit_temp_task(struct GlassesState *state, int flag) {
   if (!is_task_running(state)) {
     return;
   }
-  if (state->dashboard_mode == 6) {
+  if (state->dashboard_mode == SCREEN_DASHBOARD) {
     dmic_stream_stop();
     state->dashboard_ts->dashboard_on = 0;
-  } else if (state->dashboard_mode != 4) {
+  } else if (state->dashboard_mode != SCREEN_NOTIFICATION) {
     return;
   } else {
     /* nothing to do */
   }
   if (flag != 0) {
-    report_event_to_phone(0);
+    report_event_to_phone(BLE_EVT_DOUBLE_TAP);
   }
   update_persist_task_status_to_idle(state);
   memset(state->ui.buf, 0, sizeof(state->ui.buf));
@@ -1162,20 +1167,20 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
   struct GlassesState *state = p1;
 
   state->panel_on = 1;
-  state->dashboard_mode = 0;
+  state->dashboard_mode = SCREEN_IDLE;
   G1_LOG_WRN("enter\n");
-  if (state->display_mode == 11) {
+  if (state->display_mode == DISPLAY_MODE_ALWAYS_ON) {
     change_work_mode(2);
   }
   for (;;) {
-    if (state->display_mode != 11) {
+    if (state->display_mode != DISPLAY_MODE_ALWAYS_ON) {
       k_sem_take(&state->sem_1, K_FOREVER);
     } else {
-      state->sync_hdr.cmd = 0;
+      state->sync_hdr.cmd = (uint8_t)SYNC_CMD_DATA;
       if (!get_pt_test_mode()) {
-        state->dashboard_mode = 6;
+        state->dashboard_mode = SCREEN_DASHBOARD;
       } else {
-        state->dashboard_mode = 3;
+        state->dashboard_mode = SCREEN_DEMO_IMAGE;
       }
       k_sleep(K_MSEC(1000));
     }
@@ -1195,34 +1200,34 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
       }
     }
 
-    switch (state->sync_hdr.cmd) {
-      case 0:
+    switch ((enum sync_cmd)state->sync_hdr.cmd) {
+      case SYNC_CMD_DATA:
         if (state->suspend_state == 1) {
-          if ((state->dashboard_mode != 6) && !is_task_running(state)) {
+          if ((state->dashboard_mode != SCREEN_DASHBOARD) && !is_task_running(state)) {
             G1_LOG_ERR("Ignore data...\n");
             break;
           }
           change_work_mode(2);
-          if ((state->dashboard_mode == 6) && (state->imu.mode != 2)) {
-            state->imu.mode = 2;
+          if ((state->dashboard_mode == SCREEN_DASHBOARD) && (state->imu.mode != IMU_ATTITUDE_LOOK_UP)) {
+            state->imu.mode = IMU_ATTITUDE_LOOK_UP;
           }
         }
         k_sem_give(&state->sem_2);
         break;
-      case 1:
+      case SYNC_CMD_SUSPEND:
         display_suspend_received = 1;
         screen_switch_busy = 1;
         if (state->suspend_state == 0) {
           exit_running_task(state, 0);
-          state->imu.mode = 1;
-          state->task_status->task = 0;
+          state->imu.mode = IMU_ATTITUDE_BOW_HEAD;
+          state->task_status->task = (uint32_t)SCREEN_IDLE;
           trigger_screen_state_change("goto idle2", state, 0);
           k_sem_give(&state->sem_2);
         } else {
           k_sleep(K_MSEC(80));
         }
         break;
-      case 2:
+      case SYNC_CMD_RESUME:
         if (state->sync_data[0] == 11) {
           G1_LOG_WRN("slave rcv canvas_distance_gear:%d,raster_height_gear:%d\n", state->sync_data[1],
                      state->sync_data[2]);
@@ -1234,12 +1239,14 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
           }
         }
         screen_switch_busy = 1;
-        if ((state->dashboard_mode == 9) || (state->dashboard_mode == 12) || (state->dashboard_mode == 10) ||
-            (state->dashboard_mode == 11) || (state->dashboard_mode == 6) || (state->dashboard_mode == 7) ||
-            (state->dashboard_mode == 14) || (state->dashboard_mode == 15) || (state->dashboard_mode == 16) ||
-            (state->dashboard_mode == 20) || (state->dashboard_mode == 17) || (state->dashboard_mode == 18) ||
-            (state->dashboard_mode == 19) || (state->dashboard_mode == 0)) {
-          state->imu.mode = 2;
+        if ((state->dashboard_mode == SCREEN_TELEPROMPTER) || (state->dashboard_mode == SCREEN_QUICKNOTE) ||
+            (state->dashboard_mode == SCREEN_NAVIGATION) || (state->dashboard_mode == SCREEN_TRANSLATE) ||
+            (state->dashboard_mode == SCREEN_DASHBOARD) || (state->dashboard_mode == SCREEN_BITMAP) ||
+            (state->dashboard_mode == SCREEN_ONBOARDING) || (state->dashboard_mode == SCREEN_RASTER_HEIGHT) ||
+            (state->dashboard_mode == SCREEN_EVEN_AI) || (state->dashboard_mode == SCREEN_EVEN_AI_V2_INFO) ||
+            (state->dashboard_mode == SCREEN_SET_IMU_PITCH) || (state->dashboard_mode == SCREEN_PROMPT_INFO) ||
+            (state->dashboard_mode == SCREEN_TRANSCRIBE_INFO) || (state->dashboard_mode == SCREEN_IDLE)) {
+          state->imu.mode = IMU_ATTITUDE_LOOK_UP;
         }
         change_work_mode(2);
         /*
@@ -1257,11 +1264,11 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
         k_sem_give(&state->sem_2);
         screen_switch_busy = 0;
         break;
-      case 3:
+      case SYNC_CMD_SHIPMODE:
         exit_running_task(state, 1);
         change_work_mode(7);
         break;
-      case 6:
+      case SYNC_CMD_SUBCMD:
         if (state->sync_data[0] == 9) {
           upgradeDashboardStartupModeInfoToFlash(state->sync_data[1]);
           break;
@@ -1281,19 +1288,19 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             }
             break;
           case 1:
-            if (state->dashboard_mode == 12) {
+            if (state->dashboard_mode == SCREEN_QUICKNOTE) {
               if (state->sync_data[1] == 0) {
                 display_DelayClose(10000);
                 k_yield();
               }
             } else if (state->sync_data[1] == 1) {
               exit_temp_task(state, 0);
-              state->esb_screen_id = 12;
+              state->esb_screen_id = SCREEN_QUICKNOTE;
               state->quicknote_show_info->enable = 1;
               state->quicknote_show_info->started_by_app = 0;
               state->quicknote_show_info->action = 7;
               memset(get_dashboard_state()->quicknote_show_info->data, 0, 0x14a);
-              update_persist_task_status(state, 12, 2);
+              update_persist_task_status(state, SCREEN_QUICKNOTE, TASK_RUNNING);
               k_sem_give(&state->sem_2);
             } else {
               /* nothing to do */
@@ -1304,25 +1311,25 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             uint8_t key = v & 0xfU;
             uint8_t idx;
 
-            if ((key == 1) && (state->dashboard_mode == 6)) {
+            if ((key == 1) && (state->dashboard_mode == SCREEN_DASHBOARD)) {
               setNotesIndex(v >> 4U);
               display_inputEvent(0, 1);
               k_yield();
             } else if (key == 2) {
               setNotesIndex(v >> 4U);
-            } else if ((key == 3) && (state->dashboard_mode == 6)) {
+            } else if ((key == 3) && (state->dashboard_mode == SCREEN_DASHBOARD)) {
               setStocksIndex(v >> 4U);
               display_inputEvent(0, 1);
               k_yield();
             } else if (key == 4) {
               setStocksIndex(v >> 4U);
-            } else if ((key == 5) && (state->dashboard_mode == 6)) {
+            } else if ((key == 5) && (state->dashboard_mode == SCREEN_DASHBOARD)) {
               setNewsIndex(v >> 4U);
               display_inputEvent(0, 1);
               k_yield();
             } else if (key == 6) {
               setNewsIndex(v >> 4U);
-            } else if ((key == 7) && (state->dashboard_mode == 6)) {
+            } else if ((key == 7) && (state->dashboard_mode == SCREEN_DASHBOARD)) {
               idx = v >> 4U;
               setCalenadrIndex(idx);
               display_inputEvent(0, 1);
@@ -1344,7 +1351,7 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             break;
           }
           case 3:
-            if (state->dashboard_mode == 9) {
+            if (state->dashboard_mode == SCREEN_TELEPROMPTER) {
               if (state->sync_data[1] == 1) {
                 display_MasterSendClose();
                 k_yield();
@@ -1357,7 +1364,7 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             }
             break;
           case 6:
-            if (state->dashboard_mode == 10) {
+            if (state->dashboard_mode == SCREEN_NAVIGATION) {
               if (state->sync_data[1] == 1) {
                 display_MasterSendClose();
                 k_yield();
@@ -1370,7 +1377,7 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             }
             break;
           case 7:
-            if (state->dashboard_mode == 6) {
+            if (state->dashboard_mode == SCREEN_DASHBOARD) {
               display_powerEvent(state->sync_data[1]);
               k_yield();
             } else {
@@ -1379,9 +1386,9 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             }
             break;
           case 8: {
-            uint8_t lang = state->sync_data[1];
+            enum language lang = (enum language)state->sync_data[1];
 
-            if (CURRENT_LANGUAGE.magic != lang) {
+            if (CURRENT_LANGUAGE.magic != (uint8_t)lang) {
               G1_LOG_WRN("The information sent by the host is different from that of the APP\n");
             }
             upgradeAppLanguageInfoToFlash(lang);
@@ -1399,13 +1406,14 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             gui_dynamic_bitmap_reset_thunk();
             onboarding_request_redraw();
             state->onboarding->ts = k_uptime_get();
-            if ((state->task_status->task != 14U) && (!is_ble_device_bound() || state->onboarding->in_progress)) {
+            if ((state->task_status->task != (uint32_t)SCREEN_ONBOARDING) &&
+                (!is_ble_device_bound() || state->onboarding->in_progress)) {
               if (!is_ble_device_bound()) {
                 G1_LOG_WRN("ble device unbound,prepare to show binding tip\n");
               }
               if (show == 1) {
                 state->onboarding->active = 1;
-                update_persist_task_status(state, 14, 2);
+                update_persist_task_status(state, SCREEN_ONBOARDING, TASK_RUNNING);
                 state->onboarding->saved_brightness = state->panel.panel_brightness_level;
                 state->panel.panel_brightness_level = 0x2a;
               }
@@ -1437,21 +1445,22 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             upgradeLongpressTapCustomizeToFlash(state->sync_data[1]);
             break;
           case 14:
-            if (state->sync_data[1] == 6) {
+            if (state->sync_data[1] == (uint8_t)EVENAI_ACTION_LONG_PRESS_REQUEST) {
               exit_temp_task(get_dashboard_state(), 0);
-              if ((get_dashboard_state()->task_status->task == 0x14U) &&
-                  (get_dashboard_state()->evenai_buf->state == 1) && (get_dashboard_state()->evenai_buf->sub == 4) &&
+              if ((get_dashboard_state()->task_status->task == (uint32_t)SCREEN_EVEN_AI_V2_INFO) &&
+                  (get_dashboard_state()->evenai_buf->state == 1) &&
+                  (get_dashboard_state()->evenai_buf->sub == EVENAI_ACTION_COMMAND) &&
                   (get_dashboard_state()->evenai_buf->action_status == 0x13)) {
                 G1_LOG_WRN("evenai_v2 need to show network_err tip\n");
-                get_dashboard_state()->task_status->status = 2;
+                get_dashboard_state()->task_status->status = TASK_RUNNING;
                 break;
               }
-              if (get_dashboard_state()->task_status->task != 0x14U) {
+              if (get_dashboard_state()->task_status->task != (uint32_t)SCREEN_EVEN_AI_V2_INFO) {
                 get_dashboard_state()->evenai_buf->state = 1;
                 memset(get_dashboard_state()->evenai_buf->data, 0, 0x200);
-                update_persist_task_status(get_dashboard_state(), 0x14, 2);
+                update_persist_task_status(get_dashboard_state(), SCREEN_EVEN_AI_V2_INFO, TASK_RUNNING);
               }
-              get_dashboard_state()->evenai_buf->sub = 7;
+              get_dashboard_state()->evenai_buf->sub = EVENAI_ACTION_LONG_PRESS;
               get_dashboard_state()->evenai_buf->action_status = state->sync_data[2];
             }
             k_sem_give(&state->sem_2);
@@ -1460,22 +1469,22 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             break;
         }
         break;
-      case 4:
+      case SYNC_CMD_NOT_DISTURB_ENTER:
         exit_running_task(state, 1);
-        state->display_mode = 12;
-        state->dashboard_cmd = 3;
+        state->display_mode = DISPLAY_MODE_NOT_DISTURB;
+        state->dashboard_cmd = BLE_CMD_SILENT_MODE_SET;
         k_sem_give(&state->dashboard_position_sem);
         break;
-      case 5:
-        state->display_mode = 10;
-        state->dashboard_cmd = 3;
+      case SYNC_CMD_NOT_DISTURB_EXIT:
+        state->display_mode = DISPLAY_MODE_NORMAL;
+        state->dashboard_cmd = BLE_CMD_SILENT_MODE_SET;
         k_sem_give(&state->dashboard_position_sem);
         show_not_disturb_bitmap(1);
         break;
-      case 7:
+      case SYNC_CMD_MESSAGE_SIGNAL:
         switch (state->sync_data[0]) {
           case 0:
-            update_temp_task_status(state, 5, 2);
+            update_temp_task_status(state, SCREEN_NEW_MESSAGE, TASK_RUNNING);
             trigger_screen_state_change("BLE:wakeup:new-unread_msg", state, 1);
             break;
           case 1:
@@ -1483,7 +1492,7 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
             clear_timeout_message(0);
             set_msg_timeout_flag();
             mark_cur_message_read();
-            update_temp_task_status(state, 4, 2);
+            update_temp_task_status(state, SCREEN_NOTIFICATION, TASK_RUNNING);
             trigger_screen_state_change("IMU:wakeup:uncomplete msg", state, 1);
             break;
           case 2:
@@ -1497,8 +1506,8 @@ static void slave_display_thread(void *p1, void *p2, void *p3) {
           case 3:
             new_msg_signal_received = 1;
             if (get_dashboard_state()->message_mode && count_unread_messages() &&
-                (get_dashboard_state()->dashboard_mode != 4)) {
-              update_temp_task_status(get_dashboard_state(), 4, 2);
+                (get_dashboard_state()->dashboard_mode != SCREEN_NOTIFICATION)) {
+              update_temp_task_status(get_dashboard_state(), SCREEN_NOTIFICATION, TASK_RUNNING);
               trigger_screen_state_change("IMU:wakeup:new-notification", get_dashboard_state(), 1);
               set_msg_timeout_flag();
             }
@@ -1532,7 +1541,7 @@ static void msg_sync_thread(void *p1, void *p2, void *p3) {
     if (get_dashboard_state()->is_master == 1) {
       switch (get_dashboard_state()->dash_buf->type) {
         case 1:
-          if (sync_to_slave(get_dashboard_state(), 0xd, NULL, 0) < 500) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_EVEN_AI_START, NULL, 0) < 500) {
             exit_temp_task(state, 0);
             reset_dash_buf(0);
             if (dmic_get_stop_state()) {
@@ -1540,61 +1549,63 @@ static void msg_sync_thread(void *p1, void *p2, void *p3) {
             } else {
               get_dashboard_state()->dash_buf->type = 3;
             }
-            if (get_dashboard_state()->task_status->task != 0x10U) {
-              update_persist_task_status(get_dashboard_state(), 0x10, 2);
+            if (get_dashboard_state()->task_status->task != (uint32_t)SCREEN_EVEN_AI) {
+              update_persist_task_status(get_dashboard_state(), SCREEN_EVEN_AI, TASK_RUNNING);
             }
           }
           break;
         case 3:
-          if (sync_to_slave(get_dashboard_state(), 0xe, NULL, 0) < 500) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_EVEN_AI_MIC_ON, NULL, 0) < 500) {
             get_dashboard_state()->dash_buf->type = 4;
           }
           break;
         case 5:
-          if (sync_to_slave(get_dashboard_state(), 0xf, NULL, 0) < 500) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_EVEN_AI_MIC_OFF, NULL, 0) < 500) {
             dmic_stream_stop();
-            report_event_to_phone(0x18);
+            report_event_to_phone(BLE_EVT_LONG_PRESS_RELEASE);
             get_dashboard_state()->dash_buf->type = 6;
           }
           break;
         case 10:
-          if (sync_to_slave(get_dashboard_state(), 0x10, NULL, 0) < 500) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_EVEN_AI_NETWORK_ERROR, NULL, 0) < 500) {
             get_dashboard_state()->dash_buf->type = 0xb;
             get_dashboard_state()->stay_time_left_s = 8;
           }
           break;
         case 13:
-          if (sync_to_slave(get_dashboard_state(), 0x11, NULL, 0) < 500) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_EVEN_AI_SHOW_IMAGE, NULL, 0) < 500) {
             get_dashboard_state()->dash_buf->type = 0xe;
           }
           break;
         case 15:
-          if (sync_to_slave(get_dashboard_state(), 0x12, NULL, 0) < 500) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_EVEN_AI_SHOW_TEXT, NULL, 0) < 500) {
             get_dashboard_state()->dash_buf->type = 0x10;
           }
           break;
         default:
           break;
       }
-      if ((get_dashboard_state()->evenai_buf->sub == 6) && (get_dashboard_state()->evenai_buf->action_status < 3)) {
+      if ((get_dashboard_state()->evenai_buf->sub == EVENAI_ACTION_LONG_PRESS_REQUEST) &&
+          (get_dashboard_state()->evenai_buf->action_status < 3)) {
         data[0] = 0xe;
-        data[1] = get_dashboard_state()->evenai_buf->sub;
+        data[1] = (uint8_t)get_dashboard_state()->evenai_buf->sub;
         data[2] = get_dashboard_state()->evenai_buf->action_status;
         data[3] = 0;
-        if (sync_to_slave(get_dashboard_state(), 6, data, 4) < 500) {
+        if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, data, 4) < 500) {
           exit_temp_task(get_dashboard_state(), 0);
-          if ((get_dashboard_state()->task_status->task == 0x14U) && (get_dashboard_state()->evenai_buf->state == 1) &&
-              (get_dashboard_state()->evenai_buf->sub == 4) &&
+          if ((get_dashboard_state()->task_status->task == (uint32_t)SCREEN_EVEN_AI_V2_INFO) &&
+              (get_dashboard_state()->evenai_buf->state == 1) &&
+              (get_dashboard_state()->evenai_buf->sub == EVENAI_ACTION_COMMAND) &&
               (get_dashboard_state()->evenai_buf->action_status == 0x13)) {
             G1_LOG_WRN("evenai_v2 need to show network_err tip\n");
-            get_dashboard_state()->task_status->status = 2;
+            get_dashboard_state()->task_status->status = TASK_RUNNING;
           } else {
-            if (get_dashboard_state()->task_status->task != 0x14U) {
+            if (get_dashboard_state()->task_status->task != (uint32_t)SCREEN_EVEN_AI_V2_INFO) {
               get_dashboard_state()->evenai_buf->state = 1;
               memset(get_dashboard_state()->evenai_buf->data, 0, 0x200);
-              update_persist_task_status(get_dashboard_state(), 0x14, 2);
+              update_persist_task_status(get_dashboard_state(), SCREEN_EVEN_AI_V2_INFO, TASK_RUNNING);
             }
-            get_dashboard_state()->evenai_buf->sub = 7;
+            get_dashboard_state()->evenai_buf->sub = EVENAI_ACTION_LONG_PRESS;
             now = k_uptime_get();
             get_dashboard_state()->evenai_buf->ts = now;
           }
@@ -1603,27 +1614,27 @@ static void msg_sync_thread(void *p1, void *p2, void *p3) {
     } else {
       switch (get_dashboard_state()->dash_buf->type) {
         case 1:
-          sync_to_master(get_dashboard_state(), 0xf, NULL, 0);
+          sync_to_master(get_dashboard_state(), SLAVE_CMD_EVEN_AI_START, NULL, 0);
           exit_temp_task(state, 0);
           break;
         case 5:
-          sync_to_master(get_dashboard_state(), 0x10, NULL, 0);
+          sync_to_master(get_dashboard_state(), SLAVE_CMD_EVEN_AI_MIC_OFF, NULL, 0);
           break;
         default:
           break;
       }
-      if (get_dashboard_state()->evenai_buf->sub == 6) {
-        data[0] = get_dashboard_state()->evenai_buf->sub;
+      if (get_dashboard_state()->evenai_buf->sub == EVENAI_ACTION_LONG_PRESS_REQUEST) {
+        data[0] = (uint8_t)get_dashboard_state()->evenai_buf->sub;
         data[1] = get_dashboard_state()->evenai_buf->action_status;
-        sync_to_master(get_dashboard_state(), 0x11, data, 2);
+        sync_to_master(get_dashboard_state(), SLAVE_CMD_EVEN_AI_V2_ACTION, data, 2);
       }
     }
     sync_push_message();
     if ((get_dashboard_state()->is_master == 1) && slave_msg_key_pending) {
       sync_message_signal_to_slave(3);
       if (get_dashboard_state()->message_mode && count_unread_messages() &&
-          (get_dashboard_state()->dashboard_mode != 4)) {
-        update_temp_task_status(get_dashboard_state(), 4, 2);
+          (get_dashboard_state()->dashboard_mode != SCREEN_NOTIFICATION)) {
+        update_temp_task_status(get_dashboard_state(), SCREEN_NOTIFICATION, TASK_RUNNING);
         trigger_screen_state_change("IMU:wakeup:new-notification", get_dashboard_state(), 1);
         set_msg_timeout_flag();
       }
@@ -1646,8 +1657,8 @@ void exit_silent_mode(void) {
   }
   change_work_mode(2);
   global_system_resume(get_dashboard_state());
-  get_dashboard_state()->imu.mode = 2;
-  get_dashboard_state()->dashboard_mode = 3;
+  get_dashboard_state()->imu.mode = IMU_ATTITUDE_LOOK_UP;
+  get_dashboard_state()->dashboard_mode = SCREEN_DEMO_IMAGE;
   display_reflash_screen(get_dashboard_state()->dashboard_mode);
   normal_mode = 1;
 }
@@ -1662,9 +1673,9 @@ static void on_triple_click(void) {
 }
 
 void enter_silent_mode(void) {
-  get_dashboard_state()->imu.mode = 1;
-  display_close_screen(3);
-  get_dashboard_state()->dashboard_mode = 0;
+  get_dashboard_state()->imu.mode = IMU_ATTITUDE_BOW_HEAD;
+  display_close_screen(SCREEN_DEMO_IMAGE);
+  get_dashboard_state()->dashboard_mode = SCREEN_IDLE;
   free_demo_line_buf();
   global_system_suspend(get_dashboard_state());
   normal_mode = 0;
@@ -1689,7 +1700,7 @@ static void product_test_touch_key_thread(void *p1, void *p2, void *p3) {
       k_msleep(5000);
       continue;
     }
-    if (!(state->module_mask & BIT(0))) {
+    if (!(state->module_mask & (uint16_t)WORK_MODULE_TOUCH)) {
       continue;
     }
     if (touch_irq_pending != 0) {
@@ -1781,13 +1792,13 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
   ARG_UNUSED(p2);
   ARG_UNUSED(p3);
   struct GlassesState *state = p1;
-  int last_attitude = 1;
+  enum imu_attitude last_attitude = IMU_ATTITUDE_BOW_HEAD;
   int bright_cnt = 0;
   uint8_t changed = 0;
   const uint8_t *data = NULL;
   size_t len = 0;
   uint8_t prev_changed;
-  uint8_t screen;
+  enum screen_id screen;
 
   G1_LOG_WRN("enter\n");
   state->panel.f_360 = 0x12;
@@ -1800,8 +1811,8 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
   state->sync_canvas_y = state->panel.current_column + state->canvas_y;
   state->imu.on = 0;
   state->panel_on = 1;
-  state->dashboard_mode = 0;
-  if (state->display_mode == 11) {
+  state->dashboard_mode = SCREEN_IDLE;
+  if (state->display_mode == DISPLAY_MODE_ALWAYS_ON) {
     change_work_mode(2);
     if (get_pt_test_mode() == 1) {
       enter_silent_mode();
@@ -1819,7 +1830,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
       G1_LOG_WRN("master sync display suspend.\n");
       state->esb_arg2 = state->panel.panel_brightness_level;
       if (get_work_mode() != 3) {
-        sync_to_slave(state, 1, NULL, 0);
+        sync_to_slave(state, SYNC_CMD_SUSPEND, NULL, 0);
         change_work_mode(3);
       }
       if (state->is_master == 2) {
@@ -1876,11 +1887,11 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
         }
         if (state->panel.last_synced_brightness != state->panel.panel_brightness_level) {
           state->panel.last_synced_brightness = state->panel.panel_brightness_level;
-          if (((state->dashboard_mode == 6) && state->dashboard_ts->area) || (state->dashboard_mode == 10) ||
-              (state->dashboard_mode == 4)) {
+          if (((state->dashboard_mode == SCREEN_DASHBOARD) && (state->dashboard_ts->area != DASHBOARD_PANE_NOTES)) ||
+              (state->dashboard_mode == SCREEN_NAVIGATION) || (state->dashboard_mode == SCREEN_NOTIFICATION)) {
             changed = 0;
           } else {
-            changed = state->dashboard_mode != 20;
+            changed = state->dashboard_mode != SCREEN_EVEN_AI_V2_INFO;
           }
         }
       }
@@ -1905,7 +1916,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
         }
       }
     }
-    if (refresh && (state->display_mode == 12) && (state->dashboard_mode != 7)) {
+    if (refresh && (state->display_mode == DISPLAY_MODE_NOT_DISTURB) && (state->dashboard_mode != SCREEN_BITMAP)) {
       refresh = false;
     }
     if (refresh && !is_task_running(state)) {
@@ -1916,7 +1927,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
       k_mutex_lock(&screen_payload_mutex, K_FOREVER);
       screen = state->dashboard_mode;
       switch (state->dashboard_mode) {
-        case 4: {
+        case SCREEN_NOTIFICATION: {
           uint8_t retry = 0x33;
 
           while ((state->esb_screen_id != state->dashboard_mode) && --retry) {
@@ -1934,30 +1945,30 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           }
           break;
         }
-        case 2:
+        case SCREEN_COUNTDOWN:
           countdown_tick(state->countdown_ts);
           len = sizeof(struct countdown_ts_context);
           data = (uint8_t *)state->countdown_ts;
           break;
-        case 9:
+        case SCREEN_TELEPROMPTER:
           len = sizeof(struct teleprompter_info);
           data = (uint8_t *)state->teleprompter;
           break;
-        case 12:
+        case SCREEN_QUICKNOTE:
           len = sizeof(struct quicknote_show_info);
           data = (uint8_t *)state->quicknote_show_info;
           break;
-        case 10: {
-          uint8_t att = state->imu.mode;
+        case SCREEN_NAVIGATION: {
+          enum imu_attitude att = state->imu.mode;
 
-          if (att == 2) {
-            if ((last_attitude != 2) || (state->nav->imu_action_status != 2)) {
+          if (att == IMU_ATTITUDE_LOOK_UP) {
+            if ((last_attitude != IMU_ATTITUDE_LOOK_UP) || (state->nav->imu_action_status != IMU_ATTITUDE_LOOK_UP)) {
               changed = 1;
-              state->nav->imu_action_status = 2;
+              state->nav->imu_action_status = IMU_ATTITUDE_LOOK_UP;
             }
-          } else if ((att != last_attitude) || (state->nav->imu_action_status != 1)) {
+          } else if ((att != last_attitude) || (state->nav->imu_action_status != IMU_ATTITUDE_BOW_HEAD)) {
             changed = 1;
-            state->nav->imu_action_status = 1;
+            state->nav->imu_action_status = IMU_ATTITUDE_BOW_HEAD;
           } else {
             /* nothing to do */
           }
@@ -1965,7 +1976,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           data = (uint8_t *)state->nav;
           break;
         }
-        case 11: {
+        case SCREEN_TRANSLATE: {
           struct translate_buf *dst = state->translate_dst;
           struct translate_buf *src = state->translate_src;
           if ((dst->screen_status == 5) || (dst->screen_status == 6)) {
@@ -1983,15 +1994,16 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
               data = (uint8_t *)src;
             }
           } else {
-            uint8_t att;
+            enum imu_attitude att;
             bool show_dst;
 
             att = state->imu.mode;
-            if ((dst->original_type == dst->translation_type) || ((att == 2) && (last_attitude != 2))) {
+            if ((dst->original_type == dst->translation_type) ||
+                ((att == IMU_ATTITUDE_LOOK_UP) && (last_attitude != IMU_ATTITUDE_LOOK_UP))) {
               dst->screen_status = 2;
               show_dst = true;
             } else {
-              show_dst = att == 2;
+              show_dst = att == IMU_ATTITUDE_LOOK_UP;
             }
             if (show_dst) {
               if ((state->is_master == 2) && (state->esb_up_id != state->esb_up_seq) &&
@@ -2015,26 +2027,26 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           len = sizeof(struct translate_buf);
           break;
         }
-        case 8:
+        case SCREEN_SCHEDULE:
           len = sizeof(struct user_schedule_context);
           data = (uint8_t *)state->user_sched_info;
           break;
-        case 7:
+        case SCREEN_BITMAP:
           len = sizeof(struct bitmap_show_info);
           data = (uint8_t *)state->bitmap_info;
           break;
-        case 14:
+        case SCREEN_ONBOARDING:
           get_dashboard_state()->panel.panel_brightness_level = 0x2a;
           len = sizeof(struct onboarding_ctx);
           data = (uint8_t *)state->onboarding;
           break;
-        case 5:
-        case 6:
-        case 15:
+        case SCREEN_NEW_MESSAGE:
+        case SCREEN_DASHBOARD:
+        case SCREEN_RASTER_HEIGHT:
           len = sizeof(struct dashboard_ts_context);
           data = (uint8_t *)state->dashboard_ts;
           break;
-        case 16: {
+        case SCREEN_EVEN_AI: {
           struct dash_data_buf *blk = state->dash_buf;
 
           if ((blk->type == 13) || (blk->type == 15)) {
@@ -2055,23 +2067,23 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
           len = sizeof(struct dash_data_buf);
           break;
         }
-        case 20:
+        case SCREEN_EVEN_AI_V2_INFO:
           len = sizeof(struct evenai_buf);
           data = (uint8_t *)state->evenai_buf;
           break;
-        case 17:
+        case SCREEN_SET_IMU_PITCH:
           len = HORIZ_PITCH_CFG_SIZE;
           data = state->horiz_pitch_cfg;
           break;
-        case 18:
+        case SCREEN_PROMPT_INFO:
           len = sizeof(struct prompt_info);
           data = (uint8_t *)state->ts_info;
           break;
-        case 19:
+        case SCREEN_TRANSCRIBE_INFO:
           len = sizeof(struct transcribe_buf);
           data = (uint8_t *)state->transcribe_buf;
           break;
-        case 3: {
+        case SCREEN_DEMO_IMAGE: {
           uint32_t now = k_uptime_get();
 
           if (!date_ts) {
@@ -2112,7 +2124,7 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
         set_brightness_to_panel_reg_in_running(state->panel.panel_brightness_level);
         state->esb_arg2 = state->panel.panel_brightness_level;
       }
-      wait = sync_to_slave(state, 0, NULL, 0);
+      wait = sync_to_slave(state, SYNC_CMD_DATA, NULL, 0);
       changed = 1;
       if (wait >= 5000) {
         G1_LOG_ERR("sync to slave exceed MAX_WAIT_COUNT, wait_time %d\n", wait);
@@ -2124,8 +2136,8 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
       } else if (wait >= 500) {
         G1_LOG_ERR("sync to slave exceed LOW_WAIT_COUNT, wait_time %d\n", wait);
         refresh = false;
-      } else if ((state->esb_screen_id != state->dashboard_mode) && (state->dashboard_mode > 6) &&
-                 (state->esb_screen_id > 6)) {
+      } else if ((state->esb_screen_id != state->dashboard_mode) && (state->dashboard_mode > SCREEN_DASHBOARD) &&
+                 (state->esb_screen_id > SCREEN_DASHBOARD)) {
         G1_LOG_ERR("screen id was changed, g->master_sync_pkg.new_screen_id %d pkg->screen_id %d\n",
                    state->esb_screen_id, state->dashboard_mode);
         wait = 70;
@@ -2145,9 +2157,9 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
         G1_LOG_ERR("trigger_on_screen is closed\n");
         changed = 1;
       } else {
-        uint8_t att = state->imu.mode;
+        enum imu_attitude att = state->imu.mode;
 
-        if ((state->dashboard_mode == 10) && (last_attitude != att) && (prev_changed != 1)) {
+        if ((state->dashboard_mode == SCREEN_NAVIGATION) && (last_attitude != att) && (prev_changed != 1)) {
           G1_LOG_WRN("imu->attitude changed ....\n");
         } else {
           last_attitude = att;
@@ -2158,15 +2170,15 @@ static void display_dispatch_thread(void *p1, void *p2, void *p3) {
       }
     }
     if (state->is_master == 1) {
-      switch (deferred_text_ack_cmd) {
-        case 0x0d:
-          report_event_to_phone(0xf0);
+      switch ((enum ble_cmd)deferred_text_ack_cmd) {
+        case BLE_CMD_TRANSLATE_SRC_TEXT:
+          report_event_to_phone(BLE_EVT_ACK_TRANSLATE_SRC_TEXT);
           break;
-        case 0x0f:
-          report_event_to_phone(0xf1);
+        case BLE_CMD_TRANSLATE_DST_TEXT:
+          report_event_to_phone(BLE_EVT_ACK_TRANSLATE_DST_TEXT);
           break;
-        case 0x4e:
-          report_event_to_phone(0xf2);
+        case BLE_CMD_TEXT_SET:
+          report_event_to_phone(BLE_EVT_ACK_TEXT_SET);
           break;
         default:
           break;
@@ -2192,7 +2204,7 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
   ARG_UNUSED(p3);
   struct GlassesState *state = p1;
   uint8_t data[2];
-  uint8_t mode;
+  enum dashboard_pane mode;
   uint8_t n;
   int i;
   int type;
@@ -2212,7 +2224,7 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
             continue;
           }
           if (state->onboarding->active) {
-            report_event_to_phone(1);
+            report_event_to_phone(BLE_EVT_SINGLE_TAP);
             if (state->onboarding->action == 5) {
               if (get_dashboard_state()->is_master != 2) {
                 continue;
@@ -2237,34 +2249,34 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
             continue;
           }
           if (((state->dash_buf->type >= 7) && (state->dash_buf->type <= 11)) || state->horiz_pitch_cfg[0] ||
-              ((state->evenai_buf->state == 1) && (state->evenai_buf->sub == 3))) {
-            report_event_to_phone(1);
+              ((state->evenai_buf->state == 1) && (state->evenai_buf->sub == EVENAI_ACTION_ANSWER))) {
+            report_event_to_phone(BLE_EVT_SINGLE_TAP);
             continue;
           }
           if (state->teleprompter->ready) {
-            report_event_to_phone(1);
+            report_event_to_phone(BLE_EVT_SINGLE_TAP);
           }
           if (state->is_master == 1) {
-            if (state->dashboard_mode == 6) {
+            if (state->dashboard_mode == SCREEN_DASHBOARD) {
               mode = get_pane_mode();
               data[0] = 2;
               data[1] = 1;
-              if (mode == 0) {
+              if (mode == DASHBOARD_PANE_NOTES) {
                 data[1] |= (uint8_t)(getNotesIndex() << 4U);
-              } else if (mode == 1) {
+              } else if (mode == DASHBOARD_PANE_STOCK) {
                 data[1] = 3;
                 data[1] |= (uint8_t)(getStocksIndex() << 4U);
-              } else if (mode == 2) {
+              } else if (mode == DASHBOARD_PANE_NEWS) {
                 data[1] = 5;
                 data[1] |= (uint8_t)(getNewsIndex() << 4U);
-              } else if (mode == 3) {
+              } else if (mode == DASHBOARD_PANE_CALENDAR) {
                 data[1] = 7;
                 G1_LOG_ERR("master send calendar key single click ,timestamp = %d\n", state->dashboard_ts->ts);
                 data[1] |= (uint8_t)(getCalenadrIndex() << 4U);
               } else {
                 /* nothing to do */
               }
-              if (sync_to_slave(state, 6, data, 2) >= 5000) {
+              if (sync_to_slave(state, SYNC_CMD_SUBCMD, data, 2) >= 5000) {
                 G1_LOG_WRN("SYNC TO Slave failed...,don't exec key function.\n");
               } else {
                 display_inputEvent(0, 1);
@@ -2272,8 +2284,9 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
               }
             }
           } else if ((state->is_master == 2) && count_messages() &&
-                     (((state->dashboard_mode == 6) && (get_dashboard_state()->imu.mode == 2)) ||
-                      (state->dashboard_mode == 4))) {
+                     (((state->dashboard_mode == SCREEN_DASHBOARD) &&
+                       (get_dashboard_state()->imu.mode == IMU_ATTITUDE_LOOK_UP)) ||
+                      (state->dashboard_mode == SCREEN_NOTIFICATION))) {
             while (send_msg_key_to_master() < 0) {
             }
           } else {
@@ -2282,19 +2295,20 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
           break;
         case 2:
           if (state->onboarding->active) {
-            report_event_to_phone(0x19);
+            report_event_to_phone(BLE_EVT_ONBOARDING_DOUBLE_TAP);
             continue;
           }
-          if (state->dashboard_mode == 7) {
+          if (state->dashboard_mode == SCREEN_BITMAP) {
             continue;
           }
-          if ((state->task_status->task == 0U) && (state->dashboard_mode == 0) && (state->display_mode != 12)) {
+          if ((state->task_status->task == (uint32_t)SCREEN_IDLE) && (state->dashboard_mode == SCREEN_IDLE) &&
+              (state->display_mode != DISPLAY_MODE_NOT_DISTURB)) {
             if (state->double_tap_customize == 4) {
               if (state->is_master == 1) {
                 data[0] = 0x0a;
                 data[1] = 1;
                 for (i = 1; i != 4; i++) {
-                  if (sync_to_slave(state, 6, data, 2) >= 3000) {
+                  if (sync_to_slave(state, SYNC_CMD_SUBCMD, data, 2) >= 3000) {
                     G1_LOG_ERR("SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n",
                                i);
                   } else {
@@ -2306,7 +2320,7 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
                 }
               } else {
                 for (i = 1; i != 4; i++) {
-                  if (sync_to_master(state, 7, NULL, 0) >= 2000U) {
+                  if (sync_to_master(state, SLAVE_CMD_DOUBLE_CLICK, NULL, 0) >= 2000U) {
                     G1_LOG_ERR("SYNC dashborad startup command to start Slave failed %d times\n", i);
                   } else {
                     G1_LOG_ERR("sync dashborad startup command success,wait for starting\n");
@@ -2315,7 +2329,7 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
                 }
               }
             } else if (state->double_tap_customize != 0) {
-              report_event_to_phone(0x20);
+              report_event_to_phone(BLE_EVT_DOUBLE_TAP_CUSTOMIZE);
               for (n = 100; n != 0; n--) {
                 k_msleep(20);
               }
@@ -2324,14 +2338,14 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
             }
             continue;
           }
-          if ((state->dashboard_mode == 6) &&
+          if ((state->dashboard_mode == SCREEN_DASHBOARD) &&
               ((state->double_tap_customize == 4) || (state->dashboard_ts->dashboard_hold != 0))) {
-            report_event_to_phone(0);
+            report_event_to_phone(BLE_EVT_DOUBLE_TAP);
             if (state->is_master == 1) {
               data[0] = 0x0a;
               data[1] = 2;
               for (i = 1; i != 4; i++) {
-                if (sync_to_slave(state, 6, data, 2) >= 3000) {
+                if (sync_to_slave(state, SYNC_CMD_SUBCMD, data, 2) >= 3000) {
                   G1_LOG_ERR("SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n", i);
                 } else {
                   G1_LOG_ERR("SEND double click event to slave.\n");
@@ -2343,7 +2357,7 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
               }
             } else {
               for (i = 1; i != 4; i++) {
-                if (sync_to_master(state, 7, NULL, 0) >= 2000U) {
+                if (sync_to_master(state, SLAVE_CMD_DOUBLE_CLICK, NULL, 0) >= 2000U) {
                   G1_LOG_ERR("SYNC dashborad startup command to close dashboard Slave failed %d times\n", i);
                 } else {
                   G1_LOG_ERR("sync dashborad startup command success,close dashboard function\n");
@@ -2357,10 +2371,10 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
           while ((state->suspend_state > 1) && --n) {
             k_msleep(10);
           }
-          if ((state->dashboard_mode != 12) || (state->quicknote_show_info->action == 10)) {
-            report_event_to_phone(0);
+          if ((state->dashboard_mode != SCREEN_QUICKNOTE) || (state->quicknote_show_info->action == 10)) {
+            report_event_to_phone(BLE_EVT_DOUBLE_TAP);
             if (state->is_master == 1) {
-              if (state->dashboard_mode == 4) {
+              if (state->dashboard_mode == SCREEN_NOTIFICATION) {
                 expire_cur_message();
                 if (get_dashboard_state()->unread_msg_num) {
                   set_msg_show_state(6);
@@ -2370,10 +2384,10 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
               }
               data[0] = 1;
               data[1] = 0;
-              if (state->dashboard_mode != 6) {
+              if (state->dashboard_mode != SCREEN_DASHBOARD) {
                 atomic_or(&close_app_flags, BIT(1));
                 for (i = 1; i != 4; i++) {
-                  if (sync_to_slave(state, 8, data, 2) >= 3000) {
+                  if (sync_to_slave(state, SYNC_CMD_EXIT_TASK, data, 2) >= 3000) {
                     G1_LOG_ERR("SYNC TO Slave failed %d times,don't exec double click close app function.\n", i);
                   } else {
                     G1_LOG_ERR("SEND double click event to slave.\n");
@@ -2382,13 +2396,13 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
                   }
                 }
               } else {
-                sync_to_slave(state, 8, data, 2);
+                sync_to_slave(state, SYNC_CMD_EXIT_TASK, data, 2);
                 exit_running_task(state, 0);
                 update_persist_task_status_to_idle(state);
               }
-            } else if (state->dashboard_mode != 6) {
-              sync_to_master(state, 4, NULL, 0);
-              if (get_dashboard_state()->dashboard_mode == 4) {
+            } else if (state->dashboard_mode != SCREEN_DASHBOARD) {
+              sync_to_master(state, SLAVE_CMD_EXIT_TASK, NULL, 0);
+              if (get_dashboard_state()->dashboard_mode == SCREEN_NOTIFICATION) {
                 expire_cur_message();
                 if (get_dashboard_state()->unread_msg_num) {
                   set_msg_show_state(6);
@@ -2398,8 +2412,8 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
               }
               exit_running_task(state, 0);
             } else {
-              sync_to_master(state, 4, NULL, 0);
-              if (get_dashboard_state()->dashboard_mode == 4) {
+              sync_to_master(state, SLAVE_CMD_EXIT_TASK, NULL, 0);
+              if (get_dashboard_state()->dashboard_mode == SCREEN_NOTIFICATION) {
                 expire_cur_message();
                 if (get_dashboard_state()->unread_msg_num) {
                   set_msg_show_state(6);
@@ -2415,7 +2429,7 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
           data[0] = 1;
           data[1] = 0;
           for (i = 1; i != 4; i++) {
-            if (sync_to_slave(state, 6, data, 2) >= 3000) {
+            if (sync_to_slave(state, SYNC_CMD_SUBCMD, data, 2) >= 3000) {
               G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n", i);
             } else {
               display_DelayClose(10000);
@@ -2429,33 +2443,33 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
           if (state->onboarding->active || (state->dashboard_ts->dashboard_hold == 1)) {
             continue;
           }
-          if (state->display_mode == 12) {
-            report_event_to_phone(5);
+          if (state->display_mode == DISPLAY_MODE_NOT_DISTURB) {
+            report_event_to_phone(BLE_EVT_NOT_DISTURB_EXIT);
             if (state->is_master == 1) {
-              if (sync_to_slave(state, 5, NULL, 0) < 3000) {
+              if (sync_to_slave(state, SYNC_CMD_NOT_DISTURB_EXIT, NULL, 0) < 3000) {
                 show_not_disturb_bitmap(1);
               }
-            } else if (sync_to_master(state, 9, NULL, 0) < 2000U) {
+            } else if (sync_to_master(state, SLAVE_CMD_NOT_DISTURB_EXIT, NULL, 0) < 2000U) {
               show_not_disturb_bitmap(1);
             } else {
               /* nothing to do */
             }
-            state->display_mode = 10;
+            state->display_mode = DISPLAY_MODE_NORMAL;
             G1_LOG_ERR("#############################exit not disturb################################\n\n");
           } else {
-            report_event_to_phone(4);
+            report_event_to_phone(BLE_EVT_NOT_DISTURB_ENTER);
             if (state->is_master == 1) {
-              sync_to_slave(state, 4, NULL, 0);
+              sync_to_slave(state, SYNC_CMD_NOT_DISTURB_ENTER, NULL, 0);
               exit_running_task(state, 0);
             } else {
-              sync_to_master(state, 8, NULL, 0);
+              sync_to_master(state, SLAVE_CMD_NOT_DISTURB_ENTER, NULL, 0);
             }
-            state->display_mode = 12;
+            state->display_mode = DISPLAY_MODE_NOT_DISTURB;
             exit_running_task(state, 1);
             request_not_disturb_bitmap(0);
             G1_LOG_ERR("#############################enter not disturb################################\n\n");
           }
-          state->dashboard_cmd = 3;
+          state->dashboard_cmd = BLE_CMD_SILENT_MODE_SET;
           k_sem_give(&state->dashboard_position_sem);
           break;
         case 4:
@@ -2464,17 +2478,18 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
             continue;
           }
           long_press_active = 1;
-          if ((state->display_mode != 12) &&
-              (is_idle() || (state->dashboard_mode == 6) || (state->dashboard_mode == 1))) {
+          if ((state->display_mode != DISPLAY_MODE_NOT_DISTURB) &&
+              (is_idle() || (state->dashboard_mode == SCREEN_DASHBOARD) ||
+               (state->dashboard_mode == SCREEN_WAIT_BLOW_HEAD))) {
             if (state->is_master == 2) {
               uint8_t ok = get_glasses_ble_status();
 
               if (ok == 1) {
-                state->evenai_buf->sub = 6;
+                state->evenai_buf->sub = EVENAI_ACTION_LONG_PRESS_REQUEST;
                 state->evenai_buf->action_status = 2;
-                report_event_to_phone(0x17);
+                report_event_to_phone(BLE_EVT_LONG_PRESS);
               } else {
-                state->evenai_buf->sub = 6;
+                state->evenai_buf->sub = EVENAI_ACTION_LONG_PRESS_REQUEST;
                 state->evenai_buf->action_status = 1;
               }
             } else {
@@ -2489,17 +2504,18 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
         case 6:
           long_press_active = 0;
           if (state->is_master == 2) {
-            if (state->dashboard_mode == 0x10) {
+            if (state->dashboard_mode == SCREEN_EVEN_AI) {
               if (state->dash_buf->type == 4) {
                 state->dash_buf->type = 5;
               }
-            } else if ((state->dashboard_mode == 0x14) && (get_glasses_ble_status() == 1) &&
-                       (state->evenai_buf->sub == 7) && (state->evenai_buf->action_status == 2)) {
-              report_event_to_phone(0x18);
+            } else if ((state->dashboard_mode == SCREEN_EVEN_AI_V2_INFO) && (get_glasses_ble_status() == 1) &&
+                       (state->evenai_buf->sub == EVENAI_ACTION_LONG_PRESS) &&
+                       (state->evenai_buf->action_status == 2)) {
+              report_event_to_phone(BLE_EVT_LONG_PRESS_RELEASE);
             } else {
               /* nothing to do */
             }
-          } else if (!lp_timeout_handled && (state->dashboard_mode == 12)) {
+          } else if (!lp_timeout_handled && (state->dashboard_mode == SCREEN_QUICKNOTE)) {
             lp_timeout_handled = 1;
             state->quicknote_show_info->longpress_req = 2;
             check_disp_quicknote();
@@ -2510,17 +2526,18 @@ static void key_event_thread(void *p1, void *p2, void *p3) {
         case 5:
           long_press_active = 0;
           if (state->is_master == 2) {
-            if (state->dashboard_mode == 0x10) {
+            if (state->dashboard_mode == SCREEN_EVEN_AI) {
               if (state->dash_buf->type == 4) {
                 state->dash_buf->type = 5;
               }
-            } else if ((state->dashboard_mode == 0x14) && (get_glasses_ble_status() == 1) &&
-                       (state->evenai_buf->sub == 7) && (state->evenai_buf->action_status == 2)) {
-              report_event_to_phone(0x18);
+            } else if ((state->dashboard_mode == SCREEN_EVEN_AI_V2_INFO) && (get_glasses_ble_status() == 1) &&
+                       (state->evenai_buf->sub == EVENAI_ACTION_LONG_PRESS) &&
+                       (state->evenai_buf->action_status == 2)) {
+              report_event_to_phone(BLE_EVT_LONG_PRESS_RELEASE);
             } else {
               /* nothing to do */
             }
-          } else if (state->dashboard_mode == 12) {
+          } else if (state->dashboard_mode == SCREEN_QUICKNOTE) {
             state->quicknote_show_info->longpress_req = 2;
             check_disp_quicknote();
           } else {
@@ -2561,7 +2578,7 @@ static void touch_key_thread(void *p1, void *p2, void *p3) {
       aw9320x_get_irq_stat();
       touch_irq_pending = 0;
     }
-    if (!(state->module_mask & BIT(0))) {
+    if (!(state->module_mask & (uint16_t)WORK_MODULE_TOUCH)) {
       continue;
     }
     switch (aw9320x_wearing) {
@@ -2810,8 +2827,8 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3) {
   state->battery_info[0] = 0;
   state->battery_info[1] = 0;
   state->battery_current = 0x80;
-  if ((state->is_master == 1) && (state->display_mode == 12)) {
-    sync_to_slave(state, 4, NULL, 0);
+  if ((state->is_master == 1) && (state->display_mode == DISPLAY_MODE_NOT_DISTURB)) {
+    sync_to_slave(state, SYNC_CMD_NOT_DISTURB_ENTER, NULL, 0);
   }
   for (;;) {
     cnt++;
@@ -2862,7 +2879,7 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3) {
         } else {
           state->sync_flags &= ~3U;
         }
-        if ((sync_to_slave(state, 0xc, NULL, 0) < 500) && (state->sync_flags & BIT(2))) {
+        if ((sync_to_slave(state, SYNC_CMD_STATUS, NULL, 0) < 500) && (state->sync_flags & BIT(2))) {
           clear_all_messages();
           state->sync_flags &= ~BIT(2);
         }
@@ -2878,7 +2895,7 @@ static void low_speed_peripheral_dispatch_thread(void *p1, void *p2, void *p3) {
         if ((uint8_t)(state->sync_flags ^ state->esb_pkt.flags) & BIT(0)) {
           state->esb_pkt.data[0]++;
         }
-        if ((sync_to_master(state, 1, NULL, 0) < 500U) && (state->esb_pkt.flags & BIT(2))) {
+        if ((sync_to_master(state, SLAVE_CMD_STATUS, NULL, 0) < 500U) && (state->esb_pkt.flags & BIT(2))) {
           clear_all_messages();
           state->esb_pkt.flags &= ~BIT(2);
           state->sync_flags &= ~BIT(2);

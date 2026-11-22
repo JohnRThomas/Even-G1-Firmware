@@ -379,7 +379,7 @@ ZTEST(touch, test_pack_round_trip_through_the_boot_loader) {
 }
 
 ZTEST(touch, test_fw_version_cmp_is_equal_only_for_the_same_version) {
-  int8_t cmp = -1;
+  enum AW9320X_CMP_VAL cmp = (enum AW9320X_CMP_VAL) - 1;
 
   zassert_equal(aw9320x_fw_version_cmp(&cmp, IMG_VERSION), AW_OK);
   zassert_equal(cmp, AW9320X_VER_EQUAL);
@@ -389,17 +389,17 @@ ZTEST(touch, test_fw_version_cmp_is_equal_only_for_the_same_version) {
   zassert_equal(cmp, AW9320X_VER_NOT_EQUAL);
 
   aw9320x_emul_set_fw_version(IMG_VERSION + 1);
-  cmp = -1;
+  cmp = (enum AW9320X_CMP_VAL) - 1;
   zassert_equal(aw9320x_fw_version_cmp(&cmp, IMG_VERSION), AW_OK);
   zassert_equal(cmp, AW9320X_VER_NOT_EQUAL);
 }
 
 ZTEST(touch, test_fw_version_cmp_on_a_nak_fails_and_keeps_the_result) {
-  int8_t cmp = 7;
+  enum AW9320X_CMP_VAL cmp = (enum AW9320X_CMP_VAL)7;
 
   aw9320x_emul()->nak = true;
   zassert_equal(aw9320x_fw_version_cmp(&cmp, IMG_VERSION), -AW_ERR);
-  zassert_equal(cmp, 7);
+  zassert_equal((int)cmp, 7);
 }
 
 ZTEST(touch, test_fw_update_with_the_same_version_changes_nothing) {

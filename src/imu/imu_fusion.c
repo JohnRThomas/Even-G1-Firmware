@@ -14,12 +14,12 @@
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
-#include <zephyr/sys/util_macro.h>
 #include <zephyr/toolchain.h>
 
 #include <g1_log.h>
 
 #include "../ahrs/ahrs.h"
+#include "../ble/ble_cmd.h"
 #include "../ble/ble_proto.h"
 #include "../display/proxy_thread.h"
 #include "../main.h"
@@ -71,9 +71,11 @@ static int imu_trigger_count;
 static int imu_level_pitch;
 static uint8_t imu_last_level;
 
-/* 6-byte "look up" notification for the app (cmd 0x0650) */
+/* 6-byte "look up" notification for the app */
+#define IMU_LOOKUP_MSG_CMD ((uint16_t)BLE_CMD_DASHBOARD_LOCK_SET + 0x0600U)
+
 struct imu_lookup_msg {
-  uint16_t cmd;
+  uint16_t cmd; /* enum ble_cmd in the low byte, the message's length in the high byte */
   uint16_t f2;
   uint8_t action;
   uint8_t status;
@@ -82,7 +84,7 @@ struct imu_lookup_msg {
 static void send_dashboard_lock_info(void) {
   if (atomic_test_bit(&dashboard_lock_requested, 1) && !atomic_test_bit(&dashboard_head_up_opened, 1) &&
       !atomic_test_bit(&dashboard_lock_reported, 1) && atomic_test_bit(&dashboard_lock_requested, 1)) {
-    struct imu_lookup_msg msg = {.cmd = 0x0650, .action = 1, .status = 1};
+    struct imu_lookup_msg msg = {.cmd = IMU_LOOKUP_MSG_CMD, .action = 1, .status = 1};
 
     send_response_data_to_msgqueue(&msg, sizeof(msg));
     send_response_data_to_ble();
@@ -110,7 +112,7 @@ static int update_head_up_thresholds(struct imu_ctx *c) {
     }
 
     /* angle threshold: level scaled by 1900 in mode 2, else by 4000 */
-    if (c->mode == 2) {
+    if (c->mode == IMU_ATTITUDE_LOOK_UP) {
       scaled = c->level * 1900;
     } else {
       scaled = c->level * 4000;
@@ -280,7 +282,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
   struct esb_sync_pkt *sync = &gs->sync;
   int retry;
 
-  if ((sync->screen_id == 0) && (abs(pitch - imu_last_pitch) < 50)) {
+  if ((sync->screen_id == SCREEN_IDLE) && (abs(pitch - imu_last_pitch) < 50)) {
     imu_last_pitch = pitch;
     imu_trigger_count = 0;
     send_dashboard_lock_info();
@@ -288,7 +290,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
   }
 
   imu_last_pitch = pitch;
-  if (sync->screen_id == 13) {
+  if (sync->screen_id == SCREEN_GYRO) {
     gs->tx_cmd = 12;
     gs->tx_arg = 0;
     memcpy(&gs->ui.ypr, angles, sizeof(gs->ui.ypr));
@@ -298,7 +300,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
   imu_yaw_x100 = yaw;
   imu_roll_x100 = roll;
 
-  if (c->mode != 2) {
+  if (c->mode != IMU_ATTITUDE_LOOK_UP) {
     if ((pitch <= c->thr_low) && (pitch >= c->thr_high)) {
       /* head is up: look up */
       k_uptime_ticks();
@@ -313,7 +315,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
       }
       if (imu_trigger_count > 1) {
         imu_trigger_count = -3;
-        if ((sync->screen_id != 0) || (pitch < imu_level_pitch)) {
+        if ((sync->screen_id != SCREEN_IDLE) || (pitch < imu_level_pitch)) {
           screen_switch_busy = 1;
           if (BLE_DEBUG != 0) {
             ble_printk(
@@ -328,12 +330,15 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
           while (!get_dashboard_state()->message_mode && push_msg_syncing && --retry) {
             k_sleep(K_MSEC(10));
           }
-          report_event_to_phone(2);
-          if ((sync->screen_id == 9) || (sync->screen_id == 12) || (sync->screen_id == 10) || (sync->screen_id == 11) ||
-              (sync->screen_id == 5) || (sync->screen_id == 4) || (sync->screen_id == 7) || (sync->screen_id == 14) ||
-              (sync->screen_id == 15) || (sync->screen_id == 16) || (sync->screen_id == 20) ||
-              (sync->screen_id == 17) || (sync->screen_id == 18) || (sync->screen_id == 19)) {
-            c->mode = 2;
+          report_event_to_phone(BLE_EVT_HEAD_UP);
+          if ((sync->screen_id == SCREEN_TELEPROMPTER) || (sync->screen_id == SCREEN_QUICKNOTE) ||
+              (sync->screen_id == SCREEN_NAVIGATION) || (sync->screen_id == SCREEN_TRANSLATE) ||
+              (sync->screen_id == SCREEN_NEW_MESSAGE) || (sync->screen_id == SCREEN_NOTIFICATION) ||
+              (sync->screen_id == SCREEN_BITMAP) || (sync->screen_id == SCREEN_ONBOARDING) ||
+              (sync->screen_id == SCREEN_RASTER_HEIGHT) || (sync->screen_id == SCREEN_EVEN_AI) ||
+              (sync->screen_id == SCREEN_EVEN_AI_V2_INFO) || (sync->screen_id == SCREEN_SET_IMU_PITCH) ||
+              (sync->screen_id == SCREEN_PROMPT_INFO) || (sync->screen_id == SCREEN_TRANSCRIBE_INFO)) {
+            c->mode = IMU_ATTITUDE_LOOK_UP;
             screen_switch_busy = 0;
             return;
           }
@@ -342,7 +347,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
               if (!atomic_test_bit(&dashboard_head_up_opened, 1) && !atomic_test_bit(&dashboard_lock_reported, 1) &&
                   atomic_test_bit(&dashboard_lock_requested, 1)) {
                 struct imu_lookup_msg msg = {
-                  .cmd = 0x0650,
+                  .cmd = IMU_LOOKUP_MSG_CMD,
                   .action = 1,
                   .status = 1,
                 };
@@ -352,13 +357,13 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
                 atomic_set_bit(&dashboard_lock_reported, 1);
               }
             } else {
-              c->mode = 2;
+              c->mode = IMU_ATTITUDE_LOOK_UP;
               if (!atomic_test_bit(&dashboard_head_up_opened, 1)) {
                 atomic_set_bit(&dashboard_head_up_opened, 1);
               }
             }
           } else {
-            c->mode = 2;
+            c->mode = IMU_ATTITUDE_LOOK_UP;
           }
           screen_switch_busy = 0;
         }
@@ -377,21 +382,24 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
     } else {
       printk("bow head################################################\n");
     }
-    report_event_to_phone(3);
-    c->mode = 1;
-    if ((sync->screen_id == 9) || (sync->screen_id == 12) || (sync->screen_id == 10) || (sync->screen_id == 11) ||
-        (sync->screen_id == 7) || (sync->screen_id == 14) || (sync->screen_id == 15) || (sync->screen_id == 16) ||
-        (sync->screen_id == 20) || (sync->screen_id == 17) || (sync->screen_id == 18) || (sync->screen_id == 19) ||
-        (sync->screen_id == 4) || is_persist_task_active(gs, sync->screen_id)) {
+    report_event_to_phone(BLE_EVT_HEAD_DOWN);
+    c->mode = IMU_ATTITUDE_BOW_HEAD;
+    if ((sync->screen_id == SCREEN_TELEPROMPTER) || (sync->screen_id == SCREEN_QUICKNOTE) ||
+        (sync->screen_id == SCREEN_NAVIGATION) || (sync->screen_id == SCREEN_TRANSLATE) ||
+        (sync->screen_id == SCREEN_BITMAP) || (sync->screen_id == SCREEN_ONBOARDING) ||
+        (sync->screen_id == SCREEN_RASTER_HEIGHT) || (sync->screen_id == SCREEN_EVEN_AI) ||
+        (sync->screen_id == SCREEN_EVEN_AI_V2_INFO) || (sync->screen_id == SCREEN_SET_IMU_PITCH) ||
+        (sync->screen_id == SCREEN_PROMPT_INFO) || (sync->screen_id == SCREEN_TRANSCRIBE_INFO) ||
+        (sync->screen_id == SCREEN_NOTIFICATION) || is_persist_task_active(gs, sync->screen_id)) {
       screen_switch_busy = 0;
       return;
     }
     gs->esb_arg2 = gs->panel.panel_brightness_level;
-    if (sync->screen_id == 1) {
-      sync_to_slave(gs, 8, NULL, 0);
+    if (sync->screen_id == SCREEN_WAIT_BLOW_HEAD) {
+      sync_to_slave(gs, SYNC_CMD_EXIT_TASK, NULL, 0);
     } else if ((!gs->message_mode || cur_message_show_state() != 1) && !get_dashboard_startup_mode() &&
                !gs->dashboard_ts->dashboard_hold) {
-      sync_to_slave(gs, 1, NULL, 0);
+      sync_to_slave(gs, SYNC_CMD_SUSPEND, NULL, 0);
     } else {
       /* nothing to do */
     }
@@ -412,7 +420,7 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, co
   return;
 
 level_check:
-  if ((c->mode == 1) && (imu_trigger_count <= 0)) {
+  if ((c->mode == IMU_ATTITUDE_BOW_HEAD) && (imu_trigger_count <= 0)) {
     k_uptime_ticks();
     imu_level_pitch = pitch;
   }
@@ -520,7 +528,7 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
   }
 
   G1_LOG_WRN("start imu looper\n\n");
-  c->mode = 1;
+  c->mode = IMU_ATTITUDE_BOW_HEAD;
   gs = CONTAINER_OF(c, struct GlassesState, imu);
   now = 0;
 
@@ -530,15 +538,15 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
     }
 
     if (get_pt_test_mode() == 0) {
-      if (gs->display_mode == 11) {
-        c->mode = 2;
+      if (gs->display_mode == DISPLAY_MODE_ALWAYS_ON) {
+        c->mode = IMU_ATTITUDE_LOOK_UP;
         k_sleep(K_MSEC(1000));
         continue;
       }
-      if (gs->display_mode == 12) {
-        c->mode = 1;
-        if (gs->sync.screen_id != 7) {
-          sync_to_slave(gs, 1, NULL, 0);
+      if (gs->display_mode == DISPLAY_MODE_NOT_DISTURB) {
+        c->mode = IMU_ATTITUDE_BOW_HEAD;
+        if (gs->sync.screen_id != SCREEN_BITMAP) {
+          sync_to_slave(gs, SYNC_CMD_SUSPEND, NULL, 0);
           if (get_work_mode() == 2) {
             change_work_mode(3);
           }
@@ -547,8 +555,8 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
         k_sleep(K_MSEC(1000));
         continue;
       }
-      if (!(gs->module_mask & BIT(5))) {
-        c->mode = 1;
+      if (!(gs->module_mask & (uint16_t)WORK_MODULE_IMU)) {
+        c->mode = IMU_ATTITUDE_BOW_HEAD;
         k_sleep(K_MSEC(100));
         continue;
       }
@@ -593,8 +601,8 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
     imu_yaw_x100 = yaw;
     imu_roll_x100 = roll;
 
-    if ((get_pt_test_mode() == 1) && (gs->display_mode == 11)) {
-      c->mode = 2;
+    if ((get_pt_test_mode() == 1) && (gs->display_mode == DISPLAY_MODE_ALWAYS_ON)) {
+      c->mode = IMU_ATTITUDE_LOOK_UP;
       k_sleep(K_MSEC(10));
       continue;
     }
@@ -615,7 +623,7 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
 
     imu_motion_detect(angles);
 
-    if (c->mode == 2) {
+    if (c->mode == IMU_ATTITUDE_LOOK_UP) {
       k_sleep(K_MSEC(38));
     } else {
       k_sleep(K_MSEC(80));

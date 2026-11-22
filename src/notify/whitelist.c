@@ -13,10 +13,10 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/toolchain.h>
 
+#include "../ble/ble_cmd.h"
 #include "../ble/ble_proto.h"
 #include "../storage/storage.h"
 #include "g1_log.h"
-#include "notify.h"
 #include "whitelist.h"
 
 static char *whitelist_buf;
@@ -142,19 +142,19 @@ void put_whitelist_app_from_app(struct ble_context *ctx, const uint8_t *hdr, con
     }
   }
   if (whitelist_buf != NULL) {
-    int ret = parse_receiver_pack_pkcs7((uint8_t *)whitelist_buf, data, len);
+    enum ble_resp ret = parse_receiver_pack_pkcs7((uint8_t *)whitelist_buf, data, len);
 
-    rsp[1] = ret;
-    if (ret == PKCS7_PACK_DONE) {
+    rsp[1] = (uint8_t)ret;
+    if (ret == BLE_RESP_OK) {
       if (!is_the_same_whitelist_app(whitelist_buf)) {
         if (parse_app_white_list_json(whitelist_buf) != 0) {
           if (store_whitelist() != 0) {
             BLE_PRINTK("store_write#whitelist_app: FAIL");
-            rsp[1] = 0xca;
+            rsp[1] = BLE_RESP_ERR;
           }
         } else {
           BLE_PRINTK("invalid whilte list json ! \n");
-          rsp[1] = 0xca;
+          rsp[1] = BLE_RESP_ERR;
         }
       }
       free(whitelist_buf);

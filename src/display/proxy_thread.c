@@ -11,9 +11,9 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
-#include <zephyr/sys/util_macro.h>
 #include <zephyr/toolchain.h>
 
+#include "../ble/ble_cmd.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../storage/storage.h"
 #include "../threads/threads.h"
@@ -83,7 +83,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
       k_sleep(K_MSEC(5000));
       continue;
     }
-    if (!(gs->module_mask & BIT(7))) {
+    if (!(gs->module_mask & (uint16_t)WORK_MODULE_BLE)) {
       k_sleep(K_MSEC(1000));
       continue;
     }
@@ -129,7 +129,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
             G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
             break;
           }
-          if ((VOICE_MGR->magic == VOICE_MANAGER_MAGIC) && (VOICE_MGR->blocks[audio_block_idx].state == 2U)) {
+          if ((VOICE_MGR->magic == VOICE_MANAGER_MAGIC) &&
+              (VOICE_MGR->blocks[audio_block_idx].state == (uint32_t)VOICE_BLOCK_USED)) {
             audio_file_start = VOICE_MGR->blocks[audio_block_idx].start_addr;
             audio_file_end = VOICE_MGR->blocks[audio_block_idx].end_addr;
           }
@@ -148,11 +149,11 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
           audio_pkt_index = 0;
           audio_file_sent = 0;
           memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
-          audio_response_packet_buf[0] = 0x1e;
+          audio_response_packet_buf[0] = BLE_CMD_QUICK_NOTE_CONTROL;
           audio_response_packet_buf[2] = 0;
           audio_response_packet_buf[3] = audio_pkt_seq;
           audio_pkt_seq++;
-          audio_response_packet_buf[4] = 2;
+          audio_response_packet_buf[4] = QUICK_NOTE_SUB_AUDIO_FILE;
           audio_response_packet_buf[5] = audio_pkt_total;
           audio_response_packet_buf[6] = (uint32_t)audio_pkt_total >> 8U;
           audio_pkt_index++;
@@ -201,12 +202,12 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
           } else {
             memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
             n = MIN(audio_file_size - audio_file_sent, AUDIO_CHUNK_SIZE);
-            audio_response_packet_buf[0] = 0x1e;
+            audio_response_packet_buf[0] = BLE_CMD_QUICK_NOTE_CONTROL;
             audio_response_packet_buf[1] = n + AUDIO_PKT_HDR_SIZE;
             audio_response_packet_buf[2] = 0;
             audio_response_packet_buf[3] = audio_pkt_seq;
             audio_pkt_seq++;
-            audio_response_packet_buf[4] = 2;
+            audio_response_packet_buf[4] = QUICK_NOTE_SUB_AUDIO_FILE;
             audio_response_packet_buf[5] = audio_pkt_total;
             audio_response_packet_buf[6] = (uint32_t)audio_pkt_total >> 8U;
             audio_pkt_index++;
@@ -263,17 +264,17 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
         }
         memset(audio_response_packet_buf, 0, sizeof(audio_response_packet_buf));
         if (msg.data[0] == 0) {
-          audio_response_packet_buf[0] = 0x1e;
+          audio_response_packet_buf[0] = BLE_CMD_QUICK_NOTE_CONTROL;
         } else {
           audio_response_packet_buf[0] = 0x21;
         }
         audio_response_packet_buf[2] = 0;
         audio_response_packet_buf[3] = audio_pkt_seq;
         audio_pkt_seq++;
-        audio_response_packet_buf[4] = 1;
+        audio_response_packet_buf[4] = QUICK_NOTE_SUB_AUDIO_INFO;
         p = &audio_response_packet_buf[6];
         for (int i = 0; i < VOICE_BLOCK_NUM; i++) {
-          if (VOICE_MGR->blocks[i].state == 2U) {
+          if (VOICE_MGR->blocks[i].state == (uint32_t)VOICE_BLOCK_USED) {
             p[0] = i + 1;
             cnt++;
             sys_put_le32(VOICE_MGR->blocks[i].timestamp, &p[1]);
@@ -300,7 +301,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
         buf[1] = on;
 
         for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-          if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, buf, 2) >= SYNC_TIMEOUT) {
             G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n", i);
           } else {
             display_powerEvent(on);
@@ -312,13 +313,13 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
       }
 
       case PROXY_MSG_LANGUAGE: {
-        uint8_t lang = msg.data[0];
+        enum language lang = (enum language)msg.data[0];
 
         buf[0] = 8;
-        buf[1] = lang;
+        buf[1] = (uint8_t)lang;
 
         for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-          if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, buf, 2) >= SYNC_TIMEOUT) {
             G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n", i);
           } else {
             upgradeAppLanguageInfoToFlash(lang);
@@ -335,7 +336,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
         buf[1] = mode;
 
         for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-          if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, buf, 2) >= SYNC_TIMEOUT) {
             G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec quick note start function.\n", i);
           } else {
             upgradeDashboardStartupModeInfoToFlash(mode);
@@ -346,13 +347,13 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
       }
 
       case PROXY_MSG_DOUBLE_CLICK:
-        if ((get_dashboard_state()->double_tap_customize == 4) && (get_dashboard_state()->dashboard_mode == 0) &&
-            (get_dashboard_state()->is_master == 1)) {
+        if ((get_dashboard_state()->double_tap_customize == 4) &&
+            (get_dashboard_state()->dashboard_mode == SCREEN_IDLE) && (get_dashboard_state()->is_master == 1)) {
           buf[0] = 0x0a;
           buf[1] = 1;
 
           for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-            if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
+            if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, buf, 2) >= SYNC_TIMEOUT) {
               G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n", i);
             } else {
               atomic_or(&dashboard_flags, 2);
@@ -361,14 +362,14 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
             }
           }
         }
-        if ((get_dashboard_state()->dashboard_mode == 6) &&
+        if ((get_dashboard_state()->dashboard_mode == SCREEN_DASHBOARD) &&
             (get_dashboard_state()->double_tap_dashboard_on || get_dashboard_state()->dashboard_ts->dashboard_hold) &&
             (get_dashboard_state()->is_master == 1)) {
           buf[0] = 0x0a;
           buf[1] = 2;
 
           for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-            if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
+            if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, buf, 2) >= SYNC_TIMEOUT) {
               G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec double click startup dashboard function.\n", i);
             } else {
               atomic_or(&dashboard_flags, 2);
@@ -387,7 +388,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
         buf[1] = mode;
 
         for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-          if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, buf, 2) >= SYNC_TIMEOUT) {
             G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec double_tap_customize\n", i);
           } else {
             upgradeDoubleTapCustomizeToFlash(mode);
@@ -404,7 +405,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
         buf[1] = mode;
 
         for (int i = 1; i <= SYNC_RETRY_COUNT; i++) {
-          if (sync_to_slave(get_dashboard_state(), 6, buf, 2) >= SYNC_TIMEOUT) {
+          if (sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, buf, 2) >= SYNC_TIMEOUT) {
             G1_LOG_WRN("SYNC TO Slave failed %d times,don't exec longpress_tap_customize\n", i);
           } else {
             upgradeLongpressTapCustomizeToFlash(mode);
@@ -428,6 +429,7 @@ int send_response_data_to_msgqueue(const void *data, uint32_t len) {
     return 0;
   }
   memset(&msg, 0, sizeof(msg));
+  msg.type = PROXY_MSG_RESPONSE_LOAD;
   if (len > (uint32_t)PROXY_MSG_DATA_MAX) {
     G1_LOG_ERR("send data length more than %d,can't load it,exit ...\n", PROXY_MSG_DATA_MAX);
     return -1;
@@ -485,8 +487,8 @@ int SendPowerInfoToSlave(uint8_t on) {
   return 0;
 }
 
-int SendSystemLanguageInfoToSlave(uint8_t lang) {
-  struct proxy_msg msg = {.type = PROXY_MSG_LANGUAGE, .len = 1, .data = {lang}};
+int SendSystemLanguageInfoToSlave(enum language lang) {
+  struct proxy_msg msg = {.type = PROXY_MSG_LANGUAGE, .len = 1, .data = {(uint8_t)lang}};
 
   if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);

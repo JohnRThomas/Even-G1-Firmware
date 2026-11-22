@@ -5,6 +5,7 @@
  * app sync helpers.  They share dashboard_prv.
  */
 #include "dashboard.h"
+#include "../ble/ble_cmd.h"
 #include "../ble/ble_proto.h"
 #include "../display/display_thread.h"
 #include "../display/proxy_thread.h"
@@ -21,6 +22,7 @@
 #include "g1_date.h"
 #include "g1_log.h"
 #include "glasses_state.h"
+#include "ui_event.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -41,7 +43,7 @@ uint8_t calendar_index;
 static uint8_t new_msg_drawn;
 static uint8_t new_msg_entered;
 
-int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   const struct GlassesState *state = get_dashboard_state();
   uint8_t type;
@@ -49,14 +51,14 @@ int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int 
   if (get_msg_show_state() == 4) {
     return 0;
   }
-  if (event == 2) {
+  if (event == UI_EVT_EXIT) {
     BLE_PRINTK("ui_new_message_come_on_task exit !");
     gui_screen_clear();
     new_msg_drawn = 0;
     new_msg_entered = 0;
     return 0;
   }
-  if (event == 0) {
+  if (event == UI_EVT_REFRESH) {
     return 0;
   }
   if (new_msg_drawn == 0) {
@@ -114,7 +116,7 @@ int ui_new_message_come_on_task(struct jbd_panel_context *panel, void *arg, int 
 
 void dashboard_draw_add_note_hint(void) {
   uint8_t flag = get_glasses_ble_status();
-  uint8_t lang = get_current_language();
+  enum language lang = get_current_language();
   const char *str;
 
   if (flag == 1) {
@@ -145,7 +147,7 @@ void dashboard_draw_add_note_hint(void) {
 }
 
 void dashboard_draw_add_note_hint_wide(void) {
-  uint8_t lang = get_current_language();
+  enum language lang = get_current_language();
 
   if (dashboard_prv.language != lang) {
     dashboard_prv.language = lang;
@@ -203,7 +205,7 @@ void cleanNotesIndex(void) {
   set_ncs_mem_notes_index(0);
 }
 
-uint8_t get_pane_mode(void) {
+enum dashboard_pane get_pane_mode(void) {
   return dashboard_prv.pane_mode;
 }
 
@@ -282,7 +284,7 @@ static inline void db_draw_clock(int x0, int y0, int x1, int y1) {
   gui_clock_draw(get_date(), DB_X(x0), DB_Y(y0), DB_X(x1), DB_Y(y1), 1, is_24h);
 }
 
-void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int refresh, uint8_t display_mode) {
+void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, enum ui_event event, uint8_t display_mode) {
   struct dashboard_prv_data *ctx = &dashboard_prv;
   uint32_t connected;
   const char *s;
@@ -334,8 +336,8 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
         }
         DB_TEXT(gui_utf_draw, date_str, 3, 0, 2, 0x8c, 0x1d, 1);
         db_draw_clock(0, 0x22, 0x96, 0x43);
-        if (refresh != 1) {
-          if (refresh != 4) {
+        if (event != UI_EVT_ENTER) {
+          if (event != UI_EVT_INPUT) {
             return;
           }
         } else {
@@ -424,7 +426,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
           }
         }
 
-        if (ctx->pane_mode == 0) {
+        if (ctx->pane_mode == DASHBOARD_PANE_NOTES) {
           char buf[32] = "";
 
           count = 0;
@@ -461,7 +463,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
           }
           gui_utf_draw_dark_light_split(0, gs->quicknote->notes[idx].text, 0, DB_X(0x10a), DB_Y(0x1c), DB_X(0x238),
                                         DB_Y(0x88), 4, 0x200b, 0, NULL, 0);
-        } else if (ctx->pane_mode == 1) {
+        } else if (ctx->pane_mode == DASHBOARD_PANE_STOCK) {
           uint8_t mode;
 
           count = 0;
@@ -536,7 +538,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
           } else {
             /* nothing to do */
           }
-        } else if (ctx->pane_mode == 2) {
+        } else if (ctx->pane_mode == DASHBOARD_PANE_NEWS) {
           // cppcheck-suppress [variableScope] ; declared with the other locals of the pane
           char buf[32] = "";
           uint8_t mode;
@@ -618,7 +620,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
           } else {
             /* nothing to do */
           }
-        } else if (ctx->pane_mode == 4) {
+        } else if (ctx->pane_mode == DASHBOARD_PANE_MAP) {
           uint8_t mode = db->citywalk_disp_mode;
 
           if ((mode == 0) || ((ctx->screen_cleared == 0) && (citywalk_canvas_valid == 0))) {
@@ -672,8 +674,8 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
         }
         DB_TEXT(gui_utf_draw, date_str, 3, 0x2e, 0, 0xb9, 0x1b, 1);
         db_draw_clock(0x2e, 0x34, 0xc3, 0x55);
-        if (refresh != 1) {
-          if (refresh != 4) {
+        if (event != UI_EVT_ENTER) {
+          if (event != UI_EVT_INPUT) {
             return;
           }
         } else {
@@ -687,7 +689,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
           gui_bmp_bitmap_draw(0x5a, DB_X(0x214), DB_Y(4), 0, 0, 0);
           gui_bmp_bitmap_draw(0x59, DB_X(0xd4), DB_Y(4), 0, 0, 0);
         }
-        if (ctx->pane_mode == 0) {
+        if (ctx->pane_mode == DASHBOARD_PANE_NOTES) {
           char buf[32] = "";
 
           count = 0;
@@ -726,11 +728,11 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
                                         DB_Y(0x88), 4, 0x200b, 0, NULL, 0);
           return;
         }
-        if (ctx->pane_mode == 1) {
+        if (ctx->pane_mode == DASHBOARD_PANE_STOCK) {
           gui_bmp_bitmap_draw(0x43, DB_X(0xe0), DB_Y(2), 0, 0, 0);
-        } else if (ctx->pane_mode == 2) {
+        } else if (ctx->pane_mode == DASHBOARD_PANE_NEWS) {
           gui_bmp_bitmap_draw(0x47, DB_X(0xe0), DB_Y(2), 0, 0, 0);
-        } else if (ctx->pane_mode == 4) {
+        } else if (ctx->pane_mode == DASHBOARD_PANE_MAP) {
           gui_bmp_bitmap_draw(0x48, DB_X(0xe0), DB_Y(2), 0, 0, 0);
         } else {
           /* nothing to do */
@@ -765,8 +767,8 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
         }
         DB_TEXT(gui_utf_draw, date_str, 3, 0, 2, 0x8c, 0x1d, 1);
         db_draw_clock(0, 0x34, 0x96, 0x55);
-        if (refresh != 1) {
-          if (refresh != 4) {
+        if (event != UI_EVT_ENTER) {
+          if (event != UI_EVT_INPUT) {
             return;
           }
         } else {
@@ -822,7 +824,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
           }
         }
 
-        if (ctx->pane_mode == 0) {
+        if (ctx->pane_mode == DASHBOARD_PANE_NOTES) {
           char buf[32] = "";
 
           count = 0;
@@ -862,7 +864,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
           return;
         }
         switch (ctx->pane_mode) {
-          case 1: {
+          case DASHBOARD_PANE_STOCK: {
             uint8_t mode;
 
             count = 0;
@@ -939,7 +941,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
             }
             return;
           }
-          case 2: {
+          case DASHBOARD_PANE_NEWS: {
             // cppcheck-suppress [variableScope] ; declared with the other locals of the pane
             char buf[32] = "";
             uint8_t mode;
@@ -1023,7 +1025,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
             }
             return;
           }
-          case 3: {
+          case DASHBOARD_PANE_CALENDAR: {
             if ((ctx->calendar_disp_mode != db->calendar_disp_mode) ||
                 (ctx->calendar_last_index != ctx->calendar_index)) {
               ctx->calendar_disp_mode = db->calendar_disp_mode;
@@ -1084,7 +1086,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
             cleanCalenadrIndex();
             return;
           }
-          case 4: {
+          case DASHBOARD_PANE_MAP: {
             uint8_t mode = db->citywalk_disp_mode;
 
             if ((mode == 0) || ((ctx->screen_cleared == 0) && (citywalk_canvas_valid == 0))) {
@@ -1141,8 +1143,8 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
       }
       DB_TEXT(gui_utf_draw, date_str, 3, 0, 0, 0x8c, 0x1b, 1);
       db_draw_clock(0, 0x34, 0x96, 0x55);
-      if (refresh != 1) {
-        if (refresh != 4) {
+      if (event != UI_EVT_ENTER) {
+        if (event != UI_EVT_INPUT) {
           return;
         }
       } else {
@@ -1156,7 +1158,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
         gui_bmp_bitmap_draw(0x5a, DB_X(0x23e), DB_Y(4), 0, 0, 0);
         gui_bmp_bitmap_draw(0x59, DB_X(0xac), DB_Y(4), 0, 0, 0);
       }
-      if (ctx->pane_mode == 0) {
+      if (ctx->pane_mode == DASHBOARD_PANE_NOTES) {
         char buf[32] = "";
 
         count = 0;
@@ -1196,16 +1198,16 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
         return;
       }
       switch (ctx->pane_mode) {
-        case 1:
+        case DASHBOARD_PANE_STOCK:
           gui_bmp_bitmap_draw(0x43, DB_X(0xba), DB_Y(2), 0, 0, 0);
           break;
-        case 2:
+        case DASHBOARD_PANE_NEWS:
           gui_bmp_bitmap_draw(0x47, DB_X(0xba), DB_Y(2), 0, 0, 0);
           break;
-        case 3:
+        case DASHBOARD_PANE_CALENDAR:
           gui_bmp_bitmap_draw(0x39, DB_X(0xba), DB_Y(2), 0, 0, 0);
           break;
-        case 4:
+        case DASHBOARD_PANE_MAP:
           gui_bmp_bitmap_draw(0x48, DB_X(0xba), DB_Y(2), 0, 0, 0);
           break;
         default:
@@ -1226,7 +1228,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
       }
 
       if (connected == 1U) {
-        if (refresh == 1) {
+        if (event == UI_EVT_ENTER) {
           char str[8];
 
           if (db->low_power == 1) {
@@ -1307,7 +1309,7 @@ void DashBoard_Reflash(struct db_info *db, const struct GlassesState *gs, int re
                                  gui_screen_x_offset() + weather_x_shift + 0xe0, DB_Y(0x37), 1, 0, 0, NULL, 0);
         db_draw_clock(0xea, 0x4c, 0x180, 0x6d);
       } else {
-        if (refresh == 1) {
+        if (event == UI_EVT_ENTER) {
           if (db->low_power == 1) {
             if (weather_x_shift != 0) {
               weather_x_shift = 0;
@@ -1418,20 +1420,20 @@ int send_message_count_to_app(void) {
   }
   uint8_t data[16] = {0};
 
-  data[0] = 0x22;
+  data[0] = BLE_CMD_STATUS;
   data[1] = 0x0a;
-  data[4] = 0x01;
+  data[4] = STATUS_SUB_MESSAGE_COUNT;
   data[5] = count_unread_messages();
   data[6] = get_dashboard_state()->dashboard_ts->low_power;
   data[7] = get_dashboard_state()->dashboard_ts->disp_mode;
-  data[8] = get_dashboard_state()->dashboard_ts->area;
-  if (dashboard_prv.pane_mode == 0) {
+  data[8] = (uint8_t)get_dashboard_state()->dashboard_ts->area;
+  if (dashboard_prv.pane_mode == DASHBOARD_PANE_NOTES) {
     data[9] = getNotesIndex() + 1;
-  } else if (dashboard_prv.pane_mode == 1) {
+  } else if (dashboard_prv.pane_mode == DASHBOARD_PANE_STOCK) {
     data[9] = getStocksIndex() + 1;
-  } else if (dashboard_prv.pane_mode == 2) {
+  } else if (dashboard_prv.pane_mode == DASHBOARD_PANE_NEWS) {
     data[9] = getNewsIndex() + 1;
-  } else if (dashboard_prv.pane_mode == 3) {
+  } else if (dashboard_prv.pane_mode == DASHBOARD_PANE_CALENDAR) {
     data[9] = getCalenadrIndex() + 1;
   } else {
     /* nothing to do */
@@ -1446,18 +1448,18 @@ int sync_dashboard_key_event_to_app(void) {
   }
   uint8_t data[16] = {0};
 
-  data[0] = 0x22;
+  data[0] = BLE_CMD_STATUS;
   data[1] = 0x08;
-  data[4] = 0x02;
+  data[4] = STATUS_SUB_KEY_EVENT;
   data[5] = get_dashboard_state()->dashboard_ts->disp_mode;
-  data[6] = dashboard_prv.pane_mode;
-  if (dashboard_prv.pane_mode == 0) {
+  data[6] = (uint8_t)dashboard_prv.pane_mode;
+  if (dashboard_prv.pane_mode == DASHBOARD_PANE_NOTES) {
     data[7] = getNotesIndex() + 1;
-  } else if (dashboard_prv.pane_mode == 1) {
+  } else if (dashboard_prv.pane_mode == DASHBOARD_PANE_STOCK) {
     data[7] = getStocksIndex() + 1;
-  } else if (dashboard_prv.pane_mode == 2) {
+  } else if (dashboard_prv.pane_mode == DASHBOARD_PANE_NEWS) {
     data[7] = getNewsIndex() + 1;
-  } else if (dashboard_prv.pane_mode == 3) {
+  } else if (dashboard_prv.pane_mode == DASHBOARD_PANE_CALENDAR) {
     data[7] = getCalenadrIndex() + 1;
     G1_LOG_ERR("calendar index = %d\n", data[7]);
   } else {
@@ -1470,7 +1472,7 @@ int sync_dashboard_key_event_to_app(void) {
 #define SEND_DASHBOARD_LOCK_INFO()                                                                                     \
   do {                                                                                                                 \
     uint8_t lock[6] = {0};                                                                                             \
-    lock[0] = 0x50;                                                                                                    \
+    lock[0] = BLE_CMD_DASHBOARD_LOCK_SET;                                                                              \
     lock[1] = 0x06;                                                                                                    \
     lock[4] = 0x01;                                                                                                    \
     lock[5] = 0x02;                                                                                                    \
@@ -1481,7 +1483,7 @@ int sync_dashboard_key_event_to_app(void) {
     atomic_or(&dashboard_lock_reported, BIT(1));                                                                       \
   } while (0)
 
-int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
+int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
   struct db_info *db = &gs->ui.db;
@@ -1490,12 +1492,12 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
   set_frame_buffer(panel->panel_buffer);
 
   switch (prv->state) {
-    case 0:
+    case UI_PAGE_INIT:
       G1_LOG_INF("Enter DASHBOARD_INIT_STATUS task....\n");
       if (event == UI_EVT_EXIT) {
         G1_LOG_INF("dashboard function exit ...\n");
         get_dashboard_state()->dashboard_ts->dashboard_on = 0;
-        report_event_to_phone(0x1f);
+        report_event_to_phone(BLE_EVT_DASHBOARD_EXIT);
         gui_screen_clear();
         atomic_clear_bit(&dashboard_head_up_opened, 1);
         memset(prv, 0, sizeof(*prv));
@@ -1505,7 +1507,7 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
           (gs->ui.db.dashboard_on == 1)) {
         if (!prv->init_done) {
           G1_LOG_INF("DASHBOARD INIT .......\n");
-          report_event_to_phone(0x1e);
+          report_event_to_phone(BLE_EVT_DASHBOARD_START);
           memset(prv, 0, sizeof(*prv));
           gui_screen_clear();
           prv->notes_index = notes_index;
@@ -1523,7 +1525,7 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
           G1_LOG_INF("db_info->citywalk_disp_mode = %d\n", gs->ui.db.citywalk_disp_mode);
           clear_showing_notification_on_gui();
           for (dashboard_fade_step = 0; dashboard_fade_step < 4; dashboard_fade_step++) {
-            DashBoard_Reflash(db, get_dashboard_state(), 1, gs->ui.db.display_mode);
+            DashBoard_Reflash(db, get_dashboard_state(), UI_EVT_ENTER, gs->ui.db.display_mode);
             for (int row = 0; row < 199; row++) {
               for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
                 const uint8_t steps[8] = {1, 3, 5, 7, 7, 7, 7, 7};
@@ -1546,24 +1548,24 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
 
             sync[0] = 0x02;
             sync[1] = 0x02;
-            if (prv->pane_mode == 0) {
+            if (prv->pane_mode == DASHBOARD_PANE_NOTES) {
               idx = getNotesIndex();
               val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
               sync[1] = val;
               G1_LOG_INF("master sync quicknote index to slave ,index = %d\n", val);
-            } else if (prv->pane_mode == 1) {
+            } else if (prv->pane_mode == DASHBOARD_PANE_STOCK) {
               sync[1] = 0x04;
               idx = getStocksIndex();
               val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
               sync[1] = val;
               G1_LOG_INF("master sync stocks index to slave,index = %d\n", val);
-            } else if (prv->pane_mode == 2) {
+            } else if (prv->pane_mode == DASHBOARD_PANE_NEWS) {
               sync[1] = 0x06;
               idx = getNewsIndex();
               val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
               sync[1] = val;
               G1_LOG_INF("master sync news index to slave,index = %d\n", val);
-            } else if (prv->pane_mode == 3) {
+            } else if (prv->pane_mode == DASHBOARD_PANE_CALENDAR) {
               sync[1] = 0x08;
               idx = getCalenadrIndex();
               val = sync[1] | (((uint32_t)idx << 4U) & 0xf0U);
@@ -1572,7 +1574,7 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
             } else {
               /* nothing to do */
             }
-            ret = sync_to_slave(get_dashboard_state(), 6, sync, 2);
+            ret = sync_to_slave(get_dashboard_state(), SYNC_CMD_SUBCMD, sync, 2);
             if (ret >= 5000) {
               G1_LOG_WRN("SYNC TO Slave failed...,don't exec key function.\n");
             } else {
@@ -1580,7 +1582,7 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
             }
           }
           prv->enter_ts = k_uptime_get();
-          prv->state = 1;
+          prv->state = UI_PAGE_RUNNING;
           prv->screen_cleared = 1;
           set_display_wait_ms(0x42);
           send_message_count_to_app();
@@ -1606,7 +1608,7 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
       SEND_DASHBOARD_LOCK_INFO();
       return 0;
 
-    case 1:
+    case UI_PAGE_RUNNING:
       if (atomic_test_bit(&dashboard_lock_requested, 1) && !atomic_test_bit(&dashboard_lock_reported, 1)) {
         SEND_DASHBOARD_LOCK_INFO();
       }
@@ -1622,7 +1624,7 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
       if (event == UI_EVT_EXIT) {
         G1_LOG_INF("dashboard function exit ...\n");
         get_dashboard_state()->dashboard_ts->dashboard_on = 0;
-        report_event_to_phone(0x1f);
+        report_event_to_phone(BLE_EVT_DASHBOARD_EXIT);
         gui_screen_fade_out();
         atomic_clear_bit(&dashboard_head_up_opened, 1);
         memset(prv, 0, sizeof(*prv));
@@ -1634,37 +1636,37 @@ int ui_DashBoard_task(struct jbd_panel_context *panel, void *arg, int event) {
       }
       if (event == UI_EVT_REFRESH) {
         G1_LOG_INF("current index = %d\n", gs->ui.db.display_mode);
-        DashBoard_Reflash(db, get_dashboard_state(), 0, gs->ui.db.display_mode);
+        DashBoard_Reflash(db, get_dashboard_state(), UI_EVT_REFRESH, gs->ui.db.display_mode);
       }
       if (event == UI_EVT_INPUT) {
-        uint8_t mode;
+        enum dashboard_pane mode;
 
         G1_LOG_ERR("received key press event,_dashboard_prv_data.display_mode = %d\n", prv->display_mode);
         mode = prv->pane_mode;
         G1_LOG_ERR("_CurrentCustomAreaType = %d\n", mode);
-        if ((mode == 0) && (prv->notes_count > 1)) {
+        if ((mode == DASHBOARD_PANE_NOTES) && (prv->notes_count > 1)) {
           prv->notes_index = (uint8_t)(prv->notes_index + 1) % prv->notes_count;
           notes_index = prv->notes_index;
           set_ncs_mem_notes_index(notes_index);
           G1_LOG_INF("current quicknote index = %d\n", prv->notes_index);
         }
-        if ((mode == 1) && (prv->stocks_count > 1)) {
+        if ((mode == DASHBOARD_PANE_STOCK) && (prv->stocks_count > 1)) {
           prv->stocks_index = (uint8_t)(prv->stocks_index + 1) % prv->stocks_count;
           stocks_index = prv->stocks_index;
           G1_LOG_INF("current stocks index = %d\n", prv->stocks_index);
         }
-        if ((mode == 2) && (prv->news_count > 1) && (prv->news_index != 3)) {
+        if ((mode == DASHBOARD_PANE_NEWS) && (prv->news_count > 1) && (prv->news_index != 3)) {
           prv->news_index = (uint8_t)(prv->news_index + 1) % prv->news_count;
           news_index = prv->news_index;
           G1_LOG_INF("current news index = %d\n", prv->news_index);
         }
-        if ((mode == 3) && (prv->calendar_count != 0)) {
+        if ((mode == DASHBOARD_PANE_CALENDAR) && (prv->calendar_count != 0)) {
           prv->calendar_index = (uint8_t)(prv->calendar_index + 1) % prv->calendar_count;
           calendar_index = prv->calendar_index;
           G1_LOG_ERR("current calendar index = %d\n", prv->calendar_index);
         }
-        if (mode != 4) {
-          DashBoard_Reflash(db, get_dashboard_state(), 4, gs->ui.db.display_mode);
+        if (mode != DASHBOARD_PANE_MAP) {
+          DashBoard_Reflash(db, get_dashboard_state(), UI_EVT_INPUT, gs->ui.db.display_mode);
           sync_dashboard_key_event_to_app();
         }
       }

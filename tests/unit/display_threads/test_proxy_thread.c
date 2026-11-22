@@ -9,7 +9,7 @@
 
 extern struct k_msgq display_msgq;
 
-FAKE_VALUE_FUNC(int, upgradeAppLanguageInfoToFlash, uint8_t);
+FAKE_VALUE_FUNC(int, upgradeAppLanguageInfoToFlash, enum language);
 FAKE_VALUE_FUNC(int, upgradeDashboardStartupModeInfoToFlash, uint8_t);
 FAKE_VALUE_FUNC(int, upgradeDoubleTapCustomizeToFlash, uint32_t);
 FAKE_VALUE_FUNC(int, upgradeLongpressTapCustomizeToFlash, uint32_t);
@@ -181,7 +181,7 @@ ZTEST(proxy_thread, test_power_info_syncs_sub_7_and_raises_the_power_event_local
 
   send_and_expect_sync(SendPowerInfoToSlave, 1, "07 01");
   zassert_equal(k_msgq_get(&display_msgq, &msg, K_NO_WAIT), 0);
-  zassert_equal(msg.type, DISP_MSG_POWER_ON, "display message type %d", msg.type);
+  zassert_equal(msg.type, DISP_MSG_LOW_POWER, "display message type %d", msg.type);
 }
 
 ZTEST(proxy_thread, test_power_info_0_raises_the_power_resume_event) {
@@ -189,7 +189,7 @@ ZTEST(proxy_thread, test_power_info_0_raises_the_power_resume_event) {
 
   send_and_expect_sync(SendPowerInfoToSlave, 0, "07 00");
   zassert_equal(k_msgq_get(&display_msgq, &msg, K_NO_WAIT), 0);
-  zassert_equal(msg.type, DISP_MSG_POWER_OFF, "display message type %d", msg.type);
+  zassert_equal(msg.type, DISP_MSG_POWER_RESUME, "display message type %d", msg.type);
 }
 
 /* sends the setting and expects one sync to the slave, then one store of the value */

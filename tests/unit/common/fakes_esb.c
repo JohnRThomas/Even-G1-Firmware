@@ -9,7 +9,7 @@
 DEFINE_FAKE_VALUE_FUNC(int, SendDashBoardStartupModeInfoToSlave, uint8_t);
 DEFINE_FAKE_VALUE_FUNC(int, SendDoubleTapCustomizeToSlave, uint8_t);
 DEFINE_FAKE_VALUE_FUNC(int, SendLongpressTapCustomizeToSlave, uint8_t);
-DEFINE_FAKE_VALUE_FUNC(int, SendSystemLanguageInfoToSlave, uint8_t);
+DEFINE_FAKE_VALUE_FUNC(int, SendSystemLanguageInfoToSlave, enum language);
 DEFINE_FAKE_VALUE_FUNC(int, send_response_data_to_msgqueue, const void *, uint32_t);
 DEFINE_FAKE_VALUE_FUNC(int, send_response_data_to_ble);
 DEFINE_FAKE_VALUE_FUNC(int, g1_fake_ipc_send, const void *, size_t);

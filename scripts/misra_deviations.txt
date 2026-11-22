@@ -13,8 +13,6 @@
 
 # Deviations: the firmware does not follow these.
 1.2    Zephyr's macros (containers, logging, devicetree, sections) are built on GCC extensions
-2.3    the vendor touch driver's set of integer typedefs (src/aw9320x/aw_type.h) is kept as delivered
-2.4    enums that only group constants are used through their enumerators, never through their tag
 2.5    the register maps and protocol command tables are kept complete, whether or not the code uses every entry yet
 2.7    a callback takes the parameters its table or the SDK prescribes, used or not
 5.8    structure members share their names with the functions that read them (is_master, crc32) and with library functions (div)
@@ -45,8 +43,6 @@
 12.3   in src/gui/gui.c                      see 14.2
 13.3   in src/gui/gui.c                      the layout loops read a character and advance in one expression (c = *code++)
 10.8   in src/threads/threads.c              tick differences are taken unsigned and read signed, so that they survive the counter wrapping
-10.4   in src/production_test/pt_comm.c      the transport type arrives as an int and is compared with the enumerators; naming the conversion is a redundant cast to clang-tidy and changes the code under -fshort-enums
-10.4   in src/display/display_thread.c       as for pt_comm.c, with the display events
 10.5   in src/panel_display/panel_fb.c       the brightness test combines two comparisons with & as the original does; && compiles differently
 10.4   in src/gui/ui_even_ai_v2_info.c       cppcheck reports the two Boolean branches of a ?: as operands of different kinds
 9.2    in src/nfc/nfc_wlc.c                 the NDEF type names are byte arrays initialised from string literals

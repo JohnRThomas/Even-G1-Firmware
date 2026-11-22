@@ -27,7 +27,7 @@
 
 static int32_t old_mode = 0;
 static uint32_t hostirqen = 0;
-static uint8_t prot_update_fw_flag = 0;
+static enum AW_UPDATE_FW_STATE prot_update_fw_flag = SEND_UPDTAE_CMD;
 static struct aw9320x_func *g_aw9320x_func = NULL;
 // Interrupt mode is mutually exclusive to polling mode
 static uint8_t g_is_need_irq = 1;
@@ -37,7 +37,7 @@ aw9320x_WEARING aw9320x_wearing;
 static void aw9320x_Global_var_rst_def_val(void) {
   old_mode = 0;
   hostirqen = 0;
-  prot_update_fw_flag = 0;
+  prot_update_fw_flag = SEND_UPDTAE_CMD;
   g_is_need_irq = AW_TRUE;
 }
 
@@ -348,7 +348,7 @@ static int32_t aw9320x_check_isp_go_reg(void) {
   return AW_OK;
 }
 
-static int32_t aw9320x_close_write_flash_protect(uint32_t flash_addr_flag) {
+static int32_t aw9320x_close_write_flash_protect(enum AW9320X_UPDATE_MODE flash_addr_flag) {
   int32_t ret = 0;
 
   // Open host read / write FMC protection
@@ -363,7 +363,7 @@ static int32_t aw9320x_close_write_flash_protect(uint32_t flash_addr_flag) {
   }
 
   // Turn on flash write protection
-  if (flash_addr_flag == (uint32_t)BOOT_UPDATE) {
+  if (flash_addr_flag == BOOT_UPDATE) {
     ret = aw9320x_i2c_write(REG_ARRAY2_EW_EN, REG_SET_BTROM_EW_EN);
     if (ret != (int32_t)AW_OK) {
       return -AW_ERR;
@@ -715,11 +715,11 @@ int32_t aw9320x_update_fw_to_flash(void) {
 
 /*********************protocol update frimware start****************** *****/
 
-static uint32_t get_pack_checksum(const uint8_t *data, uint16_t length, uint8_t module, uint8_t command) {
+static uint32_t get_pack_checksum(const uint8_t *data, uint16_t length, enum AW_MODULE module, uint8_t command) {
   uint32_t i = 0;
   uint32_t check_sum = 0;
 
-  check_sum = module + command + length;
+  check_sum = (uint8_t)module + command + length;
   for (i = 0; i < length; i += 4U) {
     check_sum += AW_GET_32_DATA(data[i], data[i + 1U], data[i + 2U], data[i + 3U]);
   }
@@ -727,7 +727,7 @@ static uint32_t get_pack_checksum(const uint8_t *data, uint16_t length, uint8_t 
   return (~check_sum + 1U);
 }
 
-static int32_t dri_to_soc_pack_send(uint8_t module, uint8_t command, uint16_t length, const uint8_t *data) {
+static int32_t dri_to_soc_pack_send(enum AW_MODULE module, uint8_t command, uint16_t length, const uint8_t *data) {
   int8_t cnt = AW_RETRIES;
   uint32_t checksum = 0;
   uint8_t *prot_pack_w = (uint8_t *)malloc(AW_PACK_FIXED_SIZE + length + SEND_ADDR_LEN);
@@ -756,7 +756,7 @@ static int32_t dri_to_soc_pack_send(uint8_t module, uint8_t command, uint16_t le
   prot_pack_w[9] = checksum & GET_BITS_7_0;
 
   // module
-  prot_pack_w[10] = module;
+  prot_pack_w[10] = (uint8_t)module;
 
   // command
   prot_pack_w[11] = command;
@@ -815,7 +815,7 @@ static int32_t soc_to_dri_pack_recv(struct aw_soc_protocol *prot_pack, uint32_t 
   return AW_OK;
 }
 
-static int32_t soc_to_dri_pack_parse(uint32_t length, uint8_t module, uint8_t command) {
+static int32_t soc_to_dri_pack_parse(uint32_t length, enum AW_MODULE module, uint8_t command) {
   int32_t ret = -1;
   uint32_t pack_len = (uint32_t)AW_PACK_FIXED_SIZE + length;
   uint8_t ack_addr[2] = {0};
@@ -845,7 +845,7 @@ static int32_t soc_to_dri_pack_parse(uint32_t length, uint8_t module, uint8_t co
   cmd_status =
     AW_GET_32_DATA(prot_pack_r->value[3], prot_pack_r->value[2], prot_pack_r->value[1], prot_pack_r->value[0]);
 
-  if ((module == prot_pack_r->module) && (command == prot_pack_r->command) && (cmd_status == 0U)) {
+  if (((uint8_t)module == prot_pack_r->module) && (command == prot_pack_r->command) && (cmd_status == 0U)) {
   } else {
     AWLOGE("soc_to_dri_pack_parse err");
     free(prot_pack_r);
@@ -857,7 +857,7 @@ static int32_t soc_to_dri_pack_parse(uint32_t length, uint8_t module, uint8_t co
   return AW_OK;
 }
 
-static int32_t aw9320x_fw_version_cmp(int8_t *cmp_val, uint32_t app_version) {
+static int32_t aw9320x_fw_version_cmp(enum AW9320X_CMP_VAL *cmp_val, uint32_t app_version) {
   uint32_t firmware_version = 0;
   int32_t ret;
 
@@ -934,7 +934,7 @@ static int32_t aw9320x_read_init_comp_irq(void) {
   return AW_OK;
 }
 
-static int32_t aw9320x_send_once_cmd(uint8_t module, uint8_t command, const uint8_t *send_value,
+static int32_t aw9320x_send_once_cmd(enum AW_MODULE module, uint8_t command, const uint8_t *send_value,
                                      uint16_t send_val_len) {
   int32_t ret;
   uint8_t recv_len = 0;
@@ -1006,6 +1006,15 @@ static int32_t aw9320x_send_once_cmd(uint8_t module, uint8_t command, const uint
   return AW_OK;
 }
 
+static int32_t aw9320x_send_update_cmd(enum AW_UPDATE_COMMAND command, const uint8_t *send_value,
+                                       uint16_t send_val_len) {
+  return aw9320x_send_once_cmd(UPDATE_MODULE, (uint8_t)command, send_value, send_val_len);
+}
+
+static int32_t aw9320x_send_flash_cmd(enum AW_FLASH_COMMAND command, const uint8_t *send_value, uint16_t send_val_len) {
+  return aw9320x_send_once_cmd(FLASH_MODULE, (uint8_t)command, send_value, send_val_len);
+}
+
 static int32_t aw9320x_send_stop_cmd(void) {
   int32_t ret;
 
@@ -1071,7 +1080,7 @@ static int32_t aw9320x_cycle_write_firmware(const uint8_t *fw_data, uint32_t fir
 
     memcpy(firmware_info + value_head_len, &(fw_data[start_addr + (half_cache_len * i)]), half_cache_len);
 
-    ret = aw9320x_send_once_cmd(UPDATE_MODULE, UPDATE_TRANSFER_CMD, firmware_info, half_cache_len + value_head_len);
+    ret = aw9320x_send_update_cmd(UPDATE_TRANSFER_CMD, firmware_info, half_cache_len + value_head_len);
     if (ret != (int32_t)AW_OK) {
       AWLOGE("cnt%d dri_to_soc_pack_send err", i);
       goto err_hand;
@@ -1106,7 +1115,7 @@ static int32_t aw9320x_cycle_write_firmware(const uint8_t *fw_data, uint32_t fir
       goto err_hand;
     }
 
-    ret = aw9320x_send_once_cmd(UPDATE_MODULE, UPDATE_TRANSFER_CMD, firmware_info, cycle_cnt_last_len + value_head_len);
+    ret = aw9320x_send_update_cmd(UPDATE_TRANSFER_CMD, firmware_info, cycle_cnt_last_len + value_head_len);
     if (ret != (int32_t)AW_OK) {
       AWLOGE("last dri_to_soc_pack_send err");
       goto err_hand;
@@ -1149,7 +1158,7 @@ static int32_t aw9320x_write_firmware_checksum(const uint8_t *p_checksum) {
     j++;
   }
 
-  ret = aw9320x_send_once_cmd(UPDATE_MODULE, UPDATE_TRANSFER_CMD, transfer_value_w, AW_EN_TR_CHECK_VALUE_LEN);
+  ret = aw9320x_send_update_cmd(UPDATE_TRANSFER_CMD, transfer_value_w, AW_EN_TR_CHECK_VALUE_LEN);
   if (ret != (int32_t)AW_OK) {
     AWLOGE("send checksum err");
     return -AW_ERR;
@@ -1226,7 +1235,7 @@ static int32_t aw9320x_flash_erase_sector(void) {
     addr_buf[2] = (uint8_t)(erase_addr >> OFFSET_BIT_8);
     addr_buf[3] = (uint8_t)erase_addr;
     prot_update_fw_flag = SEND_ERASE_SECTOR_CMD;
-    ret = aw9320x_send_once_cmd(FLASH_MODULE, FLASH_ERASE_SECTOR_CMD, addr_buf, sizeof(addr_buf));
+    ret = aw9320x_send_flash_cmd(FLASH_ERASE_SECTOR_CMD, addr_buf, sizeof(addr_buf));
     if (ret != (int32_t)AW_OK) {
       AWLOGE("erase sector err");
       break;
@@ -1247,7 +1256,7 @@ static int32_t aw9320x_flash_erase_last_sector(void) {
   addr_buf[2] = (uint8_t)(erase_addr >> OFFSET_BIT_8);
   addr_buf[3] = (uint8_t)erase_addr;
   prot_update_fw_flag = SEND_ERASE_SECTOR_CMD;
-  ret = aw9320x_send_once_cmd(FLASH_MODULE, FLASH_ERASE_SECTOR_CMD, addr_buf, sizeof(addr_buf));
+  ret = aw9320x_send_flash_cmd(FLASH_ERASE_SECTOR_CMD, addr_buf, sizeof(addr_buf));
   if (ret != (int32_t)AW_OK) {
     AWLOGE("erase last sector err");
     return -AW_ERR;
@@ -1308,8 +1317,7 @@ static int32_t aw9320x_send_all_update_cmd(const uint8_t *fw_data, uint32_t fw_l
     }
 
     prot_update_fw_flag = SEND_START_CMD;
-    ret =
-      aw9320x_send_once_cmd(UPDATE_MODULE, UPDATE_START_CMD, P_AW_START_CMD_SEND_VALUE, AW_START_CMD_SEND_VALUE_LEN);
+    ret = aw9320x_send_update_cmd(UPDATE_START_CMD, P_AW_START_CMD_SEND_VALUE, AW_START_CMD_SEND_VALUE_LEN);
     if (ret != (int32_t)AW_OK) {
       update_flag = AW_FALSE;
       break;
@@ -1388,7 +1396,7 @@ static int32_t aw9320x_send_all_update_cmd(const uint8_t *fw_data, uint32_t fw_l
 }
 
 int32_t aw9320x_fw_update(uint8_t load_fw_mode) {
-  int8_t cmp_val = 0;
+  enum AW9320X_CMP_VAL cmp_val = AW9320X_VER_EQUAL;
   int32_t ret = 0;
   uint32_t arr_len = sizeof(fw_para_data) / sizeof(fw_para_data[0]);
 

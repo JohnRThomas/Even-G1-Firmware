@@ -1,6 +1,7 @@
 #include "../production_test/production_test.h"
 #include "../threads/threads.h"
 #include "ble_ancs.h"
+#include "ble_cmd.h"
 #include "ble_proto.h"
 #include "g1_log.h"
 #include "glasses_state.h"
@@ -79,12 +80,12 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
   ctx->last_rx_time = k_uptime_get();
 
   if (ctx->receiver_thd_is_running || (k_sem_count_get(&ctx->rx_sem) != 0U)) {
-    if (data[0] == 0x18) {
+    if ((enum ble_cmd)data[0] == BLE_CMD_BITMAP_HIDE) {
       uint8_t resp[20] = {0};
 
-      resp[1] = 0xc9;
+      resp[1] = BLE_RESP_OK;
       ctx->write(resp, sizeof(resp));
-      if ((get_dashboard_state()->is_master == 2) && (get_dashboard_state()->dashboard_mode == 6)) {
+      if ((get_dashboard_state()->is_master == 2) && (get_dashboard_state()->dashboard_mode == SCREEN_DASHBOARD)) {
         k_msleep(50);
       }
       exit_running_task(get_dashboard_state(), 0);

@@ -139,7 +139,7 @@ ZTEST(production_test, test_comm_write_uart_sends_bytes_on_lpuart) {
 ZTEST(production_test, test_comm_write_unknown_transport_sends_nothing) {
   uint8_t reply = 0x24;
 
-  zassert_equal(comm_write(3, &nfc_dev, &reply, 1), 0);
+  zassert_equal(comm_write((enum pt_comm_type)3, &nfc_dev, &reply, 1), 0);
   zassert_equal(eeprom_st25dv_write_i2c_mb_mailbox_ram_fake.call_count, 0);
   zassert_equal(g1_pt_uart_tx_fake.call_count, 0);
 }

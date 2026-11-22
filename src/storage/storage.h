@@ -42,7 +42,7 @@ struct sys_settings {
 
 /* User settings, flash 0x134000 */
 struct usr_settings {
-  uint8_t display_mode;
+  uint8_t display_mode;              /* enum display_mode; 0xff in a blank record */
   uint8_t brightness_level;
   uint8_t wakeup_angle;
   uint8_t dof3_enable;
@@ -80,7 +80,7 @@ struct usr_settings {
 /* setting_store.c record (flash) and CURRENT_LANGUAGE */
 struct app_setting {
   uint8_t magic;          /* flash record: SETTING_MAGIC; CURRENT_LANGUAGE: language set by the phone */
-  uint8_t language;
+  enum language language; /* 0xff in a blank flash record */
   uint8_t startup_mode;
 };
 
@@ -130,7 +130,7 @@ void start_flash_storage_threads(struct GlassesState *gs);
 extern struct k_msgq setting_msgq;
 extern struct app_setting CURRENT_LANGUAGE;
 int clearSettingStorageQueue(void);
-int upgradeAppLanguageInfoToFlash(uint8_t language);
+int upgradeAppLanguageInfoToFlash(enum language language);
 int cleanAppLanguageInfo(void);
 int upgradeDashboardStartupModeInfoToFlash(uint8_t mode);
 int cleanDashBoardStartUpModeInfo(void);
@@ -138,7 +138,7 @@ int upgradeDoubleTapCustomizeToFlash(uint32_t mode);
 int upgradeLongpressTapCustomizeToFlash(uint32_t mode);
 uint8_t getAppLanguageInfofromFlash(void);
 uint8_t getDashboardStartUpModeInfofromFlash(void);
-uint8_t get_current_language(void);
+enum language get_current_language(void);
 uint8_t get_dashboard_startup_mode(void);
 int getSettingStorageQueueNum(void);
 int SettingStoreHandler(void);

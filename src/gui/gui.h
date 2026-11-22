@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <ui_event.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 
@@ -124,7 +125,7 @@ int gui_font_kerning(uint16_t cur, uint16_t next);
 int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, int *out_w);
 
 /* gui_strings.c */
-const char *get_string_in_language(int language, uint32_t string_id);
+const char *get_string_in_language(enum language language, uint32_t string_id);
 const char *get_string(uint8_t string_id);
 
 /* resource_manager.c */
@@ -136,18 +137,18 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
 int weather_icon_to_bitmap(int weather);
 
 /* ui_set_imu_pitch.c */
-int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, int event);
+int ui_set_imu_pitch_task(struct jbd_panel_context *ctx, void *arg, enum ui_event event);
 
 /* ui_prompt_info.c */
-int ui_prompt_info_task(struct jbd_panel_context *ctx, void *arg, int event);
+int ui_prompt_info_task(struct jbd_panel_context *ctx, void *arg, enum ui_event event);
 
 /* ui_transcribe_info.c */
 void transcribe_info_timeout_reset(void);
-int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event);
+int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, enum ui_event event);
 
 /* ui_even_ai_v2_info.c */
 void even_ai_v2_info_timeout_reset(void);
-int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event);
+int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, enum ui_event event);
 
 /* fonts/gui_fonts.c */
 struct font_glyph_idx {

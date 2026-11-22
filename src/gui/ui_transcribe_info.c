@@ -12,9 +12,10 @@
 #include "g1_date.h"
 #include "g1_log.h"
 #include "gui.h"
+#include "ui_event.h"
 
 static struct {
-  uint8_t state;
+  enum ui_page_state state;
   uint8_t entered;
   uint8_t timeout_cnt;
   int64_t ts;
@@ -25,7 +26,8 @@ void transcribe_info_timeout_reset(void) {
   transcribe_ui.timeout_cnt = 0;
 }
 
-static int transcribe_info_reflash(uint8_t **fb, int force) {
+/* event == UI_EVT_ENTER: also redraw the text (it is always drawn before the page runs) */
+static int transcribe_info_reflash(uint8_t **fb, enum ui_event event) {
   struct GlassesState *gs = get_dashboard_state();
 
   if (gs->ui.gui.show_clock == 1) {
@@ -42,7 +44,7 @@ static int transcribe_info_reflash(uint8_t **fb, int force) {
                              gui_screen_y_offset() + 84);
     }
   }
-  if ((transcribe_ui.state == 0) || (force == 1)) {
+  if ((transcribe_ui.state == UI_PAGE_INIT) || (event == UI_EVT_ENTER)) {
     gui_utf_draw_darkword_by_lines(0, gs->ui.gui.text, 0, gui_screen_x_offset() + 88, gui_screen_y_offset(),
                                    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 5, gs->ui.gui.dark_cnt, 0,
                                    NULL, 0);
@@ -50,15 +52,15 @@ static int transcribe_info_reflash(uint8_t **fb, int force) {
   return 0;
 }
 
-int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
+int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
   get_dashboard_state();
   set_frame_buffer(ctx->panel_buffer);
   set_showing_notification_on_gui();
 
   switch (transcribe_ui.state) {
-    case 0:
-      if (event == 1) {
+    case UI_PAGE_INIT:
+      if (event == UI_EVT_ENTER) {
         if (transcribe_ui.entered) {
           return 0;
         }
@@ -71,7 +73,7 @@ int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event)
 
         /* fade in */
         for (int i = 0; i < 8; i++) {
-          transcribe_info_reflash(ctx->panel_buffer, 1);
+          transcribe_info_reflash(ctx->panel_buffer, UI_EVT_ENTER);
           for (int row = 0; row < 199; row++) {
             for (int col = 0; col < GUI_FB_ROW_BYTES; col++) {
               const uint8_t steps[8] = {1, 2, 3, 4, 5, 6, 7, 7};
@@ -85,10 +87,10 @@ int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event)
                                  0, 0, GUI_SCREEN_WIDTH, 199);
         }
         set_showing_notification_on_gui();
-        transcribe_ui.state = 1;
+        transcribe_ui.state = UI_PAGE_RUNNING;
         transcribe_ui.entered = 1;
         transcribe_ui.ts = k_uptime_get();
-      } else if (event == 2) {
+      } else if (event == UI_EVT_EXIT) {
         G1_LOG_INF("set_imu_pitch process received exit packet ...\n");
         gui_screen_clear();
         gui_utf_adv_draw_reset();
@@ -98,10 +100,10 @@ int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event)
         /* nothing to do */
       }
       break;
-    case 1:
-      if ((event == 0) || (event == 1)) {
+    case UI_PAGE_RUNNING:
+      if ((event == UI_EVT_REFRESH) || (event == UI_EVT_ENTER)) {
         transcribe_info_reflash(ctx->panel_buffer, event);
-      } else if (event == 2) {
+      } else if (event == UI_EVT_EXIT) {
         G1_LOG_INF("set_imu_pitch process received exit packet ...\n");
         gui_screen_fade_out();
         gui_utf_adv_draw_reset();

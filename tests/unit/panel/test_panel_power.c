@@ -60,7 +60,7 @@ FAKE_VALUE_FUNC(int, power_for_panel);
 FAKE_VALUE_FUNC(int, power_down_panel);
 FAKE_VALUE_FUNC(int, opt3007_chip_init, struct opt3007_context *);
 FAKE_VOID_FUNC(opt3007_chip_deinit);
-FAKE_VALUE_FUNC(int, panel_related, struct jbd_panel_context *, int, void *);
+FAKE_VALUE_FUNC(int, panel_related, struct jbd_panel_context *, enum screen_id, void *);
 
 /* SPIM log index at each fake's last call, -1 if none */
 static struct panel_calls {
@@ -335,7 +335,7 @@ ZTEST(panel_power, test_resume_is_refused_without_the_panel_module_bit) {
   struct jbd_panel_context *panel = panel_ctx();
 
   suspended_panel();
-  g1_state()->module_mask &= ~LP_JBD_BIT;
+  g1_state()->module_mask &= ~(uint16_t)WORK_MODULE_PANEL;
 
   zassert_equal(panel->resume_cb(panel), -1);
 

@@ -13,12 +13,12 @@
 #include <zephyr/drivers/flash.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <zephyr/sys/util_macro.h>
 #include <zephyr/toolchain.h>
 
 #include "lc3.h"
 
 #include "../ble/ble_ancs.h"
+#include "../ble/ble_cmd.h"
 #include "../production_test/production_test.h"
 #include "../utils/common_utils.h"
 #include "g1_log.h"
@@ -27,8 +27,6 @@
 
 #define DMIC_DEV  DEVICE_DT_GET(DT_NODELABEL(pdm0))
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
-
-#define DMIC_MODULE_ON BIT(1)
 
 #define AUDIO_FLASH_START 0x400000U
 #define AUDIO_FLASH_END   0x410000U
@@ -251,7 +249,7 @@ int dmic_stream_start(void) {
   struct pcm_stream_cfg stream;
   struct dmic_cfg cfg;
 
-  if (get_dashboard_state()->module_mask & DMIC_MODULE_ON) {
+  if (get_dashboard_state()->module_mask & (uint16_t)WORK_MODULE_DMIC) {
     G1_LOG_INF("DMIC sample\n");
     if (!device_is_ready(dmic_dev)) {
       G1_LOG_ERR("%s is not ready\n", dmic_dev->name);
@@ -323,8 +321,8 @@ int dmic_stream_start(void) {
               if ((ble->receiver_thd_is_running != 0) || (k_sem_count_get(&ble->rx_sem) != 0U)) {
                 uint8_t cmd[3] = {0};
 
-                cmd[0] = 0xf1;
-                cmd[2] = 0xcc;
+                cmd[0] = BLE_CMD_AUDIO;
+                cmd[2] = BLE_RESP_DMIC_SEND;
                 enqueue_bt_data(cmd, sizeof(cmd));
               } else {
                 dmic_send_pending = 1;

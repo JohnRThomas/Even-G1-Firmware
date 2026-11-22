@@ -32,7 +32,7 @@ static const int depth_shift[DEPTH_MAX + 1] = {
   [1] = 22, [2] = 8, [3] = 0, [4] = -4, [5] = -8, [6] = -10, [7] = -12, [8] = -14, [9] = -16,
 };
 
-FAKE_VALUE_FUNC(int, ui_DashBoard_task, struct jbd_panel_context *, void *, int);
+FAKE_VALUE_FUNC(int, ui_DashBoard_task, struct jbd_panel_context *, void *, enum ui_event);
 FAKE_VOID_FUNC(set_screen_cleared);
 
 /* 5 command-header bytes before, 3 spare after */
@@ -134,7 +134,7 @@ static void draw_canvas(struct jbd_panel_context *panel) {
     reflash_fb_data_to_lcd(panel->current_row, panel->current_column, 0, 0, PANEL_WIDTH, PANEL_FB_ROWS - 1), 0);
 }
 
-static int dashboard_draws_canvas(struct jbd_panel_context *panel, void *arg, int event) {
+static int dashboard_draws_canvas(struct jbd_panel_context *panel, void *arg, enum ui_event event) {
   ARG_UNUSED(arg);
 
   if (event == UI_EVT_ENTER) {
@@ -156,7 +156,7 @@ static struct box show(int role, int height, int depth) {
 }
 
 /* 0x26 sub 2 with preview 1 */
-static struct box preview(int height, int depth, int event) {
+static struct box preview(int height, int depth, enum ui_event event) {
   struct GlassesState *gs = g1_state();
 
   gs->panel.raster_height_offset = height;
