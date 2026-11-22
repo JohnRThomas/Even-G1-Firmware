@@ -4,8 +4,7 @@
 ZTEST_SUITE(persistence, NULL, NULL, NULL, NULL, NULL);
 
 /* every field differs from its default and from 0 */
-static void factory_values(struct GlassesState *gs)
-{
+static void factory_values(struct GlassesState *gs) {
   gs->aging_discharge_time_s = 0x11223344;
   gs->esb_channel = 0x2a;
   gs->imu.ref = -1234;
@@ -39,18 +38,17 @@ static void factory_values(struct GlassesState *gs)
 
 static const char factory_record[] =
   /* 00 */ "01 00 00 00  44 33 22 11  2a 00 00 00  2e fb ff ff"
-  /* 10 */ "80 38 01 00  01  53 31 31 30 4c 41 41 4c 32 39 30"   /* S110LAAL290 */
-  /* 20 */ "30 32 36 00 00 00 00 00 00 00 00 00 00 00 00 00"     /* 026 */
-  /* 30 */ "00 00 00 00 00  47 31 2d 48 57 2d 42 00 00 00 00"    /* G1-HW-B */
-  /* 40 */ "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
-  /* 50 */ "00 00 00 00 00  a1  a2  03  55 00 00 00  20 1c 00 00"
-  /* 60 */ "20 00  10 00  02 02 00 00  01 01 00 00  03 03 00 00"
-  /* 70 */ "04 04 00 00  3f 00  3e 00  3d 00  00 00  00 f4 01 00"
-  /* 80 */ "05 05 00 00  58 02 b0 04 08 07 60 09 b8 0b 10 0e"
-  /* 90 */ "80 51 01 00  09  01  00 00";
+           /* 10 */ "80 38 01 00  01  53 31 31 30 4c 41 41 4c 32 39 30"   /* S110LAAL290 */
+           /* 20 */ "30 32 36 00 00 00 00 00 00 00 00 00 00 00 00 00"     /* 026 */
+           /* 30 */ "00 00 00 00 00  47 31 2d 48 57 2d 42 00 00 00 00"    /* G1-HW-B */
+           /* 40 */ "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+           /* 50 */ "00 00 00 00 00  a1  a2  03  55 00 00 00  20 1c 00 00"
+           /* 60 */ "20 00  10 00  02 02 00 00  01 01 00 00  03 03 00 00"
+           /* 70 */ "04 04 00 00  3f 00  3e 00  3d 00  00 00  00 f4 01 00"
+           /* 80 */ "05 05 00 00  58 02 b0 04 08 07 60 09 b8 0b 10 0e"
+           /* 90 */ "80 51 01 00  09  01  00 00";
 
-ZTEST(persistence, test_save_sys_settings_writes_the_record_at_0x130000_byte_by_byte)
-{
+ZTEST(persistence, test_save_sys_settings_writes_the_record_at_0x130000_byte_by_byte) {
   factory_values(g1_state());
 
   zassert_equal(save_sys_settings(g1_state(), 0), 0);
@@ -61,8 +59,7 @@ ZTEST(persistence, test_save_sys_settings_writes_the_record_at_0x130000_byte_by_
   zassert_equal(flash_settings_write_and_verify_fake.arg2_val, SYS_SETTINGS_LEN);
 }
 
-ZTEST(persistence, test_sys_settings_survive_a_reboot)
-{
+ZTEST(persistence, test_sys_settings_survive_a_reboot) {
   struct GlassesState *gs = g1_state();
 
   factory_values(gs);
@@ -104,8 +101,7 @@ ZTEST(persistence, test_sys_settings_survive_a_reboot)
   zassert_equal(flash_settings_write_and_verify_fake.call_count, 0);
 }
 
-ZTEST(persistence, test_first_boot_loads_the_defaults_and_writes_a_valid_record)
-{
+ZTEST(persistence, test_first_boot_loads_the_defaults_and_writes_a_valid_record) {
   struct GlassesState *gs = g1_state();
 
   zassert_equal(load_sys_setting(gs), 0);
@@ -128,15 +124,13 @@ ZTEST(persistence, test_first_boot_loads_the_defaults_and_writes_a_valid_record)
 
   expect_flash(FLASH_SYS_SETTINGS, "01 00 00 00  00 00 00 00  ff");
   expect_flash(FLASH_SYS_SETTINGS + 0x10, "80 38 01 00  00"
-            "53 31 30 30 64 65 6d 6f 64 65 76 69 63 65 00 00");
-  expect_flash(FLASH_SYS_SETTINGS + 0x35,
-         "53 31 30 30 64 65 6d 6f 67 6c 61 73 73 65 73 00");
+                                          "53 31 30 30 64 65 6d 6f 64 65 76 69 63 65 00 00");
+  expect_flash(FLASH_SYS_SETTINGS + 0x35, "53 31 30 30 64 65 6d 6f 67 6c 61 73 73 65 73 00");
   expect_flash(FLASH_SYS_SETTINGS + 0x60, "20 00 20 00");
   expect_flash(FLASH_SYS_SETTINGS + 0x74, "3f 00 3f 00 3f 00 00 00  00 f4 01 00");
 }
 
-ZTEST(persistence, test_record_with_valid_0_is_a_first_boot)
-{
+ZTEST(persistence, test_record_with_valid_0_is_a_first_boot) {
   struct GlassesState *gs = g1_state();
 
   factory_values(gs);
@@ -154,8 +148,7 @@ ZTEST(persistence, test_record_with_valid_0_is_a_first_boot)
   expect_flash(FLASH_SYS_SETTINGS, "01 00 00 00  00 00 00 00  ff");
 }
 
-ZTEST(persistence, test_corrupt_record_gets_safe_values_for_the_checked_fields)
-{
+ZTEST(persistence, test_corrupt_record_gets_safe_values_for_the_checked_fields) {
   struct GlassesState *gs = g1_state();
 
   put_flash(FLASH_SYS_SETTINGS, "01 00 00 00");
@@ -173,8 +166,7 @@ ZTEST(persistence, test_corrupt_record_gets_safe_values_for_the_checked_fields)
   zassert_equal(flash_settings_write_and_verify_fake.call_count, 0);
 }
 
-ZTEST(persistence, test_out_of_range_canvas_and_curve_values_are_replaced_on_load)
-{
+ZTEST(persistence, test_out_of_range_canvas_and_curve_values_are_replaced_on_load) {
   struct GlassesState *gs = g1_state();
 
   factory_values(gs);
@@ -197,8 +189,7 @@ ZTEST(persistence, test_out_of_range_canvas_and_curve_values_are_replaced_on_loa
   zassert_equal(gs->aging_touch_count, 0);
 }
 
-ZTEST(persistence, test_canvas_limits_22_42_and_4_64_are_kept)
-{
+ZTEST(persistence, test_canvas_limits_22_42_and_4_64_are_kept) {
   static const uint16_t limits[][2] = {{42, 64}, {22, 4}}; /* canvas_x, canvas_y */
   struct GlassesState *gs = g1_state();
 
@@ -214,8 +205,7 @@ ZTEST(persistence, test_canvas_limits_22_42_and_4_64_are_kept)
   }
 }
 
-ZTEST(persistence, test_sys_settings_read_error_returns_minus_1_and_changes_nothing)
-{
+ZTEST(persistence, test_sys_settings_read_error_returns_minus_1_and_changes_nothing) {
   struct GlassesState *gs = g1_state();
 
   gs->esb_channel = 0x2a;
@@ -231,15 +221,13 @@ ZTEST(persistence, test_sys_settings_read_error_returns_minus_1_and_changes_noth
   expect_flash_fill(FLASH_SYS_SETTINGS, SYS_SETTINGS_LEN, 0xff);
 }
 
-ZTEST(persistence, test_serial_number_is_stored_in_16_bytes)
-{
+ZTEST(persistence, test_serial_number_is_stored_in_16_bytes) {
   struct GlassesState *gs = g1_state();
 
   factory_values(gs);
   strcpy(SERIAL_NUMBER, "ABCDEFGHIJKLMNOPQRSTU");
   save_sys_settings(gs, 0);
 
-  expect_flash(FLASH_SYS_SETTINGS + 0x15,
-         "41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f 50"  /* A..P */
-         "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+  expect_flash(FLASH_SYS_SETTINGS + 0x15, "41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f 50"  /* A..P */
+                                          "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
 }

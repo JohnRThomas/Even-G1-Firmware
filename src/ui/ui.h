@@ -5,27 +5,27 @@
 #ifndef G1_UI_H_
 #define G1_UI_H_
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <string.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/printk.h>
 
-#include "g1_log.h"
-#include "../main.h"
 #include "../gui/gui.h"
+#include "../main.h"
+#include "g1_log.h"
 
 /* events passed to the ui_*_task() handlers (display_thread.h) */
-#define UI_EVT_REFRESH     0
-#define UI_EVT_ENTER       1
-#define UI_EVT_EXIT        2
-#define UI_EVT_DELAY_CLOSE 3
-#define UI_EVT_INPUT       4
+#define UI_EVT_REFRESH      0
+#define UI_EVT_ENTER        1
+#define UI_EVT_EXIT         2
+#define UI_EVT_DELAY_CLOSE  3
+#define UI_EVT_INPUT        4
 #define UI_EVT_MASTER_CLOSE 5
-#define UI_EVT_LOW_POWER   6
+#define UI_EVT_LOW_POWER    6
 #define UI_EVT_POWER_RESUME 7
 
 #define LANGUAGE_FRENCH  5
@@ -107,8 +107,7 @@ void onboarding_draw_animated_page(int event);
 void onboarding_check_step_finished(void);
 int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event);
 struct ble_req_hdr;
-int onboarding_ble_process(struct GlassesState *gs, const struct ble_req_hdr *hdr,
-         const uint8_t *req, uint8_t *rsp);
+int onboarding_ble_process(struct GlassesState *gs, const struct ble_req_hdr *hdr, const uint8_t *req, uint8_t *rsp);
 int onboarding_sync_data(const uint8_t *data, uint32_t len);
 void onboarding_deactivate(void);
 

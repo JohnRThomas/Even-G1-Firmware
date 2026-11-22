@@ -4,16 +4,16 @@
  * run-length decoder.
  */
 #include <math.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 
-#include "g1_log.h"
-#include "common_utils.h"
 #include "../gui/gui.h"
 #include "../ui/ui.h"
+#include "common_utils.h"
+#include "g1_log.h"
 
 #define IS_LEAP_YEAR(y) (((y) % 4 == 0 && (y) % 100 != 0) || (y) % 400 == 0)
 
@@ -28,8 +28,7 @@ static uint32_t duration_ref_ms[4];
 static int64_t time_base_uptime;
 static int64_t time_base;
 
-int timestamp_to_date(uint32_t timestamp, struct g1_date *date)
-{
+int timestamp_to_date(uint32_t timestamp, struct g1_date *date) {
   uint32_t days = timestamp / SECONDS_PER_DAY;
   uint32_t secs = timestamp % SECONDS_PER_DAY;
   uint16_t year = 1970;
@@ -68,23 +67,21 @@ int timestamp_to_date(uint32_t timestamp, struct g1_date *date)
 }
 
 /* weekday name of a UTC timestamp */
-const char *get_weekday_name(uint32_t ts)
-{
-  struct g1_date date = { 0 };
+const char *get_weekday_name(uint32_t ts) {
+  struct g1_date date = {0};
 
   timestamp_to_date(ts, &date);
-  printk("date: %u: %04d/%02d/%02d-%02d:%02d:%02d\n", ts, date.year, date.month, date.day,
-         date.hour, date.minute, date.second);
+  printk("date: %u: %04d/%02d/%02d-%02d:%02d:%02d\n", ts, date.year, date.month, date.day, date.hour, date.minute,
+         date.second);
 
   return get_string((uint8_t)(day_of_week(date.year, date.month, date.day) + 0x3b));
 }
 
 /* formats val with two decimals and a sign ("+1.23", "-0.05"); returns the length */
-int format_float_2dp(float val, char *buf)
-{
+int format_float_2dp(float val, char *buf) {
   int v = lrintf(val * 100);
   uint32_t a = abs(v);
-  char tmp[12] = { 0 };
+  char tmp[12] = {0};
   char *p = buf;
   int mode;
   int n = 0;
@@ -130,15 +127,13 @@ int format_float_2dp(float val, char *buf)
   return n + 1;
 }
 
-void dump_ancs(const char *tag, struct notif_msg *n)
-{
+void dump_ancs(const char *tag, struct notif_msg *n) {
   BLE_PRINTK("app_identifier:(%s)\n", n->app_identifier);
   BLE_PRINTK("message:(%s)\n", n->message);
   BLE_PRINTK("uid :(%d)\n", n->uid);
 }
 
-void dump_hex(const char *tag, const uint8_t *data, int len)
-{
+void dump_hex(const char *tag, const uint8_t *data, int len) {
   printk("dump_hex(%s):", tag);
   for (int i = 0; i < len; i++) {
     if ((i & 7) == 0) {
@@ -150,8 +145,7 @@ void dump_hex(const char *tag, const uint8_t *data, int len)
 }
 
 /* accumulates whole seconds elapsed since the last call into *total_s */
-void accumulate_elapsed_seconds(uint32_t *total_s, int idx, int restart)
-{
+void accumulate_elapsed_seconds(uint32_t *total_s, int idx, int restart) {
   uint32_t now, d;
 
   if (restart) {
@@ -172,25 +166,21 @@ void accumulate_elapsed_seconds(uint32_t *total_s, int idx, int restart)
 }
 
 /* sets the wall clock */
-void set_wall_clock_ms(int64_t ts)
-{
+void set_wall_clock_ms(int64_t ts) {
   time_base = ts;
   time_base_uptime = k_uptime_get();
 }
 
 /* current wall clock */
-void get_wall_clock_ms(int64_t *ts)
-{
+void get_wall_clock_ms(int64_t *ts) {
   *ts = k_uptime_get() - time_base_uptime + time_base;
 }
 
-void init_boot_seconds(void)
-{
+void init_boot_seconds(void) {
   boot_uptime_s = k_uptime_get() / 1000;
 }
 
-int get_boot_seconds(void)
-{
+int get_boot_seconds(void) {
   int s = k_uptime_get() / 1000 - boot_uptime_s;
 
   G1_LOG_INF("[csh_debug] bootSeconds is %d\n", s);
@@ -198,8 +188,7 @@ int get_boot_seconds(void)
   return s;
 }
 
-int uint32_to_little_endian(uint8_t *buf, uint32_t val)
-{
+int uint32_to_little_endian(uint8_t *buf, uint32_t val) {
   if (buf == NULL) {
     G1_LOG_WRN("buf is NULL !\n");
     return 0;
@@ -214,9 +203,8 @@ int uint32_to_little_endian(uint8_t *buf, uint32_t val)
 }
 
 /* generic CRC-16 (init, poly, xorout, reflect in / out) */
-uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, bool refout,
-          const uint8_t *data, int len)
-{
+uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, bool refout, const uint8_t *data,
+                       int len) {
   uint16_t out;
   uint8_t b, r;
   int i, j;
@@ -264,8 +252,7 @@ uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, 
   return xorout ^ crc;
 }
 
-uint16_t crc16_usb(uint16_t crc, const uint8_t *buf, int len)
-{
+uint16_t crc16_usb(uint16_t crc, const uint8_t *buf, int len) {
   if (buf == NULL || len <= 0) {
     return 0;
   }
@@ -274,8 +261,7 @@ uint16_t crc16_usb(uint16_t crc, const uint8_t *buf, int len)
 }
 
 /* (count, value) pair run-length decoder; returns the decoded length */
-int rle_decode(const uint8_t *src, uint32_t len, uint8_t *dst)
-{
+int rle_decode(const uint8_t *src, uint32_t len, uint8_t *dst) {
   int out = 0;
 
   /* a trailing count without its value is ignored */

@@ -4,18 +4,17 @@
  */
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
+#include "../utils/common_utils.h"
 #include "g1_log.h"
 #include "notify.h"
-#include "../utils/common_utils.h"
 
 /* cut a UTF-8 sequence left incomplete at the end of s */
-static void utf8_drop_partial_tail(char *s)
-{
+static void utf8_drop_partial_tail(char *s) {
   size_t len = strlen(s);
   size_t lead = len;
   size_t need;
@@ -40,8 +39,7 @@ static void utf8_drop_partial_tail(char *s)
 }
 
 /* returns 0, or -EINVAL with msg untouched when json holds no ncs_notification object */
-int parse_ncs_notification(char *json, struct notif_msg *msg)
-{
+int parse_ncs_notification(char *json, struct notif_msg *msg) {
   cJSON *root;
   cJSON *ncs;
   cJSON *app_identifier;

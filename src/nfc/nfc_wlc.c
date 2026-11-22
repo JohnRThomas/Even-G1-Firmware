@@ -31,19 +31,19 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/eeprom.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 
 #include <g1_log.h>
 
-#include "st25dv.h"
-#include "nfc_wlc.h"
 #include "../production_test/production_test.h"
 #include "../sensors_audio/sensors_audio.h"
+#include "nfc_wlc.h"
+#include "st25dv.h"
 #include <glasses_state.h>
 
 /* ------------------------------------------------------------------ */
@@ -54,8 +54,8 @@
 static const uint8_t ndefRtdTypeWlcCapability[] = "WLCCAP";
 static const uint8_t ndefRtdTypeWlcStatusInfo[] = "WLCSTAI";
 
-ndefConstBuffer8 bufTypeRtdWlcCapability = { ndefRtdTypeWlcCapability, sizeof(ndefRtdTypeWlcCapability) - 1U };
-ndefConstBuffer8 bufTypeRtdWlcStatusInfo = { ndefRtdTypeWlcStatusInfo, sizeof(ndefRtdTypeWlcStatusInfo) - 1U };
+ndefConstBuffer8 bufTypeRtdWlcCapability = {ndefRtdTypeWlcCapability, sizeof(ndefRtdTypeWlcCapability) - 1U};
+ndefConstBuffer8 bufTypeRtdWlcStatusInfo = {ndefRtdTypeWlcStatusInfo, sizeof(ndefRtdTypeWlcStatusInfo) - 1U};
 
 static struct wlc_listener wlc_listener = {
   .state = 1,
@@ -85,28 +85,25 @@ static uint16_t wlc_last_battery;
 /* ndef_type_wlc.c: payload length / payload item encoders             */
 /* ------------------------------------------------------------------ */
 
-#define NDEF_TYPE_RTD_WLC_PAYLOAD_LENGTH      6U
+#define NDEF_TYPE_RTD_WLC_PAYLOAD_LENGTH 6U
 
-#define NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_SHIFT    6U
-#define NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_MASK    3U
-#define NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_SHIFT  2U
-#define NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_MASK    0xFU
-#define NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_SHIFT    1U
-#define NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_MASK    1U
-#define NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_SHIFT    0U
-#define NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_MASK      1U
-#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_SHIFT    5U
-#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_MASK    0x7U
-#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_SHIFT    0U
-#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_MASK    0x1FU
+#define NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_SHIFT        6U
+#define NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_MASK         3U
+#define NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_SHIFT 2U
+#define NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_MASK  0xFU
+#define NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_SHIFT       1U
+#define NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_MASK        1U
+#define NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_SHIFT         0U
+#define NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_MASK          1U
+#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_SHIFT  5U
+#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_MASK   0x7U
+#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_SHIFT      0U
+#define NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_MASK       0x1FU
 
-static const uint8_t *ndefRtdWlcCapabilityGetPayloadItem(const ndefType *type,
-               ndefConstBuffer *bufItem, bool begin)
-{
+static const uint8_t *ndefRtdWlcCapabilityGetPayloadItem(const ndefType *type, ndefConstBuffer *bufItem, bool begin) {
   const ndefTypeRtdWlcCapability *ndefData;
 
-  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCCAP) ||
-      (bufItem == NULL)) {
+  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCCAP) || (bufItem == NULL)) {
     return NULL;
   }
 
@@ -120,39 +117,43 @@ static const uint8_t *ndefRtdWlcCapabilityGetPayloadItem(const ndefType *type,
   bufItem->length = sizeof(uint8_t);
 
   switch (wlcCapabilityItem) {
-  case 0: /* WLC Protocol Version */
-    bufItem->buffer = &ndefData->wlcProtocolVersion;
-    break;
-  case 1: { /* WLC Config */
-    wlcCapabilityTemp =
-      ((ndefData->wlcConfigModeReq & NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_MASK) << NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_SHIFT)
-      | ((ndefData->wlcConfigWaitTimeRetry & NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_MASK) << NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_SHIFT)
-      | ((ndefData->wlcConfigNegoWait & NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_MASK) << NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_SHIFT)
-      | ((ndefData->wlcConfigRdConf & NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_MASK) << NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_SHIFT);
+    case 0: /* WLC Protocol Version */
+      bufItem->buffer = &ndefData->wlcProtocolVersion;
+      break;
+    case 1: { /* WLC Config */
+      wlcCapabilityTemp = ((ndefData->wlcConfigModeReq & NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_MASK)
+                           << NDEF_WLC_CAPABILITY_CONFIG_MODE_REQ_SHIFT) |
+                          ((ndefData->wlcConfigWaitTimeRetry & NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_MASK)
+                           << NDEF_WLC_CAPABILITY_CONFIG_WAIT_TIME_RETRY_SHIFT) |
+                          ((ndefData->wlcConfigNegoWait & NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_MASK)
+                           << NDEF_WLC_CAPABILITY_CONFIG_NEGO_WAIT_SHIFT) |
+                          ((ndefData->wlcConfigRdConf & NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_MASK)
+                           << NDEF_WLC_CAPABILITY_CONFIG_RD_CONF_SHIFT);
 
-    bufItem->buffer = &wlcCapabilityTemp;
-    break;
-  }
-  case 2: /* Cap Wt Int */
-    wlcCapabilityTemp =
-      ((ndefData->capWtIntRfu & NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_MASK) << NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_SHIFT)
-      | ((ndefData->capWtInt & NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_MASK) << NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_SHIFT);
+      bufItem->buffer = &wlcCapabilityTemp;
+      break;
+    }
+    case 2: /* Cap Wt Int */
+      wlcCapabilityTemp = ((ndefData->capWtIntRfu & NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_MASK)
+                           << NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_RFU_SHIFT) |
+                          ((ndefData->capWtInt & NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_MASK)
+                           << NDEF_WLC_CAPABILITY_CONFIG_CAP_WT_INT_SHIFT);
 
-    bufItem->buffer = &wlcCapabilityTemp;
-    break;
-  case 3: /* NDEF Rd Wt */
-    bufItem->buffer = &ndefData->ndefRdWt;
-    break;
-  case 4: /* NDEF Write To Int */
-    bufItem->buffer = &ndefData->ndefWriteToInt;
-    break;
-  case 5: /* NDEF Write Wt Int */
-    bufItem->buffer = &ndefData->ndefWriteWtInt;
-    break;
-  default:
-    bufItem->buffer = NULL;
-    bufItem->length = 0;
-    break;
+      bufItem->buffer = &wlcCapabilityTemp;
+      break;
+    case 3: /* NDEF Rd Wt */
+      bufItem->buffer = &ndefData->ndefRdWt;
+      break;
+    case 4: /* NDEF Write To Int */
+      bufItem->buffer = &ndefData->ndefWriteToInt;
+      break;
+    case 5: /* NDEF Write Wt Int */
+      bufItem->buffer = &ndefData->ndefWriteWtInt;
+      break;
+    default:
+      bufItem->buffer = NULL;
+      bufItem->length = 0;
+      break;
   }
 
   /* Move to to next item for next call */
@@ -161,13 +162,10 @@ static const uint8_t *ndefRtdWlcCapabilityGetPayloadItem(const ndefType *type,
   return bufItem->buffer;
 }
 
-static const uint8_t *ndefRtdWlcStatusInfoGetPayloadItem(const ndefType *type,
-               ndefConstBuffer *bufItem, bool begin)
-{
+static const uint8_t *ndefRtdWlcStatusInfoGetPayloadItem(const ndefType *type, ndefConstBuffer *bufItem, bool begin) {
   const ndefTypeRtdWlcStatusInfo *ndefData;
 
-  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCSTAI) ||
-      (bufItem == NULL)) {
+  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCSTAI) || (bufItem == NULL)) {
     return NULL;
   }
 
@@ -181,70 +179,70 @@ static const uint8_t *ndefRtdWlcStatusInfoGetPayloadItem(const ndefType *type,
   bufItem->length = sizeof(uint8_t);
 
   switch (wlcStatusInfoItem) {
-  case 0: /* Control Byte 1 */
-    bufItem->buffer = &ndefData->controlByte1;
-    wlcStatusInfoItem++;
-    break;
-  case 1: /* Battery Level */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_BATTERY_LEVEL_MASK) != 0U) {
-      bufItem->buffer = &ndefData->batteryLevel;
-      wlcStatusInfoItem = 2;
+    case 0: /* Control Byte 1 */
+      bufItem->buffer = &ndefData->controlByte1;
+      wlcStatusInfoItem++;
       break;
-    }
-    /* fall through */
-  case 2: /* Receive Power */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_POWER_MASK) != 0U) {
-      bufItem->buffer = &ndefData->receivePower;
-      wlcStatusInfoItem = 3;
+    case 1: /* Battery Level */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_BATTERY_LEVEL_MASK) != 0U) {
+        bufItem->buffer = &ndefData->batteryLevel;
+        wlcStatusInfoItem = 2;
+        break;
+      }
+      /* fall through */
+    case 2: /* Receive Power */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_POWER_MASK) != 0U) {
+        bufItem->buffer = &ndefData->receivePower;
+        wlcStatusInfoItem = 3;
+        break;
+      }
+      /* fall through */
+    case 3: /* Receive Voltage */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_VOLTAGE_MASK) != 0U) {
+        bufItem->buffer = &ndefData->receiveVoltage;
+        wlcStatusInfoItem = 4;
+        break;
+      }
+      /* fall through */
+    case 4: /* Receive Current */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_CURRENT_MASK) != 0U) {
+        bufItem->buffer = &ndefData->receiveCurrent;
+        wlcStatusInfoItem = 5;
+        break;
+      }
+      /* fall through */
+    case 5: /* Battery temperature */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_TEMPERATURE_BATTERY_MASK) != 0U) {
+        bufItem->buffer = &ndefData->temperatureBattery;
+        wlcStatusInfoItem = 6;
+        break;
+      }
+      /* fall through */
+    case 6: /* WLCL temperature */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_TEMPERATURE_WLCL_MASK) != 0U) {
+        bufItem->buffer = &ndefData->temperatureWlcl;
+        wlcStatusInfoItem = 7;
+        break;
+      }
+      /* fall through */
+    case 7: /* RFU */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RFU_MASK) != 0U) {
+        bufItem->buffer = &ndefData->rfu;
+        wlcStatusInfoItem = 8;
+        break;
+      }
+      /* fall through */
+    case 8: /* Control byte 2 */
+      if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_CONTROL_BYTE_2_MASK) != 0U) {
+        bufItem->buffer = &ndefData->controlByte2;
+        wlcStatusInfoItem = 9;
+        break;
+      }
+      /* fall through */
+    default:
+      bufItem->buffer = NULL;
+      bufItem->length = 0;
       break;
-    }
-    /* fall through */
-  case 3: /* Receive Voltage */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_VOLTAGE_MASK) != 0U) {
-      bufItem->buffer = &ndefData->receiveVoltage;
-      wlcStatusInfoItem = 4;
-      break;
-    }
-    /* fall through */
-  case 4: /* Receive Current */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RECEIVE_CURRENT_MASK) != 0U) {
-      bufItem->buffer = &ndefData->receiveCurrent;
-      wlcStatusInfoItem = 5;
-      break;
-    }
-    /* fall through */
-  case 5: /* Battery temperature */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_TEMPERATURE_BATTERY_MASK) != 0U) {
-      bufItem->buffer = &ndefData->temperatureBattery;
-      wlcStatusInfoItem = 6;
-      break;
-    }
-    /* fall through */
-  case 6: /* WLCL temperature */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_TEMPERATURE_WLCL_MASK) != 0U) {
-      bufItem->buffer = &ndefData->temperatureWlcl;
-      wlcStatusInfoItem = 7;
-      break;
-    }
-    /* fall through */
-  case 7: /* RFU */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_RFU_MASK) != 0U) {
-      bufItem->buffer = &ndefData->rfu;
-      wlcStatusInfoItem = 8;
-      break;
-    }
-    /* fall through */
-  case 8: /* Control byte 2 */
-    if ((ndefData->controlByte1 & NDEF_WLC_STATUSINFO_CONTROLBYTE1_CONTROL_BYTE_2_MASK) != 0U) {
-      bufItem->buffer = &ndefData->controlByte2;
-      wlcStatusInfoItem = 9;
-      break;
-    }
-    /* fall through */
-  default:
-    bufItem->buffer = NULL;
-    bufItem->length = 0;
-    break;
   }
 
   return bufItem->buffer;
@@ -258,12 +256,10 @@ static const uint8_t *ndefRtdWlcStatusInfoGetPayloadItem(const ndefType *type,
 #define DT_SPEC_AND_COMMA(node_id, prop, idx) ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
 
 static const struct adc_dt_spec adc_channels[] = {
-  DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels, DT_SPEC_AND_COMMA)
-};
+  DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels, DT_SPEC_AND_COMMA)};
 
 /* Zephyr ADC sample style channel loop (one channel) */
-int adc_nfc_init(void)
-{
+int adc_nfc_init(void) {
   int err;
 
   for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
@@ -281,8 +277,7 @@ int adc_nfc_init(void)
   return 0;
 }
 
-uint32_t adc_nfc_run(void)
-{
+uint32_t adc_nfc_run(void) {
   int err;
   uint16_t buf;
   int32_t val_mv;
@@ -324,8 +319,7 @@ uint32_t adc_nfc_run(void)
 /* I2C security session                                                */
 /* ------------------------------------------------------------------ */
 
-int nfc_i2c_session_open(int enable)
-{
+int nfc_i2c_session_open(int enable) {
   uint8_t session = 0;
   struct st25dv_passwd pwd;
 
@@ -347,18 +341,15 @@ int nfc_i2c_session_open(int enable)
   return session;
 }
 
-uint32_t nfc_get_field_mv(void)
-{
+uint32_t nfc_get_field_mv(void) {
   return nfc_field_mv;
 }
 
-uint32_t nfc_tick_elapsed(void)
-{
+uint32_t nfc_tick_elapsed(void) {
   return k_uptime_get_32() - nfc_tick_start;
 }
 
-void nfc_tick_reset(void)
-{
+void nfc_tick_reset(void) {
   nfc_tick_start = k_uptime_get_32();
 }
 
@@ -366,16 +357,14 @@ void nfc_tick_reset(void)
 /* type 5 tag (lib_NDEF tagtype5_wrapper.c)                            */
 /* ------------------------------------------------------------------ */
 
-uint32_t BSP_NFCTAG_GetByteSize(void)
-{
+uint32_t BSP_NFCTAG_GetByteSize(void) {
   struct st25dv_mem_size mem_size;
 
   st25dv_read_mem_size(global_st25dv_context_ptr, &mem_size);
   return (mem_size.blk_size + 1) * (mem_size.mem_size + 1);
 }
 
-int NfcType5_ReadCCFile(uint8_t *pCCBuffer)
-{
+int NfcType5_ReadCCFile(uint8_t *pCCBuffer) {
   int ret_value;
 
   /* Read 4 bytes of CC File */
@@ -396,8 +385,7 @@ int NfcType5_ReadCCFile(uint8_t *pCCBuffer)
   return NDEF_OK;
 }
 
-int NfcType5_NDEFDetection(void)
-{
+int NfcType5_NDEFDetection(void) {
   uint8_t acc_buffer[8];
   TT5_TLV_t tlv_detect;
   int16_t status;
@@ -412,8 +400,7 @@ int NfcType5_NDEFDetection(void)
   }
 
   /* Check Byte 0 is equal to magic number */
-  if ((acc_buffer[0] != NFCT5_MAGICNUMBER_E1_CCFILE) &&
-      (acc_buffer[0] != NFCT5_MAGICNUMBER_E2_CCFILE)) {
+  if ((acc_buffer[0] != NFCT5_MAGICNUMBER_E1_CCFILE) && (acc_buffer[0] != NFCT5_MAGICNUMBER_E2_CCFILE)) {
     return NDEF_ERROR_NOT_FORMATED;
   }
   /* Check Version and Access Condition */
@@ -438,9 +425,9 @@ int NfcType5_NDEFDetection(void)
   CCFileStruct.TT5Tag = acc_buffer[3];
 
   /* Search for position of NDEF TLV in memory and tag status */
-  while ((eeprom_st25dv_read(global_st25dv_context_ptr, CCFileStruct.NDEF_offset,
-           &tlv_detect, sizeof(TT5_TLV_t)) == 0) &&
-         (CCFileStruct.NDEF_offset < memory_size)) {
+  while (
+    (eeprom_st25dv_read(global_st25dv_context_ptr, CCFileStruct.NDEF_offset, &tlv_detect, sizeof(TT5_TLV_t)) == 0) &&
+    (CCFileStruct.NDEF_offset < memory_size)) {
     /* Detect first NDEF Message in memory */
     if (tlv_detect.Type == NFCT5_NDEF_MSG_TLV) {
       if (tlv_detect.Length == 0x00) {
@@ -455,8 +442,7 @@ int NfcType5_NDEFDetection(void)
     /* If Proprietary NDEF jump to end of proprietary message */
     else if (tlv_detect.Type == NFCT5_PROPRIETARY_TLV) {
       if (tlv_detect.Length == NFCT5_3_BYTES_L_TLV) {
-        CCFileStruct.NDEF_offset += sizeof(TT5_TLV_t) +
-                  sys_be16_to_cpu(tlv_detect.Length16);
+        CCFileStruct.NDEF_offset += sizeof(TT5_TLV_t) + sys_be16_to_cpu(tlv_detect.Length16);
       } else {
         CCFileStruct.NDEF_offset += 2 * sizeof(uint8_t) + tlv_detect.Length;
       }
@@ -468,8 +454,7 @@ int NfcType5_NDEFDetection(void)
   return NDEF_ERROR_NOT_FORMATED;
 }
 
-int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData)
-{
+int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData) {
   uint8_t TLV_Header[4];
   uint8_t NDEF_end = NFCT5_TERMINATOR_TLV;
   uint8_t TLVHeaderLength;
@@ -477,8 +462,7 @@ int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData)
   uint32_t offset;
   int ret_value;
 
-  maxLength = BSP_NFCTAG_GetByteSize() - CCFileStruct.NDEF_offset - 1 -
-        ((Length >= 0xFF) ? 4 : 2);
+  maxLength = BSP_NFCTAG_GetByteSize() - CCFileStruct.NDEF_offset - 1 - ((Length >= 0xFF) ? 4 : 2);
   if (Length > maxLength) {
     return NDEF_ERROR_MEMORY_TAG;
   }
@@ -499,8 +483,7 @@ int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData)
   }
 
   offset = CCFileStruct.NDEF_offset;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, offset, TLV_Header,
-          TLVHeaderLength);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, offset, TLV_Header, TLVHeaderLength);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
@@ -520,8 +503,7 @@ int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData)
   return NDEF_OK;
 }
 
-int NfcType5_WriteCCFile(const uint8_t *pCCBuffer)
-{
+int NfcType5_WriteCCFile(const uint8_t *pCCBuffer) {
   int ret_value;
 
   /* Write first block of CCFile */
@@ -542,8 +524,7 @@ int NfcType5_WriteCCFile(const uint8_t *pCCBuffer)
   return NDEF_OK;
 }
 
-void nfc_configure_gpo(uint32_t gpo_conf)
-{
+void nfc_configure_gpo(uint32_t gpo_conf) {
   uint8_t it_time;
 
   if (st25dv_configure_gpo(global_st25dv_context_ptr, gpo_conf)) {
@@ -557,8 +538,7 @@ void nfc_configure_gpo(uint32_t gpo_conf)
   st25dv_write_it_pulse(global_st25dv_context_ptr, it_time);
 }
 
-int NfcType5_TT5Init(void)
-{
+int NfcType5_TT5Init(void) {
   int ret_value;
   int16_t status;
   uint8_t accbuffer[8];
@@ -586,16 +566,14 @@ int NfcType5_TT5Init(void)
   /* Update NDEF TLV for INITIALIZED state */
   /* Update T */
   cdata = NFCT5_NDEF_MSG_TLV;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, CCFileStruct.NDEF_offset,
-          &cdata, 1);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, CCFileStruct.NDEF_offset, &cdata, 1);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
 
   /* Update L */
   cdata = 0x00;
-  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, CCFileStruct.NDEF_offset + 1,
-          &cdata, 1);
+  ret_value = eeprom_st25dv_write(global_st25dv_context_ptr, CCFileStruct.NDEF_offset + 1, &cdata, 1);
   if (ret_value != 0) {
     return NDEF_ERROR;
   }
@@ -603,8 +581,7 @@ int NfcType5_TT5Init(void)
   return NDEF_OK;
 }
 
-int nfc_write_ndef(const uint8_t *pData, uint32_t Length)
-{
+int nfc_write_ndef(const uint8_t *pData, uint32_t Length) {
   int status;
 
   status = NfcType5_WriteNDEF(Length, pData);
@@ -632,10 +609,8 @@ int nfc_write_ndef(const uint8_t *pData, uint32_t Length)
 static uint32_t ndefRtdWlcCapabilityGetPayloadLength(const ndefType *type);
 static uint32_t ndefRtdWlcStatusInfoGetPayloadLength(const ndefType *type);
 
-ReturnCode ndefRtdWlcCapabilityToRecord(const ndefType *type, ndefRecord *record)
-{
-  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCCAP) ||
-      (record == NULL)) {
+ReturnCode ndefRtdWlcCapabilityToRecord(const ndefType *type, ndefRecord *record) {
+  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCCAP) || (record == NULL)) {
     return ERR_PARAM;
   }
 
@@ -651,10 +626,8 @@ ReturnCode ndefRtdWlcCapabilityToRecord(const ndefType *type, ndefRecord *record
   return ERR_NONE;
 }
 
-ReturnCode ndefRtdWlcStatusInfoToRecord(const ndefType *type, ndefRecord *record)
-{
-  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCSTAI) ||
-      (record == NULL)) {
+ReturnCode ndefRtdWlcStatusInfoToRecord(const ndefType *type, ndefRecord *record) {
+  if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCSTAI) || (record == NULL)) {
     return ERR_PARAM;
   }
 
@@ -670,8 +643,7 @@ ReturnCode ndefRtdWlcStatusInfoToRecord(const ndefType *type, ndefRecord *record
   return ERR_NONE;
 }
 
-void wlc_reset_info(struct wlc_listener *wlc)
-{
+void wlc_reset_info(struct wlc_listener *wlc) {
   wlc->cap_info[4] = 9;
   wlc->cap_info[5] = 9;
   wlc->f30[0] = 9;
@@ -685,8 +657,7 @@ void wlc_reset_info(struct wlc_listener *wlc)
 /* ndef_message.c */
 #define NDEF_MAX_RECORD 10U
 
-static ndefRecord *ndefAllocRecord(void)
-{
+static ndefRecord *ndefAllocRecord(void) {
   static ndefRecord ndefRecordPool[NDEF_MAX_RECORD];
 
   if (ndefRecordPoolIndex >= NDEF_MAX_RECORD) {
@@ -696,8 +667,7 @@ static ndefRecord *ndefAllocRecord(void)
   return &ndefRecordPool[ndefRecordPoolIndex++];
 }
 
-static ReturnCode ndefMessageInit(ndefMessage *message)
-{
+static ReturnCode ndefMessageInit(ndefMessage *message) {
   if (message == NULL) {
     return ERR_PARAM;
   }
@@ -711,12 +681,11 @@ static ReturnCode ndefMessageInit(ndefMessage *message)
   return ERR_NONE;
 }
 
-#define WLC_FOD_RECORD_SIZE  11
+#define WLC_FOD_RECORD_SIZE   11
 /* WLCCAP (15 bytes), WLCSTAI (up to 19 bytes) and WLCFOD records */
-#define WLC_NDEF_MESSAGE_SIZE  (15 + 19 + WLC_FOD_RECORD_SIZE)
+#define WLC_NDEF_MESSAGE_SIZE (15 + 19 + WLC_FOD_RECORD_SIZE)
 
-int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, const uint8_t *fod_info)
-{
+int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, const uint8_t *fod_info) {
   ndefBuffer bufPayload;
   ndefTypeRtdWlcStatusInfo wlcStatusInfo;
   ndefTypeRtdWlcCapability wlcCapability;
@@ -743,8 +712,7 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
   wlcCapability.wlcConfigWaitTimeRetry = cap_info[1];
   wlcCapability.wlcProtocolVersion = 0x20;
   wlcCapability.capWtIntRfu = cap_info[9];
-  err = ndefRtdWlcCapabilityInit(&typeCap, &wlcCapability) |
-        ndefTypeToRecord(&typeCap, &recordCap);
+  err = ndefRtdWlcCapabilityInit(&typeCap, &wlcCapability) | ndefTypeToRecord(&typeCap, &recordCap);
   records[0] = recordCap;
 
   if (!stai_info[0]) {
@@ -759,8 +727,7 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
     wlcStatusInfo.temperatureWlcl = stai_info[7];
     wlcStatusInfo.controlByte2 = stai_info[8];
     count = 2;
-    err |= ndefRtdWlcStatusInfoInit(&typeStai, &wlcStatusInfo) |
-           ndefTypeToRecord(&typeStai, &recordStai);
+    err |= ndefRtdWlcStatusInfoInit(&typeStai, &wlcStatusInfo) | ndefTypeToRecord(&typeStai, &recordStai);
     records[1] = recordStai;
   }
 
@@ -798,8 +765,7 @@ int wlc_write_ndef_message(const uint8_t *cap_info, const uint8_t *stai_info, co
   return (err | (uint16_t)nfc_write_ndef(bufPayload.buffer, bufPayload.length)) ? -1 : 0;
 }
 
-static uint32_t ndefRtdWlcCapabilityGetPayloadLength(const ndefType *type)
-{
+static uint32_t ndefRtdWlcCapabilityGetPayloadLength(const ndefType *type) {
   if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCCAP)) {
     return 0;
   }
@@ -807,8 +773,7 @@ static uint32_t ndefRtdWlcCapabilityGetPayloadLength(const ndefType *type)
   return NDEF_TYPE_RTD_WLC_PAYLOAD_LENGTH;
 }
 
-static uint32_t ndefRtdWlcStatusInfoGetPayloadLength(const ndefType *type)
-{
+static uint32_t ndefRtdWlcStatusInfoGetPayloadLength(const ndefType *type) {
   uint32_t length;
 
   if ((type == NULL) || (type->id != NDEF_TYPE_ID_RTD_WLCSTAI)) {
@@ -829,14 +794,12 @@ static uint32_t ndefRtdWlcStatusInfoGetPayloadLength(const ndefType *type)
   return length;
 }
 
-int NfcType5_WriteNDEF(uint16_t Length, const uint8_t *pData)
-{
+int NfcType5_WriteNDEF(uint16_t Length, const uint8_t *pData) {
   return NfcType5_WriteTLV(NFCT5_NDEF_MSG_TLV, Length, pData);
 }
 
 /* ndef_types.c */
-ReturnCode ndefTypeToRecord(const ndefType *type, ndefRecord *record)
-{
+ReturnCode ndefTypeToRecord(const ndefType *type, ndefRecord *record) {
   if (type == NULL) {
     return ERR_PARAM;
   }
@@ -852,8 +815,7 @@ ReturnCode ndefTypeToRecord(const ndefType *type, ndefRecord *record)
 /* ndef_record.c                                                       */
 /* ------------------------------------------------------------------ */
 
-uint32_t ndefRecordGetHeaderLength(const ndefRecord *record)
-{
+uint32_t ndefRecordGetHeaderLength(const ndefRecord *record) {
   uint32_t length;
 
   if (record == NULL) {
@@ -876,8 +838,7 @@ uint32_t ndefRecordGetHeaderLength(const ndefRecord *record)
   return length;
 }
 
-uint32_t ndefRecordGetPayloadLength(const ndefRecord *record)
-{
+uint32_t ndefRecordGetPayloadLength(const ndefRecord *record) {
   uint32_t payloadLength;
 
   if (record == NULL) {
@@ -893,8 +854,7 @@ uint32_t ndefRecordGetPayloadLength(const ndefRecord *record)
   return payloadLength;
 }
 
-uint32_t ndefRecordGetLength(const ndefRecord *record)
-{
+uint32_t ndefRecordGetLength(const ndefRecord *record) {
   uint32_t length;
 
   length = ndefRecordGetHeaderLength(record);  /* Header */
@@ -903,10 +863,8 @@ uint32_t ndefRecordGetLength(const ndefRecord *record)
   return length;
 }
 
-ReturnCode ndefRecordSetType(ndefRecord *record, uint8_t tnf, const ndefConstBuffer8 *bufType)
-{
-  if ((record == NULL) ||
-      (bufType == NULL) || ndefBufferIsInvalid(bufType)) {
+ReturnCode ndefRecordSetType(ndefRecord *record, uint8_t tnf, const ndefConstBuffer8 *bufType) {
+  if ((record == NULL) || (bufType == NULL) || ndefBufferIsInvalid(bufType)) {
     return ERR_PARAM;
   }
 
@@ -917,10 +875,8 @@ ReturnCode ndefRecordSetType(ndefRecord *record, uint8_t tnf, const ndefConstBuf
   return ERR_NONE;
 }
 
-ReturnCode ndefRecordSetPayload(ndefRecord *record, const ndefConstBuffer *bufPayload)
-{
-  if ((record == NULL) ||
-      (bufPayload == NULL) || ndefBufferIsInvalid(bufPayload)) {
+ReturnCode ndefRecordSetPayload(ndefRecord *record, const ndefConstBuffer *bufPayload) {
+  if ((record == NULL) || (bufPayload == NULL) || ndefBufferIsInvalid(bufPayload)) {
     return ERR_PARAM;
   }
 
@@ -931,10 +887,8 @@ ReturnCode ndefRecordSetPayload(ndefRecord *record, const ndefConstBuffer *bufPa
   return ERR_NONE;
 }
 
-ReturnCode ndefRecordSetId(ndefRecord *record, const ndefConstBuffer8 *bufId)
-{
-  if ((record == NULL) ||
-      (bufId == NULL) || ndefBufferIsInvalid(bufId)) {
+ReturnCode ndefRecordSetId(ndefRecord *record, const ndefConstBuffer8 *bufId) {
+  if ((record == NULL) || (bufId == NULL) || ndefBufferIsInvalid(bufId)) {
     return ERR_PARAM;
   }
 
@@ -949,10 +903,9 @@ ReturnCode ndefRecordSetId(ndefRecord *record, const ndefConstBuffer8 *bufId)
   return ERR_NONE;
 }
 
-ReturnCode ndefRecordReset(ndefRecord *record)
-{
-  ndefConstBuffer8 bufEmpty8 = { NULL, 0 };
-  ndefConstBuffer bufEmpty = { NULL, 0 };
+ReturnCode ndefRecordReset(ndefRecord *record) {
+  ndefConstBuffer8 bufEmpty8 = {NULL, 0};
+  ndefConstBuffer bufEmpty = {NULL, 0};
 
   if (record == NULL) {
     return ERR_PARAM;
@@ -973,8 +926,7 @@ ReturnCode ndefRecordReset(ndefRecord *record)
   return ERR_NONE;
 }
 
-ReturnCode ndefRecordDecode(const ndefConstBuffer *bufPayload, ndefRecord *record)
-{
+ReturnCode ndefRecordDecode(const ndefConstBuffer *bufPayload, ndefRecord *record) {
   uint32_t offset;
 
   if ((bufPayload == NULL) || (bufPayload->buffer == NULL) || (record == NULL)) {
@@ -1065,8 +1017,7 @@ ReturnCode ndefRecordDecode(const ndefConstBuffer *bufPayload, ndefRecord *recor
   return ERR_NONE;
 }
 
-ReturnCode ndefRecordEncodeHeader(const ndefRecord *record, ndefBuffer *bufHeader)
-{
+ReturnCode ndefRecordEncodeHeader(const ndefRecord *record, ndefBuffer *bufHeader) {
   uint32_t offset;
   uint32_t payloadLength;
 
@@ -1118,17 +1069,11 @@ ReturnCode ndefRecordEncodeHeader(const ndefRecord *record, ndefBuffer *bufHeade
 }
 
 /* ndef_types.c */
-ReturnCode ndefRecordSetNdefType(ndefRecord *record, const ndefType *type)
-{
+ReturnCode ndefRecordSetNdefType(ndefRecord *record, const ndefType *type) {
   uint32_t payloadLength;
 
-  if ((record == NULL) ||
-      (type == NULL) ||
-      (type->id == NDEF_TYPE_ID_NONE) ||
-      (type->id > NDEF_TYPE_ID_COUNT) ||
-      (type->getPayloadLength == NULL) ||
-      (type->getPayloadItem == NULL) ||
-      (type->typeToRecord == NULL)) {
+  if ((record == NULL) || (type == NULL) || (type->id == NDEF_TYPE_ID_NONE) || (type->id > NDEF_TYPE_ID_COUNT) ||
+      (type->getPayloadLength == NULL) || (type->getPayloadItem == NULL) || (type->typeToRecord == NULL)) {
     return ERR_PARAM;
   }
 
@@ -1141,8 +1086,7 @@ ReturnCode ndefRecordSetNdefType(ndefRecord *record, const ndefType *type)
   return ERR_NONE;
 }
 
-ReturnCode ndefRecordGetPayload(const ndefRecord *record, ndefConstBuffer *bufPayload)
-{
+ReturnCode ndefRecordGetPayload(const ndefRecord *record, ndefConstBuffer *bufPayload) {
   if ((record == NULL) || (bufPayload == NULL)) {
     return ERR_PARAM;
   }
@@ -1153,9 +1097,7 @@ ReturnCode ndefRecordGetPayload(const ndefRecord *record, ndefConstBuffer *bufPa
   return ERR_NONE;
 }
 
-const uint8_t *ndefRecordGetPayloadItem(const ndefRecord *record, ndefConstBuffer *bufPayloadItem,
-          bool begin)
-{
+const uint8_t *ndefRecordGetPayloadItem(const ndefRecord *record, ndefConstBuffer *bufPayloadItem, bool begin) {
   if ((record == NULL) || (bufPayloadItem == NULL)) {
     return NULL;
   }
@@ -1174,8 +1116,7 @@ const uint8_t *ndefRecordGetPayloadItem(const ndefRecord *record, ndefConstBuffe
   return bufPayloadItem->buffer;
 }
 
-static ReturnCode ndefRecordEncodePayload(const ndefRecord *record, ndefBuffer *bufPayload)
-{
+static ReturnCode ndefRecordEncodePayload(const ndefRecord *record, ndefBuffer *bufPayload) {
   uint32_t payloadLength;
   uint32_t offset;
   bool begin;
@@ -1205,8 +1146,7 @@ static ReturnCode ndefRecordEncodePayload(const ndefRecord *record, ndefBuffer *
   return ERR_NONE;
 }
 
-ReturnCode ndefRecordEncode(const ndefRecord *record, ndefBuffer *bufRecord)
-{
+ReturnCode ndefRecordEncode(const ndefRecord *record, ndefBuffer *bufRecord) {
   ReturnCode err;
   ndefBuffer bufHeader;
   ndefBuffer bufPayload;
@@ -1259,8 +1199,7 @@ ReturnCode ndefRecordEncode(const ndefRecord *record, ndefBuffer *bufRecord)
 /* ndef_message.c                                                      */
 /* ------------------------------------------------------------------ */
 
-ReturnCode ndefMessageGetInfo(const ndefMessage *message, ndefMessageInfo *info)
-{
+ReturnCode ndefMessageGetInfo(const ndefMessage *message, ndefMessageInfo *info) {
   ndefRecord *record;
   uint32_t length = 0;
   uint32_t recordCount = 0;
@@ -1283,8 +1222,7 @@ ReturnCode ndefMessageGetInfo(const ndefMessage *message, ndefMessageInfo *info)
   return ERR_NONE;
 }
 
-ReturnCode ndefMessageEncode(const ndefMessage *message, ndefBuffer *bufPayload)
-{
+ReturnCode ndefMessageEncode(const ndefMessage *message, ndefBuffer *bufPayload) {
   ReturnCode err;
   ndefMessageInfo info;
   ndefRecord *record;
@@ -1327,8 +1265,7 @@ ReturnCode ndefMessageEncode(const ndefMessage *message, ndefBuffer *bufPayload)
   return ERR_NONE;
 }
 
-ReturnCode ndefMessageAppend(ndefMessage *message, ndefRecord *record)
-{
+ReturnCode ndefMessageAppend(ndefMessage *message, ndefRecord *record) {
   if ((message == NULL) || (record == NULL)) {
     return ERR_PARAM;
   }
@@ -1368,8 +1305,7 @@ ReturnCode ndefMessageAppend(ndefMessage *message, ndefRecord *record)
 }
 
 /* unused */
-ReturnCode ndefMessageDecode(const ndefConstBuffer *bufPayload, ndefMessage *message)
-{
+ReturnCode ndefMessageDecode(const ndefConstBuffer *bufPayload, ndefMessage *message) {
   ReturnCode err;
   uint32_t offset;
 
@@ -1407,8 +1343,7 @@ ReturnCode ndefMessageDecode(const ndefConstBuffer *bufPayload, ndefMessage *mes
   return ERR_NONE;
 }
 
-ReturnCode ndefRtdWlcCapabilityInit(ndefType *type, const ndefTypeRtdWlcCapability *param)
-{
+ReturnCode ndefRtdWlcCapabilityInit(ndefType *type, const ndefTypeRtdWlcCapability *param) {
   ndefTypeRtdWlcCapability *ndefData;
 
   if ((type == NULL) || (param == NULL)) {
@@ -1426,8 +1361,7 @@ ReturnCode ndefRtdWlcCapabilityInit(ndefType *type, const ndefTypeRtdWlcCapabili
   return ERR_NONE;
 }
 
-ReturnCode ndefRtdWlcStatusInfoInit(ndefType *type, const ndefTypeRtdWlcStatusInfo *param)
-{
+ReturnCode ndefRtdWlcStatusInfoInit(ndefType *type, const ndefTypeRtdWlcStatusInfo *param) {
   ndefTypeRtdWlcStatusInfo *ndefData;
 
   if ((type == NULL) || (param == NULL)) {
@@ -1445,8 +1379,7 @@ ReturnCode ndefRtdWlcStatusInfoInit(ndefType *type, const ndefTypeRtdWlcStatusIn
   return ERR_NONE;
 }
 
-uint8_t nfc_is_tag_type_ok(void)
-{
+uint8_t nfc_is_tag_type_ok(void) {
   return nfc_tag_type_ok;
 }
 
@@ -1454,22 +1387,20 @@ uint8_t nfc_is_tag_type_ok(void)
 /* NFC field supervision and WLC listener                             */
 /* ------------------------------------------------------------------ */
 
-int nfc_read_field_mv(uint32_t *field_mv)
-{
+int nfc_read_field_mv(uint32_t *field_mv) {
   *field_mv = adc_nfc_run() * 10;
   return 1;
 }
 
-int nfc_init(void)
-{
+int nfc_init(void) {
   uint8_t uid[8] = {0};
   uint8_t ic_rev = 0;
   uint8_t ic_ref;
   const struct eeprom_driver_api *api;
 
   global_st25dv_context_ptr = eeprom_st25dv_init();
-  if (!global_st25dv_context_ptr || !global_st25dv_context_ptr->config ||
-      !global_st25dv_context_ptr->data || !global_st25dv_context_ptr->api) {
+  if (!global_st25dv_context_ptr || !global_st25dv_context_ptr->config || !global_st25dv_context_ptr->data ||
+      !global_st25dv_context_ptr->api) {
     return 0;
   }
 
@@ -1478,8 +1409,8 @@ int nfc_init(void)
   api->size(global_st25dv_context_ptr);
 
   ST25DV_GetUID(global_st25dv_context_ptr, uid);
-  printk("UUID = %02X %02X %02X %02X %02X %02X %02X %02X.\n", uid[0], uid[1], uid[2],
-         uid[3], uid[4], uid[5], uid[6], uid[7]);
+  printk("UUID = %02X %02X %02X %02X %02X %02X %02X %02X.\n", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6],
+         uid[7]);
   if (uid[5] == 0x50 || uid[5] == 0x51) {
     nfc_tag_type_ok = 1;
   }
@@ -1495,8 +1426,7 @@ int nfc_init(void)
   return 0;
 }
 
-void nfc_charge_update_state(struct nfc_charge *chg)
-{
+void nfc_charge_update_state(struct nfc_charge *chg) {
   /* states 1 and 4: the pass before had the field */
   int status = nfc_charge_status(chg->state == 1 || chg->state == 4);
 
@@ -1513,8 +1443,7 @@ void nfc_charge_update_state(struct nfc_charge *chg)
  * The case's field starts above NFC_FIELD_ON_MV. Once the charger draws current the case
  * regulates it down to 4.4..4.9 V, so a field that was there counts until NFC_FIELD_HOLD_MV.
  */
-int nfc_charge_status(bool had_field)
-{
+int nfc_charge_status(bool had_field) {
   if (nfc_field_mv <= (had_field ? NFC_FIELD_HOLD_MV : NFC_FIELD_ON_MV)) {
     return 2;
   }
@@ -1522,79 +1451,74 @@ int nfc_charge_status(bool had_field)
   return get_dashboard_state()->battery_left >= 100 ? 1 : 0;
 }
 
-void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc)
-{
+void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc) {
   nfc_charge_update_state(chg);
 
   switch (chg->state) {
-  case 1:
-    wlc->charging = 0;
-    wlc->cap_info[5] = 9;
-    wlc->field_lost = 0;
-    if (chg->field_mv < 500) {
-      if (!nfc_low_field) {
-        nfc_low_field = 1;
-      }
-      return;
-    }
-    nfc_low_field = 0;
-    break;
-  case 2:
-    if (k_uptime_get_32() - nfc_charge_tick <= 3000) {
-      return;
-    }
-    if (wlc->state == 10) {
-      if (!wlc->active) {
-        wlc->cap_info[5] = 6;
-      }
-      wlc->fod_req = 1;
-    }
-    wlc->field_lost = 1;
-    /* a full lens kept its listener state through the gap of a case reboot; this is longer */
-    if (wlc->charging) {
+    case 1:
       wlc->charging = 0;
-      wlc->state = 1;
-    }
-    nfc_charge_tick = k_uptime_get_32();
-    return;
-  case 4:
-    if (wlc->state == 10) {
-      if (!wlc->active) {
-        wlc->cap_info[5] = 6;
+      wlc->cap_info[5] = 9;
+      wlc->field_lost = 0;
+      if (chg->field_mv < 500) {
+        if (!nfc_low_field) {
+          nfc_low_field = 1;
+        }
+        return;
       }
-      wlc->fod_req = 1;
-    }
-    if (!wlc->charging) {
-      wlc->charging = 1;
-    }
-    break;
-  default:
-    break;
+      nfc_low_field = 0;
+      break;
+    case 2:
+      if (k_uptime_get_32() - nfc_charge_tick <= 3000) {
+        return;
+      }
+      if (wlc->state == 10) {
+        if (!wlc->active) {
+          wlc->cap_info[5] = 6;
+        }
+        wlc->fod_req = 1;
+      }
+      wlc->field_lost = 1;
+      /* a full lens kept its listener state through the gap of a case reboot; this is longer */
+      if (wlc->charging) {
+        wlc->charging = 0;
+        wlc->state = 1;
+      }
+      nfc_charge_tick = k_uptime_get_32();
+      return;
+    case 4:
+      if (wlc->state == 10) {
+        if (!wlc->active) {
+          wlc->cap_info[5] = 6;
+        }
+        wlc->fod_req = 1;
+      }
+      if (!wlc->charging) {
+        wlc->charging = 1;
+      }
+      break;
+    default:
+      break;
   }
 
   nfc_charge_tick = k_uptime_get_32();
 }
 
-void nfc_field_voltage_update(void)
-{
+void nfc_field_voltage_update(void) {
   nfc_read_field_mv(&nfc_charge.field_mv);
   nfc_field_mv = nfc_charge.field_mv;
 }
 
-uint32_t chargerGetVdcRect(void)
-{
+uint32_t chargerGetVdcRect(void) {
   nfc_field_voltage_update();
   return nfc_field_mv;
 }
 
-bool nfc_field_detected(void)
-{
+bool nfc_field_detected(void) {
   nfc_field_voltage_update();
   return nfc_field_mv > NFC_FIELD_ON_MV;
 }
 
-int nfc_field_check(void)
-{
+int nfc_field_check(void) {
   int ret;
 
   if (nfc_field_detected()) {
@@ -1610,8 +1534,7 @@ int nfc_field_check(void)
   return ret;
 }
 
-void wlc_update_field_state(struct wlc_listener *wlc, uint8_t *present)
-{
+void wlc_update_field_state(struct wlc_listener *wlc, uint8_t *present) {
   int on = nfc_field_check();
 
   *present = on != 0;
@@ -1627,8 +1550,7 @@ void wlc_update_field_state(struct wlc_listener *wlc, uint8_t *present)
   }
 }
 
-void nfc_charge_refresh(struct nfc_charge *chg, struct wlc_listener *wlc)
-{
+void nfc_charge_refresh(struct nfc_charge *chg, struct wlc_listener *wlc) {
   nfc_read_field_mv(&chg->field_mv);
   nfc_field_mv = chg->field_mv;
 
@@ -1640,8 +1562,7 @@ void nfc_charge_refresh(struct nfc_charge *chg, struct wlc_listener *wlc)
   nfc_charge_update(chg, wlc);
 }
 
-int nfc_wlc_process(void)
-{
+int nfc_wlc_process(void) {
   uint8_t eh_ctrl = 0;
 
   enable_charger_retry();
@@ -1715,8 +1636,7 @@ int nfc_wlc_process(void)
   return 0;
 }
 
-static inline bool wlc_battery_changed(struct wlc_listener *wlc)
-{
+static inline bool wlc_battery_changed(struct wlc_listener *wlc) {
   int diff = wlc->stai_info[2] - wlc_last_battery;
 
   if (diff < 0) {
@@ -1729,101 +1649,98 @@ static inline bool wlc_battery_changed(struct wlc_listener *wlc)
   return false;
 }
 
-void wlc_listener_process(struct wlc_listener *wlc)
-{
+void wlc_listener_process(struct wlc_listener *wlc) {
   wlc_update_field_state(wlc, &wlc_field_present);
   wlc_field_present = 1;
 
   switch (wlc->state) {
-  case 1:
-    wlc_reset_info(wlc);
-    wlc->state = 2;
-    wlc->charging = 0;
-    return;
-  case 2:
-    k_msleep(50);
-    wlc->state = 3;
-    return;
-  case 3:
-    if (wlc->charging) {
-      wlc->state = 12;
+    case 1:
+      wlc_reset_info(wlc);
+      wlc->state = 2;
+      wlc->charging = 0;
       return;
-    }
-    if (!wlc->cap_info[0]) {
-      if (wlc_info_sent || wlc->cap_info[4] != wlc->cap_info[5] ||
-          wlc_battery_changed(wlc)) {
-        wlc->cap_info[4] = wlc->cap_info[5];
-        wlc_write_ndef_message(wlc->cap_info, wlc->stai_info, wlc->fod_info);
-        wlc_info_sent = 0;
-      }
-      wlc->state = 4;
-    }
-    if (wlc->fod_req) {
-      wlc->fod_req = 0;
-    }
-    wlc_wait_ms = 150.0f;
-    nfc_tick_reset();
-    return;
-  case 4:
-    if (!((float)nfc_tick_elapsed() > wlc_wait_ms)) {
+    case 2:
+      k_msleep(50);
+      wlc->state = 3;
       return;
-    }
-    if (!wlc->cap_info[0]) {
-      wlc->state = 9;
-    } else {
-      wlc->state = 5;
-    }
-    return;
-  case 5:
-  case 6:
-  case 7:
-  case 9:
-    if (!wlc->cap_info[0]) {
-      wlc_wait_ms = pow(2.0, wlc->cap_info[4] + 3) - 50.0;
-    }
-    nfc_tick_reset();
-    wlc->state = 10;
-    return;
-  case 10:
-    if (!wlc->fod_req && !((float)nfc_tick_elapsed() >= wlc_wait_ms)) {
-      return;
-    }
-    wlc->state = 11;
-    return;
-  case 11:
-    if (wlc->fod_req) {
+    case 3:
       if (wlc->charging) {
-        if (!wlc->cap_info[0]) {
-          wlc->state = 12;
+        wlc->state = 12;
+        return;
+      }
+      if (!wlc->cap_info[0]) {
+        if (wlc_info_sent || wlc->cap_info[4] != wlc->cap_info[5] || wlc_battery_changed(wlc)) {
+          wlc->cap_info[4] = wlc->cap_info[5];
+          wlc_write_ndef_message(wlc->cap_info, wlc->stai_info, wlc->fod_info);
+          wlc_info_sent = 0;
+        }
+        wlc->state = 4;
+      }
+      if (wlc->fod_req) {
+        wlc->fod_req = 0;
+      }
+      wlc_wait_ms = 150.0f;
+      nfc_tick_reset();
+      return;
+    case 4:
+      if (!((float)nfc_tick_elapsed() > wlc_wait_ms)) {
+        return;
+      }
+      if (!wlc->cap_info[0]) {
+        wlc->state = 9;
+      } else {
+        wlc->state = 5;
+      }
+      return;
+    case 5:
+    case 6:
+    case 7:
+    case 9:
+      if (!wlc->cap_info[0]) {
+        wlc_wait_ms = pow(2.0, wlc->cap_info[4] + 3) - 50.0;
+      }
+      nfc_tick_reset();
+      wlc->state = 10;
+      return;
+    case 10:
+      if (!wlc->fod_req && !((float)nfc_tick_elapsed() >= wlc_wait_ms)) {
+        return;
+      }
+      wlc->state = 11;
+      return;
+    case 11:
+      if (wlc->fod_req) {
+        if (wlc->charging) {
+          if (!wlc->cap_info[0]) {
+            wlc->state = 12;
+          }
+        } else if (!wlc->cap_info[0]) {
+          wlc->state = 2;
         }
       } else if (!wlc->cap_info[0]) {
-        wlc->state = 2;
+        wlc->state = 3;
       }
-    } else if (!wlc->cap_info[0]) {
-      wlc->state = 3;
-    }
-    return;
-  case 12:
-    wlc->cap_info[0] = 2;
-    wlc->cap_info[4] = 0x13;
-    wlc_write_ndef_message(wlc->cap_info, wlc->stai_info, wlc->fod_info);
-    wlc_info_sent = 1;
-    wlc->fod_req = 0;
-    nfc_tick_reset();
-    wlc->state = 14;
-    return;
-  case 14:
-    nfc_tick_reset();
-    return;
-  default:
-    return;
+      return;
+    case 12:
+      wlc->cap_info[0] = 2;
+      wlc->cap_info[4] = 0x13;
+      wlc_write_ndef_message(wlc->cap_info, wlc->stai_info, wlc->fod_info);
+      wlc_info_sent = 1;
+      wlc->fod_req = 0;
+      nfc_tick_reset();
+      wlc->state = 14;
+      return;
+    case 14:
+      nfc_tick_reset();
+      return;
+    default:
+      return;
   }
 }
 
 /* production-test protocol back end (pt_data.c) */
 
-int init_nfc_comm(void)
-{
+int init_nfc_comm(void) {
   if (setNFCDevice((void *)global_st25dv_context_ptr)) {
     printk("init_nfc_comm is failed\n");
     return -1;
@@ -1832,8 +1749,7 @@ int init_nfc_comm(void)
   return process_pt_data(NULL) ? -2 : 0;
 }
 
-int nfc_read_it_status(uint8_t *it_status)
-{
+int nfc_read_it_status(uint8_t *it_status) {
   int ret;
   int retries = 10;
 

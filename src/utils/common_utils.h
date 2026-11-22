@@ -4,12 +4,12 @@
 #ifndef UTILS_COMMON_UTILS_H_
 #define UTILS_COMMON_UTILS_H_
 
-#include <stdint.h>
+#include <glasses_state.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/toolchain.h>
-#include <glasses_state.h>
 
 #include <g1_date.h> /* struct g1_date, timestamp_to_date() */
 
@@ -24,8 +24,8 @@ void get_wall_clock_ms(int64_t *ts);
 void init_boot_seconds(void);
 int get_boot_seconds(void);
 int uint32_to_little_endian(uint8_t *buf, uint32_t val);
-uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, bool refout,
-          const uint8_t *data, int len);
+uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, bool refout, const uint8_t *data,
+                       int len);
 uint16_t crc16_usb(uint16_t crc, const uint8_t *buf, int len);
 int rle_decode(const uint8_t *src, uint32_t len, uint8_t *dst);
 

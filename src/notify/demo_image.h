@@ -2,9 +2,9 @@
 #ifndef G1_DEMO_IMAGE_H_
 #define G1_DEMO_IMAGE_H_
 
+#include <glasses_state.h>
 #include <stdint.h>
 #include <zephyr/toolchain.h>
-#include <glasses_state.h>
 
 struct bmp_file_header {
   char type[2];

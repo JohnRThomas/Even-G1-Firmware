@@ -4,16 +4,26 @@
 #ifndef NET_COMMON_H_
 #define NET_COMMON_H_
 
+#include <stddef.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
-#include <stdint.h>
-#include <stddef.h>
 
 /* Log level (initial value 2). */
 extern int net_log_level;
 
-#define NET_ERR(...) do { if (net_log_level > 0) { printk(__VA_ARGS__); } } while (0)
-#define NET_INF(...) do { if (net_log_level > 1) { printk(__VA_ARGS__); } } while (0)
+#define NET_ERR(...)                                                                                                   \
+  do {                                                                                                                 \
+    if (net_log_level > 0) {                                                                                           \
+      printk(__VA_ARGS__);                                                                                             \
+    }                                                                                                                  \
+  } while (0)
+#define NET_INF(...)                                                                                                   \
+  do {                                                                                                                 \
+    if (net_log_level > 1) {                                                                                           \
+      printk(__VA_ARGS__);                                                                                             \
+    }                                                                                                                  \
+  } while (0)
 
 struct net_ctx;
 

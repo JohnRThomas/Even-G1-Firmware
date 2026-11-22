@@ -19,8 +19,7 @@
 
 #include "ahrs.h"
 
-void Mahony_init(struct ahrs *a)
-{
+void Mahony_init(struct ahrs *a) {
   a->beta = 0.1f;
   a->twoKp = 4.0f;  /* 2 * proportional gain (Kp) */
   a->twoKi = 0.0f;  /* 2 * integral gain (Ki) */
@@ -37,8 +36,7 @@ void Mahony_init(struct ahrs *a)
 }
 
 /* Fast inverse square-root */
-float Mahony_invSqrt(float x)
-{
+float Mahony_invSqrt(float x) {
   float halfx = 0.5f * x;
   float y = x;
   int32_t i = *(int32_t *)&y;
@@ -51,9 +49,7 @@ float Mahony_invSqrt(float x)
   return y;
 }
 
-void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az, float dt,
-          struct ahrs *a)
-{
+void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az, float dt, struct ahrs *a) {
   float recipNorm;
   float halfvx, halfvy, halfvz;
   float halfex, halfey, halfez;
@@ -124,8 +120,7 @@ void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az
 }
 
 /* measure the sample period (no counterpart in the reference implementation) */
-float Mahony_deltatUpdate(struct ahrs *a)
-{
+float Mahony_deltatUpdate(struct ahrs *a) {
   a->Now = k_uptime_get();
   a->deltat = (float)(a->Now - a->lastUpdate) / 1000.0f;
   a->lastUpdate = a->Now;
@@ -133,8 +128,7 @@ float Mahony_deltatUpdate(struct ahrs *a)
   return a->deltat;
 }
 
-float Mahony_getRoll(struct ahrs *a)
-{
+float Mahony_getRoll(struct ahrs *a) {
   if (!a->anglesComputed) {
     Mahony_computeAngles(a);
   }
@@ -142,8 +136,7 @@ float Mahony_getRoll(struct ahrs *a)
   return a->roll * 57.295f;
 }
 
-float Mahony_getPitch(struct ahrs *a)
-{
+float Mahony_getPitch(struct ahrs *a) {
   if (!a->anglesComputed) {
     Mahony_computeAngles(a);
   }
@@ -151,8 +144,7 @@ float Mahony_getPitch(struct ahrs *a)
   return a->pitch * 57.295f;
 }
 
-float Mahony_getYaw(struct ahrs *a)
-{
+float Mahony_getYaw(struct ahrs *a) {
   if (!a->anglesComputed) {
     Mahony_computeAngles(a);
   }
@@ -160,8 +152,7 @@ float Mahony_getYaw(struct ahrs *a)
   return a->yaw * 57.295f + 180.0f;
 }
 
-void Mahony_computeAngles(struct ahrs *a)
-{
+void Mahony_computeAngles(struct ahrs *a) {
   a->roll = atan2f(a->q0 * a->q1 + a->q2 * a->q3, 0.5f - a->q1 * a->q1 - a->q2 * a->q2);
   a->pitch = asinf(-2.0f * (a->q1 * a->q3 - a->q0 * a->q2));
   a->yaw = atan2f(a->q1 * a->q2 + a->q0 * a->q3, 0.5f - a->q2 * a->q2 - a->q3 * a->q3);

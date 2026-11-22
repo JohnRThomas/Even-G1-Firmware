@@ -3,8 +3,8 @@
  * the spi_interface_t of the panel context.
  */
 #include <string.h>
-#include <zephyr/sys/byteorder.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/byteorder.h>
 
 #include "g1_log.h"
 #include "panel.h"
@@ -13,8 +13,7 @@
 #define WR_BUFFER_HDR_SIZE 5
 
 /* write the frame buffer to the panel cache at column col / row row */
-void spi_wr_buffer(uint16_t col, uint16_t row, uint8_t *buf, uint32_t len)
-{
+void spi_wr_buffer(uint16_t col, uint16_t row, uint8_t *buf, uint32_t len) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
   uint8_t *p = buf;
@@ -34,8 +33,7 @@ void spi_wr_buffer(uint16_t col, uint16_t row, uint8_t *buf, uint32_t len)
   memcpy(p - sizeof(backup), backup, sizeof(backup));
 }
 
-uint16_t spi_read_id(void)
-{
+uint16_t spi_read_id(void) {
   uint32_t tx;
   uint8_t rx[4] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
@@ -49,13 +47,11 @@ uint16_t spi_read_id(void)
   return sys_get_be16(&rx[2]);
 }
 
-void delay_ms(uint32_t ms)
-{
+void delay_ms(uint32_t ms) {
   k_busy_wait(ms * 1000);
 }
 
-void spi_send_cmd(uint8_t cmd)
-{
+void spi_send_cmd(uint8_t cmd) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
 
@@ -66,8 +62,7 @@ void spi_send_cmd(uint8_t cmd)
 
 #define SPI_TX_CHUNK 0xf000
 
-int spi_tx_data(const uint8_t *buf, uint32_t len)
-{
+int spi_tx_data(const uint8_t *buf, uint32_t len) {
   struct jbd_panel_context *c = get_jdb_panel_context();
   uint8_t rx[1] = {0};
   uint32_t whole = len / SPI_TX_CHUNK * SPI_TX_CHUNK;
@@ -85,8 +80,7 @@ int spi_tx_data(const uint8_t *buf, uint32_t len)
 }
 
 /* send one command frame: cmd followed by len parameter bytes */
-void spi_tx_frame(uint8_t cmd, const uint8_t *param, uint32_t len)
-{
+void spi_tx_frame(uint8_t cmd, const uint8_t *param, uint32_t len) {
   uint8_t buf[6];
 
   buf[0] = cmd;

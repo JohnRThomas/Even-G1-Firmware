@@ -11,15 +11,13 @@ int gui_font_kerning(uint16_t cur, uint16_t next);
 #define TS_1345 (1704067200u + 13 * 3600 + 45 * 60)
 
 /* the clock draws the same pixels as the time drawn as text in the given font */
-#define CLOCK_TEXT_TEST(name, ts, is_24h, mode, font, text)                                        \
-  ZTEST(gui, test_##name)                                                                    \
-  {                                                                                          \
-    gui_utf_draw(0, text, font, 40, 20, 300, 60, 1, 0, 0, NULL, 0);                    \
-    gui_test_fb_save_and_reset();                                                      \
-    zassert_equal(gui_clock_draw(ts, 40, 20, 300, 60, mode, is_24h), 0);               \
-    zassert_true(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS) > 0,                \
-           "nothing drawn");                                                     \
-    zassert_true(gui_test_fb_matches_saved(), "clock does not read \"%s\"", text);     \
+#define CLOCK_TEXT_TEST(name, ts, is_24h, mode, font, text)                                                            \
+  ZTEST(gui, test_##name) {                                                                                            \
+    gui_utf_draw(0, text, font, 40, 20, 300, 60, 1, 0, 0, NULL, 0);                                                    \
+    gui_test_fb_save_and_reset();                                                                                      \
+    zassert_equal(gui_clock_draw(ts, 40, 20, 300, 60, mode, is_24h), 0);                                               \
+    zassert_true(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS) > 0, "nothing drawn");                              \
+    zassert_true(gui_test_fb_matches_saved(), "clock does not read \"%s\"", text);                                     \
   }
 
 CLOCK_TEXT_TEST(clock_24h_two_digit_hour_and_minute, TS_0907, true, 0, 0, "09:07")
@@ -29,29 +27,25 @@ CLOCK_TEXT_TEST(clock_12h_midnight_hour_is_12, TS_0005, false, 0, 0, "12:05")
 CLOCK_TEXT_TEST(clock_12h_noon_hour_is_12, TS_1230, false, 0, 0, "12:30")
 CLOCK_TEXT_TEST(clock_mode_3_draws_text_in_font_3, TS_1345, true, 3, 3, "13:45")
 
-ZTEST(gui, test_clock_mode_1_24h)
-{
+ZTEST(gui, test_clock_mode_1_24h) {
   gui_clock_draw(TS_1345, 40, 20, 300, 60, 1, true);
   gui_expect_golden("clock_mode1_24h", GUI_PBM, 32, 16, 276, 44);
 }
 
-ZTEST(gui, test_clock_mode_2_12h)
-{
+ZTEST(gui, test_clock_mode_2_12h) {
   gui_clock_draw(TS_1345, 40, 20, 300, 70, 2, false);
   gui_expect_golden("clock_mode2_12h", GUI_PBM, 32, 16, 276, 52);
 }
 
 /* thumb top at y0 + percent * (y1 - y0 - 13) / 100 */
-ZTEST(gui, test_vertical_bar_thumb_position_follows_percent)
-{
+ZTEST(gui, test_vertical_bar_thumb_position_follows_percent) {
   zassert_equal(gui_verticalLine_process_bar(100, 20, 100, 180, 0, 0, 0), 0);
   zassert_equal(gui_verticalLine_process_bar(140, 20, 140, 180, 0, 50, 0), 0);
   zassert_equal(gui_verticalLine_process_bar(180, 20, 180, 180, 0, 100, 0), 0);
   gui_expect_golden("vertical_bars", GUI_PGM, 88, 16, 112, 168);
 }
 
-ZTEST(gui, test_vertical_bar_percent_clamped_to_100)
-{
+ZTEST(gui, test_vertical_bar_percent_clamped_to_100) {
   gui_verticalLine_process_bar(180, 20, 180, 180, 0, 100, 0);
   gui_test_fb_save_and_reset();
 
@@ -59,15 +53,13 @@ ZTEST(gui, test_vertical_bar_percent_clamped_to_100)
   zassert_true(gui_test_fb_matches_saved());
 }
 
-ZTEST(gui, test_vertical_bar_rejects_bad_geometry)
-{
+ZTEST(gui, test_vertical_bar_rejects_bad_geometry) {
   zassert_equal(gui_verticalLine_process_bar(100, 20, 102, 180, 0, 50, 0), -1);
   zassert_equal(gui_verticalLine_process_bar(100, 180, 100, 20, 0, 50, 0), -1);
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 0);
 }
 
-ZTEST(gui, test_horizontal_bar_segments_and_fill)
-{
+ZTEST(gui, test_horizontal_bar_segments_and_fill) {
   zassert_equal(gui_horizontal_percentage_bar(40, 20, 360, 28, 1, 0, 0), 0);
   zassert_equal(gui_horizontal_percentage_bar(40, 32, 360, 40, 1, 0, 37), 0);
   zassert_equal(gui_horizontal_percentage_bar(40, 44, 360, 52, 5, 8, 50), 0);
@@ -75,16 +67,14 @@ ZTEST(gui, test_horizontal_bar_segments_and_fill)
   gui_expect_golden("horizontal_bars", GUI_PGM, 32, 16, 336, 52);
 }
 
-ZTEST(gui, test_horizontal_bar_rejects_bad_geometry)
-{
+ZTEST(gui, test_horizontal_bar_rejects_bad_geometry) {
   zassert_equal(gui_horizontal_percentage_bar(360, 20, 40, 28, 1, 0, 50), -1);
   zassert_equal(gui_horizontal_percentage_bar(40, 28, 360, 20, 1, 0, 50), -1);
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 0);
 }
 
 /* bit 0 is the leftmost pixel */
-ZTEST(gui, test_bitmap_draw_at_top_left_corner)
-{
+ZTEST(gui, test_bitmap_draw_at_top_left_corner) {
   static const uint8_t bmp[] = {0x01, 0x80, 0xff, 0x00};
 
   zassert_equal(gui_bitmap_draw(0, 0, 16, 2, bmp, 0xf), 0);
@@ -98,8 +88,7 @@ ZTEST(gui, test_bitmap_draw_at_top_left_corner)
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 10);
 }
 
-ZTEST(gui, test_bitmap_draw_at_bottom_right_corner)
-{
+ZTEST(gui, test_bitmap_draw_at_bottom_right_corner) {
   static const uint8_t bmp[] = {0xff, 0xff, 0x55, 0xaa};
   static const int row199[] = {624, 626, 628, 630, 633, 635, 637, 639};
 
@@ -115,8 +104,7 @@ ZTEST(gui, test_bitmap_draw_at_bottom_right_corner)
   zassert_true(gui_test_guard_intact());
 }
 
-ZTEST(gui, test_bitmap_draw_replaces_background)
-{
+ZTEST(gui, test_bitmap_draw_replaces_background) {
   static const uint8_t bmp[] = {0x01};
 
   for (int col = 0; col < 8; col++) {
@@ -128,8 +116,7 @@ ZTEST(gui, test_bitmap_draw_replaces_background)
   zassert_equal(gui_test_lit(1, 10, 8, 11), 0);
 }
 
-ZTEST(gui, test_bitmap_draw_rejects_bad_parameters)
-{
+ZTEST(gui, test_bitmap_draw_rejects_bad_parameters) {
   static const uint8_t bmp[8] = {0xff};
 
   zassert_equal(gui_bitmap_draw(1, 0, 9, 1, bmp, 0xf), -1, "odd x0");
@@ -140,8 +127,7 @@ ZTEST(gui, test_bitmap_draw_rejects_bad_parameters)
 }
 
 /* rows past 199 are clipped */
-ZTEST(gui, test_bitmap_draw_clips_at_bottom_edge)
-{
+ZTEST(gui, test_bitmap_draw_clips_at_bottom_edge) {
   static const uint8_t bmp[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
   gui_bitmap_draw(0, 196, 8, 204, bmp, 0xf);
@@ -151,8 +137,7 @@ ZTEST(gui, test_bitmap_draw_clips_at_bottom_edge)
 }
 
 /* a box past x 639 is clipped at the right edge, not continued in the next row */
-ZTEST(gui, test_bitmap_draw_clips_at_right_edge)
-{
+ZTEST(gui, test_bitmap_draw_clips_at_right_edge) {
   static const uint8_t bmp[] = {0xff, 0xff};
 
   gui_bitmap_draw(632, 10, 648, 11, bmp, 0xf);
@@ -161,8 +146,7 @@ ZTEST(gui, test_bitmap_draw_clips_at_right_edge)
   zassert_equal(gui_test_lit(0, 11, GUI_SCREEN_WIDTH, 12), 0, "pixels of row 11 written");
 }
 
-ZTEST(gui, test_1bit_bitmap_override_ors_into_existing_pixels)
-{
+ZTEST(gui, test_1bit_bitmap_override_ors_into_existing_pixels) {
   static const uint8_t bmp[] = {0x01, 0x00};
 
   gui_test_px_set(624, 0, 0x8);
@@ -175,8 +159,7 @@ ZTEST(gui, test_1bit_bitmap_override_ors_into_existing_pixels)
   zassert_true(gui_test_guard_intact());
 }
 
-ZTEST(gui, test_1bit_bitmap_override_rejects_bad_parameters)
-{
+ZTEST(gui, test_1bit_bitmap_override_rejects_bad_parameters) {
   static const uint8_t bmp[8] = {0xff};
 
   zassert_equal(gui_1bit_bitmap_override(3, 0, 11, 1, bmp, 0xf), -1, "odd x0");
@@ -184,8 +167,7 @@ ZTEST(gui, test_1bit_bitmap_override_rejects_bad_parameters)
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 0);
 }
 
-ZTEST(gui, test_bitmaps_merge_draw_combines_two_levels)
-{
+ZTEST(gui, test_bitmaps_merge_draw_combines_two_levels) {
   static const uint8_t bmp1[] = {0x0f};
   static const uint8_t bmp2[] = {0x3c};
   static const uint8_t want[8] = {1, 1, 5, 5, 4, 4, 0, 0};
@@ -199,8 +181,7 @@ ZTEST(gui, test_bitmaps_merge_draw_combines_two_levels)
   zassert_true(gui_test_guard_intact());
 }
 
-ZTEST(gui, test_bitmaps_merge_draw_rejects_bad_parameters)
-{
+ZTEST(gui, test_bitmaps_merge_draw_rejects_bad_parameters) {
   static const uint8_t bmp[8] = {0xff};
 
   zassert_equal(gui_bitmps_merge_draw(1, 0, 9, 1, bmp, bmp, 1, 2), -1, "odd x0");
@@ -212,8 +193,7 @@ ZTEST(gui, test_bitmaps_merge_draw_rejects_bad_parameters)
 static int fade_lit[FADE_STEPS];
 static int fade_refreshes;
 
-static int fade_snapshot(uint32_t row, uint32_t col, int x0, int y0, int x1, int y1)
-{
+static int fade_snapshot(uint32_t row, uint32_t col, int x0, int y0, int x1, int y1) {
   ARG_UNUSED(row);
   ARG_UNUSED(col);
   zassert_equal(x0, 0);
@@ -227,8 +207,7 @@ static int fade_snapshot(uint32_t row, uint32_t col, int x0, int y0, int x1, int
   return 0;
 }
 
-static void fade_full_screen(void)
-{
+static void fade_full_screen(void) {
   memset(gui_test_rows[0], 0xff, GUI_FB_ROWS * GUI_FB_ROW_BYTES);
   fade_refreshes = 0;
   memset(fade_lit, 0, sizeof(fade_lit));
@@ -237,14 +216,13 @@ static void fade_full_screen(void)
   zassert_equal(gui_screen_fade_out(), 0);
 }
 
-ZTEST(gui, test_fade_out_darkens_in_eight_steps_then_clears_panel)
-{
+ZTEST(gui, test_fade_out_darkens_in_eight_steps_then_clears_panel) {
   fade_full_screen();
 
   zassert_equal(fade_refreshes, FADE_STEPS);
   for (int step = 1; step < FADE_STEPS; step++) {
-    zassert_true(fade_lit[step] <= fade_lit[step - 1], "step %d: %d lit after %d", step,
-           fade_lit[step], fade_lit[step - 1]);
+    zassert_true(fade_lit[step] <= fade_lit[step - 1], "step %d: %d lit after %d", step, fade_lit[step],
+                 fade_lit[step - 1]);
   }
   zassert_true(fade_lit[FADE_STEPS / 2] < fade_lit[0], "no dimming half way");
   zassert_equal(fade_lit[FADE_STEPS - 1], 0);
@@ -253,22 +231,19 @@ ZTEST(gui, test_fade_out_darkens_in_eight_steps_then_clears_panel)
   zassert_equal(jbd_clear_cache_sync_fake.arg0_val, 0);
 }
 
-ZTEST(gui, test_fade_out_never_lights_pixels)
-{
+ZTEST(gui, test_fade_out_never_lights_pixels) {
   g1_state()->panel.init_done = 1;
   gui_screen_fade_out();
   zassert_equal(gui_test_lit(0, 0, GUI_SCREEN_WIDTH, GUI_FB_ROWS), 0);
 }
 
-ZTEST(gui, test_fade_out_darkens_last_row)
-{
+ZTEST(gui, test_fade_out_darkens_last_row) {
   fade_full_screen();
   zassert_equal(gui_test_lit(0, 199, GUI_SCREEN_WIDTH, 200), 0, "row 199 still lit");
 }
 
 /* 1 px per code point in the built-in font, at most 2 */
-ZTEST(gui, test_font_kerning_pairs)
-{
+ZTEST(gui, test_font_kerning_pairs) {
   zassert_equal(gui_font_kerning('A', 'B'), 2, "two built-in glyphs");
   zassert_equal(gui_font_kerning('A', CJK_ZHONG), 1, "built-in then CJK");
   zassert_equal(gui_font_kerning(CJK_ZHONG, 'A'), 1, "CJK then built-in");
@@ -277,8 +252,7 @@ ZTEST(gui, test_font_kerning_pairs)
   zassert_equal(gui_font_kerning(0x0416, 'a'), 2, "Cyrillic Zhe then Latin");
 }
 
-ZTEST(gui, test_screen_x_offset_is_canvas_x_plus_panel_offset)
-{
+ZTEST(gui, test_screen_x_offset_is_canvas_x_plus_panel_offset) {
   g1_state()->canvas_x = 40;
   g1_state()->canvas_y = 30;
   g1_state()->panel.y_offset = 5;
@@ -287,8 +261,7 @@ ZTEST(gui, test_screen_x_offset_is_canvas_x_plus_panel_offset)
   zassert_equal(gui_screen_y_offset(), 30);
 }
 
-ZTEST(gui, test_screen_x_offset_defaults_to_32)
-{
+ZTEST(gui, test_screen_x_offset_defaults_to_32) {
   g1_state()->canvas_x = 0;
   g1_state()->canvas_y = 0;
   g1_state()->panel.y_offset = 3;
@@ -297,8 +270,7 @@ ZTEST(gui, test_screen_x_offset_defaults_to_32)
   zassert_equal(g1_state()->canvas_x, 32, "the default is stored");
 }
 
-ZTEST(gui, test_screen_y_offset_defaults_to_32)
-{
+ZTEST(gui, test_screen_y_offset_defaults_to_32) {
   g1_state()->canvas_x = 0;
   g1_state()->canvas_y = 0;
 
@@ -306,8 +278,7 @@ ZTEST(gui, test_screen_y_offset_defaults_to_32)
   zassert_equal(g1_state()->canvas_y, 32, "the default is stored");
 }
 
-ZTEST(gui, test_screen_offsets_out_of_range)
-{
+ZTEST(gui, test_screen_offsets_out_of_range) {
   g1_state()->panel.y_offset = 0;
   g1_state()->canvas_x = 65;
   g1_state()->canvas_y = 64;
@@ -324,8 +295,7 @@ ZTEST(gui, test_screen_offsets_out_of_range)
 }
 
 /* an unset canvas gives 32, 32 in either call order */
-ZTEST(gui, test_screen_offsets_unset_canvas_independent_of_call_order)
-{
+ZTEST(gui, test_screen_offsets_unset_canvas_independent_of_call_order) {
   int x_offset, y_offset;
 
   g1_state()->panel.y_offset = 0;

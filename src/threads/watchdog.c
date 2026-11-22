@@ -1,20 +1,19 @@
 /*
  * Hardware watchdog helpers (derived from samples/drivers/watchdog).
  */
-#include <string.h>
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/drivers/watchdog.h>
 #include "g1_log.h"
 #include "threads.h"
+#include <string.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/watchdog.h>
+#include <zephyr/kernel.h>
 
 #define WDT_RETRY_COUNT 5
 
 static const struct device *const wdt = DEVICE_DT_GET(DT_NODELABEL(pmic_wdt)); /* nPM1300 watchdog */
 int wdt_0_channel_id;
 
-int init_watchdog(void)
-{
+int init_watchdog(void) {
   int err;
   int i;
 
@@ -59,8 +58,7 @@ int init_watchdog(void)
 
 /* re-arm the watchdog with a short timeout so the chip resets shortly
  * (used by system_reboot_delayed()) */
-int config_watchdog_wait_reset(void)
-{
+int config_watchdog_wait_reset(void) {
   int err;
 
   if (!device_is_ready(wdt)) {
@@ -93,8 +91,7 @@ int config_watchdog_wait_reset(void)
   return err;
 }
 
-int watchdog_feed(void)
-{
+int watchdog_feed(void) {
   int err;
   int i;
 
@@ -108,8 +105,7 @@ int watchdog_feed(void)
   return err;
 }
 
-int watchdog_disable(void)
-{
+int watchdog_disable(void) {
   int err;
   int i;
 

@@ -8,9 +8,9 @@
 #include <string.h>
 #include <zephyr/kernel.h>
 
-#include "g1_log.h"
-#include "font_bitmap.h"
 #include "../notify/demo_image.h"
+#include "font_bitmap.h"
+#include "g1_log.h"
 
 /* glyph index entry in the external flash (0x140000 + (code - 0xa4) * 4) */
 struct cjk_glyph_index {
@@ -19,8 +19,8 @@ struct cjk_glyph_index {
 };
 
 /* every source byte (8 pixels, 1 bpp) maps to 4 bytes (8 pixels, 4 bpp) */
-#include "font_bitmap_data.inc"
 #include "font_1bpp_to_4bpp.inc"
+#include "font_bitmap_data.inc"
 
 /* picture table of get_demo_picture */
 static const uint8_t *const font_picture_table[2] = {demo_mark_right, NULL};
@@ -30,8 +30,7 @@ static uint8_t cjk_glyph_buf[0x1b0];
 static uint16_t unicode_buf[0x400];
 
 /* decode one 2 or 3 byte UTF-8 sequence into a unicode code point */
-uint16_t utf8_decode_char(const uint8_t *s, int len)
-{
+uint16_t utf8_decode_char(const uint8_t *s, int len) {
   uint8_t c = s[0];
   uint8_t hi, lo;
   uint8_t top2, top4;
@@ -60,8 +59,7 @@ uint16_t utf8_decode_char(const uint8_t *s, int len)
 }
 
 /* UTF-8 string -> unicode array (ASCII, CR/LF, 2 and 3 byte sequences) */
-int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max)
-{
+int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max) {
   int k = 0;
   int i = 0;
 
@@ -75,8 +73,7 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max)
     if (c == '\r' || c == '\n' || (c >= 0x20 && c < 0x80)) {
       u = c;
       i++;
-    } else if ((c & 0xf0) == 0xe0 && i + 2 < len && (utf8[i + 1] & 0xc0) == 0x80 &&
-         (utf8[i + 2] & 0xc0) == 0x80) {
+    } else if ((c & 0xf0) == 0xe0 && i + 2 < len && (utf8[i + 1] & 0xc0) == 0x80 && (utf8[i + 2] & 0xc0) == 0x80) {
       u = utf8_decode_char((const uint8_t *)&utf8[i], 3);
       i += 3;
     } else if ((c & 0xe0) == 0xc0 && i + 1 < len && (utf8[i + 1] & 0xc0) == 0x80) {
@@ -98,22 +95,19 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max)
   return k;
 }
 
-uint16_t *utf8_to_unicode_buf(const char *utf8, uint16_t *count)
-{
+uint16_t *utf8_to_unicode_buf(const char *utf8, uint16_t *count) {
   memset(unicode_buf, 0, sizeof(unicode_buf));
   *count = utf8_to_unicode(utf8, strlen(utf8), unicode_buf, 0x400);
   return unicode_buf;
 }
 
-void expand_1bpp_to_4bpp(const uint8_t *src, int len, uint8_t *dst)
-{
+void expand_1bpp_to_4bpp(const uint8_t *src, int len, uint8_t *dst) {
   for (int i = 0; i < len; i++) {
     ((uint32_t *)dst)[i] = ((const uint32_t *)font_1bpp_to_4bpp)[src[i]];
   }
 }
 
-const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
-{
+const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h) {
   uint16_t size = w * h;
   uint8_t buf[size];
   uint8_t *bitmap = buf;
@@ -131,8 +125,8 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
     if (get_dashboard_state()->flash_read == NULL) {
       bitmap = NULL;
     } else {
-      if (get_dashboard_state()->flash_read(get_dashboard_state(), ((code - 0xa4) << 2) + 0x140000,
-              &idx, sizeof(idx))) {
+      if (get_dashboard_state()->flash_read(get_dashboard_state(), ((code - 0xa4) << 2) + 0x140000, &idx,
+                                            sizeof(idx))) {
         G1_LOG_ERR("read flash fail\n\n");
         return NULL;
       }
@@ -153,8 +147,7 @@ const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h)
   return ret;
 }
 
-const uint8_t *get_small_glyph_bitmap(int glyph, int size)
-{
+const uint8_t *get_small_glyph_bitmap(int glyph, int size) {
   if (glyph == 4) {
     memcpy(small_glyph_buf, font_glyph4_4bpp, sizeof(small_glyph_buf));
   } else {
@@ -165,8 +158,7 @@ const uint8_t *get_small_glyph_bitmap(int glyph, int size)
   return small_glyph_buf;
 }
 
-const uint8_t *get_demo_picture(int id, int *w, int *h)
-{
+const uint8_t *get_demo_picture(int id, int *w, int *h) {
   *h = 200;
   if (demo_mode) {
     *w = 0x27e;
@@ -178,8 +170,7 @@ const uint8_t *get_demo_picture(int id, int *w, int *h)
   return font_picture_table[id];
 }
 
-void free_demo_line_buf(void)
-{
+void free_demo_line_buf(void) {
   if (line_buf) {
     free(line_buf);
     line_buf = NULL;

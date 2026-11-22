@@ -3,11 +3,11 @@
  * part is in system_state.c, the screen / message state machine in
  * message_task.c.
  */
-#include <string.h>
-#include <zephyr/kernel.h>
+#include "../display/display_thread.h"
 #include "g1_log.h"
 #include "threads.h"
-#include "../display/display_thread.h"
+#include <string.h>
+#include <zephyr/kernel.h>
 
 #define TASK_RUNNING 2
 #define TASK_PAUSE   3
@@ -15,30 +15,26 @@
 static uint8_t saved_auto_brightness;
 uint8_t task_status_lock;
 
-uint8_t is_persist_task_active(struct GlassesState *state, int mode)
-{
+uint8_t is_persist_task_active(struct GlassesState *state, int mode) {
   while (task_status_lock) {
     k_msleep(1);
   }
   return state->task_status->status > 1;
 }
 
-int is_task_running(struct GlassesState *state)
-{
+int is_task_running(struct GlassesState *state) {
   while (task_status_lock) {
     k_msleep(1);
   }
   return state->dashboard_mode > 1;
 }
 
-int update_persist_task_status(struct GlassesState *state, int task, int status)
-{
+int update_persist_task_status(struct GlassesState *state, int task, int status) {
   while (task_status_lock) {
     k_msleep(1);
   }
   task_status_lock = 1;
-  if (state->task_status->task == task &&
-      (state->task_status->status == 1 || state->task_status->status == status)) {
+  if (state->task_status->task == task && (state->task_status->status == 1 || state->task_status->status == status)) {
     task_status_lock = 0;
     return status;
   }
@@ -46,15 +42,15 @@ int update_persist_task_status(struct GlassesState *state, int task, int status)
     if (!state->dashboard_ts->exit_pending || state->dashboard_mode != 6) {
       if (status == TASK_RUNNING) {
         switch (task) {
-        case 4:
-        case 6:
-        case 7:
-        case 16:
-        case 20:
-          break;
-        default:
-          task_status_lock = 0;
-          return status;
+          case 4:
+          case 6:
+          case 7:
+          case 16:
+          case 20:
+            break;
+          default:
+            task_status_lock = 0;
+            return status;
         }
       }
       display_close_screen(state->dashboard_mode);
@@ -85,14 +81,12 @@ int update_persist_task_status(struct GlassesState *state, int task, int status)
   return status;
 }
 
-int update_temp_task_status(struct GlassesState *state, int task, int status)
-{
+int update_temp_task_status(struct GlassesState *state, int task, int status) {
   while (task_status_lock) {
     k_msleep(1);
   }
   task_status_lock = 1;
-  if ((state->task_status->task == task &&
-       (state->task_status->status == 1 || state->task_status->status == status)) ||
+  if ((state->task_status->task == task && (state->task_status->status == 1 || state->task_status->status == status)) ||
       state->dashboard_mode == task) {
     task_status_lock = 0;
     return status;
@@ -118,8 +112,7 @@ int update_temp_task_status(struct GlassesState *state, int task, int status)
   return status;
 }
 
-int update_persist_task_status_to_idle(struct GlassesState *state)
-{
+int update_persist_task_status_to_idle(struct GlassesState *state) {
   while (task_status_lock) {
     k_msleep(1);
   }
@@ -141,8 +134,7 @@ int update_persist_task_status_to_idle(struct GlassesState *state)
   return 0;
 }
 
-int update_persist_task_status_to_wait_blow_head(struct GlassesState *state)
-{
+int update_persist_task_status_to_wait_blow_head(struct GlassesState *state) {
   while (task_status_lock) {
     k_msleep(1);
   }
@@ -158,23 +150,21 @@ int update_persist_task_status_to_wait_blow_head(struct GlassesState *state)
   return 0;
 }
 
-bool task_uses_mic(int task)
-{
+bool task_uses_mic(int task) {
   switch (task) {
-  case 9:
-  case 11:
-  case 12:
-  case 16:
-  case 19:
-  case 20:
-    return true;
-  default:
-    return false;
+    case 9:
+    case 11:
+    case 12:
+    case 16:
+    case 19:
+    case 20:
+      return true;
+    default:
+      return false;
   }
 }
 
-bool is_idle(void)
-{
+bool is_idle(void) {
   if (get_dashboard_state()->task_status->task != 0) {
     return false;
   }

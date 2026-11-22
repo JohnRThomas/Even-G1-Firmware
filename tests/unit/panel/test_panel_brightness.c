@@ -15,8 +15,7 @@ int panel_on(struct jbd_panel_context *panel);
 #define CUR_MAX      63
 #define LEVEL_MAX    0x2a
 
-static void panel_brightness_before(void *fixture)
-{
+static void panel_brightness_before(void *fixture) {
   ARG_UNUSED(fixture);
   JBD_LUM_REG_VAL = 0;
   JBD_CUR_REG_VAL = 0;
@@ -24,21 +23,18 @@ static void panel_brightness_before(void *fixture)
 
 ZTEST_SUITE(panel_brightness, NULL, NULL, panel_brightness_before, NULL, NULL);
 
-static void curve(uint8_t level, uint16_t *lum, uint8_t *cur)
-{
+static void curve(uint8_t level, uint16_t *lum, uint8_t *cur) {
   *lum = 0xdead;
   *cur = 0xee;
   update_brightness_level_for_jdb_panel(level, lum, cur);
 }
 
-static void set_gear(uint16_t gear)
-{
+static void set_gear(uint16_t gear) {
   panel_ctx()->lum_gear = gear;
   panel_ctx()->brightness_max = gear;
 }
 
-ZTEST(panel_brightness, test_curve_end_points_at_the_factory_gear)
-{
+ZTEST(panel_brightness, test_curve_end_points_at_the_factory_gear) {
   uint16_t lum;
   uint8_t cur;
 
@@ -51,8 +47,7 @@ ZTEST(panel_brightness, test_curve_end_points_at_the_factory_gear)
   zassert_equal(cur, 36);
 }
 
-ZTEST(panel_brightness, test_curve_stays_in_the_register_ranges_for_every_gear)
-{
+ZTEST(panel_brightness, test_curve_stays_in_the_register_ranges_for_every_gear) {
   for (uint16_t gear = 0; gear <= 63; gear++) {
     set_gear(gear);
     for (int level = 0; level <= LEVEL_MAX; level++) {
@@ -60,16 +55,14 @@ ZTEST(panel_brightness, test_curve_stays_in_the_register_ranges_for_every_gear)
       uint8_t cur;
 
       curve(level, &lum, &cur);
-      zassert_true(lum >= 1 && lum <= LUM_MAX_90HZ, "gear %u level %d: LUM %u",
-             gear, level, lum);
+      zassert_true(lum >= 1 && lum <= LUM_MAX_90HZ, "gear %u level %d: LUM %u", gear, level, lum);
       zassert_true(cur <= CUR_MAX, "gear %u level %d: CUR %u", gear, level, cur);
     }
   }
 }
 
 /* 1 brighter, 0 same, -1 darker */
-static int level_step(int level)
-{
+static int level_step(int level) {
   uint16_t lum0, lum1;
   uint8_t cur0, cur1;
 
@@ -81,28 +74,23 @@ static int level_step(int level)
   return (lum1 > lum0 || cur1 > cur0) ? 1 : 0;
 }
 
-ZTEST(panel_brightness, test_every_level_step_is_brighter_at_the_factory_gear)
-{
+ZTEST(panel_brightness, test_every_level_step_is_brighter_at_the_factory_gear) {
   for (int level = 1; level <= LEVEL_MAX; level++) {
-    zassert_equal(level_step(level), 1, "level %d is not brighter than level %d",
-            level, level - 1);
+    zassert_equal(level_step(level), 1, "level %d is not brighter than level %d", level, level - 1);
   }
 }
 
 /* integer steps repeat values at low gears */
-ZTEST(panel_brightness, test_no_level_step_is_darker_for_any_gear)
-{
+ZTEST(panel_brightness, test_no_level_step_is_darker_for_any_gear) {
   for (uint16_t gear = 0; gear <= 63; gear++) {
     set_gear(gear);
     for (int level = 1; level <= LEVEL_MAX; level++) {
-      zassert_true(level_step(level) >= 0, "gear %u: level %d darker than %d",
-             gear, level, level - 1);
+      zassert_true(level_step(level) >= 0, "gear %u: level %d darker than %d", gear, level, level - 1);
     }
   }
 }
 
-ZTEST(panel_brightness, test_levels_below_6_ramp_lum_at_the_lowest_current)
-{
+ZTEST(panel_brightness, test_levels_below_6_ramp_lum_at_the_lowest_current) {
   uint16_t full, lum;
   uint8_t cur;
 
@@ -116,8 +104,7 @@ ZTEST(panel_brightness, test_levels_below_6_ramp_lum_at_the_lowest_current)
 }
 
 /* includes the factory level 0x15, which the panel init sequence writes as LUM 0x1BC0, CUR 0x0F */
-ZTEST(panel_brightness, test_levels_from_6_raise_the_current_one_step_each)
-{
+ZTEST(panel_brightness, test_levels_from_6_raise_the_current_one_step_each) {
   uint16_t lum;
   uint8_t cur;
 
@@ -128,8 +115,7 @@ ZTEST(panel_brightness, test_levels_from_6_raise_the_current_one_step_each)
   }
 }
 
-ZTEST(panel_brightness, test_percent_scales_lum_only)
-{
+ZTEST(panel_brightness, test_percent_scales_lum_only) {
   uint16_t lum;
   uint8_t cur;
 
@@ -147,8 +133,7 @@ ZTEST(panel_brightness, test_percent_scales_lum_only)
   zassert_equal(lum, 0x1bc0);
 }
 
-ZTEST(panel_brightness, test_lowest_settings_keep_the_panel_lit)
-{
+ZTEST(panel_brightness, test_lowest_settings_keep_the_panel_lit) {
   uint16_t lum;
   uint8_t cur;
 
@@ -161,8 +146,7 @@ ZTEST(panel_brightness, test_lowest_settings_keep_the_panel_lit)
 }
 
 /* CUR stays in 6 bits: from 0x46, level - 6 would reach the reserved bits 7:6 */
-ZTEST(panel_brightness, test_out_of_range_level_keeps_reserved_current_bits_clear)
-{
+ZTEST(panel_brightness, test_out_of_range_level_keeps_reserved_current_bits_clear) {
   static const uint8_t levels[] = {0x46, 0x80, 0xff};
 
   for (size_t index = 0; index < ARRAY_SIZE(levels); index++) {
@@ -174,8 +158,7 @@ ZTEST(panel_brightness, test_out_of_range_level_keeps_reserved_current_bits_clea
   }
 }
 
-ZTEST(panel_brightness, test_set_brightness_sends_the_recorded_sequence)
-{
+ZTEST(panel_brightness, test_set_brightness_sends_the_recorded_sequence) {
   panel_running();
 
   set_brightness_to_panel_reg(PANEL_DEFAULT_LEVEL);
@@ -183,8 +166,7 @@ ZTEST(panel_brightness, test_set_brightness_sends_the_recorded_sequence)
   expect_xfers("06", "a9", "36 1b c0", "46 0f", "31 04", "a3", "97");
 }
 
-ZTEST(panel_brightness, test_set_brightness_puts_the_curve_on_the_wire_for_every_level)
-{
+ZTEST(panel_brightness, test_set_brightness_puts_the_curve_on_the_wire_for_every_level) {
   panel_running();
 
   for (int level = 0; level <= LEVEL_MAX; level++) {
@@ -205,8 +187,7 @@ ZTEST(panel_brightness, test_set_brightness_puts_the_curve_on_the_wire_for_every
   }
 }
 
-ZTEST(panel_brightness, test_running_change_waits_for_panel_init)
-{
+ZTEST(panel_brightness, test_running_change_waits_for_panel_init) {
   panel_running();
   panel_ctx()->init_done = 0;
 
@@ -215,8 +196,7 @@ ZTEST(panel_brightness, test_running_change_waits_for_panel_init)
   zassert_equal(g1_fake_spim.xfers, 0);
 }
 
-ZTEST(panel_brightness, test_running_change_writes_both_registers_the_first_time)
-{
+ZTEST(panel_brightness, test_running_change_writes_both_registers_the_first_time) {
   panel_running();
 
   set_brightness_to_panel_reg_in_running(PANEL_DEFAULT_LEVEL);
@@ -224,8 +204,7 @@ ZTEST(panel_brightness, test_running_change_writes_both_registers_the_first_time
   expect_xfers("06", "a9", "36 1b c0", "46 0f", "31 04", "a3", "97");
 }
 
-ZTEST(panel_brightness, test_running_change_skips_an_unchanged_register)
-{
+ZTEST(panel_brightness, test_running_change_skips_an_unchanged_register) {
   panel_running();
   set_brightness_to_panel_reg_in_running(PANEL_DEFAULT_LEVEL);
   g1_fake_spim_clear_log();
@@ -236,8 +215,7 @@ ZTEST(panel_brightness, test_running_change_skips_an_unchanged_register)
 }
 
 /* the last LUM and CUR values written */
-static void panel_registers(uint16_t *lum, uint8_t *cur)
-{
+static void panel_registers(uint16_t *lum, uint8_t *cur) {
   for (int index = 0; index < g1_fake_spim.xfers; index++) {
     const struct g1_spim_entry *entry = panel_xfer(index);
 
@@ -249,8 +227,7 @@ static void panel_registers(uint16_t *lum, uint8_t *cur)
   }
 }
 
-ZTEST(panel_brightness, test_running_changes_keep_the_registers_on_the_curve)
-{
+ZTEST(panel_brightness, test_running_changes_keep_the_registers_on_the_curve) {
   /* panel reset values */
   uint16_t lum = 0x1bc5;
   uint8_t cur = 0x00;
@@ -272,8 +249,7 @@ ZTEST(panel_brightness, test_running_changes_keep_the_registers_on_the_curve)
   }
 }
 
-ZTEST(panel_brightness, test_wr_lum_and_cur_reg_writes_only_what_changed)
-{
+ZTEST(panel_brightness, test_wr_lum_and_cur_reg_writes_only_what_changed) {
   panel_running();
 
   wr_lum_and_cur_reg(0x0100, 5);
@@ -286,8 +262,7 @@ ZTEST(panel_brightness, test_wr_lum_and_cur_reg_writes_only_what_changed)
 }
 
 /* direct writes update the register cache */
-ZTEST(panel_brightness, test_running_change_after_a_direct_write_reaches_the_panel)
-{
+ZTEST(panel_brightness, test_running_change_after_a_direct_write_reaches_the_panel) {
   panel_running();
   set_brightness_to_panel_reg_in_running(6);
   set_brightness_to_panel_reg(10);
@@ -295,13 +270,11 @@ ZTEST(panel_brightness, test_running_change_after_a_direct_write_reaches_the_pan
 
   set_brightness_to_panel_reg_in_running(6);
 
-  zassert_true(g1_fake_spim_find_cmd(SPI_WR_CURRENT_REG) >= 0,
-         "the current register still holds level 10's CUR 4");
+  zassert_true(g1_fake_spim_find_cmd(SPI_WR_CURRENT_REG) >= 0, "the current register still holds level 10's CUR 4");
   expect_xfer(2, "46 00");
 }
 
-ZTEST(panel_brightness, test_set_brightness_callback_stores_the_level_only)
-{
+ZTEST(panel_brightness, test_set_brightness_callback_stores_the_level_only) {
   struct jbd_panel_context *panel = panel_ctx();
 
   panel_running();

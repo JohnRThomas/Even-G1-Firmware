@@ -2,9 +2,9 @@
 #ifndef PD_PROXY_THREAD_H_
 #define PD_PROXY_THREAD_H_
 
+#include <glasses_state.h>
 #include <stdint.h>
 #include <zephyr/kernel.h>
-#include <glasses_state.h>
 
 struct GlassesState;
 

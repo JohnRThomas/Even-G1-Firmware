@@ -14,19 +14,18 @@
  *   requires, the requested level.  Zephyr's version returns 0 without doing
  *   anything in that case.
  */
-#include <errno.h>
-#include <zephyr/sys/atomic.h>
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/conn.h>
 #include <../subsys/bluetooth/host/conn_internal.h>
 #include <../subsys/bluetooth/host/smp.h>
+#include <errno.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/sys/atomic.h>
 
 struct bt_conn *__real_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer);
 struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer);
 int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec);
 
-struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer)
-{
+struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer) {
   struct bt_conn *conn = __real_bt_conn_add_le(id, peer);
 
   if (conn) {
@@ -38,8 +37,7 @@ struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer)
 
 /* Zephyr's bt_conn_set_security() for an LE-only host, without its
  * "nothing to do" early return. */
-int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec)
-{
+int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec) {
   int err;
 
   if (conn->state != BT_CONN_CONNECTED) {

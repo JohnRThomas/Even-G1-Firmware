@@ -4,14 +4,14 @@
 #ifndef G1_DASHBOARD_H_
 #define G1_DASHBOARD_H_
 
-#include <stdint.h>
+#include <g1_date.h>
+#include <g1_log.h>
+#include <glasses_state.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <g1_log.h>
-#include <g1_date.h>
-#include <glasses_state.h>
 
 /* events passed to the ui_*_task() handlers (display_thread.h) */
 #define UI_EVT_REFRESH      0
@@ -81,8 +81,7 @@ uint32_t get_dashboard_tx_ctx(void);
 int draw_template_dashboard_page(struct jbd_panel_context *panel, void *arg);
 int draw_template_schedule_page(struct jbd_panel_context *panel, void *arg);
 int power_info_battery_ok(void);
-void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh,
-           uint8_t display_mode);
+void DashBoard_Reflash(struct db_info *db, struct GlassesState *gs, int refresh, uint8_t display_mode);
 uint8_t getStocksIndex(void);
 int setStocksIndex(int idx);
 void cleanStocksIndex(void);

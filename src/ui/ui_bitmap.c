@@ -2,19 +2,17 @@
  * "Do not disturb" bitmap page (ui_bitmap_task) and the do-not-disturb
  * master/slave synchronisation.
  */
-#include "ui.h"
 #include "../threads/threads.h"
+#include "ui.h"
 
 uint8_t dnd_bitmap_mode;                        /* do-not-disturb page mode */
 static uint8_t bitmap_state;
 
-static void bitmap_state_reset(void)
-{
+static void bitmap_state_reset(void) {
   bitmap_state = 0;
 }
 
-int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event)
-{
+int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event) {
   set_frame_buffer(panel->panel_buffer);
   set_showing_notification_on_gui();
 
@@ -25,65 +23,57 @@ int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event)
     return 0;
   }
   switch (bitmap_state) {
-  case 0: {
-    int64_t now;
+    case 0: {
+      int64_t now;
 
-    gui_screen_clear();
-    gui_dynamic_bitmap_reset();
-    bitmap_state = 1;
-    now = k_uptime_get();
-    get_dashboard_state()->bitmap_info->deadline = now;
-    switch (dnd_bitmap_mode) {
-    case 0:
-      gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8, gui_screen_y_offset() + 0x3a, 0, 0,
-                0, 1);
-      gui_utf_draw(0, get_string(0x25), 0, gui_screen_x_offset() + 0xf4,
-             gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88,
-             2, 0, 0, NULL, 0);
+      gui_screen_clear();
+      gui_dynamic_bitmap_reset();
+      bitmap_state = 1;
+      now = k_uptime_get();
+      get_dashboard_state()->bitmap_info->deadline = now;
+      switch (dnd_bitmap_mode) {
+        case 0:
+          gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8, gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
+          gui_utf_draw(0, get_string(0x25), 0, gui_screen_x_offset() + 0xf4, gui_screen_y_offset() + 0x37,
+                       gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88, 2, 0, 0, NULL, 0);
+          break;
+        case 2:
+          gui_bmp_bitmap_draw(0x49, gui_screen_x_offset(), gui_screen_y_offset() + 0x3a, 0, 0, 0);
+          gui_utf_draw(0, get_string(0x26), 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() + 0x37,
+                       gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88, 2, 0, 0, NULL, 0);
+          break;
+        case 1:
+          gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8, gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
+          gui_utf_draw(0, get_string(0x27), 0, gui_screen_x_offset() + 0x104, gui_screen_y_offset() + 0x37,
+                       gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88, 2, 0, 0, NULL, 0);
+          break;
+        default:
+          break;
+      }
       break;
-    case 2:
-      gui_bmp_bitmap_draw(0x49, gui_screen_x_offset(), gui_screen_y_offset() + 0x3a, 0, 0, 0);
-      gui_utf_draw(0, get_string(0x26), 0, gui_screen_x_offset() + 0x58,
-             gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88,
-             2, 0, 0, NULL, 0);
-      break;
+    }
     case 1:
-      gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8, gui_screen_y_offset() + 0x3a, 0, 0,
-                0, 1);
-      gui_utf_draw(0, get_string(0x27), 0, gui_screen_x_offset() + 0x104,
-             gui_screen_y_offset() + 0x37, gui_screen_x_offset() + 0x240, gui_screen_y_offset() + 0x88,
-             2, 0, 0, NULL, 0);
+      switch (dnd_bitmap_mode) {
+        case 0:
+          gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8, gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
+          break;
+        case 1:
+          gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8, gui_screen_y_offset() + 0x3a, 0, 0, 0, 1);
+          break;
+        case 2:
+          break;
+        default:
+          get_dashboard_state()->bitmap_info->enable = 0;
+          break;
+      }
       break;
     default:
       break;
-    }
-    break;
-  }
-  case 1:
-    switch (dnd_bitmap_mode) {
-    case 0:
-      gui_bmp_dynamic_bitmap_draw(6, gui_screen_x_offset() + 0xc8, gui_screen_y_offset() + 0x3a, 0, 0,
-                0, 1);
-      break;
-    case 1:
-      gui_bmp_dynamic_bitmap_draw(7, gui_screen_x_offset() + 0xd8, gui_screen_y_offset() + 0x3a, 0, 0,
-                0, 1);
-      break;
-    case 2:
-      break;
-    default:
-      get_dashboard_state()->bitmap_info->enable = 0;
-      break;
-    }
-    break;
-  default:
-    break;
   }
   return 0;
 }
 
-int not_disturb_sync_data(const uint8_t *data, uint8_t len)
-{
+int not_disturb_sync_data(const uint8_t *data, uint8_t len) {
   if (data == NULL) {
     return -1;
   }
@@ -107,8 +97,7 @@ int not_disturb_sync_data(const uint8_t *data, uint8_t len)
       len = 1;
       buf[1] = data[0];
     }
-    if ((unsigned int)sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >=
-        2000) {
+    if ((unsigned int)sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
       G1_LOG_ERR("not_disturb SYNC TO master failed...\n");
       return -1;
     }
@@ -116,8 +105,7 @@ int not_disturb_sync_data(const uint8_t *data, uint8_t len)
   return 0;
 }
 
-void show_not_disturb_bitmap(uint8_t mode)
-{
+void show_not_disturb_bitmap(uint8_t mode) {
   bitmap_state_reset();
   dnd_bitmap_mode = mode;
   get_dashboard_state()->bitmap_info->mode = mode;
@@ -127,8 +115,7 @@ void show_not_disturb_bitmap(uint8_t mode)
   update_persist_task_status(get_dashboard_state(), 7, 2);
 }
 
-int sync_not_disturb_bitmap(uint8_t mode)
-{
+int sync_not_disturb_bitmap(uint8_t mode) {
   int ret;
 
   if (get_dashboard_state()->bitmap_info->sync_pending) {
@@ -145,8 +132,7 @@ int sync_not_disturb_bitmap(uint8_t mode)
 }
 
 /* request a new do-not-disturb bitmap mode (0..2); synced to the app later */
-void request_not_disturb_bitmap(uint8_t mode)
-{
+void request_not_disturb_bitmap(uint8_t mode) {
   if (mode < 3 && (get_dashboard_state()->bitmap_info->mode != mode || get_dashboard_state()->dashboard_mode != 7)) {
     get_dashboard_state()->bitmap_info->mode = mode;
     get_dashboard_state()->bitmap_info->sync_pending = 1;

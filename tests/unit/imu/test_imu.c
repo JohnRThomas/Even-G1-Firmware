@@ -3,9 +3,9 @@
  * Head-up window [reference - 4500 - lift, reference - lift] (reference = base, else ref),
  * else [-9300 - lift, -6300 - lift].
  */
-#include "harness.h"
 #include "drivers.h"
 #include "fakes.h"
+#include "harness.h"
 
 #include "imu/imu_fusion.c"
 
@@ -25,8 +25,7 @@ uint8_t screen_switch_busy;
 
 static struct imu_ctx *imu;
 
-static void imu_before(void *fixture)
-{
+static void imu_before(void *fixture) {
   ARG_UNUSED(fixture);
   RESET_FAKE(exit_temp_task);
   atomic_clear(&dashboard_lock_requested);
@@ -52,8 +51,7 @@ static void imu_before(void *fixture)
 }
 
 /* imu_fusion_init() sets thread_running when it starts the fusion thread */
-static void imu_after(void *fixture)
-{
+static void imu_after(void *fixture) {
   ARG_UNUSED(fixture);
   if (imu->thread_running) {
     k_thread_abort(&imu_fusion_thread_data);
@@ -62,13 +60,11 @@ static void imu_after(void *fixture)
 
 ZTEST_SUITE(imu, NULL, NULL, imu_before, imu_after, NULL);
 
-static int offset_of(int level_byte)
-{
+static int offset_of(int level_byte) {
   return level_byte == 0 ? -350 : level_byte == 2 ? 700 : 0;
 }
 
-static void expect_thresholds_for_every_angle(int base, int ref)
-{
+static void expect_thresholds_for_every_angle(int base, int ref) {
   imu->base = base;
   imu->ref = ref;
   for (int level_byte = 0; level_byte <= 2; level_byte++) {
@@ -81,18 +77,15 @@ static void expect_thresholds_for_every_angle(int base, int ref)
       imu->level = angle;
       imu->wear = level_byte;
       update_head_up_thresholds(imu);
-      zassert_equal(imu->thr_low, top,
-              "angle %02x level byte %d: top %d, expected %d", angle,
-              level_byte, imu->thr_low, top);
-      zassert_equal(imu->thr_high, bot,
-              "angle %02x level byte %d: bottom %d, expected %d", angle,
-              level_byte, imu->thr_high, bot);
+      zassert_equal(imu->thr_low, top, "angle %02x level byte %d: top %d, expected %d", angle, level_byte, imu->thr_low,
+                    top);
+      zassert_equal(imu->thr_high, bot, "angle %02x level byte %d: bottom %d, expected %d", angle, level_byte,
+                    imu->thr_high, bot);
     }
   }
 }
 
-ZTEST(imu, test_thresholds_for_every_angle_and_level_byte_from_the_factory_reference)
-{
+ZTEST(imu, test_thresholds_for_every_angle_and_level_byte_from_the_factory_reference) {
   expect_thresholds_for_every_angle(0, REF);
 
   /* 3Ch, level byte 2: lift = 3700 */
@@ -100,8 +93,7 @@ ZTEST(imu, test_thresholds_for_every_angle_and_level_byte_from_the_factory_refer
   zassert_equal(imu->thr_high, -9200);
 }
 
-ZTEST(imu, test_thresholds_use_the_user_horizontal_from_0x10)
-{
+ZTEST(imu, test_thresholds_use_the_user_horizontal_from_0x10) {
   expect_thresholds_for_every_angle(-2500, REF);
 
   imu->level = 0x14;
@@ -111,8 +103,7 @@ ZTEST(imu, test_thresholds_use_the_user_horizontal_from_0x10)
   zassert_equal(imu->thr_high, -8000);
 }
 
-ZTEST(imu, test_thresholds_without_any_reference_at_angle_0)
-{
+ZTEST(imu, test_thresholds_without_any_reference_at_angle_0) {
   imu->level = 0;
   imu->wear = 1;
   update_head_up_thresholds(imu);
@@ -120,8 +111,7 @@ ZTEST(imu, test_thresholds_without_any_reference_at_angle_0)
   zassert_equal(imu->thr_high, -9300);
 }
 
-ZTEST(imu, test_without_a_reference_a_larger_angle_needs_more_lift)
-{
+ZTEST(imu, test_without_a_reference_a_larger_angle_needs_more_lift) {
   int prev;
 
   imu->wear = 1;
@@ -131,21 +121,18 @@ ZTEST(imu, test_without_a_reference_a_larger_angle_needs_more_lift)
   for (int angle = 0x01; angle <= 0x3c; angle++) {
     imu->level = angle;
     update_head_up_thresholds(imu);
-    zassert_true(imu->thr_low < prev, "angle %02x: top %d, angle %02x: top %d",
-           angle - 1, prev, angle, imu->thr_low);
+    zassert_true(imu->thr_low < prev, "angle %02x: top %d, angle %02x: top %d", angle - 1, prev, angle, imu->thr_low);
     prev = imu->thr_low;
   }
 }
 
-static void pitch(int pitch_x100)
-{
-  float angles[3] = { 180.0f, pitch_x100 / 100.0f, 0.0f };
+static void pitch(int pitch_x100) {
+  float angles[3] = {180.0f, pitch_x100 / 100.0f, 0.0f};
 
   imu_head_gesture(imu, pitch_x100, 18000, 0, angles);
 }
 
-static void gesture_setup(void)
-{
+static void gesture_setup(void) {
   imu->ref = REF;
   imu->mode = 1;
   update_head_up_thresholds(imu);
@@ -156,8 +143,7 @@ static void gesture_setup(void)
 }
 
 /* gesture_setup(), then a head lift that reports head up */
-static void start_with_head_up(void)
-{
+static void start_with_head_up(void) {
   gesture_setup();
   pitch(-3000);
   pitch(-3100);
@@ -165,21 +151,18 @@ static void start_with_head_up(void)
   pitch(-3100);
 }
 
-static void expect_events(int count)
-{
+static void expect_events(int count) {
   zassert_equal(report_event_to_phone_fake.call_count, count, "%d events to the phone",
-          report_event_to_phone_fake.call_count);
+                report_event_to_phone_fake.call_count);
 }
 
-static void expect_event(int index, int cmd)
-{
-  zassert_equal(report_event_to_phone_fake.arg0_history[index], cmd, "event %d: F5 %02x",
-          index, report_event_to_phone_fake.arg0_history[index]);
+static void expect_event(int index, int cmd) {
+  zassert_equal(report_event_to_phone_fake.arg0_history[index], cmd, "event %d: F5 %02x", index,
+                report_event_to_phone_fake.arg0_history[index]);
 }
 
 /* each sample must move at least 0.5 degree */
-ZTEST(imu, test_looking_up_past_the_threshold_reports_head_up)
-{
+ZTEST(imu, test_looking_up_past_the_threshold_reports_head_up) {
   gesture_setup();
 
   pitch(-3000);
@@ -192,8 +175,7 @@ ZTEST(imu, test_looking_up_past_the_threshold_reports_head_up)
   zassert_equal(screen_switch_busy, 0);
 }
 
-ZTEST(imu, test_one_sample_past_the_threshold_is_not_head_up)
-{
+ZTEST(imu, test_one_sample_past_the_threshold_is_not_head_up) {
   gesture_setup();
 
   pitch(-3000);
@@ -203,8 +185,7 @@ ZTEST(imu, test_one_sample_past_the_threshold_is_not_head_up)
   zassert_equal(imu->mode, 1);
 }
 
-ZTEST(imu, test_head_still_past_the_threshold_is_not_head_up)
-{
+ZTEST(imu, test_head_still_past_the_threshold_is_not_head_up) {
   gesture_setup();
 
   pitch(-3000);
@@ -215,8 +196,7 @@ ZTEST(imu, test_head_still_past_the_threshold_is_not_head_up)
   zassert_equal(imu->mode, 1);
 }
 
-ZTEST(imu, test_user_horizontal_from_0x10_moves_the_head_up_window)
-{
+ZTEST(imu, test_user_horizontal_from_0x10_moves_the_head_up_window) {
   imu->base = -2500; /* window [-8000, -3500] */
   imu->ref = REF;
   imu->mode = 1;
@@ -234,8 +214,7 @@ ZTEST(imu, test_user_horizontal_from_0x10_moves_the_head_up_window)
   expect_event(0, 2);
 }
 
-ZTEST(imu, test_no_repeat_while_the_head_stays_up)
-{
+ZTEST(imu, test_no_repeat_while_the_head_stays_up) {
   start_with_head_up();
 
   for (int sample = 0; sample < 20; sample++) {
@@ -245,8 +224,7 @@ ZTEST(imu, test_no_repeat_while_the_head_stays_up)
   zassert_equal(imu->mode, 2);
 }
 
-ZTEST(imu, test_looking_down_again_reports_head_down)
-{
+ZTEST(imu, test_looking_down_again_reports_head_down) {
   g1_state()->panel.panel_brightness_level = 7;
   start_with_head_up();
 
@@ -263,8 +241,7 @@ ZTEST(imu, test_looking_down_again_reports_head_down)
   zassert_equal(exit_temp_task_fake.arg1_val, 0);
 }
 
-ZTEST(imu, test_head_down_needs_one_degree_past_the_threshold)
-{
+ZTEST(imu, test_head_down_needs_one_degree_past_the_threshold) {
   start_with_head_up();
 
   pitch(-1960);
@@ -280,8 +257,7 @@ ZTEST(imu, test_head_down_needs_one_degree_past_the_threshold)
   expect_event(1, 3);
 }
 
-ZTEST(imu, test_looking_far_beyond_the_window_counts_as_head_down)
-{
+ZTEST(imu, test_looking_far_beyond_the_window_counts_as_head_down) {
   start_with_head_up();
 
   pitch(-7000);
@@ -291,8 +267,7 @@ ZTEST(imu, test_looking_far_beyond_the_window_counts_as_head_down)
   zassert_equal(imu->mode, 1);
 }
 
-ZTEST(imu, test_head_down_on_the_wait_screen_syncs_8)
-{
+ZTEST(imu, test_head_down_on_the_wait_screen_syncs_8) {
   start_with_head_up();
   g1_state()->sync.screen_id = 1;
 
@@ -304,8 +279,7 @@ ZTEST(imu, test_head_down_on_the_wait_screen_syncs_8)
 }
 
 /* 9 = teleprompter */
-ZTEST(imu, test_head_up_on_an_app_screen_does_not_open_the_dashboard)
-{
+ZTEST(imu, test_head_up_on_an_app_screen_does_not_open_the_dashboard) {
   gesture_setup();
   g1_state()->sync.screen_id = 9;
 
@@ -317,9 +291,8 @@ ZTEST(imu, test_head_up_on_an_app_screen_does_not_open_the_dashboard)
   zassert_false(atomic_test_bit(&dashboard_head_up_opened, 1));
 }
 
-ZTEST(imu, test_screen_13_puts_the_angles_into_the_esb_packet)
-{
-  float angles[3] = { 123.5f, -12.25f, 4.0f };
+ZTEST(imu, test_screen_13_puts_the_angles_into_the_esb_packet) {
+  float angles[3] = {123.5f, -12.25f, 4.0f};
 
   gesture_setup();
   g1_state()->sync.screen_id = 13;
@@ -331,18 +304,15 @@ ZTEST(imu, test_screen_13_puts_the_angles_into_the_esb_packet)
   zassert_equal((int32_t)imu_pitch_x100, -1225);
 }
 
-static void expect_lock_message(int count)
-{
-  zassert_equal(g1_esb_response_log.count, count, "%d responses queued",
-          g1_esb_response_log.count);
+static void expect_lock_message(int count) {
+  zassert_equal(g1_esb_response_log.count, count, "%d responses queued", g1_esb_response_log.count);
   for (int index = 0; index < count; index++) {
     expect_pkt(&g1_esb_response_log, index, "50 06 00 00 01 01");
   }
   zassert_equal(send_response_data_to_ble_fake.call_count, count);
 }
 
-ZTEST(imu, test_locked_dashboard_answers_once_and_stays_closed_on_head_up)
-{
+ZTEST(imu, test_locked_dashboard_answers_once_and_stays_closed_on_head_up) {
   atomic_set_bit(&dashboard_lock_requested, 1);
   gesture_setup();
   expect_lock_message(1);
@@ -358,8 +328,7 @@ ZTEST(imu, test_locked_dashboard_answers_once_and_stays_closed_on_head_up)
   expect_lock_message(1);
 }
 
-ZTEST(imu, test_lock_answer_waits_until_the_head_up_dashboard_closed)
-{
+ZTEST(imu, test_lock_answer_waits_until_the_head_up_dashboard_closed) {
   start_with_head_up();
   atomic_set_bit(&dashboard_lock_requested, 1);
 
@@ -372,23 +341,19 @@ ZTEST(imu, test_lock_answer_waits_until_the_head_up_dashboard_closed)
   expect_lock_message(1);
 }
 
-static void expect_odr(int index, enum sensor_channel chan, int32_t hz)
-{
+static void expect_odr(int index, enum sensor_channel chan, int32_t hz) {
   struct fake_imu_attr_call call;
 
   zassert_true(index < fake_imu_attr_count(), "attr_set %d missing", index);
   call = fake_imu_attr(index);
   zassert_equal(call.chan, chan, "attr_set %d: channel %d", index, call.chan);
-  zassert_equal(call.attr, SENSOR_ATTR_SAMPLING_FREQUENCY, "attr_set %d: attribute %d",
-          index, call.attr);
-  zassert_equal(call.val.val1, hz, "attr_set %d: %d Hz, expected %d", index, call.val.val1,
-          hz);
+  zassert_equal(call.attr, SENSOR_ATTR_SAMPLING_FREQUENCY, "attr_set %d: attribute %d", index, call.attr);
+  zassert_equal(call.val.val1, hz, "attr_set %d: %d Hz, expected %d", index, call.val.val1, hz);
   zassert_equal(call.val.val2, 0);
 }
 
 /* LSM6DSO ODR steps, datasheet Table 44 */
-ZTEST(imu, test_update_imu_mode_sets_the_accelerometer_rate_per_mode)
-{
+ZTEST(imu, test_update_imu_mode_sets_the_accelerometer_rate_per_mode) {
   zassert_equal(update_imu_mode(imu, 1), 0);
   zassert_equal(update_imu_mode(imu, 2), 0);
   zassert_equal(update_imu_mode(imu, 0), 0);
@@ -402,23 +367,20 @@ ZTEST(imu, test_update_imu_mode_sets_the_accelerometer_rate_per_mode)
   expect_odr(5, SENSOR_CHAN_GYRO_XYZ, 0);
 }
 
-ZTEST(imu, test_update_imu_mode_on_the_slave_touches_nothing)
-{
+ZTEST(imu, test_update_imu_mode_on_the_slave_touches_nothing) {
   g1_unit_set_role(G1_ROLE_SLAVE);
   zassert_equal(update_imu_mode(imu, 1), 0);
   zassert_equal(fake_imu_attr_count(), 0);
 }
 
-ZTEST(imu, test_update_imu_mode_while_initialised_is_refused)
-{
+ZTEST(imu, test_update_imu_mode_while_initialised_is_refused) {
   imu->inited = 1;
   zassert_equal(update_imu_mode(imu, 1), -1);
   zassert_equal(fake_imu_attr_count(), 0);
 }
 
 /* k_sleep(5 ms) lasts 6 ms on 1 ms ticks */
-ZTEST(imu, test_update_imu_mode_retries_a_failed_rate_every_5_ms)
-{
+ZTEST(imu, test_update_imu_mode_retries_a_failed_rate_every_5_ms) {
   int64_t start = g1_clock_uptime_ms();
 
   fake_imu_fail_attr(SENSOR_CHAN_ACCEL_XYZ, -EIO, 3);
@@ -428,8 +390,7 @@ ZTEST(imu, test_update_imu_mode_retries_a_failed_rate_every_5_ms)
   zassert_equal(fake_imu_odr(SENSOR_CHAN_ACCEL_XYZ), 12);
 }
 
-ZTEST(imu, test_update_imu_mode_gives_up_after_20_tries)
-{
+ZTEST(imu, test_update_imu_mode_gives_up_after_20_tries) {
   fake_imu_fail_attr(SENSOR_CHAN_ACCEL_XYZ, -EIO, -1);
   zassert_equal(update_imu_mode(imu, 1), -3);
   zassert_equal(fake_imu_attr_count(), 20);
@@ -441,8 +402,7 @@ ZTEST(imu, test_update_imu_mode_gives_up_after_20_tries)
   zassert_equal(fake_imu_odr(SENSOR_CHAN_ACCEL_XYZ), 26);
 }
 
-ZTEST(imu, test_set_cb_stores_the_sample_period_without_touching_the_sensor)
-{
+ZTEST(imu, test_set_cb_stores_the_sample_period_without_touching_the_sensor) {
   zassert_equal(register_imu_funsion_context(imu), 0);
   zassert_equal_ptr(imu->init_cb, imu_fusion_init);
   zassert_not_null(imu->set_cb);
@@ -454,8 +414,7 @@ ZTEST(imu, test_set_cb_stores_the_sample_period_without_touching_the_sensor)
   zassert_equal(fake_imu_attr_count(), 0);
 }
 
-ZTEST(imu, test_init_on_the_master_starts_the_fusion_at_52_hz)
-{
+ZTEST(imu, test_init_on_the_master_starts_the_fusion_at_52_hz) {
   imu->ref = REF;
   zassert_equal(imu_fusion_init(imu), 0);
 
@@ -469,16 +428,14 @@ ZTEST(imu, test_init_on_the_master_starts_the_fusion_at_52_hz)
   zassert_equal_ptr(imu->dev, G1_FAKE_IMU_DEV);
 }
 
-ZTEST(imu, test_init_on_the_slave_keeps_the_sensor_powered_down)
-{
+ZTEST(imu, test_init_on_the_slave_keeps_the_sensor_powered_down) {
   g1_unit_set_role(G1_ROLE_SLAVE);
   zassert_equal(imu_fusion_init(imu), 0);
   expect_odr(0, SENSOR_CHAN_ACCEL_XYZ, 0);
   expect_odr(1, SENSOR_CHAN_GYRO_XYZ, 0);
 }
 
-ZTEST(imu, test_init_on_a_device_that_is_not_ready_fails_without_a_thread)
-{
+ZTEST(imu, test_init_on_a_device_that_is_not_ready_fails_without_a_thread) {
   g1_device_set_ready(G1_FAKE_IMU_DEV, false);
 
   zassert_equal(imu_fusion_init(imu), -3);
@@ -488,8 +445,7 @@ ZTEST(imu, test_init_on_a_device_that_is_not_ready_fails_without_a_thread)
   zassert_equal(fake_imu_fetch_count(), 0);
 }
 
-ZTEST(imu, test_init_with_a_failing_gyroscope_fails_without_a_thread)
-{
+ZTEST(imu, test_init_with_a_failing_gyroscope_fails_without_a_thread) {
   fake_imu_fail_attr(SENSOR_CHAN_GYRO_XYZ, -EIO, -1);
 
   zassert_equal(imu_fusion_init(imu), -4);
@@ -499,16 +455,14 @@ ZTEST(imu, test_init_with_a_failing_gyroscope_fails_without_a_thread)
 }
 
 /* gyroscope 0, as powered down */
-static void head_at(double pitch_deg)
-{
+static void head_at(double pitch_deg) {
   double rad = pitch_deg * 0.017453292519943295;
 
   fake_imu_set(-FAKE_IMU_G * sin(rad), 0.0, FAKE_IMU_G * cos(rad), 0.0, 0.0, 0.0);
 }
 
 /* Fixed gyro offsets give a steady 0.93 degree pitch offset, inside the tolerance. */
-ZTEST(imu, test_thread_turns_a_head_lift_into_the_same_events_as_the_direct_calls)
-{
+ZTEST(imu, test_thread_turns_a_head_lift_into_the_same_events_as_the_direct_calls) {
   imu->ref = REF;
   head_at(-10.0);
   zassert_equal(imu_fusion_init(imu), 0);
@@ -538,8 +492,7 @@ ZTEST(imu, test_thread_turns_a_head_lift_into_the_same_events_as_the_direct_call
   zassert_equal(exit_temp_task_fake.call_count, 1);
 }
 
-ZTEST(imu, test_thread_skips_failed_samples)
-{
+ZTEST(imu, test_thread_skips_failed_samples) {
   imu->ref = REF;
   head_at(-10.0);
   fake_imu_fail_fetch(-EIO, -1);

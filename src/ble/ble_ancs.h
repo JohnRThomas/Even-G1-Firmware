@@ -4,12 +4,12 @@
 #ifndef G1_BLE_ANCS_H_
 #define G1_BLE_ANCS_H_
 
-#include <stdint.h>
+#include <glasses_state.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <zephyr/kernel.h>
+#include <stdint.h>
 #include <zephyr/bluetooth/addr.h>
-#include <glasses_state.h>
+#include <zephyr/kernel.h>
 
 #define BT_DATA_MSGQ_MAX 96
 

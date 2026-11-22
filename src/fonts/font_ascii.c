@@ -1,20 +1,19 @@
 /*
  * ASCII glyph helpers of the font code; the CJK glyphs are in font_bitmap.c.
  */
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <zephyr/sys/util.h>
 
-#include "font_bitmap.h"
 #include "../gui/gui.h"
+#include "font_bitmap.h"
 
 /*
  * ASCII glyph in a cell of w bytes x h rows (4 bpp, as the CJK glyphs), drawn into cell: the
  * 26-row font B glyph at the left, centred vertically. A code without a glyph leaves the cell empty.
  */
-const uint8_t *font_ascii_lookup(uint8_t c, int w, int h, uint8_t *cell)
-{
+const uint8_t *font_ascii_lookup(uint8_t c, int w, int h, uint8_t *cell) {
   int glyph_w = 0;
   int glyph_h = 0;
   const uint8_t *glyph = font_b_lookup(c, &glyph_w, &glyph_h);
@@ -37,15 +36,13 @@ const uint8_t *font_ascii_lookup(uint8_t c, int w, int h, uint8_t *cell)
  * ASCII glyph of a w x h font: there is no ASCII table, so the result is the
  * glyph offset from a NULL base (arg is unused).
  */
-const uint8_t *font_ascii_get_glyph(uint16_t digit, int w, int h, int arg)
-{
+const uint8_t *font_ascii_get_glyph(uint16_t digit, int w, int h, int arg) {
   if (digit >= 0x20 && digit < 0x80) {
     return (const uint8_t *)((digit - 0x20) * (w * h));
   }
   return NULL;
 }
 
-int check_printable_code(uint32_t code)
-{
+int check_printable_code(uint32_t code) {
   return code > 0x1f ? 0 : -1;
 }

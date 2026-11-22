@@ -4,18 +4,18 @@
  * Global context, "cpunet-hw-id" endpoint (configuration from the app core),
  * ESB event bookkeeping/statistics and the main supervision loop.
  */
-#include <string.h>
+#include <esb.h>
 #include <stdlib.h>
+#include <string.h>
+#include <zephyr/drivers/timer/nrf_rtc_timer.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/reboot.h>
-#include <esb.h>
-#include <zephyr/drivers/timer/nrf_rtc_timer.h>
 
-#include "net_common.h"
-#include "main.h"
 #include "app_esb.h"
 #include "hci_rpmsg.h"
 #include "ipc.h"
+#include "main.h"
+#include "net_common.h"
 #include "timeslot.h"
 
 /* G1_BUILD_TIME (reported to the app core) is defined by ../CMakeLists.txt */
@@ -47,62 +47,60 @@ uint8_t esb_channel;
 static uint8_t rx_repeat;
 static uint8_t last_seq;
 
-static int hwid_received(struct net_ctx *ctx, const uint8_t *data, size_t len)
-{
+static int hwid_received(struct net_ctx *ctx, const uint8_t *data, size_t len) {
   uint8_t buf[16] = {0};
 
   switch (data[0]) {
-  case 0:
-    ctx->role = data[1];
-    ctx->mode = data[2];
-    ctx->channel = data[3];
-    if (data[4] != 0xff && data[5] != 0 && data[5] != 0xff && data[4] != 0) {
-      base_addr_0[0] = data[4];
-      base_addr_0[1] = data[4];
-      base_addr_0[2] = data[4];
-      base_addr_0[3] = data[4];
-      addr_prefix[0] = data[4];
-      addr_prefix[1] = data[5];
-      base_addr_1[0] = data[5];
-      base_addr_1[1] = data[5];
-      base_addr_1[2] = data[5];
-      base_addr_1[3] = data[5];
-    }
-    buf[0] = 1;
-    buf[1] = 1;
-    ctx->ipc.send(buf, sizeof(buf));
-    if (first_cfg_log) {
-      first_cfg_log = 0;
-      NET_INF("L %d, R %d, M %d C %d\n", len, ctx->role, ctx->mode, ctx->channel);
-    }
-    break;
-  case 8:
-    net_ctx->mode = 1;
-    timeslot_handler_stop();
-    NET_INF("M %d\n", net_ctx->mode);
-    break;
-  case 10:
-    esb_link_set_high();
-    NET_INF("H\n");
-    break;
-  case 11:
-    esb_link_set_low();
-    NET_INF("L\n");
-    break;
-  case 12:
-    esb_link_set_paused();
-    NET_INF("P\n");
-    break;
-  default:
-    break;
+    case 0:
+      ctx->role = data[1];
+      ctx->mode = data[2];
+      ctx->channel = data[3];
+      if (data[4] != 0xff && data[5] != 0 && data[5] != 0xff && data[4] != 0) {
+        base_addr_0[0] = data[4];
+        base_addr_0[1] = data[4];
+        base_addr_0[2] = data[4];
+        base_addr_0[3] = data[4];
+        addr_prefix[0] = data[4];
+        addr_prefix[1] = data[5];
+        base_addr_1[0] = data[5];
+        base_addr_1[1] = data[5];
+        base_addr_1[2] = data[5];
+        base_addr_1[3] = data[5];
+      }
+      buf[0] = 1;
+      buf[1] = 1;
+      ctx->ipc.send(buf, sizeof(buf));
+      if (first_cfg_log) {
+        first_cfg_log = 0;
+        NET_INF("L %d, R %d, M %d C %d\n", len, ctx->role, ctx->mode, ctx->channel);
+      }
+      break;
+    case 8:
+      net_ctx->mode = 1;
+      timeslot_handler_stop();
+      NET_INF("M %d\n", net_ctx->mode);
+      break;
+    case 10:
+      esb_link_set_high();
+      NET_INF("H\n");
+      break;
+    case 11:
+      esb_link_set_low();
+      NET_INF("L\n");
+      break;
+    case 12:
+      esb_link_set_paused();
+      NET_INF("P\n");
+      break;
+    default:
+      break;
   }
 
   return 0;
 }
 
 /* Sends the ESB statistics to the application core; returns 1 if the report was sent. */
-int send_esb_stats(void)
-{
+int send_esb_stats(void) {
   uint8_t buf[32] = {0};
   uint8_t retry = 10;
   int sent = 0;
@@ -129,8 +127,7 @@ int send_esb_stats(void)
   return sent;
 }
 
-void ipc_send_esb_status(uint8_t val)
-{
+void ipc_send_esb_status(uint8_t val) {
   uint8_t buf[8] = {0};
   uint8_t retry = 10;
 
@@ -150,37 +147,31 @@ void ipc_send_esb_status(uint8_t val)
   } while (1);
 }
 
-int esb_tx_buf_set(const uint8_t *data, size_t len)
-{
+int esb_tx_buf_set(const uint8_t *data, size_t len) {
   memcpy(esb_tx_buf, data, len);
   tx_len = len;
   return 0;
 }
 
-size_t esb_tx_buf_len_get(void)
-{
+size_t esb_tx_buf_len_get(void) {
   return tx_len;
 }
 
-void esb_tx_buf_clear(void)
-{
+void esb_tx_buf_clear(void) {
   memset(esb_tx_buf, 0, sizeof(esb_tx_buf));
   tx_len = 0;
   esb_tx_state = 0;
 }
 
-int net_mode_get(void)
-{
+int net_mode_get(void) {
   return net_ctx->mode;
 }
 
-int net_role_get(void)
-{
+int net_role_get(void) {
   return net_ctx->role;
 }
 
-static void esb_thread_wake(void)
-{
+static void esb_thread_wake(void) {
   if (k_sem_count_get(&net_ctx->sem1) == 0) {
     k_sem_give(&net_ctx->sem1);
   }
@@ -189,8 +180,7 @@ static void esb_thread_wake(void)
 static int esb_rx_msgq_put(const uint8_t *data);
 
 /* Queues a received ESB packet and wakes the ESB thread. */
-static void esb_rx_enqueue(const uint8_t *data, size_t len)
-{
+static void esb_rx_enqueue(const uint8_t *data, size_t len) {
   uint8_t buf[252] = {0};
 
   memcpy(buf, data, len);
@@ -198,64 +188,62 @@ static void esb_rx_enqueue(const uint8_t *data, size_t len)
   esb_thread_wake();
 }
 
-static void app_esb_event_handler(struct app_esb_evt *evt)
-{
+static void app_esb_event_handler(struct app_esb_evt *evt) {
   esb_evt_active = 1;
 
   switch (evt->type) {
-  case 0:
-    esb_tx_ok_cnt++;
-    break;
-  case 1:
-    esb_tx_fail_cnt++;
-    break;
-  case 2:
-    esb_rx_cnt++;
-    if (net_ctx->mode == 1) {
+    case 0:
+      esb_tx_ok_cnt++;
       break;
-    }
-    if (net_ctx->role == 2) {
-      if (esb_tx_kind == 1 && esb_tx_state == 2) {
-        if (++rx_repeat > 1) {
-          rx_repeat = 0;
-          esb_tx_state = 0;
+    case 1:
+      esb_tx_fail_cnt++;
+      break;
+    case 2:
+      esb_rx_cnt++;
+      if (net_ctx->mode == 1) {
+        break;
+      }
+      if (net_ctx->role == 2) {
+        if (esb_tx_kind == 1 && esb_tx_state == 2) {
+          if (++rx_repeat > 1) {
+            rx_repeat = 0;
+            esb_tx_state = 0;
+            esb_tx_kind = 0;
+            esb_tx_done = 2;
+            esb_thread_wake();
+          }
+        }
+      } else if (esb_tx_kind != 0) {
+        if (esb_tx_kind == 2) {
+          esb_tx_kind = 0;
+        } else if (esb_tx_kind == 1 && esb_tx_state == 2) {
           esb_tx_kind = 0;
           esb_tx_done = 2;
           esb_thread_wake();
         }
       }
-    } else if (esb_tx_kind != 0) {
-      if (esb_tx_kind == 2) {
-        esb_tx_kind = 0;
-      } else if (esb_tx_kind == 1 && esb_tx_state == 2) {
-        esb_tx_kind = 0;
-        esb_tx_done = 2;
-        esb_thread_wake();
-      }
-    }
-    esb_rssi = evt->rssi;
-    if (evt->data[0] == 0x10 || evt->data[0] == 0x11) {
-      break;
-    }
-    if (net_ctx->role == 2 && evt->len > 15) {
-      if (last_seq == evt->data[0x11]) {
+      esb_rssi = evt->rssi;
+      if (evt->data[0] == 0x10 || evt->data[0] == 0x11) {
         break;
       }
-      last_seq = evt->data[0x11];
-    }
-    esb_rx_enqueue(evt->data, evt->len);
-    esb_rx_ms = k_ticks_to_ms_ceil64(k_uptime_ticks());
-    break;
-  default:
-    NET_ERR("UN ESB!\n");
-    break;
+      if (net_ctx->role == 2 && evt->len > 15) {
+        if (last_seq == evt->data[0x11]) {
+          break;
+        }
+        last_seq = evt->data[0x11];
+      }
+      esb_rx_enqueue(evt->data, evt->len);
+      esb_rx_ms = k_ticks_to_ms_ceil64(k_uptime_ticks());
+      break;
+    default:
+      NET_ERR("UN ESB!\n");
+      break;
   }
 
   esb_evt_active = 0;
 }
 
-static int rtc_sync_check(void)
-{
+static int rtc_sync_check(void) {
   int offset;
 
   if (sync_offset != -EBUSY) {
@@ -272,8 +260,7 @@ static int rtc_sync_check(void)
   return 0;
 }
 
-int esb_rx_msgq_init(void)
-{
+int esb_rx_msgq_init(void) {
   int err = k_msgq_alloc_init(&esb_msgq, 0xfb, 4);
 
   if (err) {
@@ -283,8 +270,7 @@ int esb_rx_msgq_init(void)
   return err;
 }
 
-static int esb_rx_msgq_put(const uint8_t *data)
-{
+static int esb_rx_msgq_put(const uint8_t *data) {
   uint8_t buf[252];
   int err;
 
@@ -301,8 +287,7 @@ static int esb_rx_msgq_put(const uint8_t *data)
   return err;
 }
 
-int esb_rx_msgq_get(uint8_t *data)
-{
+int esb_rx_msgq_get(uint8_t *data) {
   uint8_t buf[252];
   int err;
 
@@ -320,8 +305,7 @@ int esb_rx_msgq_get(uint8_t *data)
 }
 
 /* App-core handshake messages; main() retries each send up to 20 times. */
-static int mac_send(void)
-{
+static int mac_send(void) {
   uint8_t buf[16] = {0};
   int ret;
 
@@ -337,8 +321,7 @@ static int mac_send(void)
   return ret;
 }
 
-static int bt_send(void)
-{
+static int bt_send(void) {
   uint8_t buf[32] = {0};
   int ret;
 
@@ -350,8 +333,7 @@ static int bt_send(void)
   return ret;
 }
 
-int main(void)
-{
+int main(void) {
   struct net_ctx *ctx;
   int cnt;
   uint8_t err;
@@ -427,10 +409,8 @@ int main(void)
     esb_set_rf_channel(0);
   }
 
-  NET_INF("addr 0 0x%02X-0x%02X-0x%02X-0x%02X\n", base_addr_0[0], base_addr_0[1],
-    base_addr_0[2], base_addr_0[3]);
-  NET_INF("addr 1 0x%02X-0x%02X-0x%02X-0x%02X\n", base_addr_1[0], base_addr_1[1],
-    base_addr_1[2], base_addr_1[3]);
+  NET_INF("addr 0 0x%02X-0x%02X-0x%02X-0x%02X\n", base_addr_0[0], base_addr_0[1], base_addr_0[2], base_addr_0[3]);
+  NET_INF("addr 1 0x%02X-0x%02X-0x%02X-0x%02X\n", base_addr_1[0], base_addr_1[1], base_addr_1[2], base_addr_1[3]);
 
   if (net_ctx->role == 1 || net_ctx->role == 2) {
     esb_ops_init(&net_ctx->esb);
@@ -477,8 +457,7 @@ int main(void)
       if (now_ms - last_report_ms >= 10000) {
         last_report_ms = now_ms;
         send_esb_stats();
-      } else if (((esb_rssi <= 39 && last_rssi > 50) ||
-            (esb_rssi > 50 && last_rssi <= 39)) && cnt > 2) {
+      } else if (((esb_rssi <= 39 && last_rssi > 50) || (esb_rssi > 50 && last_rssi <= 39)) && cnt > 2) {
         if (send_esb_stats()) {
           last_report_ms = now_ms;
           last_rssi = esb_rssi;

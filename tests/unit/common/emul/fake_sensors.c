@@ -50,8 +50,7 @@ static struct {
 } imu;
 
 /* uses up one of count failures; count < 0 never runs out */
-static bool take_fault(int *count)
-{
+static bool take_fault(int *count) {
   if (*count == 0) {
     return false;
   }
@@ -61,8 +60,7 @@ static bool take_fault(int *count)
   return true;
 }
 
-static struct sensor_value micro_to_value(int64_t micro)
-{
+static struct sensor_value micro_to_value(int64_t micro) {
   /* C truncation: val2 has the value's sign */
   struct sensor_value value = {
     .val1 = (int32_t)(micro / 1000000),
@@ -72,8 +70,7 @@ static struct sensor_value micro_to_value(int64_t micro)
   return value;
 }
 
-static struct charger_reading to_reading(int64_t v_uv, int64_t i_ua, int64_t t_mdegc)
-{
+static struct charger_reading to_reading(int64_t v_uv, int64_t i_ua, int64_t t_mdegc) {
   struct charger_reading reading = {
     .voltage = micro_to_value(v_uv),
     .current = micro_to_value(i_ua),
@@ -83,13 +80,11 @@ static struct charger_reading to_reading(int64_t v_uv, int64_t i_ua, int64_t t_m
   return reading;
 }
 
-void fake_charger_set(int64_t v_uv, int64_t i_ua, int64_t t_mdegc)
-{
+void fake_charger_set(int64_t v_uv, int64_t i_ua, int64_t t_mdegc) {
   charger.set = to_reading(v_uv, i_ua, t_mdegc);
 }
 
-int fake_charger_queue(int64_t v_uv, int64_t i_ua, int64_t t_mdegc)
-{
+int fake_charger_queue(int64_t v_uv, int64_t i_ua, int64_t t_mdegc) {
   if (charger.queued >= CHARGER_QUEUE_MAX) {
     return -ENOSPC;
   }
@@ -97,19 +92,16 @@ int fake_charger_queue(int64_t v_uv, int64_t i_ua, int64_t t_mdegc)
   return 0;
 }
 
-void fake_charger_fail_fetch(int ret, int count)
-{
+void fake_charger_fail_fetch(int ret, int count) {
   charger.fail_ret = ret;
   charger.fail_count = count;
 }
 
-int fake_charger_fetch_count(void)
-{
+int fake_charger_fetch_count(void) {
   return charger.fetches;
 }
 
-static int charger_sample_fetch(const struct device *dev, enum sensor_channel chan)
-{
+static int charger_sample_fetch(const struct device *dev, enum sensor_channel chan) {
   ARG_UNUSED(chan);
   charger.fetches++;
   if (!device_is_ready(dev)) {
@@ -126,45 +118,42 @@ static int charger_sample_fetch(const struct device *dev, enum sensor_channel ch
   return 0;
 }
 
-static int charger_channel_get(const struct device *dev, enum sensor_channel chan,
-             struct sensor_value *val)
-{
+static int charger_channel_get(const struct device *dev, enum sensor_channel chan, struct sensor_value *val) {
   ARG_UNUSED(dev);
   switch ((uint32_t)chan) {
-  case SENSOR_CHAN_GAUGE_VOLTAGE:
-    *val = charger.latched.voltage;
-    break;
-  case SENSOR_CHAN_GAUGE_AVG_CURRENT:
-    *val = charger.latched.current;
-    break;
-  case SENSOR_CHAN_GAUGE_TEMP:
-    *val = charger.latched.temp;
-    break;
-  /* BCHGCHARGESTATUS and BCHGERRREASON, which no test scripts */
-  case SENSOR_CHAN_NPM1300_CHARGER_STATUS:
-  case SENSOR_CHAN_NPM1300_CHARGER_ERROR:
-    val->val1 = 0;
-    val->val2 = 0;
-    break;
-  /* the charge current, as the real driver reports it */
-  case SENSOR_CHAN_GAUGE_DESIRED_CHARGING_CURRENT:
-    *val = micro_to_value(DT_PROP(DT_NODELABEL(pmic_charger), current_microamp));
-    break;
-  default:
-    return -ENOTSUP;
+    case SENSOR_CHAN_GAUGE_VOLTAGE:
+      *val = charger.latched.voltage;
+      break;
+    case SENSOR_CHAN_GAUGE_AVG_CURRENT:
+      *val = charger.latched.current;
+      break;
+    case SENSOR_CHAN_GAUGE_TEMP:
+      *val = charger.latched.temp;
+      break;
+    /* BCHGCHARGESTATUS and BCHGERRREASON, which no test scripts */
+    case SENSOR_CHAN_NPM1300_CHARGER_STATUS:
+    case SENSOR_CHAN_NPM1300_CHARGER_ERROR:
+      val->val1 = 0;
+      val->val2 = 0;
+      break;
+    /* the charge current, as the real driver reports it */
+    case SENSOR_CHAN_GAUGE_DESIRED_CHARGING_CURRENT:
+      *val = micro_to_value(DT_PROP(DT_NODELABEL(pmic_charger), current_microamp));
+      break;
+    default:
+      return -ENOTSUP;
   }
   return 0;
 }
 
-static int imu_attr_set(const struct device *dev, enum sensor_channel chan,
-      enum sensor_attribute attr, const struct sensor_value *val)
-{
+static int imu_attr_set(const struct device *dev, enum sensor_channel chan, enum sensor_attribute attr,
+                        const struct sensor_value *val) {
   int ret = 0;
 
   if (!device_is_ready(dev)) {
     ret = -EIO;
   } else if ((imu.attr_fail_chan == SENSOR_CHAN_ALL || imu.attr_fail_chan == chan) &&
-       take_fault(&imu.attr_fail_count)) {
+             take_fault(&imu.attr_fail_count)) {
     ret = imu.attr_fail_ret;
   }
   if (imu.attr_calls < IMU_ATTR_LOG) {
@@ -186,8 +175,7 @@ static int imu_attr_set(const struct device *dev, enum sensor_channel chan,
   return ret;
 }
 
-static int imu_sample_fetch(const struct device *dev, enum sensor_channel chan)
-{
+static int imu_sample_fetch(const struct device *dev, enum sensor_channel chan) {
   ARG_UNUSED(chan);
   imu.fetches++;
   if (!device_is_ready(dev)) {
@@ -200,30 +188,28 @@ static int imu_sample_fetch(const struct device *dev, enum sensor_channel chan)
   return 0;
 }
 
-static int imu_channel_get(const struct device *dev, enum sensor_channel chan,
-         struct sensor_value *val)
-{
+static int imu_channel_get(const struct device *dev, enum sensor_channel chan, struct sensor_value *val) {
   ARG_UNUSED(dev);
   imu.gets++;
   switch (chan) {
-  case SENSOR_CHAN_ACCEL_XYZ:
-    memcpy(val, imu.latched.accel, sizeof(imu.latched.accel));
-    return 0;
-  case SENSOR_CHAN_GYRO_XYZ:
-    memcpy(val, imu.latched.gyro, sizeof(imu.latched.gyro));
-    return 0;
-  case SENSOR_CHAN_ACCEL_X:
-  case SENSOR_CHAN_ACCEL_Y:
-  case SENSOR_CHAN_ACCEL_Z:
-    *val = imu.latched.accel[chan - SENSOR_CHAN_ACCEL_X];
-    return 0;
-  case SENSOR_CHAN_GYRO_X:
-  case SENSOR_CHAN_GYRO_Y:
-  case SENSOR_CHAN_GYRO_Z:
-    *val = imu.latched.gyro[chan - SENSOR_CHAN_GYRO_X];
-    return 0;
-  default:
-    return -ENOTSUP;
+    case SENSOR_CHAN_ACCEL_XYZ:
+      memcpy(val, imu.latched.accel, sizeof(imu.latched.accel));
+      return 0;
+    case SENSOR_CHAN_GYRO_XYZ:
+      memcpy(val, imu.latched.gyro, sizeof(imu.latched.gyro));
+      return 0;
+    case SENSOR_CHAN_ACCEL_X:
+    case SENSOR_CHAN_ACCEL_Y:
+    case SENSOR_CHAN_ACCEL_Z:
+      *val = imu.latched.accel[chan - SENSOR_CHAN_ACCEL_X];
+      return 0;
+    case SENSOR_CHAN_GYRO_X:
+    case SENSOR_CHAN_GYRO_Y:
+    case SENSOR_CHAN_GYRO_Z:
+      *val = imu.latched.gyro[chan - SENSOR_CHAN_GYRO_X];
+      return 0;
+    default:
+      return -ENOTSUP;
   }
 }
 
@@ -238,14 +224,12 @@ static const struct sensor_driver_api imu_api = {
   .channel_get = imu_channel_get,
 };
 
-DEVICE_DT_DEFINE(DT_NODELABEL(pmic_charger), NULL, NULL, NULL, NULL, POST_KERNEL,
-     CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &charger_api);
-DEVICE_DT_DEFINE(DT_NODELABEL(lsm6dso), NULL, NULL, NULL, NULL, POST_KERNEL,
-     CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &imu_api);
+DEVICE_DT_DEFINE(DT_NODELABEL(pmic_charger), NULL, NULL, NULL, NULL, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
+                 &charger_api);
+DEVICE_DT_DEFINE(DT_NODELABEL(lsm6dso), NULL, NULL, NULL, NULL, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
+                 &imu_api);
 
-void fake_imu_set(double accel_x, double accel_y, double accel_z, double gyro_x, double gyro_y,
-      double gyro_z)
-{
+void fake_imu_set(double accel_x, double accel_y, double accel_z, double gyro_x, double gyro_y, double gyro_z) {
   sensor_value_from_double(&imu.set.accel[0], accel_x);
   sensor_value_from_double(&imu.set.accel[1], accel_y);
   sensor_value_from_double(&imu.set.accel[2], accel_z);
@@ -254,50 +238,39 @@ void fake_imu_set(double accel_x, double accel_y, double accel_z, double gyro_x,
   sensor_value_from_double(&imu.set.gyro[2], gyro_z);
 }
 
-int fake_imu_attr_count(void)
-{
+int fake_imu_attr_count(void) {
   return imu.attr_calls;
 }
 
-struct fake_imu_attr_call fake_imu_attr(int index)
-{
-  __ASSERT(index >= 0 && index < MIN(imu.attr_calls, IMU_ATTR_LOG),
-     "attr_set call %d not logged", index);
+struct fake_imu_attr_call fake_imu_attr(int index) {
+  __ASSERT(index >= 0 && index < MIN(imu.attr_calls, IMU_ATTR_LOG), "attr_set call %d not logged", index);
   return imu.attr_log[index];
 }
 
-int32_t fake_imu_odr(enum sensor_channel chan)
-{
-  return chan == SENSOR_CHAN_ACCEL_XYZ ? imu.odr_accel
-         : chan == SENSOR_CHAN_GYRO_XYZ ? imu.odr_gyro
-               : -1;
+int32_t fake_imu_odr(enum sensor_channel chan) {
+  return chan == SENSOR_CHAN_ACCEL_XYZ ? imu.odr_accel : chan == SENSOR_CHAN_GYRO_XYZ ? imu.odr_gyro : -1;
 }
 
-void fake_imu_fail_attr(enum sensor_channel chan, int ret, int count)
-{
+void fake_imu_fail_attr(enum sensor_channel chan, int ret, int count) {
   imu.attr_fail_chan = chan;
   imu.attr_fail_ret = ret;
   imu.attr_fail_count = count;
 }
 
-void fake_imu_fail_fetch(int ret, int count)
-{
+void fake_imu_fail_fetch(int ret, int count) {
   imu.fetch_fail_ret = ret;
   imu.fetch_fail_count = count;
 }
 
-int fake_imu_fetch_count(void)
-{
+int fake_imu_fetch_count(void) {
   return imu.fetches;
 }
 
-int fake_imu_get_count(void)
-{
+int fake_imu_get_count(void) {
   return imu.gets;
 }
 
-static void fake_sensors_reset(bool keep_media)
-{
+static void fake_sensors_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
   memset(&charger, 0, sizeof(charger));
   memset(&imu, 0, sizeof(imu));

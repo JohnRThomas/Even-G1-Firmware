@@ -5,12 +5,12 @@
 #ifndef STORAGE_H_
 #define STORAGE_H_
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
 #include <glasses_state.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
 
 /* System (factory) settings, flash 0x130000 */
 struct sys_settings {
@@ -67,10 +67,10 @@ struct usr_settings {
   uint8_t reserved[6];
 };
 
-#define SYS_SETTINGS_ADDR   0x130000
-#define USR_SETTINGS_ADDR   0x134000
+#define SYS_SETTINGS_ADDR 0x130000
+#define USR_SETTINGS_ADDR 0x134000
 
-#define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
+#define FLASH_DEV             DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 #define EXT_FLASH_SECTOR_SIZE 4096
 
 /* QuickNote context behind GLOBAL_STATE->quicknote */
@@ -140,8 +140,7 @@ int SettingStoreHandler(void);
 int clearQuickNoteQueue(void);
 int upgradeQuickNoteDataToFlash(int index);
 int deleteQuickNoteData(int index);
-int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *text,
-            int text_len);
+int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *text, int text_len);
 int getQuickNoteQueueNum(void);
 int QuickNoteStoreHandler(void);
 

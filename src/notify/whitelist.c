@@ -4,30 +4,29 @@
  * Record layout and limits: whitelist.h.
  */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
+#include "../ble/ble_proto.h"
+#include "../storage/storage.h"
 #include "g1_log.h"
 #include "notify.h"
 #include "whitelist.h"
-#include "../ble/ble_proto.h"
-#include "../storage/storage.h"
 
 static char *whitelist_buf;
 struct app_whitelist g_appWhiteListInfo;
 
 void dump_whitelist(void);
 
-int store_whitelist(void)
-{
+int store_whitelist(void) {
   int ret;
   uint8_t retry = 3;
 
   do {
-    ret = write_whitelist_to_flash(WHITELIST_FLASH_ADDR, (const uint8_t *)&g_appWhiteListInfo,
-                 sizeof(g_appWhiteListInfo));
+    ret =
+      write_whitelist_to_flash(WHITELIST_FLASH_ADDR, (const uint8_t *)&g_appWhiteListInfo, sizeof(g_appWhiteListInfo));
     if (ret == 0) {
       dump_whitelist();
       break;
@@ -39,8 +38,7 @@ int store_whitelist(void)
   return ret;
 }
 
-int load_whitelist(void)
-{
+int load_whitelist(void) {
   struct app_whitelist tmp;
   int ret;
 
@@ -61,13 +59,11 @@ int load_whitelist(void)
 }
 
 /* raw record (sent to the phone app as is) */
-uint8_t *get_app_whitelist_info(void)
-{
+uint8_t *get_app_whitelist_info(void) {
   return (uint8_t *)&g_appWhiteListInfo;
 }
 
-uint8_t is_on_whitelist_by_identifier(const char *pkg_name)
-{
+uint8_t is_on_whitelist_by_identifier(const char *pkg_name) {
   if (pkg_name == NULL) {
     BLE_PRINTK("[%s-%d] pkg_name is NULL !\n", __func__, __LINE__);
     return 0;
@@ -88,8 +84,7 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name)
     BLE_PRINTK("whitelist type call is disable ! \n");
     return 1;
   }
-  if (strncmp("com.apple.MobileSMS", pkg_name, 19) == 0 ||
-      strncmp("com.android.even_sms", pkg_name, 20) == 0) {
+  if (strncmp("com.apple.MobileSMS", pkg_name, 19) == 0 || strncmp("com.android.even_sms", pkg_name, 20) == 0) {
     if (g_appWhiteListInfo.msg_enable) {
       BLE_PRINTK("whitelist type message is enable ! \n");
       return 2;
@@ -97,8 +92,7 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name)
     BLE_PRINTK("whitelist type message is disable ! \n");
     return 1;
   }
-  if (strncmp("com.apple.mobilecal", pkg_name, 19) == 0 ||
-      strncmp("com.android.even_calendar", pkg_name, 25) == 0) {
+  if (strncmp("com.apple.mobilecal", pkg_name, 19) == 0 || strncmp("com.android.even_calendar", pkg_name, 25) == 0) {
     if (g_appWhiteListInfo.calendar_enable) {
       BLE_PRINTK("whitelist type calendar is enable ! \n");
       return 2;
@@ -131,9 +125,8 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name)
   return 1;
 }
 
-void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uint8_t *data,
-        uint16_t len, uint8_t *rsp)
-{
+void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uint8_t *data, uint16_t len,
+                                uint8_t *rsp) {
   if (whitelist_buf == NULL) {
     whitelist_buf = malloc(PKCS7_PACK_BUF_SIZE);
     if (whitelist_buf == NULL) {
@@ -165,8 +158,7 @@ void put_whitelist_app_from_app(struct ble_context *ctx, uint8_t *hdr, const uin
   ctx->write(rsp, 2);
 }
 
-int parse_app_white_list_json(const char *json)
-{
+int parse_app_white_list_json(const char *json) {
   cJSON *root;
   cJSON *item;
   cJSON *app;
@@ -264,12 +256,9 @@ int parse_app_white_list_json(const char *json)
         continue;
       }
       memset(g_appWhiteListInfo.list[n].id, 0, sizeof(g_appWhiteListInfo.list[n].id));
-      memset(g_appWhiteListInfo.list[n].name, 0,
-             sizeof(g_appWhiteListInfo.list[n].name));
-      strncpy(g_appWhiteListInfo.list[n].id, id->valuestring,
-        sizeof(g_appWhiteListInfo.list[n].id) - 1);
-      strncpy(g_appWhiteListInfo.list[n].name, name->valuestring,
-        sizeof(g_appWhiteListInfo.list[n].name) - 1);
+      memset(g_appWhiteListInfo.list[n].name, 0, sizeof(g_appWhiteListInfo.list[n].name));
+      strncpy(g_appWhiteListInfo.list[n].id, id->valuestring, sizeof(g_appWhiteListInfo.list[n].id) - 1);
+      strncpy(g_appWhiteListInfo.list[n].name, name->valuestring, sizeof(g_appWhiteListInfo.list[n].name) - 1);
       n++;
     }
     /* entries skipped above are not counted */
@@ -279,8 +268,7 @@ int parse_app_white_list_json(const char *json)
   return 1;
 }
 
-int is_app_name_same(const char *id, const char *name)
-{
+int is_app_name_same(const char *id, const char *name) {
   if (id == NULL || name == NULL) {
     BLE_PRINTK("invalid param ! \n");
     return 0;
@@ -294,8 +282,7 @@ int is_app_name_same(const char *id, const char *name)
   return 0;
 }
 
-int is_the_same_whitelist_app(const char *json)
-{
+int is_the_same_whitelist_app(const char *json) {
   cJSON *root;
   cJSON *item;
   cJSON *app;
@@ -414,8 +401,7 @@ out:
   return ret;
 }
 
-uint16_t convert_app_whitelist_to_json(char *buf)
-{
+uint16_t convert_app_whitelist_to_json(char *buf) {
   cJSON *root;
   cJSON *app;
   cJSON *list;
@@ -471,8 +457,7 @@ uint16_t convert_app_whitelist_to_json(char *buf)
   return len;
 }
 
-void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp)
-{
+void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp) {
   char *buf;
   char *src;
   int len;
@@ -517,8 +502,7 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp)
   free(buf);
 }
 
-void dump_whitelist(void)
-{
+void dump_whitelist(void) {
   char *buf = malloc(WHITELIST_JSON_BUF_LEN);
 
   if (buf == NULL) {
@@ -530,8 +514,7 @@ void dump_whitelist(void)
   free(buf);
 }
 
-void load_app_white_list_from_flash(void)
-{
+void load_app_white_list_from_flash(void) {
   memset(&g_appWhiteListInfo, 0, sizeof(g_appWhiteListInfo));
   printk("MAX_WHITE_LIST_BUF_LEN is %d \n", MAX_WHITE_LIST_BUF_LEN);
   if (load_whitelist() == 0) {

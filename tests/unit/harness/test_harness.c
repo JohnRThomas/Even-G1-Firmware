@@ -1,22 +1,20 @@
 #include <app_version.h>
 
-#include "harness.h"
 #include "fakes.h"
+#include "harness.h"
 
 ZTEST_SUITE(harness, NULL, NULL, NULL, NULL, NULL);
 
-static int write_frame(const char *hex)
-{
+static int write_frame(const char *hex) {
   uint8_t buf[64];
 
   return g1_ble()->write(buf, g1_hex(hex, buf, sizeof(buf)));
 }
 
-ZTEST(harness, test_hex_parse_accepts_separators_0x_prefixes_and_comments)
-{
+ZTEST(harness, test_hex_parse_accepts_separators_0x_prefixes_and_comments) {
   static const char text[] = "# 0x37 request, comment line\n"
-           "37 4d,FB:0x0a\n"
-           "c9ca  # trailing comment\n";
+                             "37 4d,FB:0x0a\n"
+                             "c9ca  # trailing comment\n";
   uint8_t buf[8];
 
   zassert_equal(g1_hex_parse(text, buf, sizeof(buf)), 6);
@@ -26,8 +24,7 @@ ZTEST(harness, test_hex_parse_accepts_separators_0x_prefixes_and_comments)
   zassert_equal(g1_hex_parse("01 02 03", buf, 2), -ENOSPC);
 }
 
-ZTEST(harness, test_frames_are_fifo_and_compared_with_length)
-{
+ZTEST(harness, test_frames_are_fifo_and_compared_with_length) {
   write_frame("01 02");
   write_frame("03");
   zassert_equal(g1_frame_count(), 2);
@@ -38,8 +35,7 @@ ZTEST(harness, test_frames_are_fifo_and_compared_with_length)
   expect_frame_padded("37 37", 4);
 }
 
-ZTEST(harness, test_frame_mismatch_message_shows_both_byte_strings)
-{
+ZTEST(harness, test_frame_mismatch_message_shows_both_byte_strings) {
   char msg[G1_MSG_SIZE];
 
   write_frame("37 37 05");
@@ -60,15 +56,13 @@ ZTEST(harness, test_frame_mismatch_message_shows_both_byte_strings)
   g1_frames_clear();
 }
 
-ZTEST(harness, test_write_returns_g1_write_ret_and_still_captures)
-{
+ZTEST(harness, test_write_returns_g1_write_ret_and_still_captures) {
   g1_write_ret = -1;
   zassert_equal(write_frame("f1 00"), -1);
   expect_frame("f1 00");
 }
 
-ZTEST(harness, test_clock_starts_on_whole_second_and_advances_exactly)
-{
+ZTEST(harness, test_clock_starts_on_whole_second_and_advances_exactly) {
   int64_t t0 = g1_clock_uptime_ms();
 
   zassert_equal(t0 % 1000, 0, "uptime %lld after reset", t0);
@@ -79,8 +73,7 @@ ZTEST(harness, test_clock_starts_on_whole_second_and_advances_exactly)
 }
 
 /* tests run in name order */
-ZTEST(harness, test_reset_1_dirty_everything)
-{
+ZTEST(harness, test_reset_1_dirty_everything) {
   struct GlassesState *gs = g1_state();
 
   gs->is_master = 2;
@@ -94,8 +87,7 @@ ZTEST(harness, test_reset_1_dirty_everything)
   LOG_LEVEL = 5;
 }
 
-ZTEST(harness, test_reset_2_state_is_rebuilt_like_init_context)
-{
+ZTEST(harness, test_reset_2_state_is_rebuilt_like_init_context) {
   struct GlassesState *gs = g1_state();
 
   zassert_equal_ptr(gs, get_dashboard_state());
@@ -119,8 +111,7 @@ ZTEST(harness, test_reset_2_state_is_rebuilt_like_init_context)
   zassert_equal_ptr(gs->flash_read, g1_fake_flash_read);
 }
 
-ZTEST(harness, test_set_role_slave_like_role_init)
-{
+ZTEST(harness, test_set_role_slave_like_role_init) {
   struct GlassesState *gs = g1_state();
 
   g1_unit_set_role(G1_ROLE_SLAVE);
@@ -131,8 +122,7 @@ ZTEST(harness, test_set_role_slave_like_role_init)
   zassert_false(gs->sync.flags & BIT(2));
 }
 
-ZTEST(harness, test_fake_flash_is_nor_and_survives_reboot_only)
-{
+ZTEST(harness, test_fake_flash_is_nor_and_survives_reboot_only) {
   struct GlassesState *gs = g1_state();
   uint8_t byte = 0;
 
@@ -157,15 +147,13 @@ ZTEST(harness, test_fake_flash_is_nor_and_survives_reboot_only)
   zassert_equal(g1_fake_flash_image[0x1000], 0xff);
 }
 
-ZTEST(harness, test_unknown_vector_is_enoent)
-{
+ZTEST(harness, test_unknown_vector_is_enoent) {
   uint8_t buf[4];
 
   zassert_equal(g1_vector_load("no_such_vector", buf, sizeof(buf)), -ENOENT);
 }
 
-ZTEST(harness, test_vector_ends_at_the_next_title)
-{
+ZTEST(harness, test_vector_ends_at_the_next_title) {
   uint8_t buf[16];
   int len;
 
@@ -176,8 +164,7 @@ ZTEST(harness, test_vector_ends_at_the_next_title)
   expect_bytes(buf, len, "0a 06 00 b2 05 01");
 }
 
-ZTEST(harness, test_vector_tag_is_told_apart_by_its_command_byte)
-{
+ZTEST(harness, test_vector_tag_is_told_apart_by_its_command_byte) {
   uint8_t buf[4];
   int len;
 

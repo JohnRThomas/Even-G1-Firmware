@@ -6,24 +6,24 @@
 #ifndef G1_BLE_PROTO_H_
 #define G1_BLE_PROTO_H_
 
-#include <stdint.h>
+#include <g1_date.h>
+#include <glasses_state.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <zephyr/kernel.h>
-#include <g1_date.h>
-#include <zephyr/sys/atomic.h>
+#include <stdint.h>
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/conn.h>
-#include <glasses_state.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/atomic.h>
 
 #include "g1_log.h"
 
 #include "ble_cmd.h"
 
 /* pkcs7 packet reassembly results */
-#define PKCS7_PACK_DONE  0xc9 /* last packet received */
-#define PKCS7_PACK_ERR   0xca
-#define PKCS7_PACK_MORE  0xcb /* more packets follow */
+#define PKCS7_PACK_DONE 0xc9 /* last packet received */
+#define PKCS7_PACK_ERR  0xca
+#define PKCS7_PACK_MORE 0xcb /* more packets follow */
 
 /* destination buffers of parse_receiver_pack_pkcs7() and parse_receiver_msg_pack_pkcs7() */
 #define PKCS7_PACK_BUF_SIZE     0x1800
@@ -42,8 +42,8 @@
 /* dashboard lock bits (dashboard_lock_reported / dashboard_lock_requested / dashboard_head_up_opened) */
 #define DASHBOARD_LOCK_BIT 1 /* bit number */
 
-#define BLE_TX_BUF_SIZE 0x2b8
-#define BLE_SMALL_PKT_MAX 20
+#define BLE_TX_BUF_SIZE    0x2b8
+#define BLE_SMALL_PKT_MAX  20
 #define BLE_SMALL_BUF_SIZE (BLE_SMALL_PKT_MAX + 1)
 
 /* request header handed to ble_process_req_dispatch() */
@@ -54,7 +54,7 @@ struct ble_req_hdr {
 };
 
 #define BLE_WORK_THREAD_STACK_SIZE 0x3000
-#define BLE_WORK_THREAD_PRIORITY (-15)
+#define BLE_WORK_THREAD_PRIORITY   (-15)
 
 /* ---- types used by ble_process_put_req() ---- */
 

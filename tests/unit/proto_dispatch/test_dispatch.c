@@ -4,20 +4,18 @@
  */
 #include <app_version.h>
 
-#include "harness.h"
 #include "fakes.h"
+#include "harness.h"
 #include "notify/whitelist.h"
 
 ZTEST_SUITE(proto_dispatch, NULL, NULL, NULL, NULL, NULL);
 
-static void send_byte(uint8_t id)
-{
+static void send_byte(uint8_t id) {
   g1_send(&id, 1);
 }
 
 /* Unknown id in a handler's range: cmd, 0xCA, NUL-terminated text, zero-padded to 20. */
-static const uint8_t *error_reply(uint8_t cmd, const char *text)
-{
+static const uint8_t *error_reply(uint8_t cmd, const char *text) {
   static uint8_t reply[20];
 
   zassert_true(strlen(text) + 1 <= sizeof(reply) - 2, "text too long");
@@ -31,8 +29,7 @@ static const uint8_t *error_reply(uint8_t cmd, const char *text)
 #define expect_error_reply(cmd, text) expect_frame_bytes(error_reply(cmd, text), 20)
 
 /* 0x11 has no case in ble_process_put_req; 0x45 ends the GET range. */
-ZTEST(proto_dispatch, test_unknown_ids_inside_a_range_get_the_range_error)
-{
+ZTEST(proto_dispatch, test_unknown_ids_inside_a_range_get_the_range_error) {
   static const struct {
     const char *ids;
     const char *text;
@@ -55,8 +52,7 @@ ZTEST(proto_dispatch, test_unknown_ids_inside_a_range_get_the_range_error)
 }
 
 /* Byte 0 is covered by the test below. */
-ZTEST(proto_dispatch, test_report_range_ends_at_0xf6)
-{
+ZTEST(proto_dispatch, test_report_range_ends_at_0xf6) {
   const uint8_t *want = error_reply(0xf6, "error post req.");
   size_t len;
   const uint8_t *frame;
@@ -69,8 +65,7 @@ ZTEST(proto_dispatch, test_report_range_ends_at_0xf6)
   zassert_mem_equal(frame + 1, want + 1, 19);
 }
 
-ZTEST(proto_dispatch, test_unknown_report_ids_echo_the_command_in_the_error_reply)
-{
+ZTEST(proto_dispatch, test_unknown_report_ids_echo_the_command_in_the_error_reply) {
   static const uint8_t ids[] = {0xf2, 0xf3, 0xf6};
 
   for (size_t index = 0; index < ARRAY_SIZE(ids); index++) {
@@ -79,11 +74,9 @@ ZTEST(proto_dispatch, test_unknown_report_ids_echo_the_command_in_the_error_repl
   }
 }
 
-ZTEST(proto_dispatch, test_ids_outside_every_range_reply_nn)
-{
+ZTEST(proto_dispatch, test_ids_outside_every_range_reply_nn) {
   for (int id = 0x00; id <= 0xff; id++) {
-    bool unhandled = id == 0x00 || id == 0x28 || id == 0x46 ||
-         (id >= 0x57 && id <= 0xf0) || id >= 0xf7;
+    bool unhandled = id == 0x00 || id == 0x28 || id == 0x46 || (id >= 0x57 && id <= 0xf0) || id >= 0xf7;
 
     if (!unhandled) {
       continue;
@@ -94,8 +87,7 @@ ZTEST(proto_dispatch, test_ids_outside_every_range_reply_nn)
   }
 }
 
-ZTEST(proto_dispatch, test_packet_of_255_bytes_is_dispatched_and_answered)
-{
+ZTEST(proto_dispatch, test_packet_of_255_bytes_is_dispatched_and_answered) {
   uint8_t pkt[255] = {0x3b};
 
   g1_send(pkt, sizeof(pkt));
@@ -103,8 +95,7 @@ ZTEST(proto_dispatch, test_packet_of_255_bytes_is_dispatched_and_answered)
   expect_frame_padded("3b c9 00 00", 20);
 }
 
-ZTEST(proto_dispatch, test_replies_are_20_byte_frames_padded_with_zeros)
-{
+ZTEST(proto_dispatch, test_replies_are_20_byte_frames_padded_with_zeros) {
   g1_state()->check_mode = 1;
 
   /* MACs unset (0xff) */
@@ -121,8 +112,7 @@ ZTEST(proto_dispatch, test_replies_are_20_byte_frames_padded_with_zeros)
   expect_only_frame_padded("4d c9", 20);
 }
 
-ZTEST(proto_dispatch, test_zero_length_packet_is_ignored)
-{
+ZTEST(proto_dispatch, test_zero_length_packet_is_ignored) {
   uint8_t none[1] = {0};
 
   g1_send_vector("0x01_brightness");
@@ -131,14 +121,12 @@ ZTEST(proto_dispatch, test_zero_length_packet_is_ignored)
   expect_no_frame();
 }
 
-ZTEST(proto_dispatch, test_0x4a_dfu_bit_without_a_dfu_callback_is_safe)
-{
+ZTEST(proto_dispatch, test_0x4a_dfu_bit_without_a_dfu_callback_is_safe) {
   g1_send_hex("4a 01");
   expect_frame_padded("4a c9", 20);
 }
 
-ZTEST(proto_dispatch, test_0x23_c_followed_by_more_text_is_not_an_unpair)
-{
+ZTEST(proto_dispatch, test_0x23_c_followed_by_more_text_is_not_an_unpair) {
   g1_send_hex("23 63 31");
 
   zassert_equal(bt_unpair_fake.call_count, 0);
@@ -146,16 +134,14 @@ ZTEST(proto_dispatch, test_0x23_c_followed_by_more_text_is_not_an_unpair)
 }
 
 /* The hook's app is put on the whitelist: an unlisted one is announced with F6 frames as well. */
-ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path)
-{
+ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path) {
   const struct notif_msg *msg = (const struct notif_msg *)&g1_ble()->tx_buf[4];
   int count;
 
-  zassert_equal(parse_app_white_list_json(
-            "{\"calendar_enable\":true,\"call_enable\":true,\"msg_enable\":true,"
-            "\"ios_mail_enable\":true,\"app\":{\"list\":["
-            "{\"id\":\"com.tencent.xin\",\"name\":\"WeChat\"}],\"enable\":true}}"),
-          1);
+  zassert_equal(parse_app_white_list_json("{\"calendar_enable\":true,\"call_enable\":true,\"msg_enable\":true,"
+                                          "\"ios_mail_enable\":true,\"app\":{\"list\":["
+                                          "{\"id\":\"com.tencent.xin\",\"name\":\"WeChat\"}],\"enable\":true}}"),
+                1);
   g1_send((const uint8_t *)"#1@title@msg", strlen("#1@title@msg"));
 
   count = g1_frame_count();
@@ -166,21 +152,18 @@ ZTEST(proto_dispatch, test_0x23_1_title_message_goes_through_the_0x4b_path)
     uint8_t want = index == count - 1 ? 0xc9 : 0xcb;
 
     zassert_true(len >= 2 && frame[0] == 0x4b, "frame %d: %02x", index, frame[0]);
-    zassert_equal(frame[1], want, "chunk %d of %d: status %02x, want %02x", index + 1,
-            count, frame[1], want);
+    zassert_equal(frame[1], want, "chunk %d of %d: status %02x, want %02x", index + 1, count, frame[1], want);
   }
   expect_str(msg->title, "title");
   expect_str(msg->message, "msg");
 }
 
-ZTEST(proto_dispatch, test_0x23_1_without_second_at_stays_inside_the_packet)
-{
+ZTEST(proto_dispatch, test_0x23_1_without_second_at_stays_inside_the_packet) {
   g1_send((const uint8_t *)"#1@no second at", strlen("#1@no second at"));
   zassert_true(g1_frame_count() <= 32);
 }
 
-ZTEST(proto_dispatch, test_0x23_1_long_title_and_message_are_cut)
-{
+ZTEST(proto_dispatch, test_0x23_1_long_title_and_message_are_cut) {
   char pkt[201];
 
   memset(pkt, 'm', sizeof(pkt) - 1);
@@ -191,29 +174,26 @@ ZTEST(proto_dispatch, test_0x23_1_long_title_and_message_are_cut)
   zassert_true(g1_frame_count() > 0);
 }
 
-ZTEST(proto_dispatch, test_0x23_cmd_with_long_command_number_stays_inside_the_buffer)
-{
+ZTEST(proto_dispatch, test_0x23_cmd_with_long_command_number_stays_inside_the_buffer) {
   g1_send((const uint8_t *)"#cmd@123456789@1", strlen("#cmd@123456789@1"));
 }
 
-ZTEST(proto_dispatch, test_0x23_t_replies_200_bytes_of_build_info)
-{
+ZTEST(proto_dispatch, test_0x23_t_replies_200_bytes_of_build_info) {
   uint8_t want[200] = {0};
 
   strcpy(net_build_time, "2025-10-22 14:21:16");
   JDB_PANEL_ID = 0x4010;
   snprintf((char *)want, sizeof(want),
-     "net build time: 2025-10-22 14:21:16, app build time %s, ver %d.%d.%d, "
-     "JBD DeviceID 4010\n\r",
-     G1_BUILD_TIME, APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_PATCHLEVEL);
+           "net build time: 2025-10-22 14:21:16, app build time %s, ver %d.%d.%d, "
+           "JBD DeviceID 4010\n\r",
+           G1_BUILD_TIME, APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_PATCHLEVEL);
 
   g1_send_vector("0x23_build_info");
 
   expect_only_frame_bytes(want, sizeof(want));
 }
 
-ZTEST(proto_dispatch, test_0x23_r_reboots_without_a_reply)
-{
+ZTEST(proto_dispatch, test_0x23_r_reboots_without_a_reply) {
   g1_send_vector("0x23_reboot");
 
   zassert_equal(system_reboot_delayed_fake.call_count, 1);
@@ -221,8 +201,7 @@ ZTEST(proto_dispatch, test_0x23_r_reboots_without_a_reply)
 }
 
 /* 255 is the longest NUS packet (uint8_t len). */
-ZTEST(proto_dispatch, test_0x23_unterminated_255_byte_string_is_an_unknown_put)
-{
+ZTEST(proto_dispatch, test_0x23_unterminated_255_byte_string_is_an_unknown_put) {
   uint8_t pkt[255];
 
   memset(pkt, 'x', sizeof(pkt));
@@ -233,8 +212,7 @@ ZTEST(proto_dispatch, test_0x23_unterminated_255_byte_string_is_an_unknown_put)
   expect_only_frame_bytes(error_reply(0x23, "error put req."), 20);
 }
 
-ZTEST(proto_dispatch, test_0x23_t_in_an_unterminated_255_byte_string_replies_build_info)
-{
+ZTEST(proto_dispatch, test_0x23_t_in_an_unterminated_255_byte_string_replies_build_info) {
   uint8_t pkt[255];
   size_t len;
   const uint8_t *frame;
@@ -251,8 +229,7 @@ ZTEST(proto_dispatch, test_0x23_t_in_an_unterminated_255_byte_string_replies_bui
   zassert_mem_equal(frame, "net build time", strlen("net build time"));
 }
 
-ZTEST(proto_dispatch, test_0x23_256_byte_packet_is_read_inside_the_buffer)
-{
+ZTEST(proto_dispatch, test_0x23_256_byte_packet_is_read_inside_the_buffer) {
   uint8_t pkt[256];
 
   memset(pkt, 'x', sizeof(pkt));
@@ -261,14 +238,12 @@ ZTEST(proto_dispatch, test_0x23_256_byte_packet_is_read_inside_the_buffer)
   expect_error_reply(0x23, "error put req.");
 }
 
-static int spi_init_stub(struct spi_master_ctx *ctx)
-{
+static int spi_init_stub(struct spi_master_ctx *ctx) {
   ARG_UNUSED(ctx);
   return 0;
 }
 
-ZTEST(proto_dispatch, test_0x23_j_does_not_call_an_unset_flash_callback)
-{
+ZTEST(proto_dispatch, test_0x23_j_does_not_call_an_unset_flash_callback) {
   /* set at boot by spi_master_register_context(), which this suite does not link */
   g1_state()->spi.init_cb = spi_init_stub;
 
@@ -277,8 +252,7 @@ ZTEST(proto_dispatch, test_0x23_j_does_not_call_an_unset_flash_callback)
 }
 
 /* "#2@" in an app name must not turn a whitelist chunk into a head-up. */
-ZTEST(proto_dispatch, test_debug_marker_inside_a_packet_is_not_a_debug_command)
-{
+ZTEST(proto_dispatch, test_debug_marker_inside_a_packet_is_not_a_debug_command) {
   uint8_t pkt[256];
   int len = g1_vector_load("0x04_whitelist_chunk2", pkt, sizeof(pkt));
 

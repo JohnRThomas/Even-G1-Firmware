@@ -3,8 +3,7 @@
 
 #include "persistence.h"
 
-static void user_values(struct GlassesState *gs)
-{
+static void user_values(struct GlassesState *gs) {
   static const bt_addr_le_t phone = {.type = 1, .a = {{0x11, 0x22, 0x33, 0x44, 0x55, 0xc6}}};
 
   gs->display_mode = 10;
@@ -31,20 +30,18 @@ static void user_values(struct GlassesState *gs)
   gs->head_up_mic_disabled = 0;
 }
 
-ZTEST(persistence, test_save_usr_settings_writes_the_record_at_0x134000_byte_by_byte)
-{
+ZTEST(persistence, test_save_usr_settings_writes_the_record_at_0x134000_byte_by_byte) {
   user_values(g1_state());
 
   zassert_equal(save_usr_settings(g1_state(), 0), 0);
 
   expect_flash(FLASH_USR_SETTINGS,
-         /* 00 */ "0a 13 1e 01  90 01 00 00  01 01 01 05  01 11 22 33"
-         /* 10 */ "44 55 c6  01  01  50  14  00  04  1e  02 00  d2 04 00 00"
-         /* 20 */ "01 00  5a 00  01 00  00 00 00 00 00 00");
+               /* 00 */ "0a 13 1e 01  90 01 00 00  01 01 01 05  01 11 22 33"
+                        /* 10 */ "44 55 c6  01  01  50  14  00  04  1e  02 00  d2 04 00 00"
+                        /* 20 */ "01 00  5a 00  01 00  00 00 00 00 00 00");
 }
 
-ZTEST(persistence, test_usr_settings_survive_a_reboot)
-{
+ZTEST(persistence, test_usr_settings_survive_a_reboot) {
   struct GlassesState *gs = g1_state();
 
   user_values(gs);
@@ -82,12 +79,11 @@ ZTEST(persistence, test_usr_settings_survive_a_reboot)
 
 static const char default_user_record[] =
   /* 00 */ "0a 15 14 01  90 01 00 00  01 00 01 03  ff ff ff ff"
-  /* 10 */ "ff ff ff  01  00  00  00  00  03  0f  00 00  00 00 00 00"
-  /* 20 */ "00 00  64 00  00 00  00 00 00 00 00 00";
+           /* 10 */ "ff ff ff  01  00  00  00  00  03  0f  00 00  00 00 00 00"
+           /* 20 */ "00 00  64 00  00 00  00 00 00 00 00 00";
 
 /* the GlassesState fields load_usr_setting() range-checks, at their defaults */
-static void expect_range_checked_defaults(struct GlassesState *gs)
-{
+static void expect_range_checked_defaults(struct GlassesState *gs) {
   zassert_equal(gs->imu.div, 400);
   zassert_equal(gs->panel.raster_height_offset, 3);
   zassert_equal(gs->message_mode, 0);
@@ -101,8 +97,7 @@ static void expect_range_checked_defaults(struct GlassesState *gs)
   zassert_equal(gs->head_up_mic_disabled, 0);
 }
 
-ZTEST(persistence, test_erased_user_record_is_replaced_by_the_defaults)
-{
+ZTEST(persistence, test_erased_user_record_is_replaced_by_the_defaults) {
   struct GlassesState *gs = g1_state();
 
   zassert_equal(load_usr_setting(gs), 0);
@@ -119,8 +114,7 @@ ZTEST(persistence, test_erased_user_record_is_replaced_by_the_defaults)
   expect_flash(FLASH_USR_SETTINGS, default_user_record);
 }
 
-ZTEST(persistence, test_clear_user_settings_writes_the_default_record)
-{
+ZTEST(persistence, test_clear_user_settings_writes_the_default_record) {
   user_values(g1_state());
   save_usr_settings(g1_state(), 0);
 
@@ -131,14 +125,13 @@ ZTEST(persistence, test_clear_user_settings_writes_the_default_record)
   zassert_equal(set_test_mode_fake.arg0_val, 0);
 }
 
-ZTEST(persistence, test_out_of_range_user_values_get_their_defaults_on_load)
-{
+ZTEST(persistence, test_out_of_range_user_values_get_their_defaults_on_load) {
   struct GlassesState *gs = g1_state();
 
   put_flash(FLASH_USR_SETTINGS,
-      /* 00 */ "0a 13 1e 01  00 00 00 00  01 00 01 09  ff ff ff ff"
-      /* 10 */ "ff ff ff  01  02  00  00  02  0a  00  06 00  ff ff ff ff"
-      /* 20 */ "03 00  65 00  02 02  00 00 00 00 00 00");
+            /* 00 */ "0a 13 1e 01  00 00 00 00  01 00 01 09  ff ff ff ff"
+                     /* 10 */ "ff ff ff  01  02  00  00  02  0a  00  06 00  ff ff ff ff"
+                     /* 20 */ "03 00  65 00  02 02  00 00 00 00 00 00");
 
   zassert_equal(load_usr_setting(gs), 0);
 
@@ -148,14 +141,13 @@ ZTEST(persistence, test_out_of_range_user_values_get_their_defaults_on_load)
   zassert_equal(gs->imu.level, 30);
 }
 
-ZTEST(persistence, test_user_value_limits_are_kept)
-{
+ZTEST(persistence, test_user_value_limits_are_kept) {
   struct GlassesState *gs = g1_state();
 
   put_flash(FLASH_USR_SETTINGS,
-      /* 00 */ "0a 13 1e 01  90 01 00 00  01 00 01 08  ff ff ff ff"
-      /* 10 */ "ff ff ff  01  01  00  00  00  09  ff  05 00  00 00 00 00"
-      /* 20 */ "02 00  46 00  01 01  00 00 00 00 00 00");
+            /* 00 */ "0a 13 1e 01  90 01 00 00  01 00 01 08  ff ff ff ff"
+                     /* 10 */ "ff ff ff  01  01  00  00  00  09  ff  05 00  00 00 00 00"
+                     /* 20 */ "02 00  46 00  01 01  00 00 00 00 00 00");
   /* stay time FF reads as erased, not as a limit */
 
   load_usr_setting(gs);
@@ -171,8 +163,7 @@ ZTEST(persistence, test_user_value_limits_are_kept)
   zassert_equal(gs->head_up_mic_disabled, 1);
 }
 
-ZTEST(persistence, test_stored_display_mode_11_is_rewritten_as_10)
-{
+ZTEST(persistence, test_stored_display_mode_11_is_rewritten_as_10) {
   struct GlassesState *gs = g1_state();
 
   user_values(gs);
@@ -189,18 +180,15 @@ ZTEST(persistence, test_stored_display_mode_11_is_rewritten_as_10)
 
 static uint8_t pt_test_mode;
 
-static void fake_set_test_mode(uint8_t mode)
-{
+static void fake_set_test_mode(uint8_t mode) {
   pt_test_mode = mode;
 }
 
-static uint8_t fake_get_pt_test_mode(void)
-{
+static uint8_t fake_get_pt_test_mode(void) {
   return pt_test_mode;
 }
 
-ZTEST(persistence, test_production_mode_record_restores_its_panel_settings)
-{
+ZTEST(persistence, test_production_mode_record_restores_its_panel_settings) {
   struct GlassesState *gs = g1_state();
 
   pt_test_mode = 1;
@@ -224,8 +212,7 @@ ZTEST(persistence, test_production_mode_record_restores_its_panel_settings)
   zassert_equal(gs->panel.canvas_distance_gear, 3);
 }
 
-ZTEST(persistence, test_usr_settings_read_error_returns_minus_1_and_changes_nothing)
-{
+ZTEST(persistence, test_usr_settings_read_error_returns_minus_1_and_changes_nothing) {
   struct GlassesState *gs = g1_state();
 
   gs->message_stay_time = 30;
@@ -241,8 +228,7 @@ ZTEST(persistence, test_usr_settings_read_error_returns_minus_1_and_changes_noth
 /* reset_all_usr_data(): clears user data, keeps the factory record. */
 
 /* before each user_data_reset test: every record and store written, then a reboot */
-static void lens_in_use(void *fixture)
-{
+static void lens_in_use(void *fixture) {
   struct GlassesState *gs = g1_state();
 
   ARG_UNUSED(fixture);
@@ -260,7 +246,7 @@ static void lens_in_use(void *fixture)
 
   /* usage statistics left by an earlier firmware */
   put_flash(FLASH_USAGE_STATS, "44 33 22 11  20 1c 00 00  00 00 00 00  00 00 00 00"
-             "  00 00 00 00  07 00 01");
+                               "  00 00 00 00  07 00 01");
 
   memset(&g1_fake_flash_image[FLASH_QUICKNOTES], 0x00, 4 * QUICKNOTE_LEN);
   for (int slot = 0; slot < 4; slot++) {
@@ -276,14 +262,12 @@ static void lens_in_use(void *fixture)
 
 ZTEST_SUITE(user_data_reset, NULL, NULL, lens_in_use, NULL, NULL);
 
-static void reset_user_data(int reboot)
-{
+static void reset_user_data(int reboot) {
   reset_all_usr_data(g1_state(), reboot);
   run_flash_ops_thread();
 }
 
-ZTEST(user_data_reset, test_removes_every_bond)
-{
+ZTEST(user_data_reset, test_removes_every_bond) {
   reset_user_data(1);
 
   zassert_equal(bt_unpair_fake.call_count, 1);
@@ -291,8 +275,7 @@ ZTEST(user_data_reset, test_removes_every_bond)
   zassert_is_null(bt_unpair_fake.arg1_val, "one address instead of all bonds");
 }
 
-ZTEST(user_data_reset, test_deletes_the_four_quick_notes)
-{
+ZTEST(user_data_reset, test_deletes_the_four_quick_notes) {
   reset_all_usr_data(g1_state(), 1);
   zassert_equal(getQuickNoteQueueNum(), 4);
   run_flash_ops_thread();
@@ -300,8 +283,7 @@ ZTEST(user_data_reset, test_deletes_the_four_quick_notes)
   expect_flash_fill(FLASH_QUICKNOTES, 4 * QUICKNOTE_LEN, 0xff);
 }
 
-ZTEST(user_data_reset, test_sets_english_and_dashboard_startup_mode_0)
-{
+ZTEST(user_data_reset, test_sets_english_and_dashboard_startup_mode_0) {
   reset_user_data(1);
 
   expect_flash(FLASH_SETTING, "aa 02 00");
@@ -309,16 +291,14 @@ ZTEST(user_data_reset, test_sets_english_and_dashboard_startup_mode_0)
   zassert_equal(get_dashboard_startup_mode(), 0);
 }
 
-ZTEST(user_data_reset, test_writes_the_default_user_settings)
-{
+ZTEST(user_data_reset, test_writes_the_default_user_settings) {
   reset_user_data(1);
 
   expect_flash(FLASH_USR_SETTINGS, default_user_record);
   zassert_equal(g1_state()->bonded, 0);
 }
 
-ZTEST(user_data_reset, test_erases_the_usage_statistics_of_earlier_firmware)
-{
+ZTEST(user_data_reset, test_erases_the_usage_statistics_of_earlier_firmware) {
   expect_flash(FLASH_USAGE_STATS, "44 33 22 11");
 
   reset_user_data(1);
@@ -326,8 +306,7 @@ ZTEST(user_data_reset, test_erases_the_usage_statistics_of_earlier_firmware)
   expect_flash_fill(FLASH_USAGE_STATS, USAGE_STATS_LEN, 0xff);
 }
 
-ZTEST(user_data_reset, test_keeps_the_factory_record)
-{
+ZTEST(user_data_reset, test_keeps_the_factory_record) {
   expect_flash(FLASH_SYS_SETTINGS, "01 00 00 00  00 00 00 00  2a");
 
   reset_user_data(1);
@@ -337,8 +316,7 @@ ZTEST(user_data_reset, test_keeps_the_factory_record)
   expect_flash(FLASH_SYS_SETTINGS + 0x60, "20 00 10 00");
 }
 
-ZTEST(user_data_reset, test_clears_page_indices_retained_ram_and_master_audio)
-{
+ZTEST(user_data_reset, test_clears_page_indices_retained_ram_and_master_audio) {
   reset_all_usr_data(g1_state(), 1);
 
   zassert_equal(cleanNotesIndex_fake.call_count, 1);
@@ -350,8 +328,7 @@ ZTEST(user_data_reset, test_clears_page_indices_retained_ram_and_master_audio)
   zassert_equal(delAudioStreamRecord_fake.arg0_val, 0xff);
 }
 
-ZTEST(user_data_reset, test_on_the_slave_has_no_audio_to_delete)
-{
+ZTEST(user_data_reset, test_on_the_slave_has_no_audio_to_delete) {
   g1_unit_set_role(G1_ROLE_SLAVE);
 
   reset_user_data(1);
@@ -360,16 +337,14 @@ ZTEST(user_data_reset, test_on_the_slave_has_no_audio_to_delete)
   zassert_equal(bt_unpair_fake.call_count, 1);
 }
 
-ZTEST(user_data_reset, test_with_reboot_reboots)
-{
+ZTEST(user_data_reset, test_with_reboot_reboots) {
   reset_user_data(1);
 
   zassert_equal(system_reboot_delayed_fake.call_count, 1);
   zassert_equal(set_shipmode_fake.call_count, 0);
 }
 
-ZTEST(user_data_reset, test_without_reboot_enters_ship_mode)
-{
+ZTEST(user_data_reset, test_without_reboot_enters_ship_mode) {
   reset_user_data(0);
 
   zassert_equal(system_reboot_delayed_fake.call_count, 0);
@@ -377,8 +352,7 @@ ZTEST(user_data_reset, test_without_reboot_enters_ship_mode)
   zassert_equal(set_shipmode_fake.arg0_val, 1);
 }
 
-ZTEST(user_data_reset, test_after_a_reboot_the_records_load_as_new)
-{
+ZTEST(user_data_reset, test_after_a_reboot_the_records_load_as_new) {
   reset_user_data(1);
 
   g1_unit_reboot();

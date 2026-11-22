@@ -16,19 +16,16 @@ static struct g1_nor_stats stats;
 static int fail_count[G1_NOR_OPS];
 static int fail_err[G1_NOR_OPS];
 
-static void mark_dirty(uint32_t addr, size_t len)
-{
+static void mark_dirty(uint32_t addr, size_t len) {
   dirty_lo = MIN(dirty_lo, addr);
   dirty_hi = MAX(dirty_hi, (uint32_t)(addr + len));
 }
 
-static bool in_range(off_t addr, size_t len)
-{
+static bool in_range(off_t addr, size_t len) {
   return addr >= 0 && len <= G1_NOR_SIZE && (size_t)addr <= G1_NOR_SIZE - len;
 }
 
-static bool injected(enum g1_nor_op op, int *ret)
-{
+static bool injected(enum g1_nor_op op, int *ret) {
   if (fail_count[op] == 0) {
     return false;
   }
@@ -37,15 +34,13 @@ static bool injected(enum g1_nor_op op, int *ret)
   return true;
 }
 
-static void record(enum g1_nor_op op, off_t addr, size_t len)
-{
+static void record(enum g1_nor_op op, off_t addr, size_t len) {
   stats.calls[op]++;
   stats.last_addr[op] = (uint32_t)addr;
   stats.last_len[op] = len;
 }
 
-static int nor_read(const struct device *dev, off_t addr, void *data, size_t len)
-{
+static int nor_read(const struct device *dev, off_t addr, void *data, size_t len) {
   int ret;
 
   ARG_UNUSED(dev);
@@ -66,16 +61,14 @@ static int nor_read(const struct device *dev, off_t addr, void *data, size_t len
   return 0;
 }
 
-static int nor_write(const struct device *dev, off_t addr, const void *data, size_t len)
-{
+static int nor_write(const struct device *dev, off_t addr, const void *data, size_t len) {
   const uint8_t *src = data;
   int ret;
 
   ARG_UNUSED(dev);
   record(G1_NOR_WRITE, addr, len);
   /* nrf_qspi_nor.c write rules */
-  if (data == NULL || len == 0 || (len > 4 && len % 4 != 0) || addr % 4 != 0 ||
-      !in_range(addr, len)) {
+  if (data == NULL || len == 0 || (len > 4 && len % 4 != 0) || addr % 4 != 0 || !in_range(addr, len)) {
     return -EINVAL;
   }
   if (injected(G1_NOR_WRITE, &ret)) {
@@ -89,14 +82,12 @@ static int nor_write(const struct device *dev, off_t addr, const void *data, siz
   return 0;
 }
 
-static int nor_erase(const struct device *dev, off_t addr, size_t len)
-{
+static int nor_erase(const struct device *dev, off_t addr, size_t len) {
   int ret;
 
   ARG_UNUSED(dev);
   record(G1_NOR_ERASE, addr, len);
-  if (!in_range(addr, len) || addr % G1_NOR_SECTOR != 0 || len == 0 ||
-      len % G1_NOR_SECTOR != 0) {
+  if (!in_range(addr, len) || addr % G1_NOR_SECTOR != 0 || len == 0 || len % G1_NOR_SECTOR != 0) {
     return -EINVAL;
   }
   if (injected(G1_NOR_ERASE, &ret)) {
@@ -112,8 +103,7 @@ static const struct flash_parameters nor_parameters = {
   .erase_value = 0xff,
 };
 
-static const struct flash_parameters *nor_get_parameters(const struct device *dev)
-{
+static const struct flash_parameters *nor_get_parameters(const struct device *dev) {
   ARG_UNUSED(dev);
   return &nor_parameters;
 }
@@ -123,9 +113,7 @@ static const struct flash_pages_layout nor_layout = {
   .pages_size = G1_NOR_SECTOR,
 };
 
-static void nor_page_layout(const struct device *dev, const struct flash_pages_layout **layout,
-          size_t *layout_size)
-{
+static void nor_page_layout(const struct device *dev, const struct flash_pages_layout **layout, size_t *layout_size) {
   ARG_UNUSED(dev);
   *layout = &nor_layout;
   *layout_size = 1;
@@ -139,40 +127,33 @@ static const struct flash_driver_api nor_api = {
   .page_layout = nor_page_layout,
 };
 
-static int nor_init(const struct device *dev)
-{
+static int nor_init(const struct device *dev) {
   ARG_UNUSED(dev);
   memset(nor_mem, 0xff, sizeof(nor_mem));
   return 0;
 }
 
-DEVICE_DT_DEFINE(DT_NODELABEL(mx25r64), nor_init, NULL, NULL, NULL, POST_KERNEL,
-     CONFIG_FLASH_INIT_PRIORITY, &nor_api);
+DEVICE_DT_DEFINE(DT_NODELABEL(mx25r64), nor_init, NULL, NULL, NULL, POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY, &nor_api);
 
-uint8_t *g1_nor_mem(uint32_t addr, size_t len)
-{
-  __ASSERT(in_range(addr, len), "g1_nor_mem(0x%x, %u) outside the flash", addr,
-     (unsigned int)len);
+uint8_t *g1_nor_mem(uint32_t addr, size_t len) {
+  __ASSERT(in_range(addr, len), "g1_nor_mem(0x%x, %u) outside the flash", addr, (unsigned int)len);
   mark_dirty(addr, len);
   return &nor_mem[addr];
 }
 
-void g1_nor_fail(enum g1_nor_op op, int count, int err)
-{
+void g1_nor_fail(enum g1_nor_op op, int count, int err) {
   __ASSERT(op < G1_NOR_OPS, "op %d", op);
   fail_count[op] = count;
   fail_err[op] = err;
 }
 
-const struct g1_nor_stats *g1_nor_stats(void)
-{
+const struct g1_nor_stats *g1_nor_stats(void) {
   return &stats;
 }
 
 #pragma weak ext_flash_api_init
 
-static void nor_reset(bool keep_media)
-{
+static void nor_reset(bool keep_media) {
   struct GlassesState *gs = get_dashboard_state();
 
   if (!keep_media && dirty_lo < dirty_hi) {
@@ -183,14 +164,12 @@ static void nor_reset(bool keep_media)
   memset(&stats, 0, sizeof(stats));
   memset(fail_count, 0, sizeof(fail_count));
   if (ext_flash_api_init) {
-    gs->ext_flash_ok = ext_flash_api_init(&gs->flash_read, &gs->flash_write,
-                  &gs->flash_erase);
+    gs->ext_flash_ok = ext_flash_api_init(&gs->flash_read, &gs->flash_write, &gs->flash_erase);
   }
 }
 
 /* after the fakes' hooks */
-static int nor_reset_register(void)
-{
+static int nor_reset_register(void) {
   g1_unit_register_reset(nor_reset);
   return 0;
 }

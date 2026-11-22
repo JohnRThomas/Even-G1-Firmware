@@ -3,9 +3,9 @@
 
 #include "fakes.h"
 
+#include "ble/ble_ancs.h"
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
-#include "ble/ble_ancs.h"
 
 uint32_t g1_fake_conn_storage;
 
@@ -16,8 +16,7 @@ DEFINE_FAKE_VALUE_FUNC(struct bt_conn *, get_current_conn);
 FAKE_VALUE_FUNC(int, set_ancs_enable, int);
 DEFINE_FAKE_VOID_FUNC(ancs_delete_notification, uint32_t);
 
-static void fakes_bt_reset(bool keep_media)
-{
+static void fakes_bt_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
 
   RESET_FAKE(bt_unpair);

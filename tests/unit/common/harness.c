@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <zephyr/fff.h>
 #include <app_version.h>
+#include <zephyr/fff.h>
 
-#include "harness.h"
 #include "ble/ble_proto.h"
+#include "harness.h"
 #include "notify/notify.h"
 #include "notify/whitelist.h"
 #include "storage/storage.h"
@@ -19,41 +19,34 @@ DEFINE_FFF_GLOBALS;
 struct GlassesState *GLOBAL_STATE;
 int LOG_LEVEL = 2;
 
-struct GlassesState *get_dashboard_state(void)
-{
+struct GlassesState *get_dashboard_state(void) {
   return GLOBAL_STATE;
 }
 
-struct ble_context *get_ble_context(void)
-{
+struct ble_context *get_ble_context(void) {
   return GLOBAL_STATE ? &GLOBAL_STATE->ble_context : NULL;
 }
 
-struct GlassesState *g1_state(void)
-{
+struct GlassesState *g1_state(void) {
   return GLOBAL_STATE;
 }
 
-struct ble_context *g1_ble(void)
-{
+struct ble_context *g1_ble(void) {
   return get_ble_context();
 }
 
-bool g1_dashboard_notified(void)
-{
+bool g1_dashboard_notified(void) {
   return k_sem_count_get(&GLOBAL_STATE->dashboard_position_sem) == 1;
 }
 
 #define DT_DRV_COMPAT vnd_g1_unit_fake_device
 
-static int g1_fake_device_init(const struct device *dev)
-{
+static int g1_fake_device_init(const struct device *dev) {
   ARG_UNUSED(dev);
   return 0;
 }
 
-#define G1_FAKE_DEVICE(inst)                                                                       \
-  DEVICE_DT_INST_DEFINE(inst, g1_fake_device_init, NULL, NULL, NULL, POST_KERNEL, 0, NULL);
+#define G1_FAKE_DEVICE(inst) DEVICE_DT_INST_DEFINE(inst, g1_fake_device_init, NULL, NULL, NULL, POST_KERNEL, 0, NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(G1_FAKE_DEVICE)
 
@@ -68,8 +61,7 @@ __weak int BLE_DEBUG;
 static char printk_lines[G1_PRINTK_LINES][G1_PRINTK_LINE_SIZE];
 static int printk_count;
 
-__weak void ble_printk(const char *fmt, ...)
-{
+__weak void ble_printk(const char *fmt, ...) {
   va_list args;
 
   if (printk_count == G1_PRINTK_LINES) {
@@ -80,13 +72,11 @@ __weak void ble_printk(const char *fmt, ...)
   va_end(args);
 }
 
-int g1_printk_count(void)
-{
+int g1_printk_count(void) {
   return printk_count;
 }
 
-const char *g1_printk_line(int index)
-{
+const char *g1_printk_line(int index) {
   return index >= 0 && index < printk_count ? printk_lines[index] : NULL;
 }
 
@@ -118,8 +108,7 @@ void ble_proto_test_reset(void);
 #pragma weak set_wall_clock_ms
 
 /* routes like ble_proto.c's: ble_printk() when BLE_DEBUG is set, otherwise printk() */
-__weak void g1_printk(const char *fmt, ...)
-{
+__weak void g1_printk(const char *fmt, ...) {
   char buf[200];
   va_list ap;
 
@@ -136,18 +125,15 @@ __weak void g1_printk(const char *fmt, ...)
 extern struct k_msgq setting_msgq;
 extern struct k_msgq quicknote_msgq;
 
-void g1_clock_advance_ms(uint32_t ms)
-{
+void g1_clock_advance_ms(uint32_t ms) {
   k_sleep(K_TIMEOUT_ABS_MS(k_uptime_get() + ms));
 }
 
-int64_t g1_clock_uptime_ms(void)
-{
+int64_t g1_clock_uptime_ms(void) {
   return k_uptime_get();
 }
 
-void g1_clock_set_date(uint32_t unix_s)
-{
+void g1_clock_set_date(uint32_t unix_s) {
   GLOBAL_STATE->date_ts = unix_s;
 }
 
@@ -155,14 +141,12 @@ static K_THREAD_STACK_ARRAY_DEFINE(thread_stacks, G1_THREADS_MAX, 16384);
 static struct k_thread threads[G1_THREADS_MAX];
 static bool thread_started[G1_THREADS_MAX];
 
-k_tid_t g1_thread_start(k_thread_entry_t entry, void *arg, int prio)
-{
+k_tid_t g1_thread_start(k_thread_entry_t entry, void *arg, int prio) {
   for (int index = 0; index < G1_THREADS_MAX; index++) {
     if (!thread_started[index]) {
       thread_started[index] = true;
-      return k_thread_create(&threads[index], thread_stacks[index],
-                 K_THREAD_STACK_SIZEOF(thread_stacks[index]), entry,
-                 arg, NULL, NULL, prio, 0, K_NO_WAIT);
+      return k_thread_create(&threads[index], thread_stacks[index], K_THREAD_STACK_SIZEOF(thread_stacks[index]), entry,
+                             arg, NULL, NULL, prio, 0, K_NO_WAIT);
     }
   }
   zassert_unreachable("more than %d harness threads in one test", G1_THREADS_MAX);
@@ -172,31 +156,30 @@ k_tid_t g1_thread_start(k_thread_entry_t entry, void *arg, int prio)
 /* Fixed address: firmware keeps pointers into it. */
 static struct GlassesState state_storage;
 
-#define G1_BLOCKS(BLOCK)                                                                           \
-  BLOCK(dashboard_ts, 0x75)                                                                  \
-  BLOCK(countdown_ts, 7)                                                                     \
-  BLOCK(task_status, 5)                                                                      \
-  BLOCK(teleprompter, 0x217)                                                                 \
-  BLOCK(nav, 0xf5)                                                                           \
-  BLOCK(translate_src, 0x1e8)                                                                \
-  BLOCK(translate_dst, 0x1e8)                                                                \
-  BLOCK(dash_buf, 0x1e9)                                                                     \
-  BLOCK(evenai_buf, 0x210)                                                                   \
-  BLOCK(quicknote, 0x50f)                                                                    \
-  BLOCK(quicknote_show_info, 0x152)                                                          \
-  BLOCK(esb_up_snapshot, 0x201)                                                              \
-  BLOCK(esb_down_snapshot, 0x201)                                                            \
-  BLOCK(user_sched_info, 0x16a)                                                              \
-  BLOCK(schedule_notif, 0xaf)                                                                \
-  BLOCK(bitmap_info, 0xb)                                                                    \
-  BLOCK(onboarding, 0x21)                                                                    \
-  BLOCK(raster_height_cfg, 1)                                                                \
-  BLOCK(horiz_pitch_cfg, 2)                                                                  \
-  BLOCK(ts_info, 10)                                                                         \
+#define G1_BLOCKS(BLOCK)                                                                                               \
+  BLOCK(dashboard_ts, 0x75)                                                                                            \
+  BLOCK(countdown_ts, 7)                                                                                               \
+  BLOCK(task_status, 5)                                                                                                \
+  BLOCK(teleprompter, 0x217)                                                                                           \
+  BLOCK(nav, 0xf5)                                                                                                     \
+  BLOCK(translate_src, 0x1e8)                                                                                          \
+  BLOCK(translate_dst, 0x1e8)                                                                                          \
+  BLOCK(dash_buf, 0x1e9)                                                                                               \
+  BLOCK(evenai_buf, 0x210)                                                                                             \
+  BLOCK(quicknote, 0x50f)                                                                                              \
+  BLOCK(quicknote_show_info, 0x152)                                                                                    \
+  BLOCK(esb_up_snapshot, 0x201)                                                                                        \
+  BLOCK(esb_down_snapshot, 0x201)                                                                                      \
+  BLOCK(user_sched_info, 0x16a)                                                                                        \
+  BLOCK(schedule_notif, 0xaf)                                                                                          \
+  BLOCK(bitmap_info, 0xb)                                                                                              \
+  BLOCK(onboarding, 0x21)                                                                                              \
+  BLOCK(raster_height_cfg, 1)                                                                                          \
+  BLOCK(horiz_pitch_cfg, 2)                                                                                            \
+  BLOCK(ts_info, 10)                                                                                                   \
   BLOCK(transcribe_buf, 0x208)
 
-static void *block_alloc(size_t size)
-{
+static void *block_alloc(size_t size) {
   void *block = malloc(size);
 
   __ASSERT(block != NULL, "harness: out of heap (CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE)");
@@ -204,8 +187,7 @@ static void *block_alloc(size_t size)
   return block;
 }
 
-static void state_free(struct GlassesState *state)
-{
+static void state_free(struct GlassesState *state) {
 #define G1_FREE(field, size) free(state->field);
   G1_BLOCKS(G1_FREE)
 #undef G1_FREE
@@ -213,8 +195,7 @@ static void state_free(struct GlassesState *state)
   free(state->ble_context.small_buf);
 }
 
-static void ble_context_setup(struct ble_context *ctx)
-{
+static void ble_context_setup(struct ble_context *ctx) {
   ctx->write = g1_frame_capture;
   k_sem_init(&ctx->rx_sem, 0, 1);
   k_sem_init(&ctx->tx_sem, 0, 2);
@@ -223,8 +204,7 @@ static void ble_context_setup(struct ble_context *ctx)
 }
 
 /* as role_init(): the VERSION file's version and the BIT(2) flag on the side's own record */
-static void set_role(struct GlassesState *state, int role)
-{
+static void set_role(struct GlassesState *state, int role) {
   static const struct fw_ver version = {APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_PATCHLEVEL};
   bool master = role == G1_ROLE_MASTER;
 
@@ -235,8 +215,7 @@ static void set_role(struct GlassesState *state, int role)
   WRITE_BIT(state->esb_pkt.flags, 2, !master);
 }
 
-static void state_build(void)
-{
+static void state_build(void) {
   struct GlassesState *state = &state_storage;
 
   if (GLOBAL_STATE == state) {
@@ -289,8 +268,7 @@ static void state_build(void)
   state->mic_nocompress = 0;
 }
 
-void g1_unit_set_role(int role)
-{
+void g1_unit_set_role(int role) {
   struct GlassesState *state = &state_storage;
   zassert_true(role == G1_ROLE_MASTER || role == G1_ROLE_SLAVE, "role %d", role);
   memset(&state->master_fw_ver, 0, sizeof(state->master_fw_ver));
@@ -316,14 +294,12 @@ void g1_unit_set_role(int role)
 static g1_unit_reset_fn reset_hooks[G1_RESET_HOOKS_MAX];
 static int reset_hook_count;
 
-void g1_unit_register_reset(g1_unit_reset_fn hook)
-{
+void g1_unit_register_reset(g1_unit_reset_fn hook) {
   __ASSERT(reset_hook_count < G1_RESET_HOOKS_MAX, "harness: too many reset hooks");
   reset_hooks[reset_hook_count++] = hook;
 }
 
-static void run_hooks(bool keep_media)
-{
+static void run_hooks(bool keep_media) {
   for (int index = 0; index < reset_hook_count; index++) {
     reset_hooks[index](keep_media);
   }
@@ -333,8 +309,7 @@ static void run_hooks(bool keep_media)
 void __printk_hook_install(int (*fn)(int character));
 void *__printk_get_hook(void);
 
-static int quiet_char_out(int character)
-{
+static int quiet_char_out(int character) {
   return character;
 }
 
@@ -343,8 +318,7 @@ static char serial_number_init[32];
 static char glasses_name_init[32];
 static bool file_queue_ready;
 
-static void firmware_reset(void)
-{
+static void firmware_reset(void) {
   struct GlassesState *state = GLOBAL_STATE;
 
   if (!snapshot_taken) {
@@ -417,8 +391,7 @@ static void firmware_reset(void)
   }
 }
 
-static void clock_reset(void)
-{
+static void clock_reset(void) {
   int64_t now = k_uptime_get();
 
   /* whole second, so s = ms / 1000 is exact */
@@ -434,8 +407,7 @@ static void clock_reset(void)
   GLOBAL_STATE->date_ts = G1_RESET_DATE;
 }
 
-static void reset(bool keep_media)
-{
+static void reset(bool keep_media) {
   void *hook = __printk_get_hook();
 
   __printk_hook_install(quiet_char_out);
@@ -454,25 +426,21 @@ static void reset(bool keep_media)
   clock_reset();
 }
 
-void g1_unit_reset(void)
-{
+void g1_unit_reset(void) {
   reset(false);
 }
 
-void g1_unit_reboot(void)
-{
+void g1_unit_reboot(void) {
   reset(true);
 }
 
-static void g1_unit_before_each(const struct ztest_unit_test *test, void *fixture)
-{
+static void g1_unit_before_each(const struct ztest_unit_test *test, void *fixture) {
   ARG_UNUSED(test);
   ARG_UNUSED(fixture);
   g1_unit_reset();
 }
 
-static void g1_unit_after_each(const struct ztest_unit_test *test, void *fixture)
-{
+static void g1_unit_after_each(const struct ztest_unit_test *test, void *fixture) {
   ARG_UNUSED(test);
   ARG_UNUSED(fixture);
   for (int index = 0; index < G1_THREADS_MAX; index++) {

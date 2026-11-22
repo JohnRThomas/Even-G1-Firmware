@@ -2,9 +2,9 @@
 #ifndef G1_BUTTON_H_
 #define G1_BUTTON_H_
 
+#include <glasses_state.h>
 #include <stdint.h>
 #include <zephyr/kernel.h>
-#include <glasses_state.h>
 
 /* button.c */
 extern int touch_irq_pending; /* AW9320x irq pending */

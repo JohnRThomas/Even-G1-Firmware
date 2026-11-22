@@ -2,8 +2,8 @@
 #ifndef PD_FONT_BITMAP_H_
 #define PD_FONT_BITMAP_H_
 
-#include <stdint.h>
 #include <glasses_state.h>
+#include <stdint.h>
 
 uint16_t utf8_decode_char(const uint8_t *s, int len);
 int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max);

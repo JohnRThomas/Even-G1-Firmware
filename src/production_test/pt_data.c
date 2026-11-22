@@ -2,19 +2,19 @@
  * Production-test link layer: selects the transport (NFC mailbox or lpuart),
  * reads one request, runs the PT protocol and writes the response back.
  */
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
 
-#include "g1_log.h"
-#include "production_test.h"
 #include "../aw9320x/aw9320x.h"
 #include "../main.h"
 #include "../nfc/st25dv.h"
 #include "../sensors_audio/sensors_audio.h"
 #include "../threads/threads.h"
+#include "g1_log.h"
+#include "production_test.h"
 
 /* current production-test transport */
 static struct {
@@ -25,16 +25,14 @@ static struct {
   .uart = (const struct device *)1,
 };
 
-#define PT_COMM_DEV()                                                               \
-  (pt_comm.type == PT_COMM_NFC ? pt_comm.nfc : (void *)pt_comm.uart)
+#define PT_COMM_DEV() (pt_comm.type == PT_COMM_NFC ? pt_comm.nfc : (void *)pt_comm.uart)
 
 /* the largest reply (0x1b, 249 bytes) with the lpuart frame header and checksum */
 #define PT_RESP_BUF_SIZE 256
 static uint8_t pt_resp_buf[PT_RESP_BUF_SIZE];
 static uint8_t pt_req_buf[256];
 
-int setUARTDevice(const struct device *dev)
-{
+int setUARTDevice(const struct device *dev) {
   if (dev == NULL) {
     return -1;
   }
@@ -47,8 +45,7 @@ int setUARTDevice(const struct device *dev)
   return 0;
 }
 
-int setNFCDevice(void *nfc)
-{
+int setNFCDevice(void *nfc) {
   if (nfc == NULL) {
     return -1;
   }
@@ -61,8 +58,7 @@ int setNFCDevice(void *nfc)
   return 0;
 }
 
-int lock_sensor_mutex(void)
-{
+int lock_sensor_mutex(void) {
   if (pt_comm.nfc) {
     eeprom_st25dv_lock(pt_comm.nfc);
   }
@@ -70,8 +66,7 @@ int lock_sensor_mutex(void)
   return 0;
 }
 
-int unlock_sensor_mutex(void)
-{
+int unlock_sensor_mutex(void) {
   if (pt_comm.nfc) {
     eeprom_st25dv_unlock(pt_comm.nfc);
   }
@@ -80,8 +75,7 @@ int unlock_sensor_mutex(void)
 }
 
 /* true when the last of the len bytes is the 8-bit sum of the bytes before it */
-static bool pt_req_has_sum(const uint8_t *req, uint32_t len)
-{
+static bool pt_req_has_sum(const uint8_t *req, uint32_t len) {
   uint8_t sum = 0;
 
   for (uint32_t i = 0; i + 1 < len; i++) {
@@ -90,14 +84,12 @@ static bool pt_req_has_sum(const uint8_t *req, uint32_t len)
   return req[len - 1] == sum;
 }
 
-int process_pt_data(void *arg)
-{
+int process_pt_data(void *arg) {
   uint8_t *p;
   uint8_t cmd;
   int ret;
 
-  if (pt_comm.type == PT_COMM_NONE ||
-      (pt_comm.type == PT_COMM_NFC && pt_comm.nfc == NULL) ||
+  if (pt_comm.type == PT_COMM_NONE || (pt_comm.type == PT_COMM_NFC && pt_comm.nfc == NULL) ||
       (pt_comm.type == PT_COMM_UART && pt_comm.uart == NULL)) {
     printk("comm para is error\n");
     return -1;
@@ -119,13 +111,11 @@ int process_pt_data(void *arg)
    * (cmd 01 02 n data sum). The case's poll, 13 00 ch 00 level lid, ends in data: without a
    * valid sum the last byte counts.
    */
-  if (pt_comm.type == PT_COMM_NFC && req_len < UINT8_MAX &&
-      !pt_req_has_sum(pt_req_buf, req_len + 1)) {
+  if (pt_comm.type == PT_COMM_NFC && req_len < UINT8_MAX && !pt_req_has_sum(pt_req_buf, req_len + 1)) {
     req_len++;
   }
 
-  if (process_pt_protocol(pt_comm.type, pt_req_buf, (uint8_t)req_len, &resp,
-        (uint8_t *)&resp_len, arg)) {
+  if (process_pt_protocol(pt_comm.type, pt_req_buf, (uint8_t)req_len, &resp, (uint8_t *)&resp_len, arg)) {
     printk("process_pt_protocol is failed\n");
     pt_comm_busy_clear();
     return -3;

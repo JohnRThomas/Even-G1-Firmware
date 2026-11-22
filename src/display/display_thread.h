@@ -4,11 +4,11 @@
 #ifndef G1_DISPLAY_THREAD_H_
 #define G1_DISPLAY_THREAD_H_
 
-#include <stdint.h>
+#include <glasses_state.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
-#include <glasses_state.h>
 
 struct GlassesState;
 struct jbd_panel_context;

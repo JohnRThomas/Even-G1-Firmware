@@ -2,18 +2,18 @@
  * Even Realities G1 network core - ESB link between the two glasses
  * (derived from nrf/samples/esb/esb_ptx|esb_prx).
  */
-#include <string.h>
-#include <zephyr/kernel.h>
-#include <zephyr/irq.h>
-#include <zephyr/logging/log.h>
-#include <zephyr/drivers/clock_control.h>
-#include <zephyr/drivers/clock_control/nrf_clock_control.h>
 #include <esb.h>
 #include <nrf.h>
+#include <string.h>
+#include <zephyr/drivers/clock_control.h>
+#include <zephyr/drivers/clock_control/nrf_clock_control.h>
+#include <zephyr/irq.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 
-#include "net_common.h"
 #include "app_esb.h"
 #include "main.h"
+#include "net_common.h"
 #include "timeslot.h"
 
 LOG_MODULE_REGISTER(app_esb);
@@ -39,8 +39,7 @@ static struct esb_payload tx_payload;
 K_THREAD_STACK_DEFINE(esb_thread_stack, 0x600);
 static struct k_thread esb_thread_data;
 
-static int esb_ipc_recv(struct net_ctx *ctx, const uint8_t *data, size_t len)
-{
+static int esb_ipc_recv(struct net_ctx *ctx, const uint8_t *data, size_t len) {
   uint8_t buf[252] = {0};
 
   memcpy(buf, data, len);
@@ -63,8 +62,7 @@ static int esb_ipc_recv(struct net_ctx *ctx, const uint8_t *data, size_t len)
   return 0;
 }
 
-static void esb_thread(void)
-{
+static void esb_thread(void) {
   struct esb_ops *ops = g_esb_ops;
   struct net_ctx *ctx = CONTAINER_OF(ops, struct net_ctx, esb);
   uint8_t buf[252] = {0};
@@ -104,15 +102,12 @@ static void esb_thread(void)
   }
 }
 
-static void esb_thread_start(void)
-{
-  k_thread_create(&esb_thread_data, esb_thread_stack, 0x600,
-      (k_thread_entry_t)esb_thread, NULL, NULL, NULL,
-      K_PRIO_COOP(5), 0, K_NO_WAIT);
+static void esb_thread_start(void) {
+  k_thread_create(&esb_thread_data, esb_thread_stack, 0x600, (k_thread_entry_t)esb_thread, NULL, NULL, NULL,
+                  K_PRIO_COOP(5), 0, K_NO_WAIT);
 }
 
-void esb_ops_init(struct esb_ops *ops)
-{
+void esb_ops_init(struct esb_ops *ops) {
   struct net_ctx *ctx = CONTAINER_OF(ops, struct net_ctx, esb);
   uint8_t *buf;
 
@@ -137,8 +132,7 @@ void esb_ops_init(struct esb_ops *ops)
 
 static void event_handler(struct esb_evt const *event);
 
-int esb_initialize(uint8_t prx)
-{
+int esb_initialize(uint8_t prx) {
   int err;
   struct esb_config config = ESB_DEFAULT_CONFIG;
 
@@ -199,8 +193,7 @@ int esb_initialize(uint8_t prx)
   return err;
 }
 
-static void esb_send(uint8_t load)
-{
+static void esb_send(uint8_t load) {
   uint8_t tmp[CONFIG_ESB_MAX_PAYLOAD_LENGTH] = {0};
   int len;
 
@@ -242,8 +235,7 @@ static void esb_send(uint8_t load)
   }
 }
 
-void esb_send_idle(void)
-{
+void esb_send_idle(void) {
   uint8_t tmp[CONFIG_ESB_MAX_PAYLOAD_LENGTH] = {0};
 
   ack_payload.pipe = 0;
@@ -261,47 +253,45 @@ void esb_send_idle(void)
   }
 }
 
-static void event_handler(struct esb_evt const *event)
-{
+static void event_handler(struct esb_evt const *event) {
   enum esb_evt_id id = event->evt_id;
 
   switch (id) {
-  case ESB_EVENT_TX_SUCCESS:
-    tx_busy = 0;
-    app_evt.type = id;
-    app_evt_cb(&app_evt);
-    break;
-  case ESB_EVENT_TX_FAILED:
-    esb_send(0);
-    if (radio_active && timeslot_radio_is_on()) {
+    case ESB_EVENT_TX_SUCCESS:
+      tx_busy = 0;
       app_evt.type = id;
       app_evt_cb(&app_evt);
-    }
-    break;
-  case ESB_EVENT_RX_RECEIVED:
-    tx_busy = 0;
-    if (esb_prx == 1) {
-      esb_send(1);
-    }
-    while (esb_read_rx_payload(&rx_payload) == 0) {
-      if (esb_prx == 0 && rx_payload.data[0] == 0x11) {
-        tx_busy = 1;
-        esb_send_idle();
-        continue;
+      break;
+    case ESB_EVENT_TX_FAILED:
+      esb_send(0);
+      if (radio_active && timeslot_radio_is_on()) {
+        app_evt.type = id;
+        app_evt_cb(&app_evt);
       }
-      esb_tx_state = 2;
-      app_evt.type = 2;
-      app_evt.data = rx_payload.data;
-      app_evt.len = rx_payload.length;
-      app_evt.rssi = rx_payload.rssi;
-      app_evt_cb(&app_evt);
-    }
-    break;
+      break;
+    case ESB_EVENT_RX_RECEIVED:
+      tx_busy = 0;
+      if (esb_prx == 1) {
+        esb_send(1);
+      }
+      while (esb_read_rx_payload(&rx_payload) == 0) {
+        if (esb_prx == 0 && rx_payload.data[0] == 0x11) {
+          tx_busy = 1;
+          esb_send_idle();
+          continue;
+        }
+        esb_tx_state = 2;
+        app_evt.type = 2;
+        app_evt.data = rx_payload.data;
+        app_evt.len = rx_payload.length;
+        app_evt.rssi = rx_payload.rssi;
+        app_evt_cb(&app_evt);
+      }
+      break;
   }
 }
 
-static int clocks_start(void)
-{
+static int clocks_start(void) {
   int err;
   int res;
   struct onoff_manager *clk_mgr;
@@ -332,8 +322,7 @@ static int clocks_start(void)
   return 0;
 }
 
-int app_esb_init(uint8_t prx, app_esb_cb_t cb)
-{
+int app_esb_init(uint8_t prx, app_esb_cb_t cb) {
   int err;
 
   app_evt_cb = cb;
@@ -351,8 +340,7 @@ int app_esb_init(uint8_t prx, app_esb_cb_t cb)
   return 0;
 }
 
-int app_esb_suspend(void)
-{
+int app_esb_suspend(void) {
   radio_active = 0;
   NRF_P0->OUTSET = BIT(29);
 
@@ -383,8 +371,7 @@ int app_esb_suspend(void)
   return 0;
 }
 
-int app_esb_resume(void)
-{
+int app_esb_resume(void) {
   int err;
 
   NRF_P0->OUTSET = BIT(29);
@@ -396,46 +383,40 @@ int app_esb_resume(void)
   return err;
 }
 
-int on_timeslot_start_stop(int op)
-{
+int on_timeslot_start_stop(int op) {
   switch (op) {
-  case 0:
-    if (esb_link_state != 3) {
-      NRF_P0->OUTSET = BIT(31);
-      return app_esb_resume();
-    }
-    break;
-  case 1:
-    if (radio_active) {
-      NRF_P0->OUTCLR = BIT(31);
-      return app_esb_suspend();
-    }
-    break;
+    case 0:
+      if (esb_link_state != 3) {
+        NRF_P0->OUTSET = BIT(31);
+        return app_esb_resume();
+      }
+      break;
+    case 1:
+      if (radio_active) {
+        NRF_P0->OUTCLR = BIT(31);
+        return app_esb_suspend();
+      }
+      break;
   }
   return op;
 }
 
-void esb_link_set_high(void)
-{
+void esb_link_set_high(void) {
   esb_link_state = 2;
 }
 
-void esb_link_set_low(void)
-{
+void esb_link_set_low(void) {
   esb_link_state = 1;
 }
 
-void esb_link_set_paused(void)
-{
+void esb_link_set_paused(void) {
   esb_link_state = 3;
 }
 
-int esb_link_state_get(void)
-{
+int esb_link_state_get(void) {
   return esb_link_state;
 }
 
-int esb_tx_busy_get(void)
-{
+int esb_tx_busy_get(void) {
   return tx_busy;
 }

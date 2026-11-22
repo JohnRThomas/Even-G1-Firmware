@@ -1,33 +1,30 @@
 /*
  * Even Realities G1 - application core main.
  */
+#include <hal/nrf_ipc.h>
+#include <stdlib.h>
 #include <string.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/mfd/npm1300.h>
 #include <zephyr/init.h>
-#include <zephyr/sys/reboot.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
-#include <hal/nrf_ipc.h>
-#include <stdlib.h>
+#include <zephyr/sys/reboot.h>
 
 #define MODULE main
 #include <caf/events/module_state_event.h>
 
-#include <app_version.h>
-#include <g1_date.h>
-#include <vendor_drivers.h>
-#include "g1_log.h"
-#include "main.h"
 #include "aw9320x/aw9320x.h"
 #include "ble/ble_ancs.h"
 #include "button/button.h"
 #include "dashboard/dashboard.h"
 #include "display/proxy_thread.h"
+#include "g1_log.h"
 #include "imu/imu_fusion.h"
 #include "ipc/ipc_host.h"
+#include "main.h"
 #include "nfc/nfc_wlc.h"
 #include "notify/notify.h"
 #include "panel_display/panel.h"
@@ -38,6 +35,9 @@
 #include "threads/threads.h"
 #include "ui/ui.h"
 #include "utils/common_utils.h"
+#include <app_version.h>
+#include <g1_date.h>
+#include <vendor_drivers.h>
 
 /* ------------------------------------------------------------------ */
 /* globals                                                             */
@@ -96,8 +96,7 @@ void update_work_module(int enable, int module);
 
 #define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
 
-void periodic_timer_expiry(struct k_timer *timer)
-{
+void periodic_timer_expiry(struct k_timer *timer) {
   if (get_pt_test_mode() == 1) {
     return;
   }
@@ -110,8 +109,7 @@ void periodic_timer_expiry(struct k_timer *timer)
   }
 }
 
-static void switch_to_dfu_mode(struct k_sem *sem)
-{
+static void switch_to_dfu_mode(struct k_sem *sem) {
   int ret;
 
   runtime_mode = 1;
@@ -128,13 +126,12 @@ static void switch_to_dfu_mode(struct k_sem *sem)
   system_reboot_delayed();
 }
 
-#define ESB_CMD_MASK  0x3f
-#define ESB_DIR_MASK  0xc0
-#define ESB_DIR_UP    0x80
-#define ESB_DIR_DOWN  0x40
+#define ESB_CMD_MASK 0x3f
+#define ESB_DIR_MASK 0xc0
+#define ESB_DIR_UP   0x80
+#define ESB_DIR_DOWN 0x40
 
-static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len)
-{
+static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len) {
   uint8_t buf[22] = {0};
   struct esb_sync_pkt *new_data_pkg = (struct esb_sync_pkt *)buf;
   struct esb_sync_pkt *data_pkg = &gs->sync;
@@ -195,8 +192,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
     gs->esb_down_seq = data[4];
     if (cmd == 0) {
       if ((buf[0] & ESB_DIR_MASK) == ESB_DIR_UP ||
-          (new_data_pkg->screen_id == 0x10 && GLOBAL_STATE->dash_buf->type >= 6 &&
-           GLOBAL_STATE->dash_buf->type <= 9)) {
+          (new_data_pkg->screen_id == 0x10 && GLOBAL_STATE->dash_buf->type >= 6 && GLOBAL_STATE->dash_buf->type <= 9)) {
         if (gs->esb_up_id != data[3] && gs->esb_up_snapshot[ESB_SNAPSHOT_SEQ] != data[3]) {
           data_pkg->package_id++;
           G1_LOG(0, "slave recv wrong up package\n");
@@ -229,96 +225,93 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
   }
 
   switch (new_data_pkg->hdr.cmd) {
-  case 8:
-    if (data_pkg->screen_id != new_data_pkg->screen_id && cmd == 8) {
-      G1_LOG(0, "screen id is not same, exit\n");
-      return 0;
-    }
-    exit_running_task_keep_status(GLOBAL_STATE, 0);
-    if (new_data_pkg->arg[0] && GLOBAL_STATE->sync.screen_id == 4) {
-      expire_cur_message();
-      if (GLOBAL_STATE->sync.unread_msg_num) {
-        set_msg_show_state(6);
-      } else {
-        set_msg_show_state(0);
+    case 8:
+      if (data_pkg->screen_id != new_data_pkg->screen_id && cmd == 8) {
+        G1_LOG(0, "screen id is not same, exit\n");
+        return 0;
       }
-    }
-    if (GLOBAL_STATE->imu.mode == 2) {
-      get_dashboard_startup_mode();
-    }
-    update_persist_task_status_to_idle(GLOBAL_STATE);
-    k_sem_give(&GLOBAL_STATE->sem_2);
-    break;
-  case 10:
-    if (GLOBAL_STATE->esb_pkt.flags & BIT(2)) {
-      return 0;
-    }
-    slot = find_push_message_by_uid(UNALIGNED_GET((uint32_t *)new_data_pkg->arg));
-    G1_LOG(0, "##########%s %d SYNC_DISPLAY_CMD_COMFIRM_NOTIFY_FIRST slave before\n",
-           __func__, __LINE__);
-    if (slot && slot->sync_state == 0) {
-      slot->sync_state = 2;
-    }
-    break;
-  case 11:
-    /* the master confirmed the end of the notification display */
-    if (GLOBAL_STATE->esb_pkt.flags & BIT(2)) {
-      return 0;
-    }
-    id = UNALIGNED_GET((uint32_t *)new_data_pkg->arg);
-    slot = find_push_message_by_uid(id);
-    G1_LOG(0, "##########%s %d SYNC_DISPLAY_CMD_COMFIRM_NOTIFY_END slave before\n",
-           __func__, __LINE__);
-    if (slot && slot->sync_state == 2) {
-      slot->sync_state = 4;
-      confirm_message(id);
-      push_msg_syncing = 0;
-    }
-    break;
-  case 13:
-    reset_dash_buf(0);
-    g = GLOBAL_STATE;
-    g->dash_buf->type = 2;
-    if (g->task_status->task != 0x10) {
-      update_persist_task_status(g, 0x10, 2);
-    }
-    break;
-  case 14:
-    GLOBAL_STATE->dash_buf->type = 4;
-    break;
-  case 15:
-    GLOBAL_STATE->dash_buf->type = 6;
-    break;
-  case 16:
-    g = GLOBAL_STATE;
-    g->dash_buf->type = 11;
-    g->sync.stay_time_left_s = 8;
-    break;
-  case 17:
-    GLOBAL_STATE->dash_buf->type = 14;
-    break;
-  case 18:
-    GLOBAL_STATE->dash_buf->type = 16;
-    break;
-  case 12:
-    if (new_data_pkg->arg[0] == 11) {
-      dist = new_data_pkg->arg[1];
-      G1_LOG(1, "slave rcv canvas_distance_gear:%d,raster_height_gear:%d\n",
-             dist, new_data_pkg->arg[2]);
-      if (dist < 10 && new_data_pkg->arg[2] < 9) {
-        g = GLOBAL_STATE;
-        g->panel.canvas_distance_gear = dist;
-        g->panel.raster_height_offset = new_data_pkg->arg[2];
-        cal_panel_canvas_coord(&g->panel.y_offset, &g->panel.current_column);
+      exit_running_task_keep_status(GLOBAL_STATE, 0);
+      if (new_data_pkg->arg[0] && GLOBAL_STATE->sync.screen_id == 4) {
+        expire_cur_message();
+        if (GLOBAL_STATE->sync.unread_msg_num) {
+          set_msg_show_state(6);
+        } else {
+          set_msg_show_state(0);
+        }
       }
-      if (GLOBAL_STATE->dashboard_ts->exit_pending) {
-        GLOBAL_STATE->dashboard_ts->exit_pending = 0;
+      if (GLOBAL_STATE->imu.mode == 2) {
+        get_dashboard_startup_mode();
       }
-    }
-    break;
-  default:
-    k_sem_give(&gs->sem_1);
-    break;
+      update_persist_task_status_to_idle(GLOBAL_STATE);
+      k_sem_give(&GLOBAL_STATE->sem_2);
+      break;
+    case 10:
+      if (GLOBAL_STATE->esb_pkt.flags & BIT(2)) {
+        return 0;
+      }
+      slot = find_push_message_by_uid(UNALIGNED_GET((uint32_t *)new_data_pkg->arg));
+      G1_LOG(0, "##########%s %d SYNC_DISPLAY_CMD_COMFIRM_NOTIFY_FIRST slave before\n", __func__, __LINE__);
+      if (slot && slot->sync_state == 0) {
+        slot->sync_state = 2;
+      }
+      break;
+    case 11:
+      /* the master confirmed the end of the notification display */
+      if (GLOBAL_STATE->esb_pkt.flags & BIT(2)) {
+        return 0;
+      }
+      id = UNALIGNED_GET((uint32_t *)new_data_pkg->arg);
+      slot = find_push_message_by_uid(id);
+      G1_LOG(0, "##########%s %d SYNC_DISPLAY_CMD_COMFIRM_NOTIFY_END slave before\n", __func__, __LINE__);
+      if (slot && slot->sync_state == 2) {
+        slot->sync_state = 4;
+        confirm_message(id);
+        push_msg_syncing = 0;
+      }
+      break;
+    case 13:
+      reset_dash_buf(0);
+      g = GLOBAL_STATE;
+      g->dash_buf->type = 2;
+      if (g->task_status->task != 0x10) {
+        update_persist_task_status(g, 0x10, 2);
+      }
+      break;
+    case 14:
+      GLOBAL_STATE->dash_buf->type = 4;
+      break;
+    case 15:
+      GLOBAL_STATE->dash_buf->type = 6;
+      break;
+    case 16:
+      g = GLOBAL_STATE;
+      g->dash_buf->type = 11;
+      g->sync.stay_time_left_s = 8;
+      break;
+    case 17:
+      GLOBAL_STATE->dash_buf->type = 14;
+      break;
+    case 18:
+      GLOBAL_STATE->dash_buf->type = 16;
+      break;
+    case 12:
+      if (new_data_pkg->arg[0] == 11) {
+        dist = new_data_pkg->arg[1];
+        G1_LOG(1, "slave rcv canvas_distance_gear:%d,raster_height_gear:%d\n", dist, new_data_pkg->arg[2]);
+        if (dist < 10 && new_data_pkg->arg[2] < 9) {
+          g = GLOBAL_STATE;
+          g->panel.canvas_distance_gear = dist;
+          g->panel.raster_height_offset = new_data_pkg->arg[2];
+          cal_panel_canvas_coord(&g->panel.y_offset, &g->panel.current_column);
+        }
+        if (GLOBAL_STATE->dashboard_ts->exit_pending) {
+          GLOBAL_STATE->dashboard_ts->exit_pending = 0;
+        }
+      }
+      break;
+    default:
+      k_sem_give(&gs->sem_1);
+      break;
   }
 
   if (gs->esb_hdr.cmd == 3 && gs->esb_hdr.dir == 2 && gs->esb_arg1 == 1) {
@@ -327,8 +320,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
   return 0;
 }
 
-int power_for_panel(void)
-{
+int power_for_panel(void) {
   const struct regulator_npm1300_config *config;
   int ret;
 
@@ -380,10 +372,9 @@ int power_for_panel(void)
 #define LSM6DSO_BOOT_TIME_MS         10
 
 BUILD_ASSERT(CONFIG_REGULATOR_NPM1300_INIT_PRIORITY < IMU_MIC_SUPPLY_INIT_PRIORITY &&
-       IMU_MIC_SUPPLY_INIT_PRIORITY < CONFIG_SENSOR_INIT_PRIORITY);
+             IMU_MIC_SUPPLY_INIT_PRIORITY < CONFIG_SENSOR_INIT_PRIORITY);
 
-static int power_for_imu_and_mic(void)
-{
+static int power_for_imu_and_mic(void) {
   int ret;
 
   if (!device_is_ready(PMIC_LDO2)) {
@@ -402,8 +393,7 @@ static int power_for_imu_and_mic(void)
 
 SYS_INIT(power_for_imu_and_mic, POST_KERNEL, IMU_MIC_SUPPLY_INIT_PRIORITY);
 
-int power_down_panel(void)
-{
+int power_down_panel(void) {
   int ret;
 
   k_msleep(2);
@@ -426,8 +416,7 @@ int power_down_panel(void)
   return 0;
 }
 
-int power_down_imu_and_mic(void)
-{
+int power_down_imu_and_mic(void) {
   int ret;
 
   ret = mfd_npm1300_reg_write(NPM_MFD(PMIC_LDO2), 0x08, 0x03, 1);
@@ -439,8 +428,7 @@ int power_down_imu_and_mic(void)
   return 0;
 }
 
-int dump_pmic_state(void)
-{
+int dump_pmic_state(void) {
   const struct regulator_npm1300_config *config = PMIC_LDO2->config;
   uint8_t val = 0;
 
@@ -485,8 +473,7 @@ struct ipc_runtime_msg {
   } info;
 } __aligned(8);
 
-int runtime_info_sync(struct GlassesState *gs)
-{
+int runtime_info_sync(struct GlassesState *gs) {
   struct ipc_runtime_msg msg = {0};
   int ret;
 
@@ -499,9 +486,8 @@ int runtime_info_sync(struct GlassesState *gs)
   ret = global_ipc_service_send(&msg, sizeof(msg));
   if (first_sync) {
     first_sync = false;
-    G1_LOG(1, "--role:%d --mode:%d, esb_channel %d --ret:%d esb_master_addr %02X esb_slave_addr %02X\n",
-           msg.info.role, msg.info.mode, msg.info.esb_channel, ret,
-           gs->esb_master_addr, gs->esb_slave_addr);
+    G1_LOG(1, "--role:%d --mode:%d, esb_channel %d --ret:%d esb_master_addr %02X esb_slave_addr %02X\n", msg.info.role,
+           msg.info.mode, msg.info.esb_channel, ret, gs->esb_master_addr, gs->esb_slave_addr);
   }
   return ret;
 }
@@ -516,8 +502,7 @@ enum {
   IPC_MSG_ESB_STATUS = 0x0d,
 };
 
-void timeout_handler(struct k_timer *timer)
-{
+void timeout_handler(struct k_timer *timer) {
   uint32_t ticks = sys_clock_tick_get_32();
 
   if (RTC_SYNC_WORD == 0xa5a5a5a5) {
@@ -534,117 +519,107 @@ void timeout_handler(struct k_timer *timer)
   rtc_sync_timer_running = 0;
 }
 
-static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len)
-{
+static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len) {
   uint64_t uptime;
 
   switch (data[0]) {
-  case IPC_MSG_TICK_SYNC:
-    uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
-    if (k_sem_count_get(&gs->ipc_sem) == 0) {
-      k_sem_give(&gs->ipc_sem);
-    }
-    break;
-  case IPC_MSG_RUNTIME_INFO:
-    uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
-    G1_LOG(1, "cpunet request send info uptime %lld\n", uptime);
-    if (uptime > 10000) {
-      G1_LOG(0, "sys reboot because recv cpunet sync package\n");
-      system_reboot_delayed();
-    }
-    runtime_info_sync(gs);
-    break;
-  case IPC_MSG_UPDATE_MACADDR:
-    uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
-    if (GLOBAL_STATE->is_master == true) {
+    case IPC_MSG_TICK_SYNC:
+      uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
+      if (k_sem_count_get(&gs->ipc_sem) == 0) {
+        k_sem_give(&gs->ipc_sem);
+      }
+      break;
+    case IPC_MSG_RUNTIME_INFO:
+      uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
+      G1_LOG(1, "cpunet request send info uptime %lld\n", uptime);
+      if (uptime > 10000) {
+        G1_LOG(0, "sys reboot because recv cpunet sync package\n");
+        system_reboot_delayed();
+      }
+      runtime_info_sync(gs);
+      break;
+    case IPC_MSG_UPDATE_MACADDR:
+      uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
+      if (GLOBAL_STATE->is_master == true) {
+        memcpy(gs->master_mac, &data[1], sizeof(gs->master_mac));
+      } else {
+        memcpy(gs->slave_mac, &data[1], sizeof(gs->slave_mac));
+      }
+      G1_LOG(1, "cpunet request update macaddr info uptime %lld bt macaddr esb_master_addr %02X esb_slave_addr %02X \n",
+             uptime, gs->esb_master_addr, gs->esb_slave_addr);
+      if (k_sem_count_get(&gs->ipc_sem) == 0) {
+        k_sem_give(&gs->ipc_sem);
+      }
+      break;
+    case IPC_MSG_BT_READY:
+      if (!gs->bt_state) {
+        gs->bt_state = 1;
+      }
+      G1_LOG(1, "bt_ready\n");
+      if (k_sem_count_get(&gs->ipc_sem) == 0) {
+        k_sem_give(&gs->ipc_sem);
+      }
+      strncpy(net_build_time, &data[1], len - 1);
+      net_build_time[sizeof(net_build_time) - 1] = 0;
+      break;
+    case IPC_RESP_CPUNET_ESB_PACKAGES:
+      memcpy(&esb_tx_count, &data[1], 4);
+      memcpy(&esb_tx_fail_count, &data[5], 4);
+      memcpy(&esb_rx_count, &data[9], 4);
+      memcpy(&esb_signal, &data[13], 4);
+      if (!gs->check_mode) {
+        esb_signal = 70;
+      }
+      G1_LOG(1, "IPC_RESP_CPUNET_ESB_PACKAGES %d %d %d %d\n", esb_tx_count, esb_tx_fail_count, esb_rx_count,
+             esb_signal);
+      break;
+    case IPC_MSG_SET_MACADDR:
       memcpy(gs->master_mac, &data[1], sizeof(gs->master_mac));
-    } else {
-      memcpy(gs->slave_mac, &data[1], sizeof(gs->slave_mac));
-    }
-    G1_LOG(1, "cpunet request update macaddr info uptime %lld bt macaddr esb_master_addr %02X esb_slave_addr %02X \n",
-           uptime, gs->esb_master_addr, gs->esb_slave_addr);
-    if (k_sem_count_get(&gs->ipc_sem) == 0) {
-      k_sem_give(&gs->ipc_sem);
-    }
-    break;
-  case IPC_MSG_BT_READY:
-    if (!gs->bt_state) {
-      gs->bt_state = 1;
-    }
-    G1_LOG(1, "bt_ready\n");
-    if (k_sem_count_get(&gs->ipc_sem) == 0) {
-      k_sem_give(&gs->ipc_sem);
-    }
-    strncpy(net_build_time, &data[1], len - 1);
-    net_build_time[sizeof(net_build_time) - 1] = 0;
-    break;
-  case IPC_RESP_CPUNET_ESB_PACKAGES:
-    memcpy(&esb_tx_count, &data[1], 4);
-    memcpy(&esb_tx_fail_count, &data[5], 4);
-    memcpy(&esb_rx_count, &data[9], 4);
-    memcpy(&esb_signal, &data[13], 4);
-    if (!gs->check_mode) {
-      esb_signal = 70;
-    }
-    G1_LOG(1, "IPC_RESP_CPUNET_ESB_PACKAGES %d %d %d %d\n",
-           esb_tx_count, esb_tx_fail_count, esb_rx_count, esb_signal);
-    break;
-  case IPC_MSG_SET_MACADDR:
-    memcpy(gs->master_mac, &data[1], sizeof(gs->master_mac));
-    memcpy(gs->slave_mac, &data[7], sizeof(gs->slave_mac));
-    break;
-  case IPC_MSG_ESB_STATUS:
-    gs->sync_ack = data[1];
-    break;
-  default:
-    G1_LOG(1, "sync fail! len: %d, data=%s\n\n", len, data);
-    break;
+      memcpy(gs->slave_mac, &data[7], sizeof(gs->slave_mac));
+      break;
+    case IPC_MSG_ESB_STATUS:
+      gs->sync_ack = data[1];
+      break;
+    default:
+      G1_LOG(1, "sync fail! len: %d, data=%s\n\n", len, data);
+      break;
   }
   return 0;
 }
 
-int getDeviceRole(void)
-{
+int getDeviceRole(void) {
   return DEVICE_ROLE;
 }
 
-uint8_t is_master(void)
-{
+uint8_t is_master(void) {
   return GLOBAL_STATE->is_master;
 }
 
-void set_ncs_mem_ts(uint32_t ts)
-{
+void set_ncs_mem_ts(uint32_t ts) {
   NCS_MEM->ts = ts;
 }
 
-bool getEraseDFU(void)
-{
+bool getEraseDFU(void) {
   return NCS_MEM->erase_dfu;
 }
 
-void setEraseDFU(bool set)
-{
+void setEraseDFU(bool set) {
   NCS_MEM->erase_dfu = set;
 }
 
-void set_ncs_mem_pt_level(uint8_t val)
-{
+void set_ncs_mem_pt_level(uint8_t val) {
   NCS_MEM->pt_level = val;
 }
 
-void set_ncs_mem_initialized(void)
-{
+void set_ncs_mem_initialized(void) {
   NCS_MEM->magic = NCS_MEM_MAGIC;
 }
 
-int is_ncs_mem_initialized(void)
-{
+int is_ncs_mem_initialized(void) {
   return NCS_MEM->magic == NCS_MEM_MAGIC ? 0 : -1;
 }
 
-void save_dashboard_ts_to_ncs_mem(void)
-{
+void save_dashboard_ts_to_ncs_mem(void) {
   struct dashboard_ts_context *ts = GLOBAL_STATE->dashboard_ts;
 
   NCS_MEM->ts = ts->ts;
@@ -659,8 +634,7 @@ void save_dashboard_ts_to_ncs_mem(void)
   memcpy(NCS_MEM->retained_buf_b, ts->retained_buf_b, sizeof(NCS_MEM->retained_buf_b));
 }
 
-void restore_dashboard_ts_from_ncs_mem(void)
-{
+void restore_dashboard_ts_from_ncs_mem(void) {
   struct GlassesState *gs = GLOBAL_STATE;
 
   gs->dashboard_ts->ts = NCS_MEM->ts + 1;
@@ -679,13 +653,11 @@ void restore_dashboard_ts_from_ncs_mem(void)
   memcpy(gs->dashboard_ts->retained_buf_b, NCS_MEM->retained_buf_b, sizeof(NCS_MEM->retained_buf_b));
 }
 
-void set_ncs_mem_notes_index(uint8_t idx)
-{
+void set_ncs_mem_notes_index(uint8_t idx) {
   NCS_MEM->notes_index = idx;
 }
 
-void deinit_ncs_memory(void)
-{
+void deinit_ncs_memory(void) {
   NCS_MEM->ms_ts = 0;
   NCS_MEM->ts = 0;
   NCS_MEM->weather_icon = 0;
@@ -700,13 +672,11 @@ void deinit_ncs_memory(void)
   NCS_MEM->magic = 0;
 }
 
-struct GlassesState *get_dashboard_state(void)
-{
+struct GlassesState *get_dashboard_state(void) {
   return GLOBAL_STATE;
 }
 
-int erase_dfu_flash(void)
-{
+int erase_dfu_flash(void) {
   const struct device *flash = DFU_FLASH;
 
   if (!device_is_ready(flash)) {
@@ -718,8 +688,7 @@ int erase_dfu_flash(void)
   return 0;
 }
 
-int set_shipmode(int enable)
-{
+int set_shipmode(int enable) {
   int ret;
 
   power_down_panel();
@@ -734,8 +703,7 @@ int set_shipmode(int enable)
   return 0;
 }
 
-void set_band_for_ESB(uint8_t band)
-{
+void set_band_for_ESB(uint8_t band) {
   uint8_t msg[64] = {0};
 
   msg[0] = 1;
@@ -743,8 +711,7 @@ void set_band_for_ESB(uint8_t band)
   global_ipc_service_send(msg, 4);
 }
 
-void imu_module_set_mode(int enable)
-{
+void imu_module_set_mode(int enable) {
   int mode = 0;
 
   if (enable == 1) {
@@ -755,8 +722,7 @@ void imu_module_set_mode(int enable)
   update_imu_mode(&GLOBAL_STATE->imu, mode);
 }
 
-void update_work_module(int enable, int module)
-{
+void update_work_module(int enable, int module) {
   struct GlassesState *gs = GLOBAL_STATE;
 
   if (enable) {
@@ -768,71 +734,69 @@ void update_work_module(int enable, int module)
     return;
   }
   switch (module) {
-  case WORK_MODULE_IMU:
-    if (gs->is_master == true) {
-      imu_module_set_mode(enable);
-    } else {
-      k_msleep(50);
-    }
-    break;
-  case WORK_MODULE_TOUCH:
-    if (enable) {
-      touch_power_on();
-    } else {
-      touch_power_off();
-    }
-    break;
-  case WORK_MODULE_NFC:
-    if (enable) {
-      nfc_lpd_off();
-    } else {
-      nfc_lpd_on();
-    }
-    break;
-  case WORK_MODULE_SYSTEM:
-    if (get_pt_test_mode() == 0) {
-      if (enable) {
-        global_system_resume(GLOBAL_STATE);
+    case WORK_MODULE_IMU:
+      if (gs->is_master == true) {
+        imu_module_set_mode(enable);
       } else {
-        global_system_suspend(GLOBAL_STATE);
+        k_msleep(50);
       }
-    }
-    break;
-  case WORK_MODULE_BLE:
-    if (enable) {
-      bt_start();
-    } else {
-      stop_ble_advertising();
-    }
-    break;
-  case WORK_MODULE_ESB:
-    switch (enable) {
-    case 2:
-      set_band_for_ESB(0x0a);
       break;
-    case 1:
-      set_band_for_ESB(0x0b);
+    case WORK_MODULE_TOUCH:
+      if (enable) {
+        touch_power_on();
+      } else {
+        touch_power_off();
+      }
       break;
-    default:
-      set_band_for_ESB(0x0c);
+    case WORK_MODULE_NFC:
+      if (enable) {
+        nfc_lpd_off();
+      } else {
+        nfc_lpd_on();
+      }
       break;
-    }
-    break;
-  case WORK_MODULE_SHIPMODE:
-    if (!enable) {
-      set_shipmode(1);
-    }
-    break;
+    case WORK_MODULE_SYSTEM:
+      if (get_pt_test_mode() == 0) {
+        if (enable) {
+          global_system_resume(GLOBAL_STATE);
+        } else {
+          global_system_suspend(GLOBAL_STATE);
+        }
+      }
+      break;
+    case WORK_MODULE_BLE:
+      if (enable) {
+        bt_start();
+      } else {
+        stop_ble_advertising();
+      }
+      break;
+    case WORK_MODULE_ESB:
+      switch (enable) {
+        case 2:
+          set_band_for_ESB(0x0a);
+          break;
+        case 1:
+          set_band_for_ESB(0x0b);
+          break;
+        default:
+          set_band_for_ESB(0x0c);
+          break;
+      }
+      break;
+    case WORK_MODULE_SHIPMODE:
+      if (!enable) {
+        set_shipmode(1);
+      }
+      break;
   }
 }
 
-int get_work_mode(void)
-{
+int get_work_mode(void) {
   return GLOBAL_STATE->work_mode;
 }
 
-int change_work_mode(int mode)
-{
+int change_work_mode(int mode) {
   int retry = 5000;
 
   while (work_mode_busy) {
@@ -847,113 +811,112 @@ int change_work_mode(int mode)
     G1_LOG(0, "change_work_mode to %d\n", (uint8_t)mode);
 
     switch (GLOBAL_STATE->work_mode) {
-    case 0:
-      update_work_module(1, WORK_MODULE_EXT_FLASH);
-      update_work_module(1, WORK_MODULE_SYSTEM);
-      update_work_module(1, WORK_MODULE_IMU);
-      update_work_module(1, WORK_MODULE_BLE);
-      update_work_module(1, WORK_MODULE_ESB);
-      update_work_module(1, WORK_MODULE_0008);
-      update_work_module(1, WORK_MODULE_DMIC);
-      update_work_module(1, WORK_MODULE_TOUCH);
-      update_work_module(1, WORK_MODULE_NFC);
-      update_work_module(1, WORK_MODULE_SHIPMODE);
-      break;
-    case 1:
-      update_work_module(1, WORK_MODULE_EXT_FLASH);
-      update_work_module(0, WORK_MODULE_SYSTEM);
-      update_work_module(0, WORK_MODULE_IMU);
-      update_work_module(1, WORK_MODULE_BLE);
-      update_work_module(0, WORK_MODULE_ESB);
-      update_work_module(0, WORK_MODULE_0008);
-      update_work_module(0, WORK_MODULE_DMIC);
-      update_work_module(0, WORK_MODULE_TOUCH);
-      update_work_module(1, WORK_MODULE_NFC);
-      update_work_module(1, WORK_MODULE_SHIPMODE);
-      {
-        uint8_t msg[64] = {0};
+      case 0:
+        update_work_module(1, WORK_MODULE_EXT_FLASH);
+        update_work_module(1, WORK_MODULE_SYSTEM);
+        update_work_module(1, WORK_MODULE_IMU);
+        update_work_module(1, WORK_MODULE_BLE);
+        update_work_module(1, WORK_MODULE_ESB);
+        update_work_module(1, WORK_MODULE_0008);
+        update_work_module(1, WORK_MODULE_DMIC);
+        update_work_module(1, WORK_MODULE_TOUCH);
+        update_work_module(1, WORK_MODULE_NFC);
+        update_work_module(1, WORK_MODULE_SHIPMODE);
+        break;
+      case 1:
+        update_work_module(1, WORK_MODULE_EXT_FLASH);
+        update_work_module(0, WORK_MODULE_SYSTEM);
+        update_work_module(0, WORK_MODULE_IMU);
+        update_work_module(1, WORK_MODULE_BLE);
+        update_work_module(0, WORK_MODULE_ESB);
+        update_work_module(0, WORK_MODULE_0008);
+        update_work_module(0, WORK_MODULE_DMIC);
+        update_work_module(0, WORK_MODULE_TOUCH);
+        update_work_module(1, WORK_MODULE_NFC);
+        update_work_module(1, WORK_MODULE_SHIPMODE);
+        {
+          uint8_t msg[64] = {0};
 
-        msg[0] = 1;
-        msg[1] = 8;
-        global_ipc_service_send(msg, 4);
-      }
-      break;
-    case 2:
-      update_work_module(1, WORK_MODULE_EXT_FLASH);
-      update_work_module(1, WORK_MODULE_SYSTEM);
-      update_work_module(2, WORK_MODULE_IMU);
-      update_work_module(1, WORK_MODULE_BLE);
-      update_work_module(1, WORK_MODULE_ESB);
-      update_work_module(0, WORK_MODULE_0008);
-      update_work_module(1, WORK_MODULE_DMIC);
-      update_work_module(1, WORK_MODULE_TOUCH);
-      update_work_module(1, WORK_MODULE_NFC);
-      update_work_module(1, WORK_MODULE_SHIPMODE);
-      memset(GLOBAL_STATE->ui.buf, 0, sizeof(GLOBAL_STATE->ui.buf));
-      break;
-    case 3:
-      update_work_module(0, WORK_MODULE_SYSTEM);
-      update_work_module(0, WORK_MODULE_EXT_FLASH);
-      update_work_module(1, WORK_MODULE_IMU);
-      update_work_module(1, WORK_MODULE_BLE);
-      update_work_module(1, WORK_MODULE_ESB);
-      update_work_module(0, WORK_MODULE_0008);
-      update_work_module(1, WORK_MODULE_DMIC);
-      update_work_module(1, WORK_MODULE_TOUCH);
-      update_work_module(1, WORK_MODULE_NFC);
-      update_work_module(1, WORK_MODULE_SHIPMODE);
-      break;
-    case 4:
-    case 5:
-    case 6:
-      update_work_module(0, WORK_MODULE_EXT_FLASH);
-      update_work_module(0, WORK_MODULE_SYSTEM);
-      update_work_module(0, WORK_MODULE_IMU);
-      update_work_module(1, WORK_MODULE_BLE);
-      update_work_module(1, WORK_MODULE_ESB);
-      update_work_module(0, WORK_MODULE_0008);
-      update_work_module(0, WORK_MODULE_DMIC);
-      update_work_module(0, WORK_MODULE_TOUCH);
-      update_work_module(1, WORK_MODULE_NFC);
-      update_work_module(1, WORK_MODULE_SHIPMODE);
-      break;
-    case 8:
-      update_work_module(0, WORK_MODULE_SYSTEM);
-      update_work_module(0, WORK_MODULE_EXT_FLASH);
-      update_work_module(0, WORK_MODULE_IMU);
-      update_work_module(0, WORK_MODULE_BLE);
-      update_work_module(0, WORK_MODULE_ESB);
-      update_work_module(0, WORK_MODULE_0008);
-      update_work_module(0, WORK_MODULE_DMIC);
-      update_work_module(0, WORK_MODULE_TOUCH);
-      update_work_module(0, WORK_MODULE_NFC);
-      update_work_module(1, WORK_MODULE_SHIPMODE);
-      break;
-    case 9:
-      update_work_module(0, WORK_MODULE_SYSTEM);
-      update_work_module(1, WORK_MODULE_EXT_FLASH);
-      update_work_module(1, WORK_MODULE_IMU);
-      update_work_module(0, WORK_MODULE_BLE);
-      update_work_module(0, WORK_MODULE_ESB);
-      update_work_module(1, WORK_MODULE_0008);
-      update_work_module(1, WORK_MODULE_DMIC);
-      update_work_module(1, WORK_MODULE_TOUCH);
-      update_work_module(1, WORK_MODULE_NFC);
-      update_work_module(1, WORK_MODULE_SHIPMODE);
-      break;
-    case 7:
-      set_shipmode(1);
-      break;
-    default:
-      break;
+          msg[0] = 1;
+          msg[1] = 8;
+          global_ipc_service_send(msg, 4);
+        }
+        break;
+      case 2:
+        update_work_module(1, WORK_MODULE_EXT_FLASH);
+        update_work_module(1, WORK_MODULE_SYSTEM);
+        update_work_module(2, WORK_MODULE_IMU);
+        update_work_module(1, WORK_MODULE_BLE);
+        update_work_module(1, WORK_MODULE_ESB);
+        update_work_module(0, WORK_MODULE_0008);
+        update_work_module(1, WORK_MODULE_DMIC);
+        update_work_module(1, WORK_MODULE_TOUCH);
+        update_work_module(1, WORK_MODULE_NFC);
+        update_work_module(1, WORK_MODULE_SHIPMODE);
+        memset(GLOBAL_STATE->ui.buf, 0, sizeof(GLOBAL_STATE->ui.buf));
+        break;
+      case 3:
+        update_work_module(0, WORK_MODULE_SYSTEM);
+        update_work_module(0, WORK_MODULE_EXT_FLASH);
+        update_work_module(1, WORK_MODULE_IMU);
+        update_work_module(1, WORK_MODULE_BLE);
+        update_work_module(1, WORK_MODULE_ESB);
+        update_work_module(0, WORK_MODULE_0008);
+        update_work_module(1, WORK_MODULE_DMIC);
+        update_work_module(1, WORK_MODULE_TOUCH);
+        update_work_module(1, WORK_MODULE_NFC);
+        update_work_module(1, WORK_MODULE_SHIPMODE);
+        break;
+      case 4:
+      case 5:
+      case 6:
+        update_work_module(0, WORK_MODULE_EXT_FLASH);
+        update_work_module(0, WORK_MODULE_SYSTEM);
+        update_work_module(0, WORK_MODULE_IMU);
+        update_work_module(1, WORK_MODULE_BLE);
+        update_work_module(1, WORK_MODULE_ESB);
+        update_work_module(0, WORK_MODULE_0008);
+        update_work_module(0, WORK_MODULE_DMIC);
+        update_work_module(0, WORK_MODULE_TOUCH);
+        update_work_module(1, WORK_MODULE_NFC);
+        update_work_module(1, WORK_MODULE_SHIPMODE);
+        break;
+      case 8:
+        update_work_module(0, WORK_MODULE_SYSTEM);
+        update_work_module(0, WORK_MODULE_EXT_FLASH);
+        update_work_module(0, WORK_MODULE_IMU);
+        update_work_module(0, WORK_MODULE_BLE);
+        update_work_module(0, WORK_MODULE_ESB);
+        update_work_module(0, WORK_MODULE_0008);
+        update_work_module(0, WORK_MODULE_DMIC);
+        update_work_module(0, WORK_MODULE_TOUCH);
+        update_work_module(0, WORK_MODULE_NFC);
+        update_work_module(1, WORK_MODULE_SHIPMODE);
+        break;
+      case 9:
+        update_work_module(0, WORK_MODULE_SYSTEM);
+        update_work_module(1, WORK_MODULE_EXT_FLASH);
+        update_work_module(1, WORK_MODULE_IMU);
+        update_work_module(0, WORK_MODULE_BLE);
+        update_work_module(0, WORK_MODULE_ESB);
+        update_work_module(1, WORK_MODULE_0008);
+        update_work_module(1, WORK_MODULE_DMIC);
+        update_work_module(1, WORK_MODULE_TOUCH);
+        update_work_module(1, WORK_MODULE_NFC);
+        update_work_module(1, WORK_MODULE_SHIPMODE);
+        break;
+      case 7:
+        set_shipmode(1);
+        break;
+      default:
+        break;
     }
   }
   work_mode_busy = 0;
   return 0;
 }
 
-static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len)
-{
+static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, size_t len) {
   const struct notif_msg *src;
   struct notif_msg *slot;
   uint8_t cmd = data[0] & 0x3f;
@@ -974,152 +937,149 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
   }
 
   switch (((const struct esb_hdr *)data)->cmd) {
-  case 4:
-    if (GLOBAL_STATE->sync.screen_id == 4) {
-      expire_cur_message();
-      if (GLOBAL_STATE->sync.unread_msg_num) {
-        set_msg_show_state(6);
-      } else {
-        set_msg_show_state(0);
+    case 4:
+      if (GLOBAL_STATE->sync.screen_id == 4) {
+        expire_cur_message();
+        if (GLOBAL_STATE->sync.unread_msg_num) {
+          set_msg_show_state(6);
+        } else {
+          set_msg_show_state(0);
+        }
       }
-    }
-    atomic_or(&close_app_flags, BIT(1));
-    exit_running_task(gs, 1);
-    if (gs->imu.mode == 2) {
-      get_dashboard_startup_mode();
-    }
-    update_persist_task_status_to_idle(gs);
-    break;
-  case 5:
-    exit_running_task(gs, 1);
-    change_work_mode(7);
-    break;
-  case 8:
-    exit_running_task(gs, 1);
-    gs->display_mode = 12;
-    gs->dashboard_cmd = 3;
-    k_sem_give(&gs->dashboard_position_sem);
-    break;
-  case 9:
-    gs->display_mode = 10;
-    gs->dashboard_cmd = 3;
-    k_sem_give(&gs->dashboard_position_sem);
-    show_not_disturb_bitmap(1);
-    break;
-  case 6:
-    if (gs->esb_pkt.subcmd == 1) {
-      gs->quicknote_show_info->longpress_req = 1;
-    } else if (gs->esb_pkt.subcmd == 0) {
-      gs->quicknote_show_info->longpress_req = 2;
-    }
-    break;
-  case 7:
-    SlaveDoubleClickEventInject();
-    break;
-  case 10:
-    slave_msg_key_pending = 1;
-    break;
-  case 11:
-    break;
-  case 12:
-    if ((GLOBAL_STATE->sync.flags & BIT(2)) || msg_array_busy) {
+      atomic_or(&close_app_flags, BIT(1));
+      exit_running_task(gs, 1);
+      if (gs->imu.mode == 2) {
+        get_dashboard_startup_mode();
+      }
+      update_persist_task_status_to_idle(gs);
       break;
-    }
-    src = (const struct notif_msg *)&data[1];
-    slot = get_message_by_index(data[0xd]);
-    if (slot && !slot->busy &&
-        (src->uid != slot->uid || src->recv_time != slot->recv_time || slot->sync_state != 1)) {
-      memcpy(slot, &data[1], NOTIF_MSG_HALF);
-      slot->sync_state = 1;
-    }
-    break;
-  case 13:
-    if ((GLOBAL_STATE->sync.flags & BIT(2)) || msg_array_busy) {
+    case 5:
+      exit_running_task(gs, 1);
+      change_work_mode(7);
       break;
-    }
-    slot = get_push_message();
-    if (slot && !slot->busy && slot->sync_state != 3) {
-      memcpy((uint8_t *)slot + NOTIF_MSG_HALF, &data[1], NOTIF_MSG_HALF);
-      slot->sync_state = 3;
-    }
-    break;
-  case 14:
-    if (gs->esb_pkt.subcmd == 4) {
-      GLOBAL_STATE->onboarding->action = gs->esb_pkt.value;
-    } else if (gs->esb_pkt.subcmd == 5) {
-      request_not_disturb_bitmap(gs->esb_pkt.value);
-    }
-    break;
-  case 15:
-    if (GLOBAL_STATE->dash_buf->type == 1) {
+    case 8:
+      exit_running_task(gs, 1);
+      gs->display_mode = 12;
+      gs->dashboard_cmd = 3;
+      k_sem_give(&gs->dashboard_position_sem);
       break;
-    }
-    reset_dash_buf(0);
-    GLOBAL_STATE->dash_buf->type = 1;
-    break;
-  case 16:
-    if (GLOBAL_STATE->dash_buf->type == 4) {
-      GLOBAL_STATE->dash_buf->type = 5;
-    }
-    break;
-  case 17:
-    if (gs->esb_pkt.subcmd == 6) {
-      struct GlassesState *g = GLOBAL_STATE;
+    case 9:
+      gs->display_mode = 10;
+      gs->dashboard_cmd = 3;
+      k_sem_give(&gs->dashboard_position_sem);
+      show_not_disturb_bitmap(1);
+      break;
+    case 6:
+      if (gs->esb_pkt.subcmd == 1) {
+        gs->quicknote_show_info->longpress_req = 1;
+      } else if (gs->esb_pkt.subcmd == 0) {
+        gs->quicknote_show_info->longpress_req = 2;
+      }
+      break;
+    case 7:
+      SlaveDoubleClickEventInject();
+      break;
+    case 10:
+      slave_msg_key_pending = 1;
+      break;
+    case 11:
+      break;
+    case 12:
+      if ((GLOBAL_STATE->sync.flags & BIT(2)) || msg_array_busy) {
+        break;
+      }
+      src = (const struct notif_msg *)&data[1];
+      slot = get_message_by_index(data[0xd]);
+      if (slot && !slot->busy &&
+          (src->uid != slot->uid || src->recv_time != slot->recv_time || slot->sync_state != 1)) {
+        memcpy(slot, &data[1], NOTIF_MSG_HALF);
+        slot->sync_state = 1;
+      }
+      break;
+    case 13:
+      if ((GLOBAL_STATE->sync.flags & BIT(2)) || msg_array_busy) {
+        break;
+      }
+      slot = get_push_message();
+      if (slot && !slot->busy && slot->sync_state != 3) {
+        memcpy((uint8_t *)slot + NOTIF_MSG_HALF, &data[1], NOTIF_MSG_HALF);
+        slot->sync_state = 3;
+      }
+      break;
+    case 14:
+      if (gs->esb_pkt.subcmd == 4) {
+        GLOBAL_STATE->onboarding->action = gs->esb_pkt.value;
+      } else if (gs->esb_pkt.subcmd == 5) {
+        request_not_disturb_bitmap(gs->esb_pkt.value);
+      }
+      break;
+    case 15:
+      if (GLOBAL_STATE->dash_buf->type == 1) {
+        break;
+      }
+      reset_dash_buf(0);
+      GLOBAL_STATE->dash_buf->type = 1;
+      break;
+    case 16:
+      if (GLOBAL_STATE->dash_buf->type == 4) {
+        GLOBAL_STATE->dash_buf->type = 5;
+      }
+      break;
+    case 17:
+      if (gs->esb_pkt.subcmd == 6) {
+        struct GlassesState *g = GLOBAL_STATE;
 
-      if (g->task_status->task == 0x14 && g->evenai_buf->state == 1 &&
-          g->evenai_buf->sub == 4 && g->evenai_buf->action_status == 0x13) {
-        G1_LOG(1, "evenai_v2 need to show network_err tip\n");
-      } else if (gs->esb_pkt.value < 3) {
-        g->evenai_buf->sub = 6;
-        g->evenai_buf->action_status = gs->esb_pkt.value;
+        if (g->task_status->task == 0x14 && g->evenai_buf->state == 1 && g->evenai_buf->sub == 4 &&
+            g->evenai_buf->action_status == 0x13) {
+          G1_LOG(1, "evenai_v2 need to show network_err tip\n");
+        } else if (gs->esb_pkt.value < 3) {
+          g->evenai_buf->sub = 6;
+          g->evenai_buf->action_status = gs->esb_pkt.value;
+        }
       }
-    }
-    break;
+      break;
   }
   return 0;
 }
 
 /* IPC endpoint callback for "cpunet-esbs-ctrl" */
-int ipc_ep3_recv_stub(struct GlassesState *gs, const uint8_t *data, size_t len)
-{
+int ipc_ep3_recv_stub(struct GlassesState *gs, const uint8_t *data, size_t len) {
   return 0;
 }
 
-static void role_init(struct GlassesState *s)
-{
+static void role_init(struct GlassesState *s) {
   switch (DEVICE_ROLE) {
-  case 0:
-    s->is_master = 1;
-    G1_LOG(0, "Master!------\n");
-    break;
-  case 1:
-    s->is_master = 2;
-    G1_LOG(0, "Slave!------\n");
-    break;
-  default:
-    G1_LOG(0, "error --hw_id:0x%x\n", DEVICE_ROLE);
-    break;
+    case 0:
+      s->is_master = 1;
+      G1_LOG(0, "Master!------\n");
+      break;
+    case 1:
+      s->is_master = 2;
+      G1_LOG(0, "Slave!------\n");
+      break;
+    default:
+      G1_LOG(0, "error --hw_id:0x%x\n", DEVICE_ROLE);
+      break;
   }
   runtime_info_sync(s);
 
   switch (s->is_master) {
-  case 1:
-    s->master_fw_ver.major = APP_VERSION_MAJOR;
-    s->master_fw_ver.minor = APP_VERSION_MINOR;
-    s->master_fw_ver.patch = APP_PATCHLEVEL;
-    s->sync.flags |= BIT(2);
-    break;
-  case 2:
-    s->fw_ver.major = APP_VERSION_MAJOR;
-    s->fw_ver.minor = APP_VERSION_MINOR;
-    s->fw_ver.patch = APP_PATCHLEVEL;
-    s->esb_pkt.flags |= BIT(2);
-    break;
+    case 1:
+      s->master_fw_ver.major = APP_VERSION_MAJOR;
+      s->master_fw_ver.minor = APP_VERSION_MINOR;
+      s->master_fw_ver.patch = APP_PATCHLEVEL;
+      s->sync.flags |= BIT(2);
+      break;
+    case 2:
+      s->fw_ver.major = APP_VERSION_MAJOR;
+      s->fw_ver.minor = APP_VERSION_MINOR;
+      s->fw_ver.patch = APP_PATCHLEVEL;
+      s->esb_pkt.flags |= BIT(2);
+      break;
   }
 }
 
-static struct GlassesState *init_context(void)
-{
+static struct GlassesState *init_context(void) {
   struct GlassesState *s;
 
   G1_LOG(1, "[cpuapp] global context init\n\n");
@@ -1281,8 +1241,7 @@ static struct GlassesState *init_context(void)
   return s;
 }
 
-static void component_init(struct GlassesState *s)
-{
+static void component_init(struct GlassesState *s) {
   const struct device *regulators = DEVICE_DT_GET(DT_NODELABEL(pmic_regulators));
   const struct device *charger = DEVICE_DT_GET(DT_NODELABEL(pmic_charger));
   int ret;
@@ -1345,8 +1304,7 @@ static void component_init(struct GlassesState *s)
   set_pt_level(NCS_MEM->pt_level);
 }
 
-int main(void)
-{
+int main(void) {
   struct GlassesState *s;
 
   init_boot_seconds();
@@ -1354,9 +1312,8 @@ int main(void)
   G1_LOG(0, "Synchronization using %s driver\n", "mbox");
   k_timer_start(&rtc_sync_timer, K_MSEC(50), K_MSEC(50));
   serialization_init();
-  G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n",
-         APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_PATCHLEVEL,
-         G1_GIT_COMMIT, G1_BUILD_TIME);
+  G1_LOG(1, "[Build Info: Ver:v%d.%d.%d Commit:%s] [Build Time:%s]\n", APP_VERSION_MAJOR, APP_VERSION_MINOR,
+         APP_PATCHLEVEL, G1_GIT_COMMIT, G1_BUILD_TIME);
 
   s = init_context();
   component_init(s);
@@ -1391,10 +1348,8 @@ int main(void)
 }
 
 /* empty hooks called around external flash accesses (ext_flash_read/write/erase) */
-void ext_flash_power_up(void)
-{
+void ext_flash_power_up(void) {
 }
 
-void ext_flash_power_down(void)
-{
+void ext_flash_power_down(void) {
 }

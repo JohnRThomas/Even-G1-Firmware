@@ -4,11 +4,11 @@
 #ifndef G1_MAIN_H_
 #define G1_MAIN_H_
 
-#include <zephyr/kernel.h>
+#include <glasses_state.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/regulator.h>
-#include <glasses_state.h>
+#include <zephyr/kernel.h>
 
 /* Copy of the private config struct of drivers/regulator/regulator_npm1300.c */
 struct regulator_npm1300_config {
@@ -49,7 +49,7 @@ struct ncs_mem {
 
 /* placed at 0x2007fc00 by the linker */
 extern struct ncs_mem ncs_mem;
-#define NCS_MEM (&ncs_mem)
+#define NCS_MEM       (&ncs_mem)
 #define NCS_MEM_MAGIC 0x12345678
 
 /* main.c */

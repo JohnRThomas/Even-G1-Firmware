@@ -3,12 +3,12 @@
  * zephyr/drivers/sensor/opt3001/opt3001.c, plus the panel LDSW1 power switch.
  */
 #include <errno.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/i2c.h>
-#include <zephyr/drivers/regulator.h>
 #include <zephyr/drivers/mfd/npm1300.h>
+#include <zephyr/drivers/regulator.h>
+#include <zephyr/kernel.h>
 
 #include "g1_log.h"
 #include "sensors_audio.h"
@@ -53,10 +53,9 @@ static struct opt3007_context *opt3007_ctx;
 static bool opt3007_ready;
 static uint8_t als_level;
 
-static int opt3001_reg_read(uint8_t reg, uint16_t *val)
-{
+static int opt3001_reg_read(uint8_t reg, uint16_t *val) {
   uint8_t tx_buf[1];
-  uint8_t value[2] = { 0 };
+  uint8_t value[2] = {0};
 
   if (!device_is_ready(opt3001_i2c_device.bus)) {
     G1_LOG_ERR("Bus device is not ready\n");
@@ -71,9 +70,8 @@ static int opt3001_reg_read(uint8_t reg, uint16_t *val)
   return 0;
 }
 
-static int opt3001_reg_write(uint8_t reg, uint16_t val)
-{
-  uint8_t tx_buf[3] = { reg, val >> 8, val & 0xff };
+static int opt3001_reg_write(uint8_t reg, uint16_t val) {
+  uint8_t tx_buf[3] = {reg, val >> 8, val & 0xff};
   int ret;
 
   if (!device_is_ready(opt3001_i2c_device.bus)) {
@@ -88,8 +86,7 @@ static int opt3001_reg_write(uint8_t reg, uint16_t val)
   return 0;
 }
 
-static int opt3001_reg_update(uint8_t reg, uint16_t mask, uint16_t val)
-{
+static int opt3001_reg_update(uint8_t reg, uint16_t mask, uint16_t val) {
   uint16_t old_val;
   uint16_t new_val;
 
@@ -103,8 +100,7 @@ static int opt3001_reg_update(uint8_t reg, uint16_t mask, uint16_t val)
   return opt3001_reg_write(reg, new_val);
 }
 
-int opt3007_read(int arg)
-{
+int opt3007_read(int arg) {
   uint16_t value;
 
   if (!opt3007_ready) {
@@ -116,8 +112,7 @@ int opt3007_read(int arg)
   return (value & OPT3001_MANTISSA_MASK) << (value >> OPT3001_SAMPLE_EXPONENT_SHIFT);
 }
 
-static uint8_t als_lux_to_level(int lux)
-{
+static uint8_t als_lux_to_level(int lux) {
   uint8_t level;
 
   if (lux < 50) {
@@ -159,8 +154,7 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* ctx is unus
     return 0xff;
   }
 
-  if (get_dashboard_state()->luminance_curve == 0 ||
-      get_dashboard_state()->luminance_curve == -1 ||
+  if (get_dashboard_state()->luminance_curve == 0 || get_dashboard_state()->luminance_curve == -1 ||
       get_dashboard_state()->luminance_curve <= 60000) {
     return als_lux_to_level(lux);
   }
@@ -168,59 +162,58 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) /* ctx is unus
   l = lux * (get_dashboard_state()->luminance_curve / 1000000.0);
   level = als_level;
   switch (level) {
-  case 0:
-    if (l > 2.4) {
-      level = 3;
-    }
-    break;
-  case 3:
-    if (l > 6.0) {
-      level = 6;
-    } else if (l < 1.6) {
-      level = 0;
-    }
-    break;
-  case 6:
-    if (l > 12.0) {
-      level = 12;
-    } else if (l < 4.0) {
-      level = 3;
-    }
-    break;
-  case 12:
-    if (l > 120.0) {
-      level = 19;
-    } else if (l < 8.0) {
-      level = 6;
-    }
-    break;
-  case 19:
-    if (l > 496.0) {
-      level = 26;
-    } else if (l < 75.0) {
-      level = 12;
-    }
-    break;
-  case 26:
-    if (l > 1440.0) {
-      level = 42;
-    } else if (l < 372.0) {
-      level = 19;
-    }
-    break;
-  case 42:
-    if (l < 960.0) {
-      level = 26;
-    }
-    break;
+    case 0:
+      if (l > 2.4) {
+        level = 3;
+      }
+      break;
+    case 3:
+      if (l > 6.0) {
+        level = 6;
+      } else if (l < 1.6) {
+        level = 0;
+      }
+      break;
+    case 6:
+      if (l > 12.0) {
+        level = 12;
+      } else if (l < 4.0) {
+        level = 3;
+      }
+      break;
+    case 12:
+      if (l > 120.0) {
+        level = 19;
+      } else if (l < 8.0) {
+        level = 6;
+      }
+      break;
+    case 19:
+      if (l > 496.0) {
+        level = 26;
+      } else if (l < 75.0) {
+        level = 12;
+      }
+      break;
+    case 26:
+      if (l > 1440.0) {
+        level = 42;
+      } else if (l < 372.0) {
+        level = 19;
+      }
+      break;
+    case 42:
+      if (l < 960.0) {
+        level = 26;
+      }
+      break;
   }
   als_level = level;
 
   return level;
 }
 
-int opt3007_get_max_lux(void)
-{
+int opt3007_get_max_lux(void) {
   int lux;
   double max_lux;
 
@@ -232,13 +225,11 @@ int opt3007_get_max_lux(void)
     return lux;
   }
   max_lux = (double)((int64_t)lux * get_dashboard_state()->luminance_curve) / 1000000.0;
-  G1_LOG_INF("opt3007_get_max_lux %d %f luminance_curve_a0 %d\n", lux, max_lux,
-       get_dashboard_state()->luminance_curve);
+  G1_LOG_INF("opt3007_get_max_lux %d %f luminance_curve_a0 %d\n", lux, max_lux, get_dashboard_state()->luminance_curve);
   return (int)max_lux;
 }
 
-int opt3007_chip_init(struct opt3007_context *ctx)
-{
+int opt3007_chip_init(struct opt3007_context *ctx) {
   uint16_t value = 0;
 
   if (ctx == NULL) {
@@ -268,8 +259,7 @@ int opt3007_chip_init(struct opt3007_context *ctx)
     return -ENOTSUP;
   }
 
-  if (opt3001_reg_update(OPT3001_REG_CONFIG, OPT3001_CONVERSION_MODE_MASK,
-             OPT3001_CONVERSION_MODE_CONTINUOUS) != 0) {
+  if (opt3001_reg_update(OPT3001_REG_CONFIG, OPT3001_CONVERSION_MODE_MASK, OPT3001_CONVERSION_MODE_CONTINUOUS) != 0) {
     G1_LOG_ERR("opt3007 Failed to set mode to continuous conversion\n");
     return -EIO;
   }
@@ -282,8 +272,7 @@ int opt3007_chip_init(struct opt3007_context *ctx)
   return 0;
 }
 
-void opt3007_chip_deinit(void)
-{
+void opt3007_chip_deinit(void) {
   if (opt3007_ctx != NULL) {
     opt3007_ctx->ready = 0;
   }
@@ -291,14 +280,12 @@ void opt3007_chip_deinit(void)
   opt3007_ready = false;
 }
 
-void register_opt3007_context(struct opt3007_context *ctx)
-{
+void register_opt3007_context(struct opt3007_context *ctx) {
   ctx->init_cb = opt3007_chip_init;
   ctx->read_cb = opt3007_read;
 }
 
-int enable_power_for_panel(void)
-{
+int enable_power_for_panel(void) {
   int ret;
 
   ret = mfd_npm1300_reg_write(NPM_MFD(PMIC_LDO1), 0x08, 0x00, 1);
@@ -311,8 +298,7 @@ int enable_power_for_panel(void)
   return 0;
 }
 
-int disable_power_for_panel(void)
-{
+int disable_power_for_panel(void) {
   int ret;
 
   ret = mfd_npm1300_reg_write(NPM_MFD(PMIC_LDO1), 0x08, 0x01, 1);

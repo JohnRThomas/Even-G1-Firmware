@@ -4,8 +4,8 @@
  */
 #include <errno.h>
 
-#include "harness.h"
 #include "ble/ble_proto.h"
+#include "harness.h"
 
 /* NULL unless the suite links ble/ble_proto.c */
 #pragma weak ble_handle_rx_data
@@ -22,8 +22,7 @@ static int frame_count;
 static int frames_dropped;
 int g1_write_ret;
 
-int g1_frame_capture(const uint8_t *data, uint16_t len)
-{
+int g1_frame_capture(const uint8_t *data, uint16_t len) {
   struct g1_frame *frame;
 
   if (frame_count == G1_FRAME_MAX) {
@@ -38,13 +37,11 @@ int g1_frame_capture(const uint8_t *data, uint16_t len)
   return g1_write_ret;
 }
 
-int g1_frame_count(void)
-{
+int g1_frame_count(void) {
   return frame_count;
 }
 
-int g1_frame_pop(uint8_t *buf, size_t cap)
-{
+int g1_frame_pop(uint8_t *buf, size_t cap) {
   struct g1_frame *frame;
 
   if (frame_count == 0) {
@@ -57,8 +54,7 @@ int g1_frame_pop(uint8_t *buf, size_t cap)
   return frame->len;
 }
 
-const uint8_t *g1_frame_peek(int index, size_t *len)
-{
+const uint8_t *g1_frame_peek(int index, size_t *len) {
   struct g1_frame *frame;
 
   if (index < 0 || index >= frame_count) {
@@ -71,15 +67,13 @@ const uint8_t *g1_frame_peek(int index, size_t *len)
   return frame->data;
 }
 
-void g1_frames_clear(void)
-{
+void g1_frames_clear(void) {
   frame_head = 0;
   frame_count = 0;
   frames_dropped = 0;
 }
 
-static int hex_value(char digit)
-{
+static int hex_value(char digit) {
   if (digit >= '0' && digit <= '9') {
     return digit - '0';
   }
@@ -92,8 +86,7 @@ static int hex_value(char digit)
   return -1;
 }
 
-static int hex_parse_range(const char *text, const char *end, uint8_t *buf, size_t cap)
-{
+static int hex_parse_range(const char *text, const char *end, uint8_t *buf, size_t cap) {
   size_t count = 0;
 
   while (text < end) {
@@ -103,13 +96,11 @@ static int hex_parse_range(const char *text, const char *end, uint8_t *buf, size
       }
       continue;
     }
-    if (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n' ||
-        *text == ',' || *text == ':') {
+    if (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n' || *text == ',' || *text == ':') {
       text++;
       continue;
     }
-    if (text[0] == '0' && (text[1] == 'x' || text[1] == 'X') &&
-        hex_value(text[2]) >= 0 && hex_value(text[3]) >= 0) {
+    if (text[0] == '0' && (text[1] == 'x' || text[1] == 'X') && hex_value(text[2]) >= 0 && hex_value(text[3]) >= 0) {
       text += 2;
     }
     if (hex_value(text[0]) < 0 || hex_value(text[1]) < 0) {
@@ -124,21 +115,18 @@ static int hex_parse_range(const char *text, const char *end, uint8_t *buf, size
   return (int)count;
 }
 
-int g1_hex_parse(const char *text, uint8_t *buf, size_t cap)
-{
+int g1_hex_parse(const char *text, uint8_t *buf, size_t cap) {
   return hex_parse_range(text, text + strlen(text), buf, cap);
 }
 
-int g1_hex(const char *hex, uint8_t *buf, size_t cap)
-{
+int g1_hex(const char *hex, uint8_t *buf, size_t cap) {
   int len = g1_hex_parse(hex, buf, cap);
 
   zassert_true(len >= 0, "bad hex \"%s\" (%d)", hex, len);
   return len;
 }
 
-void g1_hex_format(const uint8_t *buf, size_t len, char *out, size_t out_size)
-{
+void g1_hex_format(const uint8_t *buf, size_t len, char *out, size_t out_size) {
   size_t used = 0;
 
   if (out_size == 0) {
@@ -156,16 +144,14 @@ void g1_hex_format(const uint8_t *buf, size_t len, char *out, size_t out_size)
 
 extern const struct g1_unit_file g1_vectors[];
 
-static const char *next_line(const char *text)
-{
+static const char *next_line(const char *text) {
   const char *newline = strchr(text, '\n');
 
   return newline ? newline + 1 : text + strlen(text);
 }
 
 /* True if the line is the title "# <tag>" */
-static bool is_vector_title(const char *line, const char *tag, size_t len)
-{
+static bool is_vector_title(const char *line, const char *tag, size_t len) {
   if (*line++ != '#') {
     return false;
   }
@@ -186,10 +172,9 @@ static bool is_vector_title(const char *line, const char *tag, size_t len)
  * "0x<id>_<tag>" is the packet titled "# <tag>" whose first byte is <id>. A packet is the data
  * lines between its title and the next comment line.
  */
-int g1_vector_load(const char *name, uint8_t *buf, size_t cap)
-{
-  if (name[0] != '0' || name[1] != 'x' || hex_value(name[2]) < 0 || hex_value(name[3]) < 0 ||
-      name[4] != '_' || name[5] == '\0') {
+int g1_vector_load(const char *name, uint8_t *buf, size_t cap) {
+  if (name[0] != '0' || name[1] != 'x' || hex_value(name[2]) < 0 || hex_value(name[3]) < 0 || name[4] != '_' ||
+      name[5] == '\0') {
     return -ENOENT;
   }
   int id = hex_value(name[2]) << 4 | hex_value(name[3]);
@@ -218,8 +203,7 @@ int g1_vector_load(const char *name, uint8_t *buf, size_t cap)
   return -ENOENT;
 }
 
-int g1_vector(const char *name, uint8_t *buf, size_t cap)
-{
+int g1_vector(const char *name, uint8_t *buf, size_t cap) {
   int len = g1_vector_load(name, buf, cap);
 
   zassert_true(len > 0, "vector %s: %d (tests/unit/vectors/*.hex)", name, len);
@@ -237,23 +221,20 @@ int g1_vector(const char *name, uint8_t *buf, size_t cap)
 #define REPORT_LEAD  16
 
 /* len is a length up to max; else msg tells a negative length (an error code) from a long one */
-static bool length_ok(const char *what, size_t len, size_t max, char *msg, size_t msg_size)
-{
+static bool length_ok(const char *what, size_t len, size_t max, char *msg, size_t msg_size) {
   if (len <= max) {
     return true;
   }
   if ((long)len < 0) {
     snprintf(msg, msg_size, "%s length %ld is negative", what, (long)len);
   } else {
-    snprintf(msg, msg_size, "%s length %lu is more than %lu", what, (unsigned long)len,
-       (unsigned long)max);
+    snprintf(msg, msg_size, "%s length %lu is more than %lu", what, (unsigned long)len, (unsigned long)max);
   }
   return false;
 }
 
 /* the hex of buf[start..len), cut after REPORT_BYTES; "from byte N:" first when start > 0 */
-static void report_window(const uint8_t *buf, size_t len, size_t start, char *out, size_t out_size)
-{
+static void report_window(const uint8_t *buf, size_t len, size_t start, char *out, size_t out_size) {
   size_t shown = MIN(len - start, REPORT_BYTES);
   size_t used = 0;
 
@@ -267,9 +248,8 @@ static void report_window(const uint8_t *buf, size_t len, size_t start, char *ou
   }
 }
 
-bool g1_bytes_check(const uint8_t *got, size_t got_len, const uint8_t *want, size_t want_len,
-        char *msg, size_t msg_size)
-{
+bool g1_bytes_check(const uint8_t *got, size_t got_len, const uint8_t *want, size_t want_len, char *msg,
+                    size_t msg_size) {
   static char want_text[G1_MSG_SIZE / 2 - 64];
   static char got_text[G1_MSG_SIZE / 2 - 64];
   size_t first_diff = 0;
@@ -290,15 +270,12 @@ bool g1_bytes_check(const uint8_t *got, size_t got_len, const uint8_t *want, siz
   }
   report_window(want, want_len, start, want_text, sizeof(want_text));
   report_window(got, got_len, start, got_text, sizeof(got_text));
-  snprintf(msg, msg_size,
-     "differs at byte %u\n  expected (%u bytes) %s\n  got      (%u bytes) %s",
-     (unsigned int)first_diff, (unsigned int)want_len, want_text, (unsigned int)got_len,
-     got_text);
+  snprintf(msg, msg_size, "differs at byte %u\n  expected (%u bytes) %s\n  got      (%u bytes) %s",
+           (unsigned int)first_diff, (unsigned int)want_len, want_text, (unsigned int)got_len, got_text);
   return false;
 }
 
-bool g1_hex_check(const void *got, size_t len, const char *hex, char *msg, size_t msg_size)
-{
+bool g1_hex_check(const void *got, size_t len, const char *hex, char *msg, size_t msg_size) {
   static uint8_t want[G1_FRAME_SIZE];
   int want_len = g1_hex_parse(hex, want, sizeof(want));
 
@@ -313,9 +290,7 @@ bool g1_hex_check(const void *got, size_t len, const char *hex, char *msg, size_
   return g1_bytes_check(got, len, want, want_len, msg, msg_size);
 }
 
-bool g1_fill_check(const void *buf, size_t len, uint8_t value, const char *what, char *msg,
-       size_t msg_size)
-{
+bool g1_fill_check(const void *buf, size_t len, uint8_t value, const char *what, char *msg, size_t msg_size) {
   const uint8_t *bytes = buf;
 
   if (!length_ok(what, len, LENGTH_MAX, msg, msg_size)) {
@@ -323,16 +298,15 @@ bool g1_fill_check(const void *buf, size_t len, uint8_t value, const char *what,
   }
   for (size_t offset = 0; offset < len; offset++) {
     if (bytes[offset] != value) {
-      snprintf(msg, msg_size, "%s byte %u is 0x%02x, expected 0x%02x", what,
-         (unsigned int)offset, bytes[offset], value);
+      snprintf(msg, msg_size, "%s byte %u is 0x%02x, expected 0x%02x", what, (unsigned int)offset, bytes[offset],
+               value);
       return false;
     }
   }
   return true;
 }
 
-bool g1_frame_check(const char *hex, int pad_to, char *msg, size_t msg_size)
-{
+bool g1_frame_check(const char *hex, int pad_to, char *msg, size_t msg_size) {
   static uint8_t want[G1_FRAME_SIZE];
   int len = g1_hex_parse(hex, want, sizeof(want));
 
@@ -342,8 +316,7 @@ bool g1_frame_check(const char *hex, int pad_to, char *msg, size_t msg_size)
   }
   if (pad_to >= 0) {
     if (len > pad_to || pad_to > (int)sizeof(want)) {
-      snprintf(msg, msg_size,
-         "expected hex has %d bytes, more than the padded %d", len, pad_to);
+      snprintf(msg, msg_size, "expected hex has %d bytes, more than the padded %d", len, pad_to);
       return false;
     }
     memset(want + len, 0, pad_to - len);
@@ -352,8 +325,7 @@ bool g1_frame_check(const char *hex, int pad_to, char *msg, size_t msg_size)
   return g1_frame_check_bytes(want, len, msg, msg_size);
 }
 
-bool g1_frame_check_bytes(const uint8_t *want, size_t len, char *msg, size_t msg_size)
-{
+bool g1_frame_check_bytes(const uint8_t *want, size_t len, char *msg, size_t msg_size) {
   static char want_text[G1_MSG_SIZE / 2 - 64];
   static char diff[G1_MSG_SIZE];
   uint8_t got[G1_FRAME_SIZE];
@@ -364,18 +336,15 @@ bool g1_frame_check_bytes(const uint8_t *want, size_t len, char *msg, size_t msg
   }
   g1_hex_format(want, len, want_text, sizeof(want_text));
   if (frames_dropped) {
-    snprintf(msg, msg_size, "frame queue overflowed (%d frames dropped) before %s",
-       frames_dropped, want_text);
+    snprintf(msg, msg_size, "frame queue overflowed (%d frames dropped) before %s", frames_dropped, want_text);
     return false;
   }
   if (frame_count == 0) {
-    snprintf(msg, msg_size, "no frame sent; expected (%u bytes) %s", (unsigned int)len,
-       want_text);
+    snprintf(msg, msg_size, "no frame sent; expected (%u bytes) %s", (unsigned int)len, want_text);
     return false;
   }
   if (frames[frame_head].sent > G1_FRAME_SIZE) {
-    snprintf(msg, msg_size, "frame of %u bytes is longer than G1_FRAME_SIZE",
-       frames[frame_head].sent);
+    snprintf(msg, msg_size, "frame of %u bytes is longer than G1_FRAME_SIZE", frames[frame_head].sent);
     return false;
   }
   got_len = g1_frame_pop(got, sizeof(got));
@@ -386,8 +355,7 @@ bool g1_frame_check_bytes(const uint8_t *want, size_t len, char *msg, size_t msg
   return false;
 }
 
-bool g1_frame_check_none(char *msg, size_t msg_size)
-{
+bool g1_frame_check_none(char *msg, size_t msg_size) {
   char text[256];
   size_t len;
   const uint8_t *frame;
@@ -401,13 +369,11 @@ bool g1_frame_check_none(char *msg, size_t msg_size)
     return false;
   }
   g1_hex_format(frame, len, text, sizeof(text));
-  snprintf(msg, msg_size, "expected no frame, %d queued; first (%u bytes) %s", frame_count,
-     (unsigned int)len, text);
+  snprintf(msg, msg_size, "expected no frame, %d queued; first (%u bytes) %s", frame_count, (unsigned int)len, text);
   return false;
 }
 
-void g1_pkt_log_add(struct g1_pkt_log *log, const void *data, size_t len)
-{
+void g1_pkt_log_add(struct g1_pkt_log *log, const void *data, size_t len) {
   if (log->count == G1_PKT_LOG_MAX) {
     log->dropped++;
     return;
@@ -417,25 +383,21 @@ void g1_pkt_log_add(struct g1_pkt_log *log, const void *data, size_t len)
   log->count++;
 }
 
-void g1_pkt_log_clear(struct g1_pkt_log *log)
-{
+void g1_pkt_log_clear(struct g1_pkt_log *log) {
   log->count = 0;
   log->dropped = 0;
 }
 
-bool g1_pkt_check(const struct g1_pkt_log *log, int index, const char *hex, char *msg,
-      size_t msg_size)
-{
+bool g1_pkt_check(const struct g1_pkt_log *log, int index, const char *hex, char *msg, size_t msg_size) {
   static char diff[G1_MSG_SIZE];
 
   if (index < 0 || index >= log->count) {
-    snprintf(msg, msg_size, "no packet %d (%d logged, %d dropped)", index, log->count,
-       log->dropped);
+    snprintf(msg, msg_size, "no packet %d (%d logged, %d dropped)", index, log->count, log->dropped);
     return false;
   }
   if (log->len[index] > G1_PKT_LOG_SIZE) {
-    snprintf(msg, msg_size, "packet %d has %u bytes; the log keeps %d", index,
-       (unsigned int)log->len[index], G1_PKT_LOG_SIZE);
+    snprintf(msg, msg_size, "packet %d has %u bytes; the log keeps %d", index, (unsigned int)log->len[index],
+             G1_PKT_LOG_SIZE);
     return false;
   }
   if (g1_hex_check(log->data[index], log->len[index], hex, diff, sizeof(diff))) {
@@ -445,14 +407,13 @@ bool g1_pkt_check(const struct g1_pkt_log *log, int index, const char *hex, char
   return false;
 }
 
-void g1_send(const uint8_t *buf, size_t len)
-{
+void g1_send(const uint8_t *buf, size_t len) {
   struct ble_context *ctx = g1_ble();
 
   zassert_not_null(ble_handle_rx_data, "g1_send() needs ble/ble_proto.c in FIRMWARE");
   /* As ble_work_thread(): short packets reuse small_buf without clearing it. */
-  zassert_true(len <= sizeof(ctx->rx_data), "packet of %u bytes: NUS rx holds %u",
-         (unsigned int)len, (unsigned int)sizeof(ctx->rx_data));
+  zassert_true(len <= sizeof(ctx->rx_data), "packet of %u bytes: NUS rx holds %u", (unsigned int)len,
+               (unsigned int)sizeof(ctx->rx_data));
   if (len > 20) {
     memcpy(ctx->rx_data, buf, len);
     ctx->rx_len = len;
@@ -468,22 +429,19 @@ void g1_send(const uint8_t *buf, size_t len)
   ctx->rx_pending = 0;
 }
 
-void g1_send_hex(const char *hex)
-{
+void g1_send_hex(const char *hex) {
   uint8_t buf[256];
 
   g1_send(buf, g1_hex(hex, buf, sizeof(buf)));
 }
 
-void g1_send_vector(const char *name)
-{
+void g1_send_vector(const char *name) {
   uint8_t buf[256];
 
   g1_send(buf, g1_vector(name, buf, sizeof(buf)));
 }
 
-int g1_send_vector_with(const char *name, int offset, uint8_t value)
-{
+int g1_send_vector_with(const char *name, int offset, uint8_t value) {
   uint8_t buf[256];
   int len = g1_vector(name, buf, sizeof(buf));
 
@@ -493,9 +451,8 @@ int g1_send_vector_with(const char *name, int offset, uint8_t value)
   return len;
 }
 
-size_t g1_put_chunk(uint8_t *pkt, uint8_t cmd, uint8_t seq, uint8_t sub, uint16_t total,
-        uint16_t index, const void *payload, size_t payload_len)
-{
+size_t g1_put_chunk(uint8_t *pkt, uint8_t cmd, uint8_t seq, uint8_t sub, uint16_t total, uint16_t index,
+                    const void *payload, size_t payload_len) {
   size_t len = G1_CHUNK_HDR_LEN + payload_len;
 
   memmove(&pkt[G1_CHUNK_HDR_LEN], payload, payload_len);
@@ -508,15 +465,13 @@ size_t g1_put_chunk(uint8_t *pkt, uint8_t cmd, uint8_t seq, uint8_t sub, uint16_
   return len;
 }
 
-void g1_fill_pattern(uint8_t *buf, size_t len, size_t start)
-{
+void g1_fill_pattern(uint8_t *buf, size_t len, size_t start) {
   for (size_t offset = 0; offset < len; offset++) {
     buf[offset] = (start + offset) & 0xff;
   }
 }
 
-uint8_t g1_sum8(const uint8_t *buf, size_t len)
-{
+uint8_t g1_sum8(const uint8_t *buf, size_t len) {
   uint8_t sum = 0;
 
   for (size_t offset = 0; offset < len; offset++) {

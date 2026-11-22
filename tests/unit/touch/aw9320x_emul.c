@@ -15,21 +15,21 @@
 
 #include "aw9320x_emul.h"
 
-#define SFR_BASE   0x4000
-#define SYS_BASE   0xff00
+#define SFR_BASE 0x4000
+#define SYS_BASE 0xff00
 
-#define RSTNALL_KEY      0x3c
-#define MCFG_CPU_HALT    BIT(16)
-#define HOSTCTRL_WAKE    BIT(0)
-#define UPDATA_DIS_JUMP  0xff000000u
-#define ERR_FW_CHECK     0x09
-#define PACK_HEADER      0x0002
-#define PACK_FIXED       12
+#define RSTNALL_KEY     0x3c
+#define MCFG_CPU_HALT   BIT(16)
+#define HOSTCTRL_WAKE   BIT(0)
+#define UPDATA_DIS_JUMP 0xff000000u
+#define ERR_FW_CHECK    0x09
+#define PACK_HEADER     0x0002
+#define PACK_FIXED      12
 
-#define MODULE_UPDATE    0x01
-#define MODULE_FLASH     0x02
-#define UPDATE_START     0x01
-#define UPDATE_TRANSFER  0x02
+#define MODULE_UPDATE      0x01
+#define MODULE_FLASH       0x02
+#define UPDATE_START       0x01
+#define UPDATE_TRANSFER    0x02
 #define FLASH_ERASE_SECTOR 0x02
 
 /* INT is wired to sw0 */
@@ -38,8 +38,7 @@ static const struct gpio_dt_spec int_gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sw0), 
 static struct aw9320x_emul_data aw9320x_data;
 
 /* the SFR or SYS register word at addr, NULL elsewhere (SRAM is bytes) */
-static uint32_t *word_of(struct aw9320x_emul_data *data, uint16_t addr)
-{
+static uint32_t *word_of(struct aw9320x_emul_data *data, uint16_t addr) {
   if (addr >= SFR_BASE && addr < SFR_BASE + sizeof(data->sfr)) {
     return &data->sfr[(addr - SFR_BASE) / 4];
   }
@@ -50,8 +49,7 @@ static uint32_t *word_of(struct aw9320x_emul_data *data, uint16_t addr)
 }
 
 /* no side effects (IRQSRC not cleared) */
-static uint32_t value_of(struct aw9320x_emul_data *data, uint16_t addr)
-{
+static uint32_t value_of(struct aw9320x_emul_data *data, uint16_t addr) {
   uint32_t *word;
 
   addr &= ~3u;
@@ -74,8 +72,7 @@ static uint32_t value_of(struct aw9320x_emul_data *data, uint16_t addr)
   return word ? *word : 0;
 }
 
-static void store(struct aw9320x_emul_data *data, uint16_t addr, uint32_t val)
-{
+static void store(struct aw9320x_emul_data *data, uint16_t addr, uint32_t val) {
   uint32_t *word;
 
   addr &= ~3u;
@@ -89,8 +86,7 @@ static void store(struct aw9320x_emul_data *data, uint16_t addr, uint32_t val)
   }
 }
 
-static void drive_int(struct aw9320x_emul_data *data)
-{
+static void drive_int(struct aw9320x_emul_data *data) {
   gpio_flags_t flags;
 
   if (gpio_emul_flags_get(int_gpio.port, int_gpio.pin, &flags) == 0 && (flags & GPIO_INPUT)) {
@@ -99,8 +95,7 @@ static void drive_int(struct aw9320x_emul_data *data)
 }
 
 /* call last: a GPIO callback may switch threads */
-static void update_int(struct aw9320x_emul_data *data)
-{
+static void update_int(struct aw9320x_emul_data *data) {
   bool low = data->irqsrc != 0;
 
   if (low != data->int_low) {
@@ -109,22 +104,19 @@ static void update_int(struct aw9320x_emul_data *data)
   }
 }
 
-static bool fw_valid(const struct aw9320x_emul_data *data)
-{
+static bool fw_valid(const struct aw9320x_emul_data *data) {
   return sys_get_be32(&data->flash[AW9320X_EMUL_CHECK_EN_ADDR]) == AW9320X_EMUL_CHECK_EN;
 }
 
-static void set_wst(struct aw9320x_emul_data *data)
-{
+static void set_wst(struct aw9320x_emul_data *data) {
   uint32_t wst = data->mode == AW9320X_EMUL_CMD_ACTIVE  ? AW9320X_EMUL_WST_ACTIVE
-           : data->mode == AW9320X_EMUL_CMD_SLEEP ? AW9320X_EMUL_WST_SLEEP
-                    : AW9320X_EMUL_WST_DEEPSLEEP;
+                 : data->mode == AW9320X_EMUL_CMD_SLEEP ? AW9320X_EMUL_WST_SLEEP
+                                                        : AW9320X_EMUL_WST_DEEPSLEEP;
 
   store(data, AW9320X_EMUL_REG_WST, wst);
 }
 
-static void init_done(struct aw9320x_emul_data *data)
-{
+static void init_done(struct aw9320x_emul_data *data) {
   data->init_due = -1;
   if (!fw_valid(data)) {
     data->state = AW9320X_EMUL_BOOT_FAILED;
@@ -139,21 +131,18 @@ static void init_done(struct aw9320x_emul_data *data)
   data->irqsrc |= AW9320X_EMUL_IRQ_INIT;
 }
 
-static void advance(struct aw9320x_emul_data *data, int64_t now)
-{
+static void advance(struct aw9320x_emul_data *data, int64_t now) {
   if (data->state == AW9320X_EMUL_INIT && data->init_due >= 0 && now >= data->init_due) {
     init_done(data);
   }
 }
 
-static void start_init(struct aw9320x_emul_data *data, int64_t now)
-{
+static void start_init(struct aw9320x_emul_data *data, int64_t now) {
   data->state = AW9320X_EMUL_INIT;
   data->init_due = now + AW9320X_EMUL_TINIT_MS;
 }
 
-static void soft_reset(struct aw9320x_emul_data *data, int64_t now)
-{
+static void soft_reset(struct aw9320x_emul_data *data, int64_t now) {
   data->soft_resets++;
   memset(data->sram, 0, sizeof(data->sram));
   memset(data->sfr, 0, sizeof(data->sfr));
@@ -162,8 +151,7 @@ static void soft_reset(struct aw9320x_emul_data *data, int64_t now)
   start_init(data, now);
 }
 
-static void enter_boot_loader(struct aw9320x_emul_data *data)
-{
+static void enter_boot_loader(struct aw9320x_emul_data *data) {
   data->state = AW9320X_EMUL_BOOT_LOADER;
   data->init_due = -1;
   store(data, AW9320X_EMUL_REG_UPDATA_DIS,
@@ -177,22 +165,17 @@ static void enter_boot_loader(struct aw9320x_emul_data *data)
 }
 
 /* NOR programming only clears bits */
-static void flash_program(struct aw9320x_emul_data *data, uint32_t offset, const uint8_t *src,
-        size_t len)
-{
+static void flash_program(struct aw9320x_emul_data *data, uint32_t offset, const uint8_t *src, size_t len) {
   for (size_t index = 0; index < len; index++) {
     data->flash[offset + index] &= src[index];
   }
 }
 
-static void flash_erase_sector(struct aw9320x_emul_data *data, uint32_t offset)
-{
-  memset(&data->flash[offset & ~(AW9320X_EMUL_SECTOR_SIZE - 1u)], 0xff,
-         AW9320X_EMUL_SECTOR_SIZE);
+static void flash_erase_sector(struct aw9320x_emul_data *data, uint32_t offset) {
+  memset(&data->flash[offset & ~(AW9320X_EMUL_SECTOR_SIZE - 1u)], 0xff, AW9320X_EMUL_SECTOR_SIZE);
 }
 
-static void isp_go(struct aw9320x_emul_data *data)
-{
+static void isp_go(struct aw9320x_emul_data *data) {
   uint32_t cmd = value_of(data, AW9320X_EMUL_REG_ISPCMD) & 0xff;
   uint32_t offset = value_of(data, AW9320X_EMUL_REG_ISPADR) & ~3u;
   uint8_t word[4];
@@ -202,24 +185,22 @@ static void isp_go(struct aw9320x_emul_data *data)
     return;
   }
   switch (cmd) {
-  case AW9320X_EMUL_ISP_READ:
-    store(data, AW9320X_EMUL_REG_ISPRDATA, sys_get_be32(&data->flash[offset]));
-    break;
-  case AW9320X_EMUL_ISP_PROGRAM:
-    sys_put_be32(value_of(data, AW9320X_EMUL_REG_ISPWDATA), word);
-    flash_program(data, offset, word, sizeof(word));
-    break;
-  case AW9320X_EMUL_ISP_ERASE:
-    flash_erase_sector(data, offset);
-    break;
-  default:
-    break;
+    case AW9320X_EMUL_ISP_READ:
+      store(data, AW9320X_EMUL_REG_ISPRDATA, sys_get_be32(&data->flash[offset]));
+      break;
+    case AW9320X_EMUL_ISP_PROGRAM:
+      sys_put_be32(value_of(data, AW9320X_EMUL_REG_ISPWDATA), word);
+      flash_program(data, offset, word, sizeof(word));
+      break;
+    case AW9320X_EMUL_ISP_ERASE:
+      flash_erase_sector(data, offset);
+      break;
+    default:
+      break;
   }
 }
 
-static uint32_t pack_checksum(uint8_t module, uint8_t command, uint16_t length,
-            const uint8_t *value)
-{
+static uint32_t pack_checksum(uint8_t module, uint8_t command, uint16_t length, const uint8_t *value) {
   uint32_t sum = module + command + length;
 
   for (uint32_t pos = 0; pos < length; pos += 4) {
@@ -228,18 +209,15 @@ static uint32_t pack_checksum(uint8_t module, uint8_t command, uint16_t length,
   return ~sum + 1;
 }
 
-static int32_t flash_offset(uint32_t addr, uint32_t len)
-{
-  if (addr < AW9320X_EMUL_FLASH_BASE ||
-      addr - AW9320X_EMUL_FLASH_BASE + len > AW9320X_EMUL_FLASH_SIZE) {
+static int32_t flash_offset(uint32_t addr, uint32_t len) {
+  if (addr < AW9320X_EMUL_FLASH_BASE || addr - AW9320X_EMUL_FLASH_BASE + len > AW9320X_EMUL_FLASH_SIZE) {
     return -1;
   }
   return (int32_t)(addr - AW9320X_EMUL_FLASH_BASE);
 }
 
-static void parse_packet(struct aw9320x_emul_data *data)
-{
-  struct aw9320x_emul_cmd cmd = { 0 };
+static void parse_packet(struct aw9320x_emul_data *data) {
+  struct aw9320x_emul_cmd cmd = {0};
   uint32_t pkt = value_of(data, AW9320X_EMUL_REG_CMD_PACK) - AW9320X_EMUL_SRAM_BASE;
   uint8_t *ack = &data->sram[AW9320X_EMUL_ACK_ADDR];
   const uint8_t *packet;
@@ -253,18 +231,15 @@ static void parse_packet(struct aw9320x_emul_data *data)
     cmd.module = packet[8];
     cmd.command = packet[9];
     cmd.length = sys_get_be16(&packet[10]);
-    if (sys_get_be16(&packet[0]) == PACK_HEADER &&
-        sys_get_be16(&packet[2]) == PACK_FIXED + cmd.length &&
+    if (sys_get_be16(&packet[0]) == PACK_HEADER && sys_get_be16(&packet[2]) == PACK_FIXED + cmd.length &&
         cmd.length <= AW9320X_EMUL_SRAM_SIZE - PACK_FIXED - pkt &&
-        sys_get_be32(&packet[4]) ==
-          pack_checksum(cmd.module, cmd.command, cmd.length, value)) {
+        sys_get_be32(&packet[4]) == pack_checksum(cmd.module, cmd.command, cmd.length, value)) {
       cmd.status = AW9320X_EMUL_STATUS_UNKNOWN;
       if (data->cmds == data->fail_cmd) {
         cmd.status = AW9320X_EMUL_STATUS_INJECTED;
       } else if (cmd.module == MODULE_UPDATE && cmd.command == UPDATE_START) {
         cmd.status = 0;
-      } else if (cmd.module == MODULE_FLASH &&
-           cmd.command == FLASH_ERASE_SECTOR && cmd.length == 4) {
+      } else if (cmd.module == MODULE_FLASH && cmd.command == FLASH_ERASE_SECTOR && cmd.length == 4) {
         cmd.addr = sys_get_be32(value);
         offset = flash_offset(cmd.addr, 1);
         cmd.status = AW9320X_EMUL_STATUS_BAD_ADDR;
@@ -272,8 +247,7 @@ static void parse_packet(struct aw9320x_emul_data *data)
           flash_erase_sector(data, offset);
           cmd.status = 0;
         }
-      } else if (cmd.module == MODULE_UPDATE && cmd.command == UPDATE_TRANSFER &&
-           cmd.length >= 8) {
+      } else if (cmd.module == MODULE_UPDATE && cmd.command == UPDATE_TRANSFER && cmd.length >= 8) {
         cmd.seq = sys_get_be32(value);
         cmd.addr = sys_get_be32(value + 4);
         offset = flash_offset(cmd.addr, cmd.length - 8);
@@ -303,8 +277,7 @@ static void parse_packet(struct aw9320x_emul_data *data)
   }
 }
 
-static void set_mode(struct aw9320x_emul_data *data, uint32_t mode)
-{
+static void set_mode(struct aw9320x_emul_data *data, uint32_t mode) {
   if (data->mode == AW9320X_EMUL_CMD_DEEPSLEEP && !data->host_wake) {
     return; /* asleep until HOSTCTRL1 wake */
   }
@@ -315,32 +288,29 @@ static void set_mode(struct aw9320x_emul_data *data, uint32_t mode)
   set_wst(data);
 }
 
-static void cmd_write(struct aw9320x_emul_data *data, uint32_t val)
-{
+static void cmd_write(struct aw9320x_emul_data *data, uint32_t val) {
   switch (data->state) {
-  case AW9320X_EMUL_APP:
-    if (val == AW9320X_EMUL_CMD_ONLINE_UPGRADE) {
-      enter_boot_loader(data);
-    } else if (val >= AW9320X_EMUL_CMD_ACTIVE && val <= AW9320X_EMUL_CMD_DEEPSLEEP) {
-      set_mode(data, val);
-    }
-    break;
-  case AW9320X_EMUL_BOOT_FAILED:
-  case AW9320X_EMUL_BOOT_LOADER:
-    if (val == AW9320X_EMUL_CMD_ONLINE_UPGRADE) {
-      enter_boot_loader(data);
-    } else if (val == AW9320X_EMUL_CMD_PARSE &&
-         data->state == AW9320X_EMUL_BOOT_LOADER) {
-      parse_packet(data);
-    }
-    break;
-  default:
-    break;
+    case AW9320X_EMUL_APP:
+      if (val == AW9320X_EMUL_CMD_ONLINE_UPGRADE) {
+        enter_boot_loader(data);
+      } else if (val >= AW9320X_EMUL_CMD_ACTIVE && val <= AW9320X_EMUL_CMD_DEEPSLEEP) {
+        set_mode(data, val);
+      }
+      break;
+    case AW9320X_EMUL_BOOT_FAILED:
+    case AW9320X_EMUL_BOOT_LOADER:
+      if (val == AW9320X_EMUL_CMD_ONLINE_UPGRADE) {
+        enter_boot_loader(data);
+      } else if (val == AW9320X_EMUL_CMD_PARSE && data->state == AW9320X_EMUL_BOOT_LOADER) {
+        parse_packet(data);
+      }
+      break;
+    default:
+      break;
   }
 }
 
-static void mcfg_write(struct aw9320x_emul_data *data, uint32_t val, int64_t now)
-{
+static void mcfg_write(struct aw9320x_emul_data *data, uint32_t val, int64_t now) {
   if (val & MCFG_CPU_HALT) {
     data->state = AW9320X_EMUL_HALTED;
     data->init_due = -1;
@@ -354,8 +324,7 @@ static void mcfg_write(struct aw9320x_emul_data *data, uint32_t val, int64_t now
   }
 }
 
-static void reg_write(struct aw9320x_emul_data *data, uint16_t addr, uint32_t val, int64_t now)
-{
+static void reg_write(struct aw9320x_emul_data *data, uint16_t addr, uint32_t val, int64_t now) {
   if (data->writes < AW9320X_EMUL_WRITE_LOG) {
     data->write_addr[data->writes] = addr;
     data->write_val[data->writes] = val;
@@ -368,34 +337,33 @@ static void reg_write(struct aw9320x_emul_data *data, uint16_t addr, uint32_t va
   }
   store(data, addr, val);
   switch (addr) {
-  case AW9320X_EMUL_REG_RSTNALL:
-    if (val == RSTNALL_KEY) {
-      soft_reset(data, now);
-    }
-    break;
-  case AW9320X_EMUL_REG_MCFG:
-    mcfg_write(data, val, now);
-    break;
-  case AW9320X_EMUL_REG_CMD:
-    cmd_write(data, val);
-    break;
-  case AW9320X_EMUL_REG_HOSTCTRL1:
-    if (val & HOSTCTRL_WAKE) {
-      data->host_wake = true;
-    }
-    break;
-  case AW9320X_EMUL_REG_ISPGO:
-    if (val & 1) {
-      isp_go(data);
-    }
-    break;
-  default:
-    break;
+    case AW9320X_EMUL_REG_RSTNALL:
+      if (val == RSTNALL_KEY) {
+        soft_reset(data, now);
+      }
+      break;
+    case AW9320X_EMUL_REG_MCFG:
+      mcfg_write(data, val, now);
+      break;
+    case AW9320X_EMUL_REG_CMD:
+      cmd_write(data, val);
+      break;
+    case AW9320X_EMUL_REG_HOSTCTRL1:
+      if (val & HOSTCTRL_WAKE) {
+        data->host_wake = true;
+      }
+      break;
+    case AW9320X_EMUL_REG_ISPGO:
+      if (val & 1) {
+        isp_go(data);
+      }
+      break;
+    default:
+      break;
   }
 }
 
-static uint32_t reg_read(struct aw9320x_emul_data *data, uint16_t addr, int64_t now)
-{
+static uint32_t reg_read(struct aw9320x_emul_data *data, uint16_t addr, int64_t now) {
   uint32_t value;
 
   advance(data, now);
@@ -406,8 +374,7 @@ static uint32_t reg_read(struct aw9320x_emul_data *data, uint16_t addr, int64_t 
   return value;
 }
 
-static bool nak_now(struct aw9320x_emul_data *data)
-{
+static bool nak_now(struct aw9320x_emul_data *data) {
   if (data->nak) {
     return true;
   }
@@ -422,9 +389,7 @@ static bool nak_now(struct aw9320x_emul_data *data)
   return false;
 }
 
-static int aw9320x_emul_transfer(const struct emul *target, struct i2c_msg *msgs, int num_msgs,
-         int addr)
-{
+static int aw9320x_emul_transfer(const struct emul *target, struct i2c_msg *msgs, int num_msgs, int addr) {
   struct aw9320x_emul_data *data = target->data;
   int64_t now = k_uptime_get();
   int ret = 0;
@@ -454,8 +419,7 @@ static int aw9320x_emul_transfer(const struct emul *target, struct i2c_msg *msgs
     }
     data->pointer = sys_get_be16(msg->buf);
     for (uint32_t pos = 2; pos + 4 <= msg->len; pos += 4) {
-      reg_write(data, data->pointer + (pos - 2), sys_get_be32(&msg->buf[pos]),
-          now);
+      reg_write(data, data->pointer + (pos - 2), sys_get_be32(&msg->buf[pos]), now);
     }
   }
   update_int(data);
@@ -466,8 +430,7 @@ static const struct i2c_emul_api aw9320x_emul_bus_api = {
   .transfer = aw9320x_emul_transfer,
 };
 
-static void power_on(struct aw9320x_emul_data *data)
-{
+static void power_on(struct aw9320x_emul_data *data) {
   memset(data, 0, sizeof(*data));
   data->chip_id = AW9320X_EMUL_CHIP_ID;
   data->fw_version = AW9320X_EMUL_FW_VERSION;
@@ -481,24 +444,20 @@ static void power_on(struct aw9320x_emul_data *data)
   init_done(data);
 }
 
-static int aw9320x_emul_init(const struct emul *target, const struct device *parent)
-{
+static int aw9320x_emul_init(const struct emul *target, const struct device *parent) {
   ARG_UNUSED(parent);
   power_on(target->data);
   return 0;
 }
 
-EMUL_DT_DEFINE(DT_NODELABEL(aw93203), aw9320x_emul_init, &aw9320x_data, NULL,
-         &aw9320x_emul_bus_api, NULL);
+EMUL_DT_DEFINE(DT_NODELABEL(aw93203), aw9320x_emul_init, &aw9320x_data, NULL, &aw9320x_emul_bus_api, NULL);
 
-struct aw9320x_emul_data *aw9320x_emul(void)
-{
+struct aw9320x_emul_data *aw9320x_emul(void) {
   advance(&aw9320x_data, k_uptime_get());
   return &aw9320x_data;
 }
 
-void aw9320x_emul_set_fw_version(uint32_t version)
-{
+void aw9320x_emul_set_fw_version(uint32_t version) {
   struct aw9320x_emul_data *data = aw9320x_emul();
 
   data->fw_version = version;
@@ -507,14 +466,12 @@ void aw9320x_emul_set_fw_version(uint32_t version)
   }
 }
 
-void aw9320x_emul_corrupt_fw(void)
-{
+void aw9320x_emul_corrupt_fw(void) {
   memset(&aw9320x_emul()->flash[AW9320X_EMUL_CHECK_EN_ADDR], 0xff, 4);
 }
 
 /* NAKs the next count transfers once cmds boot loader commands are done */
-void aw9320x_emul_nak_after_cmds(int cmds, int count)
-{
+void aw9320x_emul_nak_after_cmds(int cmds, int count) {
   struct aw9320x_emul_data *data = aw9320x_emul();
 
   data->nak_after_armed = true;
@@ -522,12 +479,11 @@ void aw9320x_emul_nak_after_cmds(int cmds, int count)
   data->nak_after_count = count;
 }
 
-bool aw9320x_emul_touch(bool down)
-{
+bool aw9320x_emul_touch(bool down) {
   struct aw9320x_emul_data *data = aw9320x_emul();
   uint32_t bit = down ? AW9320X_EMUL_IRQ_PROX : AW9320X_EMUL_IRQ_PROX_EXIT;
   bool latched = data->state == AW9320X_EMUL_APP && data->mode == AW9320X_EMUL_CMD_ACTIVE &&
-           (value_of(data, AW9320X_EMUL_REG_IRQEN) & bit);
+                 (value_of(data, AW9320X_EMUL_REG_IRQEN) & bit);
 
   data->touched = down;
   if (latched) {
@@ -537,29 +493,25 @@ bool aw9320x_emul_touch(bool down)
   return latched;
 }
 
-bool aw9320x_emul_int_asserted(void)
-{
+bool aw9320x_emul_int_asserted(void) {
   struct aw9320x_emul_data *data = aw9320x_emul();
 
   update_int(data);
   return data->int_low;
 }
 
-void aw9320x_emul_sync_int(void)
-{
+void aw9320x_emul_sync_int(void) {
   struct aw9320x_emul_data *data = aw9320x_emul();
 
   data->int_low = data->irqsrc != 0;
   drive_int(data);
 }
 
-uint32_t aw9320x_emul_get_reg(uint16_t addr)
-{
+uint32_t aw9320x_emul_get_reg(uint16_t addr) {
   return value_of(aw9320x_emul(), addr);
 }
 
-void aw9320x_emul_set_reg(uint16_t addr, uint32_t val)
-{
+void aw9320x_emul_set_reg(uint16_t addr, uint32_t val) {
   struct aw9320x_emul_data *data = aw9320x_emul();
 
   if ((addr & ~3u) == AW9320X_EMUL_REG_IRQSRC) {
@@ -572,14 +524,12 @@ void aw9320x_emul_set_reg(uint16_t addr, uint32_t val)
   update_int(data);
 }
 
-uint32_t aw9320x_emul_flash_word(uint32_t addr)
-{
+uint32_t aw9320x_emul_flash_word(uint32_t addr) {
   __ASSERT(addr + 4 <= AW9320X_EMUL_FLASH_SIZE, "flash word beyond 4000h");
   return sys_get_be32(&aw9320x_data.flash[addr]);
 }
 
-int aw9320x_emul_find_write(uint16_t addr, int from)
-{
+int aw9320x_emul_find_write(uint16_t addr, int from) {
   struct aw9320x_emul_data *data = &aw9320x_data;
 
   for (int index = MAX(from, 0); index < MIN(data->writes, AW9320X_EMUL_WRITE_LOG); index++) {
@@ -590,8 +540,7 @@ int aw9320x_emul_find_write(uint16_t addr, int from)
   return -1;
 }
 
-int aw9320x_emul_count_writes(uint16_t addr, uint32_t val)
-{
+int aw9320x_emul_count_writes(uint16_t addr, uint32_t val) {
   struct aw9320x_emul_data *data = &aw9320x_data;
   int count = 0;
 
@@ -603,8 +552,7 @@ int aw9320x_emul_count_writes(uint16_t addr, uint32_t val)
   return count;
 }
 
-static void aw9320x_emul_reset(bool keep_media)
-{
+static void aw9320x_emul_reset(bool keep_media) {
   ARG_UNUSED(keep_media);
   power_on(&aw9320x_data);
   drive_int(&aw9320x_data);

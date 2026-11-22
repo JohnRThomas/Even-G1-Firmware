@@ -6,11 +6,11 @@
 #include <string.h>
 #include <zephyr/kernel.h>
 
-#include "g1_log.h"
-#include "panel.h"
 #include "../main.h"
 #include "../notify/notify.h"
 #include "../sensors_audio/sensors_audio.h"
+#include "g1_log.h"
+#include "panel.h"
 
 static int JBD_LUM_REG_VAL;
 static int JBD_CUR_REG_VAL;
@@ -21,8 +21,7 @@ static int JBD_CUR_REG_VAL;
 int panel_off(struct jbd_panel_context *c);
 int panel_on(struct jbd_panel_context *c);
 
-int panel_set_brightness_level(struct jbd_panel_context *c, uint8_t level)
-{
+int panel_set_brightness_level(struct jbd_panel_context *c, uint8_t level) {
   if (c->panel_brightness_level != level) {
     c->panel_brightness_level = level;
     G1_LOG_INF("new: %d\n", level);
@@ -30,8 +29,7 @@ int panel_set_brightness_level(struct jbd_panel_context *c, uint8_t level)
   return level;
 }
 
-void set_brightness_to_panel_reg(uint8_t level)
-{
+void set_brightness_to_panel_reg(uint8_t level) {
   uint16_t lum;
   uint8_t cur;
 
@@ -49,8 +47,7 @@ void set_brightness_to_panel_reg(uint8_t level)
   delay_ms(1);
 }
 
-void wr_lum_and_cur_reg(uint16_t lum_value, uint8_t cur_value)
-{
+void wr_lum_and_cur_reg(uint16_t lum_value, uint8_t cur_value) {
   if (lum_value != JBD_LUM_REG_VAL) {
     wr_lum_reg(lum_value);
     JBD_LUM_REG_VAL = lum_value;
@@ -61,8 +58,7 @@ void wr_lum_and_cur_reg(uint16_t lum_value, uint8_t cur_value)
   }
 }
 
-void set_brightness_to_panel_reg_in_running(uint8_t level)
-{
+void set_brightness_to_panel_reg_in_running(uint8_t level) {
   uint16_t lum;
   uint8_t cur;
 
@@ -80,8 +76,7 @@ void set_brightness_to_panel_reg_in_running(uint8_t level)
   delay_ms(1);
 }
 
-int panel_suspend(struct jbd_panel_context *c)
-{
+int panel_suspend(struct jbd_panel_context *c) {
   c->spi_callbacks = PANEL_SPI(c);
   G1_LOG_INF("panel_suspend enter!\n");
   jbd_panel_suspend();
@@ -90,8 +85,7 @@ int panel_suspend(struct jbd_panel_context *c)
   return 0;
 }
 
-int panel_off(struct jbd_panel_context *c)
-{
+int panel_off(struct jbd_panel_context *c) {
   c->spi_callbacks = PANEL_SPI(c);
   if (PANEL_SPI(c)->is_initialized) {
     c->init_done = 0;
@@ -105,8 +99,7 @@ int panel_off(struct jbd_panel_context *c)
   return 0;
 }
 
-int panel_resume(struct jbd_panel_context *c)
-{
+int panel_resume(struct jbd_panel_context *c) {
   c->spi_callbacks = PANEL_SPI(c);
   if (!(CONTAINER_OF(c, struct GlassesState, panel)->module_mask & LP_JBD_BIT)) {
     G1_LOG_ERR("panel_resume exit due to LP_JBD_BIT\n");
@@ -130,8 +123,7 @@ int panel_resume(struct jbd_panel_context *c)
   return 0;
 }
 
-int panel_on(struct jbd_panel_context *c)
-{
+int panel_on(struct jbd_panel_context *c) {
   c->spi_callbacks = PANEL_SPI(c);
   if (!PANEL_SPI(c)->is_initialized) {
     G1_LOG_INF("panel_on enter!\n");
@@ -146,8 +138,7 @@ int panel_on(struct jbd_panel_context *c)
   return 0;
 }
 
-int jdb_panel_init(struct jbd_panel_context *c)
-{
+int jdb_panel_init(struct jbd_panel_context *c) {
   c->spi_callbacks = PANEL_SPI(c);
   panel_init();
   set_brightness_to_panel_reg(c->panel_brightness_level);
@@ -161,8 +152,7 @@ int jdb_panel_init(struct jbd_panel_context *c)
   return 0;
 }
 
-void register_jdb_panel_context(struct jbd_panel_context *c)
-{
+void register_jdb_panel_context(struct jbd_panel_context *c) {
   uint8_t *buf;
   int i;
 
