@@ -48,7 +48,7 @@ static int load_whitelist(void) {
 
   memset(&tmp, 0, sizeof(tmp));
   ret = flash_settings_read(WHITELIST_FLASH_ADDR, &tmp, sizeof(tmp));
-  if (ret) {
+  if (ret != 0) {
     BLE_PRINTK("[%s-%d] flash_settings_read error,ret is %d \n", __func__, __LINE__, ret);
     return -1;
   }
@@ -77,8 +77,8 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name) {
     return 0;
   }
   BLE_PRINTK("pkg_name is %s \n", pkg_name);
-  if (strncmp("com.apple.mobilephone", pkg_name, 21) == 0 ||
-      strncmp("com.apple.mobilephone_missed", pkg_name, 28) == 0 ||
+  if ((strncmp("com.apple.mobilephone", pkg_name, 21) == 0) ||
+      (strncmp("com.apple.mobilephone_missed", pkg_name, 28) == 0) ||
       strncmp("com.android.phone_incall", pkg_name, 24) == 0 ||
       strncmp("com.android.phone_missed", pkg_name, 24) == 0) {
     if (g_appWhiteListInfo.call_enable) {
@@ -88,7 +88,7 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name) {
     BLE_PRINTK("whitelist type call is disable ! \n");
     return 1;
   }
-  if (strncmp("com.apple.MobileSMS", pkg_name, 19) == 0 || strncmp("com.android.even_sms", pkg_name, 20) == 0) {
+  if ((strncmp("com.apple.MobileSMS", pkg_name, 19) == 0) || (strncmp("com.android.even_sms", pkg_name, 20) == 0)) {
     if (g_appWhiteListInfo.msg_enable) {
       BLE_PRINTK("whitelist type message is enable ! \n");
       return 2;
@@ -96,7 +96,8 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name) {
     BLE_PRINTK("whitelist type message is disable ! \n");
     return 1;
   }
-  if (strncmp("com.apple.mobilecal", pkg_name, 19) == 0 || strncmp("com.android.even_calendar", pkg_name, 25) == 0) {
+  if ((strncmp("com.apple.mobilecal", pkg_name, 19) == 0) ||
+      (strncmp("com.android.even_calendar", pkg_name, 25) == 0)) {
     if (g_appWhiteListInfo.calendar_enable) {
       BLE_PRINTK("whitelist type calendar is enable ! \n");
       return 2;
@@ -123,7 +124,7 @@ uint8_t is_on_whitelist_by_identifier(const char *pkg_name) {
       }
     }
   }
-  if (strstr("com.apple.mobilecal", pkg_name)) {
+  if (strstr("com.apple.mobilecal", pkg_name) != NULL) {
     return 3;
   }
   return 1;
@@ -146,8 +147,8 @@ void put_whitelist_app_from_app(struct ble_context *ctx, const uint8_t *hdr, con
     rsp[1] = ret;
     if (ret == PKCS7_PACK_DONE) {
       if (!is_the_same_whitelist_app(whitelist_buf)) {
-        if (parse_app_white_list_json(whitelist_buf)) {
-          if (store_whitelist()) {
+        if (parse_app_white_list_json(whitelist_buf) != 0) {
+          if (store_whitelist() != 0) {
             BLE_PRINTK("store_write#whitelist_app: FAIL");
             rsp[1] = 0xca;
           }
@@ -165,15 +166,12 @@ void put_whitelist_app_from_app(struct ble_context *ctx, const uint8_t *hdr, con
 
 int parse_app_white_list_json(const char *json) {
   cJSON *root;
-  cJSON *item;
-  cJSON *app;
-  cJSON *list;
-  cJSON *single;
-  cJSON *id;
-  cJSON *name;
-  uint8_t i;
-  uint8_t n = 0;
-  uint8_t count;
+  const cJSON *item;
+  const cJSON *app;
+  const cJSON *list;
+  const cJSON *single;
+  const cJSON *id;
+  const cJSON *name;
   bool call_enable;
   bool msg_enable;
   bool calendar_enable;
@@ -239,12 +237,14 @@ int parse_app_white_list_json(const char *json) {
   g_appWhiteListInfo.calendar_enable = calendar_enable;
   g_appWhiteListInfo.ios_mail_enable = ios_mail_enable;
   g_appWhiteListInfo.app_enable = app_enable;
-  if (cJSON_IsArray(list)) {
-    count = cJSON_GetArraySize(list);
-    if (count > MAX_WHITE_LIST_APP_NUM - 1) {
+  if (cJSON_IsArray(list) != 0) {
+    uint8_t n = 0;
+    uint8_t count = cJSON_GetArraySize(list);
+
+    if (count > (MAX_WHITE_LIST_APP_NUM - 1)) {
       count = MAX_WHITE_LIST_APP_NUM;
     }
-    for (i = 0; i < count; i++) {
+    for (uint8_t i = 0; i < count; i++) {
       single = cJSON_GetArrayItem(list, i);
       if (single == NULL) {
         BLE_PRINTK("singleAppJson is NULL !\n");
@@ -262,8 +262,8 @@ int parse_app_white_list_json(const char *json) {
       }
       memset(g_appWhiteListInfo.list[n].id, 0, sizeof(g_appWhiteListInfo.list[n].id));
       memset(g_appWhiteListInfo.list[n].name, 0, sizeof(g_appWhiteListInfo.list[n].name));
-      strncpy(g_appWhiteListInfo.list[n].id, id->valuestring, sizeof(g_appWhiteListInfo.list[n].id) - 1);
-      strncpy(g_appWhiteListInfo.list[n].name, name->valuestring, sizeof(g_appWhiteListInfo.list[n].name) - 1);
+      strncpy(g_appWhiteListInfo.list[n].id, id->valuestring, sizeof(g_appWhiteListInfo.list[n].id) - 1U);
+      strncpy(g_appWhiteListInfo.list[n].name, name->valuestring, sizeof(g_appWhiteListInfo.list[n].name) - 1U);
       n++;
     }
     /* entries skipped above are not counted */
@@ -274,13 +274,13 @@ int parse_app_white_list_json(const char *json) {
 }
 
 int is_app_name_same(const char *id, const char *name) {
-  if (id == NULL || name == NULL) {
+  if ((id == NULL) || (name == NULL)) {
     BLE_PRINTK("invalid param ! \n");
     return 0;
   }
   for (uint8_t i = 0; i < g_appWhiteListInfo.app_count; i++) {
-    if (strncmp(g_appWhiteListInfo.list[i].id, id, 40) == 0 &&
-        strncmp(g_appWhiteListInfo.list[i].name, name, 16) == 0) {
+    if ((strncmp(g_appWhiteListInfo.list[i].id, id, 40) == 0) &&
+        (strncmp(g_appWhiteListInfo.list[i].name, name, 16) == 0)) {
       return 1;
     }
   }
@@ -289,12 +289,12 @@ int is_app_name_same(const char *id, const char *name) {
 
 int is_the_same_whitelist_app(const char *json) {
   cJSON *root;
-  cJSON *item;
-  cJSON *app;
-  cJSON *list;
-  cJSON *single;
-  cJSON *id;
-  cJSON *name;
+  const cJSON *item;
+  const cJSON *app;
+  const cJSON *list;
+  const cJSON *single;
+  const cJSON *id;
+  const cJSON *name;
   char app_name[16];
   char app_id[40];
   uint8_t i;
@@ -468,7 +468,9 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp) {
   int len;
   int rem;
   uint8_t pad;
-  int i, n, total;
+  int i;
+  int n;
+  int total;
 
   buf = malloc(MAX_WHITE_LIST_BUF_LEN);
   if (buf == NULL) {
@@ -481,6 +483,7 @@ void get_whitelist_app_from_device(struct ble_context *ctx, uint8_t *rsp) {
   len = convert_app_whitelist_to_json(buf);
   if (len == 0) {
     BLE_PRINTK("[%s-%d] total_len is %d \n", __func__, __LINE__, len);
+    free(buf);
     return;
   }
   rem = len % 17;
@@ -521,7 +524,7 @@ static void dump_whitelist(void) {
 
 void load_app_white_list_from_flash(void) {
   memset(&g_appWhiteListInfo, 0, sizeof(g_appWhiteListInfo));
-  printk("MAX_WHITE_LIST_BUF_LEN is %d \n", MAX_WHITE_LIST_BUF_LEN);
+  printk("MAX_WHITE_LIST_BUF_LEN is %zu \n", MAX_WHITE_LIST_BUF_LEN);
   if (load_whitelist() == 0) {
     dump_whitelist();
   }

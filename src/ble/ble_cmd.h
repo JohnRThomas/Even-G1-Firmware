@@ -109,4 +109,7 @@ enum ble_hw_sub {
   HW_SUB_MIC_ON_HEAD_UP = 8,
 };
 
+/* highest panel brightness level of Brightness Set (0x01) and of the "#i" debug command */
+#define BLE_BRIGHTNESS_LEVEL_MAX 0x2a
+
 #endif /* BLE_CMD_H_ */

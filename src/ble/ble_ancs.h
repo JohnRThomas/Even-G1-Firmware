@@ -12,7 +12,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/kernel.h>
 
-#define BT_DATA_MSGQ_MAX 96
+#define BT_DATA_MSGQ_MAX 96U
 
 /* One queued NUS packet (enqueue_bt_data / dequeue_bt_data) */
 struct bt_data_msg {
@@ -22,7 +22,7 @@ struct bt_data_msg {
 
 /* ble_nus.c */
 extern struct k_msgq nus_data_msgq;
-int enqueue_bt_data(void *data, uint8_t len);
+int enqueue_bt_data(const void *data, uint8_t len);
 int dequeue_bt_data(struct bt_data_msg *out);
 int init_nus(void);
 struct ble_context *get_ble_context(void);

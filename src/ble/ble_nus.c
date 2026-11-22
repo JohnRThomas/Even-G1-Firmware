@@ -33,20 +33,20 @@ static int ble_write_thread(const uint8_t *data, uint16_t len) {
   int err;
 
   if (!get_pt_test_mode() && (!connected || get_dashboard_state()->ble_context.security_pending ||
-                              k_sem_count_get(&get_dashboard_state()->ble_context.tx_sem) == 0)) {
+                              (k_sem_count_get(&get_dashboard_state()->ble_context.tx_sem) == 0U))) {
     return -1;
   }
   k_mutex_lock(&nus_mutex, K_FOREVER);
   err = bt_nus_send(NULL, data, len);
   k_mutex_unlock(&nus_mutex);
-  if (err) {
+  if (err != 0) {
     printk("Failed to send data over BLE connection: ret %d len %d \n", err, len);
     return -1;
   }
   return 0;
 }
 
-int enqueue_bt_data(void *data, uint8_t len) {
+int enqueue_bt_data(const void *data, uint8_t len) {
   struct bt_data_msg msg;
   int err;
 
@@ -58,12 +58,13 @@ int enqueue_bt_data(void *data, uint8_t len) {
   msg.len = len;
   memcpy(msg.data, data, sizeof(msg.data));
   err = k_msgq_put(&nus_data_msgq, &msg, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     BLE_PRINTK("enqueue_bt_data failed !\n");
   }
   return err;
 }
 
+// cppcheck-suppress constParameterCallback
 static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint16_t len) {
   char addr[BT_ADDR_LE_STR_LEN] = {0};
   struct bt_data_msg msg;
@@ -77,13 +78,13 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
 
   ctx->last_rx_time = k_uptime_get();
 
-  if (ctx->receiver_thd_is_running || k_sem_count_get(&ctx->rx_sem) != 0) {
-    uint8_t resp[20] = {0};
-
+  if (ctx->receiver_thd_is_running || (k_sem_count_get(&ctx->rx_sem) != 0U)) {
     if (data[0] == 0x18) {
+      uint8_t resp[20] = {0};
+
       resp[1] = 0xc9;
       ctx->write(resp, sizeof(resp));
-      if (get_dashboard_state()->is_master == 2 && get_dashboard_state()->dashboard_mode == 6) {
+      if ((get_dashboard_state()->is_master == 2) && (get_dashboard_state()->dashboard_mode == 6)) {
         k_msleep(50);
       }
       exit_running_task(get_dashboard_state(), 0);

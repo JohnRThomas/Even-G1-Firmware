@@ -91,12 +91,12 @@ static void send_dashboard_lock_info(void) {
 }
 
 static int update_head_up_thresholds(struct imu_ctx *c) {
-  int offset;
-  int scaled;
-  int t;
+  if ((c->ref != imu_last_ref) || (c->level != imu_last_level) || (c->wear != imu_last_wear) ||
+      (c->div != imu_last_div) || (c->base != imu_last_base)) {
+    int offset;
+    int scaled;
+    int t;
 
-  if (c->ref != imu_last_ref || c->level != imu_last_level || c->wear != imu_last_wear || c->div != imu_last_div ||
-      c->base != imu_last_base) {
     imu_last_ref = c->ref;
     imu_last_level = c->level;
     imu_last_wear = c->wear;
@@ -118,11 +118,11 @@ static int update_head_up_thresholds(struct imu_ctx *c) {
     imu_angle_threshold = scaled / c->div;
     is_master();
 
-    t = 50 * c->level + offset;
-    if (c->base) {
+    t = (50 * c->level) + offset;
+    if (c->base != 0) {
       c->thr_low = c->base - t;
       c->thr_high = c->base - 4500 - t;
-    } else if (c->ref) {
+    } else if (c->ref != 0) {
       c->thr_low = c->ref - t;
       c->thr_high = c->ref - 4500 - t;
     } else {
@@ -136,9 +136,7 @@ static int update_head_up_thresholds(struct imu_ctx *c) {
 }
 
 static void imu_fusion_set(struct imu_ctx *c, uint32_t val) {
-  if (c->sample_period_ms != val) {
-    c->sample_period_ms = val;
-  }
+  c->sample_period_ms = val;
 }
 
 int update_imu_mode(struct imu_ctx *c, uint8_t mode) {
@@ -174,7 +172,8 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode) {
       break;
   }
 
-  for (retry = 1;;) {
+  retry = 1;
+  while (true) {
     ret = sensor_attr_set(c->dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
     if (ret >= 0) {
       break;
@@ -194,7 +193,8 @@ int update_imu_mode(struct imu_ctx *c, uint8_t mode) {
     c->odr.val2 = 0;
   }
 
-  for (retry = 1;;) {
+  retry = 1;
+  while (true) {
     ret = sensor_attr_set(c->dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &c->odr);
     if (ret >= 0) {
       break;
@@ -275,12 +275,12 @@ static int imu_fusion_init(struct imu_ctx *c) {
 }
 
 /* Head-up ("look up") / bow-head gesture detection. */
-static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, float *angles) {
+static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, const float *angles) {
   struct GlassesState *gs = CONTAINER_OF(c, struct GlassesState, imu);
   struct esb_sync_pkt *sync = &gs->sync;
   int retry;
 
-  if (sync->screen_id == 0 && abs(pitch - imu_last_pitch) < 50) {
+  if ((sync->screen_id == 0) && (abs(pitch - imu_last_pitch) < 50)) {
     imu_last_pitch = pitch;
     imu_trigger_count = 0;
     send_dashboard_lock_info();
@@ -299,23 +299,23 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
   imu_roll_x100 = roll;
 
   if (c->mode != 2) {
-    if (pitch <= c->thr_low && pitch >= c->thr_high) {
+    if ((pitch <= c->thr_low) && (pitch >= c->thr_high)) {
       /* head is up: look up */
       k_uptime_ticks();
-      if (get_dashboard_state()->suspend_state != 0 && get_dashboard_state()->suspend_state != 1) {
+      if ((get_dashboard_state()->suspend_state != 0) && (get_dashboard_state()->suspend_state != 1)) {
         goto level_check;
       }
       imu_trigger_count++;
-      if (BLE_DEBUG) {
+      if (BLE_DEBUG != 0) {
         ble_printk("trigger_count %d", imu_trigger_count);
       } else {
         printk("trigger_count %d", imu_trigger_count);
       }
       if (imu_trigger_count > 1) {
         imu_trigger_count = -3;
-        if (sync->screen_id != 0 || pitch < imu_level_pitch) {
+        if ((sync->screen_id != 0) || (pitch < imu_level_pitch)) {
           screen_switch_busy = 1;
-          if (BLE_DEBUG) {
+          if (BLE_DEBUG != 0) {
             ble_printk(
               "look up################################################,screen_id is %d, pitch_y is %d, pitch_threshold_bow_head is %d, pitch_threshold_level is %d\n",
               sync->screen_id, pitch, c->thr_low, c->level);
@@ -329,10 +329,10 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
             k_sleep(K_MSEC(10));
           }
           report_event_to_phone(2);
-          if (sync->screen_id == 9 || sync->screen_id == 12 || sync->screen_id == 10 || sync->screen_id == 11 ||
-              sync->screen_id == 5 || sync->screen_id == 4 || sync->screen_id == 7 || sync->screen_id == 14 ||
-              sync->screen_id == 15 || sync->screen_id == 16 || sync->screen_id == 20 || sync->screen_id == 17 ||
-              sync->screen_id == 18 || sync->screen_id == 19) {
+          if ((sync->screen_id == 9) || (sync->screen_id == 12) || (sync->screen_id == 10) || (sync->screen_id == 11) ||
+              (sync->screen_id == 5) || (sync->screen_id == 4) || (sync->screen_id == 7) || (sync->screen_id == 14) ||
+              (sync->screen_id == 15) || (sync->screen_id == 16) || (sync->screen_id == 20) ||
+              (sync->screen_id == 17) || (sync->screen_id == 18) || (sync->screen_id == 19)) {
             c->mode = 2;
             screen_switch_busy = 0;
             return;
@@ -365,24 +365,24 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
       }
       goto level_check;
     }
-  } else if (pitch > c->thr_low + 100 || pitch < c->thr_high) {
+  } else if ((pitch > (c->thr_low + 100)) || (pitch < c->thr_high)) {
     /* head went down: bow head */
     if (++imu_trigger_count < 2) {
       goto level_check;
     }
     imu_trigger_count = -3;
     screen_switch_busy = 1;
-    if (BLE_DEBUG) {
+    if (BLE_DEBUG != 0) {
       ble_printk("bow head################################################\n");
     } else {
       printk("bow head################################################\n");
     }
     report_event_to_phone(3);
     c->mode = 1;
-    if (sync->screen_id == 9 || sync->screen_id == 12 || sync->screen_id == 10 || sync->screen_id == 11 ||
-        sync->screen_id == 7 || sync->screen_id == 14 || sync->screen_id == 15 || sync->screen_id == 16 ||
-        sync->screen_id == 20 || sync->screen_id == 17 || sync->screen_id == 18 || sync->screen_id == 19 ||
-        sync->screen_id == 4 || is_persist_task_active(gs, sync->screen_id)) {
+    if ((sync->screen_id == 9) || (sync->screen_id == 12) || (sync->screen_id == 10) || (sync->screen_id == 11) ||
+        (sync->screen_id == 7) || (sync->screen_id == 14) || (sync->screen_id == 15) || (sync->screen_id == 16) ||
+        (sync->screen_id == 20) || (sync->screen_id == 17) || (sync->screen_id == 18) || (sync->screen_id == 19) ||
+        (sync->screen_id == 4) || is_persist_task_active(gs, sync->screen_id)) {
       screen_switch_busy = 0;
       return;
     }
@@ -392,12 +392,16 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
     } else if ((!gs->message_mode || cur_message_show_state() != 1) && !get_dashboard_startup_mode() &&
                !gs->dashboard_ts->dashboard_hold) {
       sync_to_slave(gs, 1, NULL, 0);
+    } else {
+      /* nothing to do */
     }
     if (!gs->message_mode && !get_dashboard_startup_mode() && !gs->dashboard_ts->dashboard_hold) {
       exit_temp_task(gs, 0);
     }
     screen_switch_busy = 0;
     goto level_check;
+  } else {
+    /* nothing to do */
   }
 
   if (imu_trigger_count < 0) {
@@ -408,15 +412,15 @@ static void imu_head_gesture(struct imu_ctx *c, int pitch, int yaw, int roll, fl
   return;
 
 level_check:
-  if (c->mode == 1 && imu_trigger_count <= 0) {
+  if ((c->mode == 1) && (imu_trigger_count <= 0)) {
     k_uptime_ticks();
     imu_level_pitch = pitch;
   }
 }
 
 /* Motion / still detection on the yaw/pitch/roll angles. */
-static void imu_motion_detect(float *angles) {
-  float diff[3];
+static void imu_motion_detect(const float *angles) {
+  float diff[3] = {0};
   float out[3];
   int moved;
   int i;
@@ -431,7 +435,7 @@ static void imu_motion_detect(float *angles) {
       moved = 0;
       for (i = 0; i < 3; i++) {
         if (fabsf(diff[i]) > imu_motion_thr[i]) {
-          int s = (diff[i] > 0) ? 1 : -1;
+          int s = (diff[i] > 0.0f) ? 1 : -1;
 
           if (imu_motion.sign[i] == s) {
             moved++;
@@ -439,12 +443,14 @@ static void imu_motion_detect(float *angles) {
           imu_motion.sign[i] = s;
         }
       }
-      if (moved) {
+      if (moved != 0) {
         if (imu_motion.move_cnt == 0) {
-          memcpy(imu_motion.start, angles, 3 * sizeof(float));
+          memcpy(imu_motion.start, angles, 3U * sizeof(float));
           imu_motion.move_cnt = 1;
         } else if (++imu_motion.move_cnt > 4) {
           imu_motion.state = 1;
+        } else {
+          /* nothing to do */
         }
       }
       break;
@@ -454,7 +460,7 @@ static void imu_motion_detect(float *angles) {
       for (i = 0; i < 3; i++) {
         delta[i] = angles[i] - imu_motion.start[i];
         if (fabsf(delta[i]) > 180.0f) {
-          if (delta[i] > 0) {
+          if (delta[i] > 0.0f) {
             delta[i] -= 360.0f;
           } else {
             delta[i] += 360.0f;
@@ -462,11 +468,13 @@ static void imu_motion_detect(float *angles) {
         }
         out[i] = imu_motion.accum[i] + delta[i];
       }
-      if (fabsf(diff[0]) > 0.1f || fabsf(diff[1]) > 0.1f || fabsf(diff[2]) > 0.1f) {
+      if ((fabsf(diff[0]) > 0.1f) || (fabsf(diff[1]) > 0.1f) || (fabsf(diff[2]) > 0.1f)) {
         imu_motion.still_cnt = 0;
       } else if (++imu_motion.still_cnt > 4) {
         imu_motion.state = 2;
         memcpy(imu_motion.accum, out, sizeof(out));
+      } else {
+        /* nothing to do */
       }
       break;
     }
@@ -480,22 +488,30 @@ static void imu_motion_detect(float *angles) {
       break;
   }
 
-  memcpy(imu_motion.prev, angles, 3 * sizeof(float));
+  memcpy(imu_motion.prev, angles, 3U * sizeof(float));
 }
 
 static void imu_fusion_thread(void *p1, void *p2, void *p3) {
   struct imu_ctx *c = p1;
   struct GlassesState *gs;
   float angles[3] = {0};
-  struct sensor_value accel[3];
+  struct sensor_value acc[3];
   struct sensor_value gyro[3];
-  float ax, ay, az, gx, gy, gz, dt;
+  float ax;
+  float ay;
+  float az;
+  float gx;
+  float gy;
+  float gz;
+  float dt;
   uint32_t now;
-  int yaw, pitch, roll;
+  int yaw;
+  int pitch;
+  int roll;
 
   ARG_UNUSED(p2);
   ARG_UNUSED(p3);
-  memset(accel, 0, sizeof(accel));
+  memset(acc, 0, sizeof(acc));
   memset(gyro, 0, sizeof(gyro));
 
   if (c->inited) {
@@ -509,7 +525,7 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
   now = 0;
 
   while (c->thread_running) {
-    while (gs->work_mode == 1 || gs->work_mode == 8) {
+    while ((gs->work_mode == 1) || (gs->work_mode == 8)) {
       k_sleep(K_MSEC(5000));
     }
 
@@ -537,7 +553,7 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
         continue;
       }
       now = k_uptime_get();
-      if (now - imu_last_ms > 1000) {
+      if ((now - imu_last_ms) > 1000U) {
         Mahony_init(&c->fusion);
       }
     }
@@ -546,12 +562,12 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
       k_sleep(K_MSEC(20));
       continue;
     }
-    sensor_channel_get(c->dev, SENSOR_CHAN_ACCEL_XYZ, accel);
+    sensor_channel_get(c->dev, SENSOR_CHAN_ACCEL_XYZ, acc);
     sensor_channel_get(c->dev, SENSOR_CHAN_GYRO_XYZ, gyro);
 
-    ax = (float)(sensor_value_to_double(&accel[0]) * 10);
-    ay = (float)(sensor_value_to_double(&accel[1]) * 10);
-    az = (float)(sensor_value_to_double(&accel[2]) * 10);
+    ax = (float)(sensor_value_to_double(&acc[0]) * 10.0);
+    ay = (float)(sensor_value_to_double(&acc[1]) * 10.0);
+    az = (float)(sensor_value_to_double(&acc[2]) * 10.0);
     gx = (float)sensor_value_to_double(&gyro[0]);
     gy = (float)sensor_value_to_double(&gyro[1]);
     gz = (float)sensor_value_to_double(&gyro[2]);
@@ -570,14 +586,14 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
     angles[1] = Mahony_getPitch(&c->fusion);
     angles[2] = Mahony_getRoll(&c->fusion);
 
-    pitch = (int)(angles[1] * 100);
-    yaw = (int)(angles[0] * 100);
-    roll = (int)(angles[2] * 100);
+    pitch = (int)(angles[1] * 100.0f);
+    yaw = (int)(angles[0] * 100.0f);
+    roll = (int)(angles[2] * 100.0f);
     imu_pitch_x100 = pitch;
     imu_yaw_x100 = yaw;
     imu_roll_x100 = roll;
 
-    if (get_pt_test_mode() == 1 && gs->display_mode == 11) {
+    if ((get_pt_test_mode() == 1) && (gs->display_mode == 11)) {
       c->mode = 2;
       k_sleep(K_MSEC(10));
       continue;
@@ -586,7 +602,7 @@ static void imu_fusion_thread(void *p1, void *p2, void *p3) {
     imu_last_ms = now;
     imu_motion.samples++;
     if (!imu_motion.warmed_up) {
-      if (imu_motion.samples <= 200) {
+      if (imu_motion.samples <= 200U) {
         k_sleep(K_MSEC(10));
         continue;
       }

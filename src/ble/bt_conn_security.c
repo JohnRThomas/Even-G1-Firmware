@@ -28,7 +28,7 @@
 struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer) {
   struct bt_conn *conn = __real_bt_conn_add_le(id, peer);
 
-  if (conn) {
+  if (conn != NULL) {
     conn->sec_level = BT_SECURITY_L2;
     conn->required_sec_level = BT_SECURITY_L2;
   }
@@ -39,26 +39,27 @@ struct bt_conn *__wrap_bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer) {
  * "nothing to do" early return. */
 int __wrap_bt_conn_set_security(struct bt_conn *conn, bt_security_t sec) {
   int err;
+  bt_security_t level = sec;
 
   if (conn->state != BT_CONN_CONNECTED) {
     return -ENOTCONN;
   }
 
   if (IS_ENABLED(CONFIG_BT_SMP_SC_ONLY)) {
-    sec = BT_SECURITY_L4;
+    level = BT_SECURITY_L4;
   }
 
   if (IS_ENABLED(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY)) {
-    sec = BT_SECURITY_L3;
+    level = BT_SECURITY_L3;
   }
 
-  atomic_set_bit_to(conn->flags, BT_CONN_FORCE_PAIR, (uint32_t)sec & (uint32_t)BT_SECURITY_FORCE_PAIR);
-  conn->required_sec_level = (uint32_t)sec & ~(uint32_t)BT_SECURITY_FORCE_PAIR;
+  atomic_set_bit_to(conn->flags, BT_CONN_FORCE_PAIR, (uint32_t)level & (uint32_t)BT_SECURITY_FORCE_PAIR);
+  conn->required_sec_level = (uint32_t)level & ~(uint32_t)BT_SECURITY_FORCE_PAIR;
 
   err = bt_smp_start_security(conn);
 
   /* reset required security level in case of error */
-  if (err) {
+  if (err != 0) {
     conn->required_sec_level = conn->sec_level;
   }
 

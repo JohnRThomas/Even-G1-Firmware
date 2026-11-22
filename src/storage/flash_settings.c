@@ -36,13 +36,13 @@ int local_store_write(const char *key, const void *val, size_t len) {
   char path[128] = SETT_ROOT "/";
   int err;
 
-  if (strlen(path) + strlen(key) >= sizeof(path)) {
+  if ((strlen(path) + strlen(key)) >= sizeof(path)) {
     G1_LOG_ERR("key too long: %s\n", key);
     return -ENAMETOOLONG;
   }
   strcat(path, key);
   err = settings_save_one(path, val, len);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("failed to store key: %s --- %d\n", key, len);
   } else {
     G1_LOG_INF("save success:[%s], len=%d\n", key, len);
@@ -167,11 +167,11 @@ void sett_init(struct local_store *st) {
   int err;
 
   err = settings_subsys_init();
-  if (err) {
+  if (err != 0) {
     G1_LOG_WRN("Failed to initialize settings subsystem, error: %d\n", err);
   } else {
     err = settings_register(&sett_conf);
-    if (err) {
+    if (err != 0) {
       G1_LOG_WRN("Cannot register settings handler %d\n", err);
     } else {
       G1_LOG_WRN("init ok\n");
@@ -227,23 +227,23 @@ int flash_settings_write_and_verify(uint32_t addr, const void *data, size_t len)
   } else {
     memset(buf, 0, EXT_FLASH_SECTOR_SIZE);
     ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
-    if (ret) {
+    if (ret != 0) {
       printk("Flash read failed! %d\n", ret);
     } else if (memcmp(data, buf, len) == 0) {
       printk("write data and read data is same, exit\n");
     } else {
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
-      if (ret) {
+      if (ret != 0) {
         printk("Flash erase failed! %d\n", ret);
       } else {
         memset(buf, 0, EXT_FLASH_SECTOR_SIZE);
         memcpy(buf, data, len);
         ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
-        if (ret) {
+        if (ret != 0) {
           printk("Flash write failed! %d addr %08X size %d\n", ret, addr, len);
         } else {
           ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
-          if (ret) {
+          if (ret != 0) {
             printk("Flash read failed! %d\n", ret);
           } else if (memcmp(data, buf, len) == 0) {
             printk("flash verify success!\n");
@@ -266,11 +266,11 @@ int write_whitelist_to_flash(uint32_t addr, const uint8_t *data, uint32_t size) 
   uint8_t i;
 
   BLE_PRINTK("size is %d\n", size);
-  pages = size / EXT_FLASH_SECTOR_SIZE + 1;
+  pages = (size / EXT_FLASH_SECTOR_SIZE) + 1U;
   last = (int16_t)(size - (pages - 1) * EXT_FLASH_SECTOR_SIZE);
   for (i = 0; i < pages; i++) {
-    ret += flash_settings_write_and_verify(addr + i * EXT_FLASH_SECTOR_SIZE, data + i * EXT_FLASH_SECTOR_SIZE,
-                                           i < pages - 1 ? EXT_FLASH_SECTOR_SIZE : last);
+    ret += flash_settings_write_and_verify(addr + (i * EXT_FLASH_SECTOR_SIZE), data + (i * EXT_FLASH_SECTOR_SIZE),
+                                           (i < (pages - 1)) ? EXT_FLASH_SECTOR_SIZE : last);
   }
   return ret;
 }
@@ -290,24 +290,24 @@ int write_font(uint32_t addr, const void *data, size_t len) {
       ret = -1;
     } else {
       ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
-      if (ret) {
+      if (ret != 0) {
         printk("Flash read font failed! %d\n", ret);
       } else if (memcmp(data, buf, len) == 0) {
         printk("write font data and read data is same, exit\n");
         return 0;
       } else {
         ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, EXT_FLASH_SECTOR_SIZE);
-        if (ret) {
+        if (ret != 0) {
           printk("Flash erase font failed! %d\n", ret);
         } else {
           memset(buf, 0xff, sizeof(buf));
           memcpy(buf, data, len);
           ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, buf, ROUND_UP(len, FLASH_WRITE_ALIGN));
-          if (ret) {
+          if (ret != 0) {
             printk("Flash write font failed! %d\n", ret);
           } else {
             ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, EXT_FLASH_SECTOR_SIZE);
-            if (ret) {
+            if (ret != 0) {
               printk("Flash read font failed! %d\n", ret);
             } else if (memcmp(data, buf, len) == 0) {
               return 0;
@@ -331,18 +331,15 @@ int write_font(uint32_t addr, const void *data, size_t len) {
 
 int calc_flash_crc(uint16_t *crc, int addr, uint32_t size) {
   uint16_t pages;
-  int pos;
-  int len;
-  int ret;
   int i;
 
   G1_LOG_INF("join in calc_flash_crc\n\n");
-  if (crc == NULL || size == 0) {
+  if (crc == NULL || (size == 0U)) {
     G1_LOG_INF("calc_flash_crc para is NULL\n\n");
     return -1;
   }
-  pages = size / FLASH_CRC_CHUNK_LEN;
-  if (size % FLASH_CRC_CHUNK_LEN) {
+  pages = size / (uint32_t)FLASH_CRC_CHUNK_LEN;
+  if ((size % (uint32_t)FLASH_CRC_CHUNK_LEN) != 0U) {
     pages++;
   }
   uint8_t buf[FLASH_CRC_CHUNK_LEN] = {0xff};
@@ -352,13 +349,14 @@ int calc_flash_crc(uint16_t *crc, int addr, uint32_t size) {
     return -1;
   }
   for (uint16_t page = 0; page < pages; page++) {
-    pos = addr + page * FLASH_CRC_CHUNK_LEN;
-    len = (int)(size + addr - pos);
+    int pos = addr + (page * FLASH_CRC_CHUNK_LEN);
+    // cppcheck-suppress [misra-c2012-10.8] ; the length left, computed unsigned and never above size
+    int len = (int)((size + (uint32_t)addr) - (uint32_t)pos);
     if (len >= FLASH_CRC_CHUNK_LEN) {
       len = FLASH_CRC_CHUNK_LEN;
     }
-    ret = get_dashboard_state()->flash_read(get_dashboard_state(), pos, buf, len);
-    if (ret) {
+    int ret = get_dashboard_state()->flash_read(get_dashboard_state(), pos, buf, len);
+    if (ret != 0) {
       printk("Flash read 0x%x failed: %d\n", pos, ret);
       return -1;
     }

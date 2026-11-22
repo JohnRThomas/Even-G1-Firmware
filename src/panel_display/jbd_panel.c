@@ -7,6 +7,7 @@
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 
 #include "../main.h"
 #include "../notify/notify.h"
@@ -109,11 +110,11 @@ static int panel_resume(struct jbd_panel_context *c) {
     return -1;
   }
   G1_LOG_INF("panel_resume enter!\n");
-  if (c->init_done) {
+  if (c->init_done != 0U) {
     G1_LOG_ERR("panel_resume exit due to init_done\n");
     return -1;
   }
-  if (c->spi_callbacks->is_initialized) {
+  if (c->spi_callbacks->is_initialized != 0U) {
     jbd_panel_resume(c);
     if (spi_read_id() != JBD_PANEL_DEVICE_ID) {
       G1_LOG_ERR("JBD PANEL init failure!\n");
@@ -171,9 +172,15 @@ void register_jdb_panel_context(struct jbd_panel_context *c) {
   c->set_brightness_cb = panel_set_brightness_level;
   /* 5 bytes command header in front of the frame buffer, 3 behind */
   buf = malloc(PANEL_FB_SIZE + 8);
+  if (buf == NULL) {
+    /* nothing can be drawn, and every draw would write through a bad row pointer */
+    G1_LOG_ERR("no memory for the frame buffer\n");
+    k_panic();
+    CODE_UNREACHABLE;
+  }
   c->current_buffer = buf + 5;
   for (i = 0; i < PANEL_FB_ROWS; i++) {
-    c->panel_buffer[i] = buf + 5 + i * PANEL_FB_STRIDE;
+    c->panel_buffer[i] = buf + 5 + (i * PANEL_FB_STRIDE);
   }
   c->current_buffer_size = PANEL_FB_SIZE;
 }

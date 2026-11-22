@@ -78,12 +78,12 @@ int fuel_gauge_init(const struct device *charger) {
 bool is_old_board(void) {
   const char *hw = get_glasses_name();
 
-  if (hw[4] == 'E' && hw[5] == 'G' && hw[6] == 'P') {
+  if ((hw[4] == 'E') && (hw[5] == 'G') && (hw[6] == 'P')) {
     if (hw[7] == '0') {
       return true;
     }
     if (hw[7] == '1') {
-      return hw[8] >= '0' && hw[8] <= '3';
+      return (hw[8] >= '0') && (hw[8] <= '3');
     }
   }
   return false;
@@ -93,12 +93,10 @@ int fuel_gauge_update(const struct device *charger) {
   float voltage;
   float current;
   float temp;
-  float soc = 0;
+  float soc = 0.0f;
   float new_soc;
   int retry = 11;
-  int64_t delta;
   uint32_t now;
-  int ret;
 
   if (!fuel_gauge_ready) {
     return -ENODEV;
@@ -109,7 +107,7 @@ int fuel_gauge_update(const struct device *charger) {
   }
   while (1) {
     lock_sensor_mutex();
-    ret = read_sensors(charger, &voltage, &current, &temp);
+    int ret = read_sensors(charger, &voltage, &current, &temp);
     unlock_sensor_mutex();
     if (ret < 0) {
       printk("Error: Could not read from charger device\n");
@@ -117,11 +115,11 @@ int fuel_gauge_update(const struct device *charger) {
     }
 
     /* 1 s after the previous update; the retries (soc > 0) follow 5 ms apart */
-    delta = k_uptime_get() - fuel_gauge_ref_time;
-    if (delta >= 1000 || soc > 0) {
+    int64_t delta = k_uptime_get() - fuel_gauge_ref_time;
+    if ((delta >= 1000) || (soc > 0.0f)) {
       soc = nrf_fuel_gauge_process(voltage, current, temp, (float)delta / 1000.f, NULL);
       fuel_gauge_ref_time += delta;
-      if (current != 0 || --retry == 0 || !(soc < 100) || !(soc > 0)) {
+      if ((current != 0.0f) || (--retry == 0) || !(soc < 100.0f) || !(soc > 0.0f)) {
         break;
       }
       k_sleep(K_MSEC(5));
@@ -136,11 +134,13 @@ int fuel_gauge_update(const struct device *charger) {
   G1_LOG_ERR("V: %.3f, I: %.3f, T: %.2f\n", voltage, current, temp);
 
   now = k_uptime_get();
-  if ((soc != 0 && fg_last_soc != soc) || soc >= 100) {
+  if (((soc != 0.0f) && (fg_last_soc != soc)) || (soc >= 100.0f)) {
     fg_last_soc_time = now;
     fg_last_soc = soc;
-  } else if (now - fg_last_soc_time >= 120000) {
+  } else if ((now - fg_last_soc_time) >= 120000U) {
     fuel_gauge_stuck = 1;
+  } else {
+    /* nothing to do */
   }
 
   if (is_old_board()) {
@@ -150,33 +150,37 @@ int fuel_gauge_update(const struct device *charger) {
   }
   G1_LOG_ERR("Original soc %.2f, New Soc %.2f, %s\n", soc, new_soc, get_glasses_name());
 
-  if (new_soc < 0 || new_soc >= 150) {
-    new_soc = 0;
-  } else if (new_soc >= 100) {
-    new_soc = 100;
+  if ((new_soc < 0.0f) || (new_soc >= 150.0f)) {
+    new_soc = 0.0f;
+  } else if (new_soc >= 100.0f) {
+    new_soc = 100.0f;
+  } else {
+    /* nothing to do */
   }
-  if ((new_soc >= 93.5f && new_soc < 94.0f) || (new_soc >= 94.5f && new_soc < 95.0f)) {
+  if (((new_soc >= 93.5f) && (new_soc < 94.0f)) || ((new_soc >= 94.5f) && (new_soc < 95.0f))) {
     get_dashboard_state()->battery_soc_flag = 1;
   } else {
     get_dashboard_state()->battery_soc_flag = 0;
   }
   get_dashboard_state()->battery_left = (uint8_t)new_soc;
-  get_dashboard_state()->battery_voltage = (uint8_t)(voltage * 100 - 200);
+  get_dashboard_state()->battery_voltage = (uint8_t)((voltage * 100.0f) - 200.0f);
 
-  if (current != 0) {
+  if (current != 0.0f) {
     get_dashboard_state()->battery_current = (uint8_t)((current + 0.128) * 1000.0);
-    get_dashboard_state()->battery_current_ma = (int8_t)(current * 1000);
+    get_dashboard_state()->battery_current_ma = (int8_t)(current * 1000.0f);
     zero_current_count = 0;
   } else if (++zero_current_count > 5) {
     zero_current_count = 0;
     get_dashboard_state()->battery_current = (uint8_t)((current + 0.128) * 1000.0);
-    get_dashboard_state()->battery_current_ma = (int8_t)(current * 1000);
+    get_dashboard_state()->battery_current_ma = (int8_t)(current * 1000.0f);
+  } else {
+    /* nothing to do */
   }
 
   get_dashboard_state()->battery_temp = (uint8_t)temp;
-  get_dashboard_state()->battery_temp_x100 = (int16_t)(temp * 100);
+  get_dashboard_state()->battery_temp_x100 = (int16_t)(temp * 100.0f);
 
-  if ((temp >= 60 && temp < 120) || (temp >= -50 && temp <= -20)) {
+  if (((temp >= 60.0f) && (temp < 120.0f)) || ((temp >= -50.0f) && (temp <= -20.0f))) {
     if (get_dashboard_state()->display_mode != DISPLAY_MODE_ABNORMAL_TEMP) {
       report_event_to_phone(4);
       if (get_dashboard_state()->is_master == 1) {

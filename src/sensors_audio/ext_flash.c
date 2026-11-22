@@ -55,6 +55,7 @@ int ext_flash_api_init(ext_flash_read_t *read, ext_flash_write_t *write, ext_fla
   return -1;
 }
 
+// cppcheck-suppress constParameterCallback
 static int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size) {
   int ret = 0;
 
@@ -71,6 +72,7 @@ static int ext_flash_erase(struct GlassesState *gs, uint32_t offset, size_t size
   return ret;
 }
 
+// cppcheck-suppress constParameterCallback
 static int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void *data, size_t len) {
   int ret = 0;
 
@@ -87,6 +89,7 @@ static int ext_flash_write(struct GlassesState *gs, uint32_t offset, const void 
   return ret;
 }
 
+// cppcheck-suppress constParameterCallback
 static int ext_flash_read(struct GlassesState *gs, uint32_t offset, void *data, size_t len) {
   int ret = 0;
 

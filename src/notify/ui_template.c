@@ -27,22 +27,22 @@ int draw_template_gyro_page(struct jbd_panel_context *panel, void *arg) {
   uint8_t **fb = panel->panel_buffer;
   uint16_t count;
   char buf[10] = {0};
-  uint16_t *codes;
+  const uint16_t *codes;
   struct GlassesState *state;
   float ypr[3];
-  int n;
 
   ARG_UNUSED(arg);
   codes = utf8_to_unicode_buf("陀螺仪姿态解算:YPR", &count);
   for (int i = 0; i < count; i++) {
-    copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12, 36, i * 12 + 6, 0);
+    copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(codes[i], 12, 36), 12, 36, (i * 12) + 6, 0);
   }
   state = get_dashboard_state();
   memcpy(ypr, &state->ui.ypr, sizeof(ypr));
   for (int k = 0; k < 3; k++) {
-    n = format_float_2dp(ypr[k], buf);
+    int n = format_float_2dp(ypr[k], buf);
+
     for (int i = 0; i < n; i++) {
-      copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(buf[i], 12, 36), 12, 36, i * 12 + 6, (k + 1) * 30);
+      copy_to_frame_buffer_raw(fb, find_chinese_bitmap_by_unicode(buf[i], 12, 36), 12, 36, (i * 12) + 6, (k + 1) * 30);
     }
   }
   return 0;

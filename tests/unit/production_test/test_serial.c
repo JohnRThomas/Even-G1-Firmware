@@ -158,6 +158,16 @@ ZTEST(production_test, test_serial_read_of_invalid_buffer_returns_minus_3) {
   zassert_equal(read_payload(), -2);
 }
 
+/* a header in the last bytes has no room for a frame, whatever length is stored */
+ZTEST(production_test, test_serial_read_with_a_length_below_a_frame_stays_in_the_buffer) {
+  memset(serial_rx_buf, 0, sizeof(serial_rx_buf));
+  g1_hex("5a a5 7f", &serial_rx_buf[BUF_SIZE - 3], 3);
+  serial_rx_len = 1;
+
+  zassert_equal(read_payload(), -3);
+  zassert_equal(read_payload(), -2);
+}
+
 ZTEST(production_test, test_serial_rx_clear_drops_pending_frame) {
   pt_test_uart_receive("5a a5 7f 01 07 86", 0);
   serial_rx_clear();

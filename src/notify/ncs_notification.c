@@ -22,10 +22,10 @@ static void utf8_drop_partial_tail(char *s) {
   size_t lead = len;
   size_t need;
 
-  while (lead > 0 && ((uint8_t)s[lead - 1] & 0xc0U) == 0x80U) {
+  while ((lead > 0) && (((uint8_t)s[lead - 1] & 0xc0U) == 0x80U)) {
     lead--;
   }
-  if (lead == 0 || ((uint8_t)s[lead - 1] & 0xc0U) != 0xc0U) {
+  if ((lead == 0) || (((uint8_t)s[lead - 1] & 0xc0U) != 0xc0U)) {
     return;
   }
   lead--;
@@ -36,23 +36,23 @@ static void utf8_drop_partial_tail(char *s) {
   } else {
     need = 2;
   }
-  if (len - lead < need) {
+  if ((len - lead) < need) {
     s[lead] = 0;
   }
 }
 
 /* returns 0, or -EINVAL with msg untouched when json holds no ncs_notification object */
-int parse_ncs_notification(char *json, struct notif_msg *msg) {
+int parse_ncs_notification(const char *json, struct notif_msg *msg) {
   cJSON *root;
-  cJSON *ncs;
-  cJSON *app_identifier;
-  cJSON *title;
-  cJSON *subtitle;
-  cJSON *message;
-  cJSON *date;
-  cJSON *display_name;
-  cJSON *msg_id;
-  cJSON *action;
+  const cJSON *ncs;
+  const cJSON *app_identifier;
+  const cJSON *title;
+  const cJSON *subtitle;
+  const cJSON *message;
+  const cJSON *date;
+  const cJSON *display_name;
+  const cJSON *msg_id;
+  const cJSON *action;
 
   root = cJSON_Parse(json);
   if (root == NULL) {
@@ -75,33 +75,33 @@ int parse_ncs_notification(char *json, struct notif_msg *msg) {
   action = cJSON_GetObjectItem(ncs, "action");
 
   memset(msg, 0, sizeof(*msg));
-  if (cJSON_IsString(app_identifier)) {
+  if (cJSON_IsString(app_identifier) != 0) {
     strncpy(msg->app_identifier, app_identifier->valuestring, 31);
     if (strcmp(app_identifier->valuestring, "com.android.phone_incall") == 0) {
       msg->start_show_time = get_date();
     }
   }
-  if (cJSON_IsString(title)) {
+  if (cJSON_IsString(title) != 0) {
     strncpy(msg->title, title->valuestring, 31);
     utf8_drop_partial_tail(msg->title);
   }
-  if (cJSON_IsString(message)) {
+  if (cJSON_IsString(message) != 0) {
     strncpy(msg->message, message->valuestring, 255);
   }
-  if (cJSON_IsString(subtitle)) {
+  if (cJSON_IsString(subtitle) != 0) {
     strncpy(msg->subtitle, subtitle->valuestring, 31);
   }
-  if (cJSON_IsString(date)) {
-    strncpy(msg->date, date->valuestring, sizeof(msg->date) - 1);
+  if (cJSON_IsString(date) != 0) {
+    strncpy(msg->date, date->valuestring, sizeof(msg->date) - 1U);
   }
-  if (cJSON_IsString(display_name)) {
+  if (cJSON_IsString(display_name) != 0) {
     strncpy(msg->display_name, display_name->valuestring, 31);
   }
-  if (msg_id) {
+  if (msg_id != NULL) {
     /* u32 id (negative ones wrap); valueint saturates at INT_MAX */
     msg->uid = (uint32_t)(int64_t)msg_id->valuedouble;
   }
-  if (action) {
+  if (action != NULL) {
     msg->action = action->valueint;
   }
   msg->recv_time = get_date();

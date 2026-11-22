@@ -23,7 +23,7 @@
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
 #define AUDIO_STREAM_MSG_DATA 200
-#define AUDIO_STREAM_MSGQ_LEN 18
+#define AUDIO_STREAM_MSGQ_LEN 18U
 
 #define VOICE_MANAGER_ADDR      0x400000
 #define VOICE_SECTOR_SIZE       0x1000
@@ -32,7 +32,7 @@
 #define VOICE_BLOCK_LAST_SECTOR 0x10000
 #define VOICE_BLOCK_NUM         4
 #define VOICE_BLOCK_ALL         0xff
-#define VOICE_MANAGER_MAGIC     0x5aa5aa5a
+#define VOICE_MANAGER_MAGIC     0x5aa5aa5aU
 
 enum audio_stream_cmd {
   AUDIO_STREAM_START = 1,
@@ -84,7 +84,7 @@ static uint8_t audio_cache[VOICE_SECTOR_SIZE];
 #define VOICE_MGR ((struct voice_manager *)audio_cache)
 
 static int getAudioMessageQueueCacheData(void *msg) {
-  if (k_msgq_get(&audio_stream_msgq, msg, K_NO_WAIT)) {
+  if (k_msgq_get(&audio_stream_msgq, msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("dequeue_dmic failed\r\n\n");
     return -1;
   }
@@ -96,7 +96,7 @@ static void delVoiceBlock(uint8_t num) {
 
   G1_LOG_INF("received audio delete command\n");
   /* valid: 1..VOICE_BLOCK_NUM, or 0xff = all */
-  if (num == 0 || (num > VOICE_BLOCK_NUM && num != VOICE_BLOCK_ALL)) {
+  if ((num == 0) || ((num > VOICE_BLOCK_NUM) && (num != VOICE_BLOCK_ALL))) {
     G1_LOG_ERR("input parameter error...\n");
     return;
   }
@@ -106,12 +106,12 @@ static void delVoiceBlock(uint8_t num) {
   }
   memset(audio_cache, 0, sizeof(audio_cache));
   ret = get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR, audio_cache, VOICE_SECTOR_SIZE);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
     return;
   }
   ret = get_dashboard_state()->flash_erase(get_dashboard_state(), VOICE_MANAGER_ADDR, VOICE_SECTOR_SIZE);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG_INF("Flash erase failed! %d\n\n", ret);
     return;
   }
@@ -126,7 +126,7 @@ static void delVoiceBlock(uint8_t num) {
     G1_LOG_INF("success delete all voice block \n");
   }
   ret = get_dashboard_state()->flash_write(get_dashboard_state(), VOICE_MANAGER_ADDR, audio_cache, VOICE_SECTOR_SIZE);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG_ERR("Flash write failed! %d\n\n", ret);
     return;
   }
@@ -145,7 +145,7 @@ int clearAudioMessageQueue(void) {
   return ret;
 }
 
-int sendAudioStram2Cache(void *data) {
+int sendAudioStram2Cache(const void *data) {
   struct audio_stream_msg msg;
   uint32_t used;
 
@@ -158,7 +158,7 @@ int sendAudioStram2Cache(void *data) {
   memcpy(msg.data, data, AUDIO_STREAM_MSG_DATA);
   msg.len = AUDIO_STREAM_MSG_DATA;
   msg.cmd = AUDIO_STREAM_DATA;
-  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("enqueue_dmic failed\r\n\n");
     return -1;
   }
@@ -172,11 +172,12 @@ uint32_t getAudioMessageQueueNum(void) {
 
 int startAudioStreamRecord(void) {
   struct audio_stream_msg msg;
-  uint8_t exit_quicknote[2];
 
   memset(&msg, 0, sizeof(msg));
   msg.cmd = AUDIO_STREAM_START;
-  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT) != 0) {
+    uint8_t exit_quicknote[2];
+
     G1_LOG_ERR("start up audio record failed\r\n\n");
     exit_quicknote[0] = 1;
     exit_quicknote[1] = 0;
@@ -194,7 +195,7 @@ int stopAudioStreamRecord(void) {
 
   memset(&msg, 0, sizeof(msg));
   msg.cmd = AUDIO_STREAM_STOP;
-  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("enqueue_dmic failed\r\n\n");
     return -1;
   }
@@ -210,7 +211,7 @@ int delAudioStreamRecord(uint8_t num) {
   msg.len = 1;
   msg.cmd = AUDIO_STREAM_DELETE;
   msg.data[0] = num;
-  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&audio_stream_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("enqueue_dmic failed\r\n\n");
     return -1;
   }
@@ -231,26 +232,24 @@ static atomic_val_t getAudioBlockInUse(void) {
 }
 
 int audioStreamFileManagerHandler(void) {
-  uint8_t exit_quicknote[2];
-  int32_t oldest;
-  uint8_t sel;
-  int addr;
-  int copied;
   int ret;
-  int i;
 
   switch (audio_record_state) {
     case 0: {
       struct audio_stream_msg msg;
 
-      if (audio_stream_msgq.used_msgs == 0) {
+      if (audio_stream_msgq.used_msgs == 0U) {
         return 0;
       }
-      if (getAudioMessageQueueCacheData(&msg)) {
+      if (getAudioMessageQueueCacheData(&msg) != 0) {
         G1_LOG_ERR("get audio message queue data failed!\n");
         return 0;
       }
       if (msg.cmd == AUDIO_STREAM_START) {
+        int32_t oldest;
+        uint8_t sel;
+        int i;
+
         G1_LOG_INF("start audio stream record!\r\n\n");
         if (!device_is_ready(FLASH_DEV)) {
           G1_LOG_ERR(" [%s] device not ready.\n\n", FLASH_DEV->name);
@@ -259,7 +258,7 @@ int audioStreamFileManagerHandler(void) {
         memset(audio_cache, 0, sizeof(audio_cache));
         ret =
           get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR, audio_cache, VOICE_SECTOR_SIZE);
-        if (ret) {
+        if (ret != 0) {
           G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
           return 0;
         }
@@ -268,13 +267,13 @@ int audioStreamFileManagerHandler(void) {
           memset(audio_cache, 0, sizeof(audio_cache));
           memcpy(audio_cache, &voice_manager_default, sizeof(voice_manager_default));
           ret = get_dashboard_state()->flash_erase(get_dashboard_state(), VOICE_MANAGER_ADDR, VOICE_SECTOR_SIZE);
-          if (ret) {
+          if (ret != 0) {
             G1_LOG_INF("Flash erase failed! %d\n\n", ret);
             return 0;
           }
           ret = get_dashboard_state()->flash_write(get_dashboard_state(), VOICE_MANAGER_ADDR, audio_cache,
                                                    VOICE_SECTOR_SIZE);
-          if (ret) {
+          if (ret != 0) {
             G1_LOG_ERR("Flash write failed! %d\n\n", ret);
             return 0;
           }
@@ -284,13 +283,14 @@ int audioStreamFileManagerHandler(void) {
         oldest = INT32_MAX;
         sel = 0;
         for (i = 0; i < VOICE_BLOCK_NUM; i++) {
-          if (VOICE_MGR->blocks[i].state == VOICE_BLOCK_FREE) {
+          if (VOICE_MGR->blocks[i].state == (uint32_t)VOICE_BLOCK_FREE) {
             G1_LOG_INF("find a free voice block(%d)!\r\n\n", i);
             break;
           }
           G1_LOG_INF("voice_block_store_timestamp = %d, voice_stream_block_ts = %d\n", VOICE_MGR->blocks[i].timestamp,
                      oldest);
-          if (VOICE_MGR->blocks[i].timestamp < oldest && (getAudioBlockInUse() == 0 || getAudioBlockInUse() - 1 != i)) {
+          if ((VOICE_MGR->blocks[i].timestamp < oldest) &&
+              ((getAudioBlockInUse() == 0) || ((getAudioBlockInUse() - 1) != i))) {
             oldest = VOICE_MGR->blocks[i].timestamp;
             sel = i;
           }
@@ -311,20 +311,22 @@ int audioStreamFileManagerHandler(void) {
         audio_stream_crc = 0;
         return 0;
       }
-      if (msg.cmd == AUDIO_STREAM_STOP || msg.cmd == AUDIO_STREAM_DATA) {
+      if ((msg.cmd == AUDIO_STREAM_STOP) || (msg.cmd == AUDIO_STREAM_DATA)) {
         clearAudioMessageQueue();
       } else if (msg.cmd == AUDIO_STREAM_DELETE) {
         delVoiceBlock(msg.data[0]);
+      } else {
+        /* nothing to do */
       }
       return 0;
     }
     case 1: {
       struct audio_stream_msg msg;
 
-      if (audio_stream_msgq.used_msgs == 0) {
+      if (audio_stream_msgq.used_msgs == 0U) {
         return 0;
       }
-      if (getAudioMessageQueueCacheData(&msg)) {
+      if (getAudioMessageQueueCacheData(&msg) != 0) {
         G1_LOG_ERR("get audio message queue data failed!\n");
         return 0;
       }
@@ -337,7 +339,9 @@ int audioStreamFileManagerHandler(void) {
         return 0;
       }
       if (msg.cmd == AUDIO_STREAM_DATA) {
-        if (audio_cache_offset + msg.len < VOICE_SECTOR_SIZE) {
+        int addr;
+
+        if ((audio_cache_offset + msg.len) < VOICE_SECTOR_SIZE) {
           memcpy(&audio_cache[audio_cache_offset], msg.data, msg.len);
           audio_cache_offset += msg.len;
           G1_LOG_INF("copy %d byte into audio cache\n", audio_cache_offset);
@@ -349,33 +353,33 @@ int audioStreamFileManagerHandler(void) {
           G1_LOG_ERR(" [%s] device not ready.\n\n", FLASH_DEV->name);
           return 0;
         }
-        addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE + audio_sector_count * VOICE_SECTOR_SIZE;
-        if (addr > audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE + VOICE_BLOCK_LAST_SECTOR) {
+        addr = (audio_block_num * VOICE_BLOCK_SIZE) + VOICE_BLOCK_BASE + (audio_sector_count * VOICE_SECTOR_SIZE);
+        if (addr > ((audio_block_num * VOICE_BLOCK_SIZE) + VOICE_BLOCK_BASE + VOICE_BLOCK_LAST_SECTOR)) {
           G1_LOG_ERR("the number of recording files exceeds the upper limit, system "
                      "automatically stops\n");
           G1_LOG_ERR("Catch touch release is not recognized, start QuickNote exception "
                      "recovery mechanism\n");
-          exit_quicknote[0] = 1;
-          exit_quicknote[1] = 0;
+          uint8_t exit_quicknote[2] = {1, 0};
+
           sync_to_slave(get_dashboard_state(), 6, exit_quicknote, sizeof(exit_quicknote));
           display_DelayClose(10000);
           stop = 1;
         } else {
           G1_LOG_INF("wirte addr = 0x%08x\n", addr);
           ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, VOICE_SECTOR_SIZE);
-          if (ret) {
+          if (ret != 0) {
             G1_LOG_INF("Flash erase failed! %d\n\n", ret);
             return 0;
           }
           ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, audio_cache, VOICE_SECTOR_SIZE);
-          if (ret) {
+          if (ret != 0) {
             G1_LOG_ERR("Flash write failed! %d\n\n", ret);
             return 0;
           }
           audio_stream_crc = crc32(audio_stream_crc, audio_cache, VOICE_SECTOR_SIZE);
           audio_sector_count++;
           G1_LOG_INF("wirte 4k voice data to flash,write address = 0x%08x\n", addr);
-          copied = VOICE_SECTOR_SIZE - audio_cache_offset;
+          int copied = VOICE_SECTOR_SIZE - audio_cache_offset;
           audio_cache_offset = 0;
           memset(audio_cache, 0, sizeof(audio_cache));
           G1_LOG_INF("Copy remain %d byte data into cache memory\n", msg.len - copied);
@@ -384,22 +388,24 @@ int audioStreamFileManagerHandler(void) {
           return 0;
         }
       }
-      if (msg.cmd == AUDIO_STREAM_STOP || stop) {
+      if ((msg.cmd == AUDIO_STREAM_STOP) || stop) {
+        int addr;
+
         G1_LOG_INF("received audio stop command,stop audio write process\n");
         G1_LOG_INF("To complete a sector of data, perform flash write operations\n");
         if (!device_is_ready(FLASH_DEV)) {
           G1_LOG_ERR(" [%s] device not ready.\n\n", FLASH_DEV->name);
           return 0;
         }
-        addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE + audio_sector_count * VOICE_SECTOR_SIZE;
+        addr = (audio_block_num * VOICE_BLOCK_SIZE) + VOICE_BLOCK_BASE + (audio_sector_count * VOICE_SECTOR_SIZE);
         G1_LOG_INF("wirte addr = 0x%08x\n", addr);
         ret = get_dashboard_state()->flash_erase(get_dashboard_state(), addr, VOICE_SECTOR_SIZE);
-        if (ret) {
+        if (ret != 0) {
           G1_LOG_INF("Flash erase failed! %d\n\n", ret);
           return 0;
         }
         ret = get_dashboard_state()->flash_write(get_dashboard_state(), addr, audio_cache, VOICE_SECTOR_SIZE);
-        if (ret) {
+        if (ret != 0) {
           G1_LOG_ERR("Flash write failed! %d\n\n", ret);
           return 0;
         }
@@ -408,21 +414,21 @@ int audioStreamFileManagerHandler(void) {
         memset(audio_cache, 0, sizeof(audio_cache));
         ret =
           get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR, audio_cache, VOICE_SECTOR_SIZE);
-        if (ret) {
+        if (ret != 0) {
           G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
           return 0;
         }
         VOICE_MGR->magic = VOICE_MANAGER_MAGIC;
         VOICE_MGR->reserved = 0;
         VOICE_MGR->blocks[audio_block_num].state = VOICE_BLOCK_USED;
-        VOICE_MGR->blocks[audio_block_num].start_addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE;
-        VOICE_MGR->blocks[audio_block_num].end_addr = audio_block_num * VOICE_BLOCK_SIZE + VOICE_BLOCK_BASE +
-                                                      audio_sector_count * VOICE_SECTOR_SIZE + audio_cache_offset;
+        VOICE_MGR->blocks[audio_block_num].start_addr = (audio_block_num * VOICE_BLOCK_SIZE) + VOICE_BLOCK_BASE;
+        VOICE_MGR->blocks[audio_block_num].end_addr = (audio_block_num * VOICE_BLOCK_SIZE) + VOICE_BLOCK_BASE +
+                                                      (audio_sector_count * VOICE_SECTOR_SIZE) + audio_cache_offset;
         VOICE_MGR->blocks[audio_block_num].timestamp = (int32_t)get_date();
         VOICE_MGR->blocks[audio_block_num].crc32 = audio_stream_crc;
         G1_LOG_INF("upgrade Num.%d voice manager block,total write sector num = %d, total write "
                    "byte = %d ,crc32 = %d\n",
-                   audio_block_num, audio_sector_count, audio_cache_offset + audio_sector_count * VOICE_SECTOR_SIZE,
+                   audio_block_num, audio_sector_count, audio_cache_offset + (audio_sector_count * VOICE_SECTOR_SIZE),
                    audio_stream_crc);
 
         if (VOICE_MGR->blocks[audio_block_num].start_addr == VOICE_MGR->blocks[audio_block_num].end_addr) {
@@ -437,7 +443,7 @@ int audioStreamFileManagerHandler(void) {
           return 0;
         }
         ret = get_dashboard_state()->flash_erase(get_dashboard_state(), VOICE_MANAGER_ADDR, VOICE_SECTOR_SIZE);
-        if (ret) {
+        if (ret != 0) {
           G1_LOG_INF("Flash erase failed! %d\n\n", ret);
           return 0;
         }
@@ -449,7 +455,7 @@ int audioStreamFileManagerHandler(void) {
         audio_sector_count = 0;
         clearAudioMessageQueue();
         requestAudioInfoToApp(1);
-        if (ret) {
+        if (ret != 0) {
           G1_LOG_ERR("Flash write failed! %d\n\n", ret);
           return 0;
         }

@@ -71,6 +71,8 @@ static void set_timeslot_active_status(bool on) {
   } else if (timeslot_radio_on) {
     radio_ctrl_cb(1);
     timeslot_radio_on = 0;
+  } else {
+    /* nothing to do */
   }
 }
 
@@ -91,31 +93,31 @@ static void mpsl_nonpreemptible_thread(void) {
       switch (api_call) {
         case REQ_OPEN_SESSION:
           err = mpsl_timeslot_session_open(mpsl_timeslot_callback, &session_id);
-          if (err) {
+          if (err != 0) {
             NET_ERR("Timeslot open error: %d\n", err);
             k_oops();
           }
           break;
         case REQ_MAKE_REQUEST:
           err = mpsl_timeslot_request(session_id, &timeslot_request_earliest);
-          if (err) {
+          if (err != 0) {
             NET_ERR("Timeslot request error %d\n", err);
             k_oops();
           }
           break;
         case REQ_MAKE_REQUEST_NORMAL:
-          if (blocked_count) {
-            timeslot_request_normal.params.normal.distance_us = 50000 + 5000 * blocked_count;
+          if (blocked_count != 0) {
+            timeslot_request_normal.params.normal.distance_us = 50000 + (5000 * blocked_count);
           }
           err = mpsl_timeslot_request(session_id, &timeslot_request_normal);
-          if (err) {
+          if (err != 0) {
             NET_ERR("Timeslot request error %d\n", err);
             k_oops();
           }
           break;
         case REQ_CLOSE_SESSION:
           err = mpsl_timeslot_session_close(session_id);
-          if (err) {
+          if (err != 0) {
             NET_ERR("Timeslot close error %d\n", err);
             k_oops();
           }
@@ -133,7 +135,7 @@ static void schedule_request(enum mpsl_timeslot_call api_call) {
   int err;
 
   err = k_msgq_put(&mpsl_api_msgq, &api_call, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     NET_ERR("Message sent error %d\n", err);
     k_oops();
   }
@@ -179,7 +181,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
         if (net_role_get() == 1) {
           if (!busy) {
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
-            timeslot_request_normal_m.params.normal.distance_us = 50000 + 5000 * timer0_extend_count;
+            timeslot_request_normal_m.params.normal.distance_us = 50000 + (5000 * timer0_extend_count);
             timer0_extend_count = 0;
             set_timeslot_active_status(false);
           } else {
@@ -190,7 +192,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
         } else {
           if (!busy) {
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
-            timeslot_request_normal.params.normal.distance_us = 50000 + 5000 * timer0_extend_count;
+            timeslot_request_normal.params.normal.distance_us = 50000 + (5000 * timer0_extend_count);
             timer0_extend_count = 0;
             set_timeslot_active_status(false);
           } else {
@@ -211,6 +213,8 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
         } else {
           signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_REQUEST;
         }
+      } else {
+        /* nothing to do */
       }
       p_ret_val = &signal_callback_return_param;
       break;
@@ -221,12 +225,12 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
         uint32_t cc = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0);
 
         nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
-        nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, cc + 5000);
+        nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, cc + 5000U);
         nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
 
         cc = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1);
         nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
-        nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, cc + 5000);
+        nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, cc + 5000U);
         nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
       }
       p_ret_val = &signal_callback_return_param;

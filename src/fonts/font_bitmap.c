@@ -34,10 +34,13 @@ static uint16_t unicode_buf[0x400];
 /* decode one 2 or 3 byte UTF-8 sequence into a unicode code point */
 uint16_t utf8_decode_char(const uint8_t *s, int len) {
   uint8_t c = s[0];
-  uint32_t hi, lo;
-  uint32_t top2, top4;
+  uint32_t hi;
+  uint32_t lo;
+  uint32_t top2;
 
   if ((c & 0xf0U) == 0xe0U) {
+    uint32_t top4;
+
     if (len < 3) {
       return 0;
     }
@@ -72,14 +75,14 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max) {
     if (c == 0) {
       break;
     }
-    if (c == '\r' || c == '\n' || (c >= 0x20 && c < 0x80)) {
+    if ((c == '\r') || (c == '\n') || ((c >= 0x20) && (c < 0x80))) {
       u = c;
       i++;
-    } else if ((c & 0xf0U) == 0xe0U && i + 2 < len && ((uint8_t)utf8[i + 1] & 0xc0U) == 0x80U &&
-               ((uint8_t)utf8[i + 2] & 0xc0U) == 0x80U) {
+    } else if (((c & 0xf0U) == 0xe0U) && ((i + 2) < len) && (((uint8_t)utf8[i + 1] & 0xc0U) == 0x80U) &&
+               (((uint8_t)utf8[i + 2] & 0xc0U) == 0x80U)) {
       u = utf8_decode_char((const uint8_t *)&utf8[i], 3);
       i += 3;
-    } else if ((c & 0xe0U) == 0xc0U && i + 1 < len && ((uint8_t)utf8[i + 1] & 0xc0U) == 0x80U) {
+    } else if (((c & 0xe0U) == 0xc0U) && ((i + 1) < len) && (((uint8_t)utf8[i + 1] & 0xc0U) == 0x80U)) {
       u = utf8_decode_char((const uint8_t *)&utf8[i], 2);
       i += 2;
     } else {
@@ -88,7 +91,7 @@ int utf8_to_unicode(const char *utf8, int len, uint16_t *out, int max) {
       continue;
     }
     out[k] = u;
-    if (k == max - 1) {
+    if (k == (max - 1)) {
       printf("maybe array overflow!(k=%d)\n", k);
       break;
     }
@@ -113,38 +116,39 @@ void expand_1bpp_to_4bpp(const uint8_t *src, int len, uint8_t *dst) {
 const uint8_t *find_chinese_bitmap_by_unicode(int code, int w, int h) {
   uint16_t size = w * h;
   uint8_t buf[size];
-  uint8_t *bitmap = buf;
   const uint8_t *ret;
   struct cjk_glyph_index idx;
-  uint32_t addr;
-  int err;
 
-  if (code >= 0x20 && code < 0x80) {
+  if ((code >= 0x20) && (code < 0x80)) {
     if (size > sizeof(cjk_glyph_buf)) {
       return NULL;
     }
     ret = font_ascii_lookup(code, w, h, cjk_glyph_buf);
   } else {
     if (get_dashboard_state()->flash_read == NULL) {
-      bitmap = NULL;
+      /* no flash to read the glyph from: a blank one */
+      memset(buf, 0, size);
     } else {
-      if (get_dashboard_state()->flash_read(get_dashboard_state(), ((uint32_t)(code - 0xa4) << 2U) + 0x140000U, &idx,
-                                            sizeof(idx))) {
+      uint32_t addr;
+      int err;
+
+      if (get_dashboard_state()->flash_read(get_dashboard_state(), (((uint32_t)code - 0xa4U) << 2U) + 0x140000U, &idx,
+                                            sizeof(idx)) != 0) {
         G1_LOG_ERR("read flash fail\n\n");
         return NULL;
       }
       printk("unicode=%x, offset=%d\n", idx.unicode, idx.offset);
       addr = (size / 4) * idx.offset;
       if (size == 0x1b0) {
-        addr += 0xcf120;
+        addr += 0xcf120U;
       }
       memset(buf, 0, size);
-      err = get_dashboard_state()->flash_read(get_dashboard_state(), addr + 0x200000, buf, size / 4);
-      if (err) {
+      err = get_dashboard_state()->flash_read(get_dashboard_state(), addr + 0x200000U, buf, size / 4);
+      if (err != 0) {
         G1_LOG_ERR("read flash fail: %d\n\n", err);
       }
     }
-    expand_1bpp_to_4bpp(bitmap, size / 4, cjk_glyph_buf);
+    expand_1bpp_to_4bpp(buf, size / 4, cjk_glyph_buf);
     ret = cjk_glyph_buf;
   }
   return ret;
@@ -162,7 +166,6 @@ const uint8_t *get_small_glyph_bitmap(int glyph, int size) {
 }
 
 const uint8_t *get_demo_picture(int id, int *w, int *h) {
-  *h = 200;
   if (demo_mode) {
     *w = 0x27e;
     *h = 199;

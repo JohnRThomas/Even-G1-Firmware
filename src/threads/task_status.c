@@ -26,7 +26,7 @@ uint8_t is_persist_task_active(struct GlassesState *state, int mode) {
   return state->task_status->status > 1;
 }
 
-int is_task_running(struct GlassesState *state) {
+int is_task_running(const struct GlassesState *state) {
   while (task_status_lock) {
     k_msleep(1);
   }
@@ -38,12 +38,13 @@ int update_persist_task_status(struct GlassesState *state, int task, int status)
     k_msleep(1);
   }
   task_status_lock = 1;
-  if (state->task_status->task == task && (state->task_status->status == 1 || state->task_status->status == status)) {
+  if ((state->task_status->task == (uint32_t)task) &&
+      ((state->task_status->status == 1) || (state->task_status->status == status))) {
     task_status_lock = 0;
     return status;
   }
-  if (state->dashboard_mode != 0 && state->dashboard_mode != 1) {
-    if (!state->dashboard_ts->exit_pending || state->dashboard_mode != 6) {
+  if ((state->dashboard_mode != 0) && (state->dashboard_mode != 1)) {
+    if (!state->dashboard_ts->exit_pending || (state->dashboard_mode != 6)) {
       if (status == TASK_RUNNING) {
         switch (task) {
           case 4:
@@ -90,13 +91,14 @@ int update_temp_task_status(struct GlassesState *state, int task, int status) {
     k_msleep(1);
   }
   task_status_lock = 1;
-  if ((state->task_status->task == task && (state->task_status->status == 1 || state->task_status->status == status)) ||
-      state->dashboard_mode == task) {
+  if (((state->task_status->task == (uint32_t)task) &&
+       ((state->task_status->status == 1) || (state->task_status->status == status))) ||
+      (state->dashboard_mode == task)) {
     task_status_lock = 0;
     return status;
   }
-  if (state->dashboard_mode != 0 && state->dashboard_mode != 1) {
-    if (status == TASK_RUNNING && task != 4 && task != 6) {
+  if ((state->dashboard_mode != 0) && (state->dashboard_mode != 1)) {
+    if ((status == TASK_RUNNING) && (task != 4) && (task != 6)) {
       task_status_lock = 0;
       return status;
     }
@@ -121,11 +123,11 @@ int update_persist_task_status_to_idle(struct GlassesState *state) {
     k_msleep(1);
   }
   task_status_lock = 1;
-  if (state->dashboard_mode == 0 && state->task_status->status == 1) {
+  if ((state->dashboard_mode == 0) && (state->task_status->status == 1)) {
     task_status_lock = 0;
     return 0;
   }
-  if (state->dashboard_mode != 0 && state->dashboard_mode != 1) {
+  if ((state->dashboard_mode != 0) && (state->dashboard_mode != 1)) {
     display_close_screen(state->dashboard_mode);
   }
   if (state->dashboard_mode == 16) {
@@ -143,7 +145,7 @@ int update_persist_task_status_to_wait_blow_head(struct GlassesState *state) {
     k_msleep(1);
   }
   task_status_lock = 1;
-  if (state->dashboard_mode != 0 && state->dashboard_mode != 1) {
+  if ((state->dashboard_mode != 0) && (state->dashboard_mode != 1)) {
     display_close_screen(state->dashboard_mode);
   }
   G1_LOG_ERR("persist task [stop]: %d\n", 1);
@@ -169,7 +171,7 @@ bool task_uses_mic(int task) {
 }
 
 bool is_idle(void) {
-  if (get_dashboard_state()->task_status->task != 0) {
+  if (get_dashboard_state()->task_status->task != 0U) {
     return false;
   }
   if (get_dashboard_state()->task_status->status != 1) {

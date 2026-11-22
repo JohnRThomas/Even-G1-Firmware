@@ -355,6 +355,48 @@ ZTEST(dashboard, test_0x06_canvas_icon_one_byte_too_many_writes_nothing_behind_i
                 ICON_DUAL + ICON_SIZE, panoramic_map_buf[ICON_DUAL + ICON_SIZE]);
 }
 
+/* a packet that ends before the icon's position (12 of at least 16 bytes) stores neither */
+ZTEST(dashboard, test_0x06_canvas_icon_packet_without_position_stores_nothing) {
+  const uint8_t body[] = {0x01, 0x04, 0x03};
+
+  select_map_pane(0x01);
+  send_icon(0x01, 0xac, 0x34); /* leaves its position and icon behind the short packet's end */
+  memset(panoramic_map_buf + ICON_DUAL, 0, ICON_SIZE);
+  dts()->arrow_x = 2;
+
+  g1_send(pkt, g1_put_chunk(pkt, 0x06, seq++, DASH_SUB_CANVAS, 1, 1, body, sizeof(body)));
+
+  expect_fill(panoramic_map_buf + ICON_DUAL, ICON_SIZE, 0, "icon of a 12 byte packet");
+  zassert_equal(dts()->arrow_x, 2, "x 0x%x taken from behind the packet", dts()->arrow_x);
+}
+
+/*
+ * The calendar, stock, news and canvas panes take their chunk count and index from bytes 5 .. 8
+ * and data_len - 9 bytes of data: a packet that ends before byte 9 is a length error, as a wrong
+ * length field is. Here: first of two chunks, cut off in its index.
+ */
+ZTEST(dashboard, test_0x06_chunked_pane_packet_shorter_than_its_header_is_a_length_error) {
+  static const uint8_t subs[] = {DASH_SUB_CALENDAR, DASH_SUB_STOCK, DASH_SUB_NEWS, DASH_SUB_CANVAS};
+
+  select_map_pane(0x01);
+  g1_frames_clear();
+  for (unsigned int row = 0; row < ARRAY_SIZE(subs); row++) {
+    const uint8_t request[] = {0x06, 0x08, 0x00, 0x40 + row, subs[row], 0x02, 0x00, 0x01};
+    uint8_t reply[20] = {0};
+
+    memset(pkt, 0, sizeof(pkt)); /* the index's high byte, behind the packet, reads 0 */
+    memcpy(pkt, request, sizeof(request));
+    pkt[10] = 0x04; /* the canvas takes a first chunk for pane 4, */
+    pkt[11] = 0x02; /* background */
+    g1_send(pkt, sizeof(request));
+
+    memcpy(reply, request, 5);
+    reply[5] = 0x01;
+    expect_frame_bytes(reply, sizeof(reply));
+  }
+  expect_no_frame();
+}
+
 /* a dual canvas does not fit the full layout */
 ZTEST(dashboard, test_0x06_pane_mode_change_puts_the_map_pane_back_to_no_data) {
   select_map_pane(0x01);

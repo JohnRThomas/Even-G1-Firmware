@@ -41,7 +41,7 @@ int nav_prv_reset(void) {
 }
 
 void navigation_direction_img_display(int direction) {
-  if (direction < 1 || direction > 0x23) {
+  if ((direction < 1) || (direction > 0x23)) {
     G1_LOG_WRN("navigation direction parampter error\n");
     return;
   }
@@ -87,7 +87,7 @@ void navigation_overview_map_display(const uint8_t *nav) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, 0,
                              0, GUI_SCREEN_WIDTH, 199);
     }
-    if (nav_overview_map_ready == 1 && nav_overview_decoded == 0) {
+    if ((nav_overview_map_ready == 1) && (nav_overview_decoded == 0)) {
       nav_load_overview_map(info);
     }
     clear_showing_notification_on_gui();
@@ -127,6 +127,8 @@ void navigation_overview_map_display(const uint8_t *nav) {
       gui_bitmps_merge_draw(X0 + 0x1b6, Y0, X0 + 0x240, Y0 + 0x88, nav_map_bitmaps[0], nav_map_bitmaps[1], 2, 0xf);
     } else if (nav_overview_decoded == 1) {
       gui_bitmps_merge_draw(X0 + 0x1b6, Y0, X0 + 0x240, Y0 + 0x88, nav_map_bitmaps[0], nav_map_bitmaps[1], 2, 0xf);
+    } else {
+      /* nothing to do */
     }
     nav_overview_map_updated = 0;
   }
@@ -148,7 +150,7 @@ void navigation_overview_map_display(const uint8_t *nav) {
 
 #define nav_draw_position(info)                                                                                        \
   do {                                                                                                                 \
-    if ((info)->pos_x <= 0x1e8 && (info)->pos_y <= 0x88) {                                                             \
+    if (((info)->pos_x <= 0x1e8) && ((info)->pos_y <= 0x88)) {                                                         \
       gui_4bit_bitmap_override(0x5f, (info)->pos_x + X0 + 0x52, (info)->pos_y - 6 + Y0);                               \
     } else {                                                                                                           \
       G1_LOG_ERR("APP send navigation offset overstep ,stop draw....\n");                                              \
@@ -216,7 +218,7 @@ void navigation_panoramic_map_display(const uint8_t *nav) {
     }
     NAV_DRAW_CLOCK();
   }
-  if (nav_panoramic_map_updated == 1 || nav_pos_updated == 1) {
+  if ((nav_panoramic_map_updated == 1) || (nav_pos_updated == 1)) {
     if (nav_panoramic_map_updated == 1) {
       nav_panoramic_map_updated = 0;
     }
@@ -271,7 +273,7 @@ void nav_draw_route_generating(void) {
 int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
   ARG_UNUSED(arg);
   struct GlassesState *gs = get_dashboard_state();
-  uint8_t *nav = gs->ui.buf;
+  const uint8_t *nav = gs->ui.buf;
 
   set_frame_buffer(panel->panel_buffer);
   set_showing_notification_on_gui();
@@ -287,7 +289,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
         nav_overview_decoded = 0;
         return 0;
       }
-      if (event == UI_EVT_REFRESH && nav_prv.synced == 1) {
+      if ((event == UI_EVT_REFRESH) && (nav_prv.synced == 1)) {
         G1_LOG_INF("dynamic image reflash\n");
         gui_bmp_dynamic_bitmap_draw(8, X0, Y0 + 0x3a, 0, 0, 0, 0);
       } else if (event == UI_EVT_ENTER) {
@@ -304,7 +306,7 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           gui_dynamic_bitmap_reset();
           nav_draw_route_generating();
         }
-        if (nav_prv.synced == 1 && nav_overview_map_ready == 1 && nav_panoramic_map_ready == 1) {
+        if ((nav_prv.synced == 1) && (nav_overview_map_ready == 1) && (nav_panoramic_map_ready == 1)) {
           nav_prv.state = 1;
           nav_panoramic_drawn = 0;
           G1_LOG_INF("switch NAVIGATION_RUNNING_STATUS .....\n");
@@ -314,8 +316,10 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           nav_prv.ts = k_uptime_get();
           navigation_overview_map_display(nav);
         }
+      } else {
+        /* nothing to do */
       }
-      if (get_dashboard_state()->is_master == 1 && nav_prv.synced == 1) {
+      if ((get_dashboard_state()->is_master == 1) && (nav_prv.synced == 1)) {
         if (nav_app_sync_count > 0) {
           nav_app_sync_count = 0;
           if (nav_prv.sync_cnt < 20) {
@@ -377,8 +381,9 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
           nav_prv.state = 3;
           gui_screen_clear();
 
-          uint32_t x = get_current_language() == 6 ? 0xaa : 0xc4;
+          uint32_t x = (get_current_language() == 6) ? 0xaa : 0xc4;
 
+          // cppcheck-suppress [misra-c2012-10.4] ; int offset plus unsigned x, passed as an int
           gui_utf_draw(0, gs->ui.nav_arrived.text, 0, X0 + x, Y0 + 0x3c, X0 + 0x23f, Y0 + 0x57, 2, 0, 0, NULL, 0);
           NAV_DRAW_CLOCK();
           nav_prv.arrived_ts = k_uptime_get();
@@ -398,8 +403,9 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
             gui_bitmps_merge_draw(X0 + 0x1b6, Y0, X0 + 0x240, Y0 + 0x88, nav_map_bitmaps[0], nav_map_bitmaps[1], 2,
                                   0xf);
 
-            uint32_t x = get_current_language() == 6 ? 0xe8 : 0xc4;
+            uint32_t x = (get_current_language() == 6) ? 0xe8 : 0xc4;
 
+            // cppcheck-suppress [misra-c2012-10.4] ; int offset plus unsigned x, passed as an int
             gui_utf_draw(0, gs->ui.nav_arrived.text, 0, X0 + x, Y0 + 0x3c, X0 + 0x1e4, Y0 + 0x57, 2, 0, 0, NULL, 0);
             nav_prv.panoramic_shown = 0;
             nav_prv.overview_shown = 1;
@@ -416,11 +422,13 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
         struct g1_date date = {0};
 
         timestamp_to_date(get_date(), &date);
-        if (nav_prv.minute != date.minute || nav_prv.hour != date.hour) {
+        if ((nav_prv.minute != date.minute) || (nav_prv.hour != date.hour)) {
           nav_prv.minute = date.minute;
           nav_prv.hour = date.hour;
           NAV_DRAW_CLOCK();
         }
+      } else {
+        /* nothing to do */
       }
       if (get_dashboard_state()->is_master == 1) {
         if (nav_app_sync_count > 0) {
@@ -476,10 +484,10 @@ int ui_navigation_task(struct jbd_panel_context *panel, void *arg, int event) {
 
     case 3:
       if (event != UI_EVT_EXIT) {
-        if (event == UI_EVT_ENTER && get_dashboard_state()->is_master == 1) {
+        if ((event == UI_EVT_ENTER) && (get_dashboard_state()->is_master == 1)) {
           send_response_data_to_ble();
         }
-        if (k_uptime_get() > nav_prv.timeout + nav_prv.arrived_ts) {
+        if (k_uptime_get() > (nav_prv.timeout + nav_prv.arrived_ts)) {
           G1_LOG_INF("exec navigation auto exit ...\n");
           get_dashboard_state()->nav->running = 0;
           gui_screen_fade_out();

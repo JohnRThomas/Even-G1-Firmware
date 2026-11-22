@@ -31,7 +31,7 @@ static void ipc_ept_recv(const void *data, size_t len, void *priv) {
   for (int i = 0; i < ops->count; i++) {
     struct ipc_ep *ep = ops->eps[i];
 
-    if (ep != NULL && ep->id == id) {
+    if ((ep != NULL) && (ep->id == id)) {
       ep->cb(CONTAINER_OF(ops, struct net_ctx, ipc), p + 1, len - 1);
       return;
     }
@@ -52,10 +52,8 @@ static int ipc_register(struct ipc_ep *ep) {
 }
 
 static int ipc_send(const void *data, size_t len) {
-  int ret;
-
   if (ipc_ready == 1) {
-    ret = ipc_service_send(&ipc_ept, data, len);
+    int ret = ipc_service_send(&ipc_ept, data, len);
     if (ret < 0) {
       NET_ERR("send data failed %d\n", ret);
     }
@@ -85,7 +83,7 @@ int ipc_init(void) {
   int err;
 
   err = ipc_service_open_instance(ipc_instance);
-  if (err < 0 && err != -EALREADY) {
+  if ((err < 0) && (err != -EALREADY)) {
     NET_ERR("ipc service open fail\n");
     return -1;
   }

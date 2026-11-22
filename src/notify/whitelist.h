@@ -9,7 +9,7 @@
 
 #define WHITELIST_FLASH_ADDR   0x131000
 #define MAX_WHITE_LIST_APP_NUM 100
-#define MAX_WHITE_LIST_BUF_LEN (sizeof(struct app_whitelist) + 1)
+#define MAX_WHITE_LIST_BUF_LEN (sizeof(struct app_whitelist) + 1U)
 #define WHITELIST_JSON_BUF_LEN 0x1800
 
 struct app_info {

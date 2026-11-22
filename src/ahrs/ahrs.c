@@ -39,11 +39,15 @@ void Mahony_init(struct ahrs *a) {
 /* Fast inverse square-root */
 float Mahony_invSqrt(float x) {
   float halfx = 0.5f * x;
-  float y = x;
-  uint32_t i = *(uint32_t *)&y;
+  union {
+    float f;
+    uint32_t bits;
+  } v;
+  float y;
 
-  i = 0x5f3759dfU - (i >> 1U);
-  y = *(float *)&i;
+  v.f = x;
+  v.bits = 0x5f3759dfU - (v.bits >> 1U);
+  y = v.f;
   y = y * (1.5f - (halfx * y * y));
   y = y * (1.5f - (halfx * y * y));
 
@@ -52,31 +56,37 @@ float Mahony_invSqrt(float x) {
 
 void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az, float dt, struct ahrs *a) {
   float recipNorm;
-  float halfvx, halfvy, halfvz;
-  float halfex, halfey, halfez;
-  float qa, qb, qc;
+  float qa;
+  float qb;
+  float qc;
+  float gyrox = gx;
+  float gyroy = gy;
+  float gyroz = gz;
+  float accx = ax;
+  float accy = ay;
+  float accz = az;
 
   /* Compute feedback only if accelerometer measurement valid
    * (avoids NaN in accelerometer normalisation)
    */
   if (!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
     /* Normalise accelerometer measurement */
-    recipNorm = Mahony_invSqrt(ax * ax + ay * ay + az * az);
-    ax *= recipNorm;
-    ay *= recipNorm;
-    az *= recipNorm;
+    recipNorm = Mahony_invSqrt((accx * accx) + (accy * accy) + (accz * accz));
+    accx *= recipNorm;
+    accy *= recipNorm;
+    accz *= recipNorm;
 
     /* Estimated direction of gravity */
-    halfvx = a->q1 * a->q3 - a->q0 * a->q2;
-    halfvy = a->q0 * a->q1 + a->q2 * a->q3;
-    halfvz = a->q0 * a->q0 - 0.5f + a->q3 * a->q3;
+    float halfvx = (a->q1 * a->q3) - (a->q0 * a->q2);
+    float halfvy = (a->q0 * a->q1) + (a->q2 * a->q3);
+    float halfvz = ((a->q0 * a->q0) - 0.5f) + (a->q3 * a->q3);
 
     /* Error is sum of cross product between estimated
      * and measured direction of gravity
      */
-    halfex = (ay * halfvz - az * halfvy);
-    halfey = (az * halfvx - ax * halfvz);
-    halfez = (ax * halfvy - ay * halfvx);
+    float halfex = ((accy * halfvz) - (accz * halfvy));
+    float halfey = ((accz * halfvx) - (accx * halfvz));
+    float halfez = ((accx * halfvy) - (accy * halfvx));
 
     /* Compute and apply integral feedback if enabled */
     if (a->twoKi > 0.0f) {
@@ -84,9 +94,9 @@ void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az
       a->integralFBx += a->twoKi * halfex * dt;
       a->integralFBy += a->twoKi * halfey * dt;
       a->integralFBz += a->twoKi * halfez * dt;
-      gx += a->integralFBx;  /* apply integral feedback */
-      gy += a->integralFBy;
-      gz += a->integralFBz;
+      gyrox += a->integralFBx;  /* apply integral feedback */
+      gyroy += a->integralFBy;
+      gyroz += a->integralFBz;
     } else {
       a->integralFBx = 0.0f;  /* prevent integral windup */
       a->integralFBy = 0.0f;
@@ -94,25 +104,25 @@ void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az
     }
 
     /* Apply proportional feedback */
-    gx += a->twoKp * halfex;
-    gy += a->twoKp * halfey;
-    gz += a->twoKp * halfez;
+    gyrox += a->twoKp * halfex;
+    gyroy += a->twoKp * halfey;
+    gyroz += a->twoKp * halfez;
   }
 
   /* Integrate rate of change of quaternion */
-  gx *= (0.5f * dt);  /* pre-multiply common factors */
-  gy *= (0.5f * dt);
-  gz *= (0.5f * dt);
+  gyrox *= (0.5f * dt);  /* pre-multiply common factors */
+  gyroy *= (0.5f * dt);
+  gyroz *= (0.5f * dt);
   qa = a->q0;
   qb = a->q1;
   qc = a->q2;
-  a->q0 += (-qb * gx - qc * gy - a->q3 * gz);
-  a->q1 += (qa * gx + qc * gz - a->q3 * gy);
-  a->q2 += (qa * gy - qb * gz + a->q3 * gx);
-  a->q3 += (qa * gz + qb * gy - qc * gx);
+  a->q0 += (((-qb * gyrox) - (qc * gyroy)) - (a->q3 * gyroz));
+  a->q1 += (((qa * gyrox) + (qc * gyroz)) - (a->q3 * gyroy));
+  a->q2 += (((qa * gyroy) - (qb * gyroz)) + (a->q3 * gyrox));
+  a->q3 += (((qa * gyroz) + (qb * gyroy)) - (qc * gyrox));
 
   /* Normalise quaternion */
-  recipNorm = Mahony_invSqrt(a->q0 * a->q0 + a->q1 * a->q1 + a->q2 * a->q2 + a->q3 * a->q3);
+  recipNorm = Mahony_invSqrt((a->q0 * a->q0) + (a->q1 * a->q1) + (a->q2 * a->q2) + (a->q3 * a->q3));
   a->q0 *= recipNorm;
   a->q1 *= recipNorm;
   a->q2 *= recipNorm;
@@ -122,8 +132,11 @@ void Mahony_updateIMU(float gx, float gy, float gz, float ax, float ay, float az
 
 /* measure the sample period (no counterpart in the reference implementation) */
 float Mahony_deltatUpdate(struct ahrs *a) {
+  uint32_t elapsed;
+
   a->Now = k_uptime_get();
-  a->deltat = (float)(a->Now - a->lastUpdate) / 1000.0f;
+  elapsed = a->Now - a->lastUpdate;
+  a->deltat = (float)elapsed / 1000.0f;
   a->lastUpdate = a->Now;
 
   return a->deltat;
@@ -150,12 +163,12 @@ float Mahony_getYaw(struct ahrs *a) {
     Mahony_computeAngles(a);
   }
 
-  return a->yaw * 57.295f + 180.0f;
+  return (a->yaw * 57.295f) + 180.0f;
 }
 
 void Mahony_computeAngles(struct ahrs *a) {
-  a->roll = atan2f(a->q0 * a->q1 + a->q2 * a->q3, 0.5f - a->q1 * a->q1 - a->q2 * a->q2);
-  a->pitch = asinf(-2.0f * (a->q1 * a->q3 - a->q0 * a->q2));
-  a->yaw = atan2f(a->q1 * a->q2 + a->q0 * a->q3, 0.5f - a->q2 * a->q2 - a->q3 * a->q3);
+  a->roll = atan2f((a->q0 * a->q1) + (a->q2 * a->q3), (0.5f - (a->q1 * a->q1)) - (a->q2 * a->q2));
+  a->pitch = asinf(-2.0f * ((a->q1 * a->q3) - (a->q0 * a->q2)));
+  a->yaw = atan2f((a->q1 * a->q2) + (a->q0 * a->q3), (0.5f - (a->q2 * a->q2)) - (a->q3 * a->q3));
   a->anglesComputed = 1;
 }

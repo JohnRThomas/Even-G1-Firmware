@@ -73,10 +73,9 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         break;
       }
       G1_LOG_INF("GLOBAL->temeprompter_info->enable = %d\n", get_dashboard_state()->teleprompter->ready);
-      if (event == UI_EVT_ENTER && get_dashboard_state()->teleprompter->ready == 1 && gs->ui.tp.cmd == 1) {
+      if ((event == UI_EVT_ENTER) && (get_dashboard_state()->teleprompter->ready == 1) && (gs->ui.tp.cmd == 1)) {
         uint8_t percent;
         uint16_t dark_lines;
-        bool is_24h;
 
         G1_LOG_INF("setp1: received teleprompter command.\n");
         if (get_dashboard_state()->is_master == 1) {
@@ -111,7 +110,8 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         for (int i = 0; i < 4; i++) {
           gui_utf_draw(0, tp->text, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() + 1,
                        gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x88, 5, dark_lines, 0, NULL, 0);
-          is_24h = get_dashboard_state()->dashboard_ts->time_disp_mode != 1;
+          bool is_24h = get_dashboard_state()->dashboard_ts->time_disp_mode != 1;
+
           gui_clock_draw(get_date(), gui_screen_x_offset(), gui_screen_y_offset() + 2, gui_screen_x_offset() + 0x3f,
                          gui_screen_y_offset() + 0x1d, 3, is_24h);
           gui_verticalLine_process_bar(gui_screen_x_offset() + 0x23c, gui_screen_y_offset(),
@@ -144,7 +144,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
       }
       if (event == UI_EVT_ENTER) {
         G1_LOG_INF("counter down break,received sync message...\n");
-        if (gs->ui.tp.status == 2 || gs->ui.tp.status == 3) {
+        if ((gs->ui.tp.status == 2) || (gs->ui.tp.status == 3)) {
           tp->last_sync_ts = k_uptime_get();
           tp->state = TELEPROMPTER_TEXT_DISPLAY;
           tp->start_ts = k_uptime_get();
@@ -154,6 +154,8 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
             gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
           } else if (tp->work_mode == 0) {
             gui_bmp_bitmap_draw(0x19, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
+          } else {
+            /* nothing to do */
           }
         }
         if (get_dashboard_state()->is_master == 1) {
@@ -183,6 +185,8 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
               gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
             } else if (tp->work_mode == 0) {
               gui_bmp_bitmap_draw(0x19, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
+            } else {
+              /* nothing to do */
             }
           } else {
             /* the count down field shows at most two characters */
@@ -209,8 +213,12 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
             gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
           } else if (tp->work_mode == 0) {
             gui_bmp_bitmap_draw(0x19, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
+          } else {
+            /* nothing to do */
           }
         }
+      } else {
+        /* nothing to do */
       }
       break;
 
@@ -222,7 +230,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         G1_LOG_INF("received exit command,clear screen...\n");
         gui_screen_fade_out();
         memset(tp, 0, sizeof(*tp));
-        if (get_dashboard_state()->is_master == 1 && tp->work_mode == 2) {
+        if ((get_dashboard_state()->is_master == 1) && (tp->work_mode == 2)) {
           dmic_stream_stop();
         }
         break;
@@ -308,39 +316,51 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
             gui_bmp_bitmap_draw(0x1a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
           } else if (tp->work_mode == 0) {
             gui_bmp_bitmap_draw(0x19, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
+          } else {
+            /* nothing to do */
           }
           G1_LOG_INF("suspend cancel...\n");
         }
       }
-      if (tp->work_mode == 2 && tp->suspended == 0) {
+      if ((tp->work_mode == 2) && (tp->suspended == 0)) {
         gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0, 0);
       }
       tp->display_ms /= 1000;
-      if (tp->display_ms < 60) {
-        tp_sec = (int)(tp->display_ms % 60);
-      } else if (tp->display_ms < 3600) {
-        tp_sec = (int)(tp->display_ms % 60);
-        tp_min = (int)(tp->display_ms / 60);
-      } else if (tp->display_ms < 360000) {
-        uint32_t rem;
+      if (tp->display_ms < 60U) {
+        uint32_t sec = tp->display_ms % 60U;
 
-        tp_hour = (int)(tp->display_ms / 3600);
-        rem = tp->display_ms % 3600;
-        tp_sec = (int)(rem % 60);
-        tp_min = (int)(rem / 60);
+        tp_sec = (int)sec;
+      } else if (tp->display_ms < 3600U) {
+        uint32_t sec = tp->display_ms % 60U;
+        uint32_t min = tp->display_ms / 60U;
+
+        tp_sec = (int)sec;
+        tp_min = (int)min;
+      } else if (tp->display_ms < 360000U) {
+        uint32_t rem;
+        uint32_t hour = tp->display_ms / 3600U;
+        uint32_t sec;
+        uint32_t min;
+
+        tp_hour = (int)hour;
+        rem = tp->display_ms % 3600U;
+        sec = rem % 60U;
+        min = rem / 60U;
+        tp_sec = (int)sec;
+        tp_min = (int)min;
       } else {
         tp_hour = 99;
         tp_min = 59;
         tp_sec = 59;
       }
-      char buf[64] = "";
+      char buf[64] = {0};
 
       if (tp_hour > 9) {
         snprintf(buf, sizeof(buf), "%02d:%02d:%02d", tp_hour, tp_min, tp_sec);
       } else {
         snprintf(buf, sizeof(buf), "%d:%02d:%02d", tp_hour, tp_min, tp_sec);
       }
-      if (tp_hour != tp_last_hour || tp_min != tp_last_min || tp_sec != tp_last_sec) {
+      if ((tp_hour != tp_last_hour) || (tp_min != tp_last_min) || (tp_sec != tp_last_sec)) {
         gui_utf_draw(0, buf, 0, gui_screen_x_offset(), gui_screen_y_offset() + 0x6e, gui_screen_x_offset() + 0x50,
                      gui_screen_y_offset() + 0x88, 1, 0, 0, NULL, 0);
         tp_last_hour = tp_hour;
@@ -387,7 +407,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
           gui_utf_draw(0, "App-Trennung gestoppt.", 0, gui_screen_x_offset() + 0xb4, gui_screen_y_offset() + 0x52,
                        gui_screen_x_offset() + 0x23a, gui_screen_y_offset() + 0x6d, 1, 0, 0, NULL, 0);
         }
-        if (get_dashboard_state()->is_master == 1 && tp->work_mode == 2) {
+        if ((get_dashboard_state()->is_master == 1) && (tp->work_mode == 2)) {
           dmic_stream_stop();
         }
       } else if (event == UI_EVT_MASTER_CLOSE) {
@@ -406,6 +426,8 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
           gui_utf_draw(0, "App-Trennung gestoppt.", 0, gui_screen_x_offset() + 0xb4, gui_screen_y_offset() + 0x52,
                        gui_screen_x_offset() + 0x23a, gui_screen_y_offset() + 0x6d, 1, 0, 0, NULL, 0);
         }
+      } else {
+        /* nothing to do */
       }
       break;
     }
@@ -423,7 +445,7 @@ int ui_teleprompter_task(struct jbd_panel_context *panel, void *arg, int event) 
         G1_LOG_INF("received exit command,clear screen...\n");
         gui_screen_fade_out();
         memset(tp, 0, sizeof(*tp));
-        if (get_dashboard_state()->is_master == 1 && tp->work_mode == 2) {
+        if ((get_dashboard_state()->is_master == 1) && (tp->work_mode == 2)) {
           dmic_stream_stop();
         }
       }

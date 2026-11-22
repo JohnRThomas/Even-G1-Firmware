@@ -153,9 +153,9 @@ struct put_pkt_hdr {
 /* quick note list entry (re-read through globle->quicknote on every access) */
 #define QN_ITEM(n) (globle->quicknote->notes[n])
 
-#define POST_TO_HOST(n)                                                                                                \
+#define POST_TO_HOST(sz)                                                                                               \
   do {                                                                                                                 \
-    ret = ctx->write(resp, n);                                                                                         \
+    ret = ctx->write(resp, sz);                                                                                        \
     if (ret < 0) {                                                                                                     \
       G1_LOG_ERR("post_to_host failed ret = %d\n", ret);                                                               \
     }                                                                                                                  \
@@ -176,17 +176,17 @@ static struct k_thread ble_work_thread_data;
 static struct k_timer DashboardLockTimer;
 
 static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr, uint8_t *data);
-static int ble_process_report_response(struct ble_context *ctx, struct ble_req_hdr *hdr, uint8_t *data);
+static int ble_process_report_response(struct ble_context *ctx, const struct ble_req_hdr *hdr, const uint8_t *data);
 static int set_esb_recv_state(uint8_t a, uint8_t b, int sel);
 static void set_esb_up_recv_state(uint8_t a, uint8_t b);
 static void lock_nav_map_mutex(k_timeout_t timeout);
 static void unlock_nav_map_mutex(void);
-static int spec_ble_command_hook(uint8_t *data, uint32_t len);
+static int spec_ble_command_hook(const uint8_t *data, uint32_t len);
 
 static int save_esb_snapshot(const void *data, size_t len, uint8_t arg, int sel) {
   uint8_t *buf;
 
-  if (sel) {
+  if (sel != 0) {
     buf = get_dashboard_state()->esb_up_snapshot;
   } else {
     buf = get_dashboard_state()->esb_down_snapshot;
@@ -196,7 +196,9 @@ static int save_esb_snapshot(const void *data, size_t len, uint8_t arg, int sel)
   return 0;
 }
 int parse_receiver_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint16_t req_len) {
-  uint8_t cmd, total, idx;
+  uint8_t cmd;
+  uint8_t total;
+  uint8_t idx;
 
   if (req == NULL) {
     BLE_PRINTK("[%s-%d]error, req is NULL ! \n", __func__, __LINE__);
@@ -239,14 +241,14 @@ int parse_receiver_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint16_t
     return PKCS7_PACK_MORE;
   }
   /* the last byte stays 0 to end the string */
-  if (pack_offset + req_len - 3 >= PKCS7_PACK_BUF_SIZE) {
+  if ((pack_offset + req_len - 3) >= PKCS7_PACK_BUF_SIZE) {
     BLE_PRINTK("[%s-%d]error, chunk %d overflows the buffer ! \n", __func__, __LINE__, idx);
     return PKCS7_PACK_ERR;
   }
   memcpy(origin_data + pack_offset, req + 3, req_len - 3);
   pack_offset += req_len - 3;
   pack_next_idx = idx + 1;
-  if (idx == total - 1) {
+  if (idx == (total - 1)) {
     return PKCS7_PACK_DONE;
   }
   return PKCS7_PACK_MORE;
@@ -260,11 +262,45 @@ static uint32_t nav_field_len(const uint8_t *s, uint32_t max) {
 
   for (len = 0; len < max; len++) {
     if (s[len] == '\0') {
-      return len + 1;
+      return len + 1U;
     }
   }
   return 0;
 }
+/*
+ * The Dashboard Set panes whose data comes in chunks: cmd, length, sequence, sub, then the chunk
+ * count and the chunk's index (bytes 5 .. 8) and the data from byte 9.
+ */
+#define PUT_CHUNK_HDR_LEN 9U
+
+static bool dashboard_sub_is_chunked(uint8_t sub) {
+  bool chunked;
+
+  switch (sub) {
+    case DASHBOARD_SUB_PANE_CALENDAR:
+    case DASHBOARD_SUB_PANE_STOCK:
+    case DASHBOARD_SUB_PANE_NEWS:
+    case DASHBOARD_SUB_PANE_CANVAS:
+      chunked = true;
+      break;
+    default:
+      chunked = false;
+      break;
+  }
+  return chunked;
+}
+
+/* whether the data of a pane's chunk packet fits behind the used bytes of its buffer of cap bytes */
+static bool put_chunk_fits(const char *pane, uint32_t data_len, size_t used, size_t cap) {
+  bool fits = (data_len >= PUT_CHUNK_HDR_LEN) && (used <= cap) && ((data_len - PUT_CHUNK_HDR_LEN) <= (cap - used));
+
+  if (!fits) {
+    G1_LOG_ERR("%s data is too long, the current data length %u, packet data length = %u\n", pane, (unsigned int)used,
+               (unsigned int)data_len);
+  }
+  return fits;
+}
+
 static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr, uint8_t *data) {
   struct GlassesState *globle = CONTAINER_OF(ctx, struct GlassesState, ble_context);
   uint8_t *tx = ctx->tx_buf;
@@ -273,8 +309,9 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
   uint8_t rx[0x100];
   int ret;
   uint32_t data_len;
-  uint16_t total, idx;
-  uint8_t i, num, sub;
+  uint16_t total;
+  uint16_t idx;
+  uint8_t sub;
   uint16_t dlen;
 
   memcpy(tx, hdr, sizeof(*hdr));
@@ -292,7 +329,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       memcpy(msg, &data[1], hdr->len - 1);
       G1_LOG_INF("msg_data:%02x, %02x, %02x, %02x\n", msg[0], msg[1], msg[2], msg[3]);
       ret = spim_transfer(ctx, rx, 8);
-      resp[1] = (ret == 1 && rx[0] == PKCS7_PACK_ERR) ? PKCS7_PACK_ERR : PKCS7_PACK_DONE;
+      resp[1] = ((ret == 1) && (rx[0] == PKCS7_PACK_ERR)) ? PKCS7_PACK_ERR : PKCS7_PACK_DONE;
       ctx->write(resp, 20);
       break;
     case BLE_CMD_HEAD_UP_CALIBRATION:
@@ -301,7 +338,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       resp[3] = data[3];
       resp[2] = 0;
       resp[4] = data[4];
-      if (hdr->len == dlen && data[4] <= 2) {
+      if ((hdr->len == dlen) && (data[4] <= 2)) {
         switch (data[4]) {
           case 1:
             if (get_dashboard_state()->imu.base != 0) {
@@ -341,7 +378,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       break;
     case BLE_CMD_HEAD_UP_ACTION_SET:
       data_len = *(uint16_t *)&data[1];
-      if (data_len != hdr->len || data_len > sizeof(resp)) {
+      if ((data_len != hdr->len) || (data_len > sizeof(resp))) {
         G1_LOG_WRN("packet length error,input data length = %d,packet data length = "
                    "%d\n",
                    hdr->len, data_len);
@@ -390,7 +427,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       ctx->write(resp, 20);
       break;
     case BLE_CMD_DASHBOARD_SET: {
-      struct put_pkt_hdr *ph = (struct put_pkt_hdr *)data;
+      const struct put_pkt_hdr *ph = (const struct put_pkt_hdr *)data;
 
       data_len = ph->len;
       if (data_len != hdr->len) {
@@ -402,6 +439,13 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         return;
       }
       G1_LOG_INF("received sync id = %d\n", data[3]);
+      /* a chunked pane takes data_len - 9 bytes from behind the chunk header */
+      if ((data_len < PUT_CHUNK_HDR_LEN) && dashboard_sub_is_chunked(data[4])) {
+        G1_LOG_ERR("dashboard information packet shorter than its chunk header, packet data length = %d\n", data_len);
+        PUT_RSP(5, 1);
+        ctx->write(resp, 20);
+        return;
+      }
       switch (data[4]) {
         case DASHBOARD_SUB_TIME_WEATHER: {
           int64_t ms_ts = ((struct put_time_sync *)data)->ms_ts;
@@ -422,7 +466,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           accumulate_elapsed_seconds((uint32_t *)(void *)globle->dashboard_ts, 0, 1);
           globle->dashboard_ts->temp_unit = data[0x13];
           globle->dashboard_ts->time_disp_mode = data[0x14];
-          if (data_len > 0x15 && globle->dashboard_ts->date_format != data[0x15]) {
+          if ((data_len > 0x15U) && (globle->dashboard_ts->date_format != data[0x15])) {
             globle->dashboard_ts->date_format = data[0x15];
             storage_commit_request(0, 0);
           }
@@ -450,7 +494,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           }
           globle->dashboard_ts->disp_mode = data[5];
           globle->dashboard_ts->area = data[6];
-          if (globle->dashboard_ts->area == 4 && globle->dashboard_ts->disp_mode != citywalk_last_disp_mode) {
+          if ((globle->dashboard_ts->area == 4) && (globle->dashboard_ts->disp_mode != citywalk_last_disp_mode)) {
             citywalk_last_disp_mode = globle->dashboard_ts->disp_mode;
             get_dashboard_state()->dashboard_ts->citywalk_mode = 0;
             citywalk_reload = 1;
@@ -478,6 +522,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             G1_LOG_INF("schedule display mode = %d\n", get_dashboard_state()->dashboard_ts->sched_mode);
             if (get_dashboard_state()->dashboard_ts->sched_mode == 3) {
               struct schedule_item *item;
+              uint8_t i;
+              uint8_t num;
 
               num = data[0xc];
               G1_LOG_INF("schedule total record num = %d\n", num);
@@ -490,7 +536,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               }
               memset(schedule_items, 0, sizeof(schedule_items));
               item = schedule_items;
-              for (i = 0; i != num; i++, item++) {
+              for (i = 0; i != num; i++) {
                 if (p[0] == 1) {
                   if (p[1] > 0x40) {
                     G1_LOG_WRN("schedule title data format error!!!\n");
@@ -531,6 +577,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                   POST_TO_HOST(10);
                   return;
                 }
+                item++;
               }
               if (get_dashboard_state()->dashboard_ts->sched_num != i) {
                 cleanCalenadrIndex();
@@ -549,14 +596,19 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             sched_total = 0;
             sched_len = 0;
             memset(sched_buf, 0, sizeof(sched_buf));
-            memcpy(sched_buf, &data[9], data_len - 9);
-            sched_len += data_len - 9;
+            if (!put_chunk_fits("schedule", data_len, 0, sizeof(sched_buf))) {
+              PUT_RSP(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(sched_buf, &data[9], data_len - 9U);
+            sched_len += data_len - 9U;
             sched_cnt++;
             sched_total = total;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
           } else if (idx < total) {
-            if (sched_cnt != idx - 1) {
+            if (sched_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order = "
                          "%d, expected packet order =%d\n",
                          idx, sched_cnt + 1);
@@ -567,15 +619,23 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy(&sched_buf[sched_len], &data[9], data_len - 9);
-            sched_len += data_len - 9;
+            if (!put_chunk_fits("schedule", data_len, sched_len, sizeof(sched_buf))) {
+              sched_total = 0;
+              sched_cnt = 0;
+              memset(sched_buf, 0, sizeof(sched_buf));
+              PUT_RSP_NC(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(&sched_buf[sched_len], &data[9], data_len - 9U);
+            sched_len += data_len - 9U;
             sched_cnt++;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
           } else if (idx == total) {
             const uint8_t *p;
 
-            if (sched_cnt != idx - 1 || sched_total != idx) {
+            if ((sched_cnt != (idx - 1)) || (sched_total != idx)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, sched_cnt + 1);
@@ -586,8 +646,16 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy(&sched_buf[sched_len], &data[9], data_len - 9);
-            sched_len += data_len - 9;
+            if (!put_chunk_fits("schedule", data_len, sched_len, sizeof(sched_buf))) {
+              sched_total = 0;
+              sched_cnt = 0;
+              memset(sched_buf, 0, sizeof(sched_buf));
+              PUT_RSP_NC(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(&sched_buf[sched_len], &data[9], data_len - 9U);
+            sched_len += data_len - 9U;
             sched_cnt++;
             get_dashboard_state()->dashboard_ts->disp_mode = sched_buf[0];
             get_dashboard_state()->dashboard_ts->area = sched_buf[1];
@@ -597,6 +665,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             G1_LOG_INF("schedule display mode = %d\n", get_dashboard_state()->dashboard_ts->sched_mode);
             if (get_dashboard_state()->dashboard_ts->sched_mode == 3) {
               struct schedule_item *item;
+              uint8_t i;
+              uint8_t num;
 
               num = sched_buf[3];
               G1_LOG_INF("schedule record num = %d\n", num);
@@ -609,6 +679,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               memset(schedule_items, 0, sizeof(schedule_items));
               p = &sched_buf[4];
               item = schedule_items;
+              // cppcheck-suppress [misra-c2012-12.3] ; the item cursor steps with the counter
               for (i = 0; i != num; i++, item++) {
                 if (p[0] == 1) {
                   if (p[1] > 0x40) {
@@ -662,6 +733,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
+          } else {
+            /* nothing to do */
           }
           return;
         case DASHBOARD_SUB_PANE_STOCK: /* stocks */
@@ -675,8 +748,10 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                        globle->dashboard_ts->area);
             G1_LOG_INF("stocks display mode = %d\n", get_dashboard_state()->dashboard_ts->stocks_mode);
             if (get_dashboard_state()->dashboard_ts->stocks_mode == 2) {
+              uint8_t num;
+
               num = data[0xc];
-              if (num == 0 || num >= 5) {
+              if ((num == 0) || (num >= 5)) {
                 G1_LOG_ERR("stocks data oversize!!!!\n");
                 PUT_RSP(9, 1);
                 POST_TO_HOST(10);
@@ -690,14 +765,14 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               } else {
                 struct stock_item *st;
                 const uint8_t *p;
-                uint16_t img_len;
+                uint8_t i;
 
                 /* the image length is checked before any field is changed */
                 p = &data[0xe];
-                for (i = 1; i < 7 && p[0] == i; i++) {
+                for (i = 1; (i < 7) && (p[0] == i); i++) {
                   p += p[1] + 2;
                 }
-                if (p[0] == 7 && *(uint16_t *)&p[1] > sizeof(st->image)) {
+                if ((p[0] == 7) && (*(uint16_t *)&p[1] > sizeof(st->image))) {
                   G1_LOG_ERR("stocks image format oversize !!!\n");
                   PUT_RSP(9, 1);
                   POST_TO_HOST(10);
@@ -824,7 +899,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                   return;
                 }
                 if (p[0] == 7) {
-                  img_len = *(uint16_t *)&p[1];
+                  uint16_t img_len = *(uint16_t *)&p[1];
+
                   if (img_len > sizeof(st->image)) {
                     G1_LOG_ERR("stocks image format oversize !!!\n");
                     PUT_RSP(9, 1);
@@ -860,14 +936,19 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             stock_total = 0;
             stock_len = 0;
             memset(stock_buf, 0, sizeof(stock_buf));
-            memcpy(stock_buf, &data[9], data_len - 9);
-            stock_len += data_len - 9;
+            if (!put_chunk_fits("stock", data_len, 0, sizeof(stock_buf))) {
+              PUT_RSP(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(stock_buf, &data[9], data_len - 9U);
+            stock_len += data_len - 9U;
             stock_cnt++;
             stock_total = total;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
           } else if (idx < total) {
-            if (stock_cnt != idx - 1) {
+            if (stock_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, sched_cnt + 1);
@@ -878,13 +959,21 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy(&stock_buf[stock_len], &data[9], data_len - 9);
-            stock_len += data_len - 9;
+            if (!put_chunk_fits("stock", data_len, stock_len, sizeof(stock_buf))) {
+              stock_total = 0;
+              stock_cnt = 0;
+              memset(stock_buf, 0, sizeof(stock_buf));
+              PUT_RSP_NC(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(&stock_buf[stock_len], &data[9], data_len - 9U);
+            stock_len += data_len - 9U;
             stock_cnt++;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
           } else if (idx == total) {
-            if (stock_cnt != idx - 1 || stock_total != idx) {
+            if ((stock_cnt != (idx - 1)) || (stock_total != idx)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, stock_cnt + 1);
@@ -895,8 +984,16 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy(&stock_buf[stock_len], &data[9], data_len - 9);
-            stock_len += data_len - 9;
+            if (!put_chunk_fits("stock", data_len, stock_len, sizeof(stock_buf))) {
+              stock_total = 0;
+              stock_cnt = 0;
+              memset(stock_buf, 0, sizeof(stock_buf));
+              PUT_RSP_NC(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(&stock_buf[stock_len], &data[9], data_len - 9U);
+            stock_len += data_len - 9U;
             stock_cnt++;
             get_dashboard_state()->dashboard_ts->disp_mode = stock_buf[0];
             get_dashboard_state()->dashboard_ts->area = stock_buf[1];
@@ -905,8 +1002,10 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                        globle->dashboard_ts->area);
             G1_LOG_INF("stocks display mode = %d\n", get_dashboard_state()->dashboard_ts->stocks_mode);
             if (get_dashboard_state()->dashboard_ts->stocks_mode == 2) {
+              uint8_t num;
+
               num = stock_buf[3];
-              if (num == 0 || num >= 5) {
+              if ((num == 0) || (num >= 5)) {
                 G1_LOG_ERR("stocks data oversize!!!!\n");
                 PUT_RSP(9, 1);
                 POST_TO_HOST(10);
@@ -922,13 +1021,13 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               } else {
                 const uint8_t *p = &stock_buf[5];
                 struct stock_item *st;
-                uint16_t img_len;
+                uint8_t i;
 
                 /* the image length is checked before any field is changed */
-                for (i = 1; i < 7 && p[0] == i; i++) {
+                for (i = 1; (i < 7) && (p[0] == i); i++) {
                   p += p[1] + 2;
                 }
-                if (p[0] == 7 && *(uint16_t *)&p[1] > sizeof(st->image)) {
+                if ((p[0] == 7) && (*(uint16_t *)&p[1] > sizeof(st->image))) {
                   G1_LOG_ERR("stocks image format oversize !!!\n");
                   PUT_RSP(9, 1);
                   POST_TO_HOST(10);
@@ -1056,7 +1155,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                   return;
                 }
                 if (p[0] == 7) {
-                  img_len = *(uint16_t *)&p[1];
+                  uint16_t img_len = *(uint16_t *)&p[1];
+
                   if (img_len > sizeof(st->image)) {
                     G1_LOG_ERR("stocks image format oversize !!!\n");
                     PUT_RSP(9, 1);
@@ -1085,6 +1185,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               PUT_RSP(9, 0);
               POST_TO_HOST(10);
             }
+          } else {
+            /* nothing to do */
           }
           break;
         case DASHBOARD_SUB_PANE_NEWS: /* news */
@@ -1098,6 +1200,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                        globle->dashboard_ts->area);
             G1_LOG_INF("news display mode = %d\n", get_dashboard_state()->dashboard_ts->news_mode);
             if (get_dashboard_state()->dashboard_ts->news_mode == 2) {
+              uint8_t num;
+
               num = data[0xc];
               if (num >= 5) {
                 G1_LOG_ERR("news index num  oversize!!!!\n");
@@ -1113,7 +1217,6 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               } else {
                 const uint8_t *p = &data[0xe];
                 struct news_item *nw;
-                uint16_t txt_len;
 
                 if (p[0] == 1) {
                   if (p[1] > 0x40) {
@@ -1136,7 +1239,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                   return;
                 }
                 if (p[0] == 2) {
-                  txt_len = *(uint16_t *)&p[1];
+                  uint16_t txt_len = *(uint16_t *)&p[1];
+
                   if (txt_len >= sizeof(nw->text)) {
                     G1_LOG_ERR("news txt format oversize !!!\n");
                     PUT_RSP(9, 1);
@@ -1172,14 +1276,19 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             news_total = 0;
             news_len = 0;
             memset(news_buf, 0, sizeof(news_buf));
-            memcpy(news_buf, &data[9], data_len - 9);
-            news_len += data_len - 9;
+            if (!put_chunk_fits("news", data_len, 0, sizeof(news_buf))) {
+              PUT_RSP(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(news_buf, &data[9], data_len - 9U);
+            news_len += data_len - 9U;
             news_cnt++;
             news_total = total;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
           } else if (idx < total) {
-            if (news_cnt != idx - 1) {
+            if (news_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, news_cnt + 1);
@@ -1190,13 +1299,21 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy(&news_buf[news_len], &data[9], data_len - 9);
-            news_len += data_len - 9;
+            if (!put_chunk_fits("news", data_len, news_len, sizeof(news_buf))) {
+              news_total = 0;
+              news_cnt = 0;
+              memset(news_buf, 0, sizeof(news_buf));
+              PUT_RSP_NC(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(&news_buf[news_len], &data[9], data_len - 9U);
+            news_len += data_len - 9U;
             news_cnt++;
             PUT_RSP(9, 0);
             POST_TO_HOST(10);
           } else if (total == idx) {
-            if (news_cnt != total - 1 || news_total != total) {
+            if ((news_cnt != (total - 1)) || (news_total != total)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, news_cnt + 1);
@@ -1207,8 +1324,16 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy(&news_buf[news_len], &data[9], data_len - 9);
-            news_len += data_len - 9;
+            if (!put_chunk_fits("news", data_len, news_len, sizeof(news_buf))) {
+              news_total = 0;
+              news_cnt = 0;
+              memset(news_buf, 0, sizeof(news_buf));
+              PUT_RSP_NC(9, 1);
+              POST_TO_HOST(10);
+              return;
+            }
+            memcpy(&news_buf[news_len], &data[9], data_len - 9U);
+            news_len += data_len - 9U;
             news_cnt++;
             get_dashboard_state()->dashboard_ts->disp_mode = news_buf[0];
             get_dashboard_state()->dashboard_ts->area = news_buf[1];
@@ -1217,6 +1342,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                        globle->dashboard_ts->area);
             G1_LOG_INF("news display mode = %d\n", get_dashboard_state()->dashboard_ts->news_mode);
             if (get_dashboard_state()->dashboard_ts->news_mode == 2) {
+              uint8_t num;
+
               num = news_buf[3];
               if (num >= 5) {
                 G1_LOG_ERR("stocks data oversize!!!!\n");
@@ -1233,7 +1360,6 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               } else {
                 const uint8_t *p = &news_buf[5];
                 struct news_item *nw;
-                uint16_t txt_len;
 
                 if (p[0] == 1) {
                   if (p[1] > 0x40) {
@@ -1256,7 +1382,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                   return;
                 }
                 if (p[0] == 2) {
-                  txt_len = *(uint16_t *)&p[1];
+                  uint16_t txt_len = *(uint16_t *)&p[1];
+
                   if (txt_len >= sizeof(nw->text)) {
                     G1_LOG_ERR("news txt format oversize !!!\n");
                     PUT_RSP(9, 1);
@@ -1287,6 +1414,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               PUT_RSP(9, 0);
               POST_TO_HOST(10);
             }
+          } else {
+            /* nothing to do */
           }
           break;
         case DASHBOARD_SUB_PANE_CANVAS: /* citywalk */
@@ -1308,25 +1437,32 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               return;
             }
             if (get_dashboard_state()->dashboard_ts->citywalk_mode == 3) {
+              /* the arrow's position ends at byte 0x10, where its bitmap starts */
+              if (data_len < 0x10U) {
+                G1_LOG_ERR("citywalk arrow packet too short!\n");
+                return;
+              }
               get_dashboard_state()->dashboard_ts->arrow_x = *(uint16_t *)&data[0xc];
               if (get_dashboard_state()->dashboard_ts->arrow_x & 1U) {
                 get_dashboard_state()->dashboard_ts->arrow_x--;
               }
               get_dashboard_state()->dashboard_ts->arrow_y = *(uint16_t *)&data[0xe];
               if (get_dashboard_state()->dashboard_ts->disp_mode == 0) {
-                if (get_dashboard_state()->dashboard_ts->arrow_x > 0x108 ||
-                    get_dashboard_state()->dashboard_ts->arrow_y > 0x68) {
+                if ((get_dashboard_state()->dashboard_ts->arrow_x > 0x108) ||
+                    (get_dashboard_state()->dashboard_ts->arrow_y > 0x68)) {
                   G1_LOG_ERR("citywalk arrow offset too long!\n");
                   return;
                 }
-                memcpy(&panoramic_map_buf[0x13ac], &data[0x10], MIN(data_len - 0x10, CITYWALK_ARROW_SIZE));
+                memcpy(&panoramic_map_buf[0x13ac], &data[0x10], MIN(data_len - 0x10U, (uint32_t)CITYWALK_ARROW_SIZE));
               } else if (get_dashboard_state()->dashboard_ts->disp_mode == 1) {
-                if (get_dashboard_state()->dashboard_ts->arrow_x > 0x158 ||
-                    get_dashboard_state()->dashboard_ts->arrow_y > 0x68) {
+                if ((get_dashboard_state()->dashboard_ts->arrow_x > 0x158) ||
+                    (get_dashboard_state()->dashboard_ts->arrow_y > 0x68)) {
                   G1_LOG_ERR("citywalk arrow offset too long!\n");
                   return;
                 }
-                memcpy(&panoramic_map_buf[0x18fc], &data[0x10], MIN(data_len - 0x10, CITYWALK_ARROW_SIZE));
+                memcpy(&panoramic_map_buf[0x18fc], &data[0x10], MIN(data_len - 0x10U, (uint32_t)CITYWALK_ARROW_SIZE));
+              } else {
+                /* nothing to do */
               }
               if (get_dashboard_state()->dashboard_ts->disp_mode != citywalk_last_disp_mode) {
                 citywalk_last_disp_mode = get_dashboard_state()->dashboard_ts->disp_mode;
@@ -1341,9 +1477,13 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                   memcpy(&panoramic_map_buf[0x197c + 0x13ac], &panoramic_map_buf[0x13ac], CITYWALK_ARROW_SIZE);
                 } else if (get_dashboard_state()->dashboard_ts->disp_mode == 1) {
                   memcpy(&panoramic_map_buf[0x197c + 0x18fc], &panoramic_map_buf[0x18fc], CITYWALK_ARROW_SIZE);
+                } else {
+                  /* nothing to do */
                 }
                 get_dashboard_state()->dashboard_ts->citywalk_state = 3;
                 citywalk_canvas_valid = 1;
+              } else {
+                /* nothing to do */
               }
               if (citywalk_reload == 1) {
                 get_dashboard_state()->dashboard_ts->citywalk_mode = 0;
@@ -1361,13 +1501,13 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               citywalk_bg_ready = 0;
               get_dashboard_state()->dashboard_ts->citywalk_state = 1;
               memset(panoramic_map_buf, 0, 0x197c);
-              memcpy(panoramic_map_buf, &data[9], data_len - 9);
-              citywalk_len = data_len - 9;
+              memcpy(panoramic_map_buf, &data[9], data_len - 9U);
+              citywalk_len = data_len - 9U;
             }
           } else if (idx < total) {
             if (get_dashboard_state()->dashboard_ts->citywalk_state == 1) {
               citywalk_bg_ready = 0;
-              if (multi_packet_cnt != idx - 1) {
+              if (multi_packet_cnt != (idx - 1)) {
                 G1_LOG_WRN("There is a packet order error, current packet "
                            "order = %d, expected packet order = %d\n",
                            idx, multi_packet_cnt + 1);
@@ -1379,14 +1519,14 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                 ctx->write(resp, 10);
                 return;
               }
-              if (citywalk_len - 9 + data_len > 0x197c) {
+              if ((citywalk_len - 9 + data_len) > 0x197c) {
                 G1_LOG_ERR("citywalk data is too long, the current data "
                            "length %d,wait write data length = %d\n",
-                           citywalk_len, data_len - 9);
+                           citywalk_len, data_len - 9U);
                 return;
               }
-              memcpy(&panoramic_map_buf[citywalk_len], &data[9], data_len - 9);
-              citywalk_len += data_len - 9;
+              memcpy(&panoramic_map_buf[citywalk_len], &data[9], data_len - 9U);
+              citywalk_len += data_len - 9U;
               G1_LOG_INF("Successfully received the subpackage content, the "
                          "packet sequence is %d\n",
                          idx);
@@ -1394,7 +1534,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
           } else if (total == idx) {
             if (get_dashboard_state()->dashboard_ts->citywalk_state == 1) {
-              if (multi_packet_cnt != total - 1 || multi_packet_total != total) {
+              if ((multi_packet_cnt != (total - 1)) || (multi_packet_total != total)) {
                 G1_LOG_WRN("There is a packet order error, current packet "
                            "order = %d, expected packet order = %d\n",
                            idx, multi_packet_cnt + 1);
@@ -1407,18 +1547,18 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                 ctx->write(resp, 10);
                 return;
               }
-              if (citywalk_len - 9 + data_len > 0x197c) {
+              if ((citywalk_len - 9 + data_len) > 0x197c) {
                 G1_LOG_ERR("citywalk data is too long, the current data "
                            "length %d,wait write data length = %d\n",
-                           citywalk_len, data_len - 9);
+                           citywalk_len, data_len - 9U);
                 citywalk_bg_ready = 0;
                 return;
               }
               G1_LOG_ERR("Successfully assembled multiple packages of data, and "
                          "updated the complete content to the UI thread for "
                          "data update.\n");
-              memcpy(&panoramic_map_buf[citywalk_len], &data[9], data_len - 9);
-              citywalk_len += data_len - 9;
+              memcpy(&panoramic_map_buf[citywalk_len], &data[9], data_len - 9U);
+              citywalk_len += data_len - 9U;
               get_dashboard_state()->dashboard_ts->disp_mode = panoramic_map_buf[0];
               get_dashboard_state()->dashboard_ts->area = panoramic_map_buf[1];
               if (citywalk_reload == 1) {
@@ -1427,8 +1567,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               get_dashboard_state()->dashboard_ts->citywalk_bg_param = panoramic_map_buf[3];
               citywalk_bg_ready = 1;
               get_dashboard_state()->dashboard_ts->citywalk_state = 2;
-              if ((get_dashboard_state()->dashboard_ts->disp_mode == 0 && citywalk_len != 0x13ac) ||
-                  (get_dashboard_state()->dashboard_ts->disp_mode == 1 && citywalk_len != 0x18fc)) {
+              if (((get_dashboard_state()->dashboard_ts->disp_mode == 0) && (citywalk_len != 0x13ac)) ||
+                  ((get_dashboard_state()->dashboard_ts->disp_mode == 1) && (citywalk_len != 0x18fc))) {
                 citywalk_reload = 1;
                 citywalk_bg_ready = 0;
                 get_dashboard_state()->dashboard_ts->citywalk_state = 0;
@@ -1438,6 +1578,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             multi_packet_total = 0;
             multi_packet_cnt = 0;
             citywalk_len = 0;
+          } else {
+            /* nothing to do */
           }
           ctx->write(resp, 10);
           break;
@@ -1464,8 +1606,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       }
       break;
     case BLE_CMD_TELEPROMPTER_INFO: { /* teleprompter */
-      struct put_pkt_hdr *ph = (struct put_pkt_hdr *)data;
-      struct teleprompter_info *tp;
+      const struct put_pkt_hdr *ph = (const struct put_pkt_hdr *)data;
 
       data_len = ph->len;
       if (data_len != hdr->len) {
@@ -1483,9 +1624,10 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           idx = *(uint16_t *)&data[7];
           if (total == 1) {
             int64_t now;
+            struct teleprompter_info *tp;
 
             G1_LOG_INF("received teleprompter init packet,total packet = 1\n");
-            if (data_len < 0x14) {
+            if (data_len < 0x14U) {
               G1_LOG_ERR("teleprompter packet too short\n");
               PUT_RSP(9, 1);
               POST_TO_HOST(10);
@@ -1502,9 +1644,9 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             tp->scroll_pct = data[0xb];
             tp->mark_pos = 0;
             tp->suspend = 0;
-            memcpy(tp->text, &data[0xc], data_len - 0x14);
-            tp->len = data_len - 0x14;
-            tp->ts = GET_LE64(&data[data_len - 8]);
+            memcpy(tp->text, &data[0xc], data_len - 0x14U);
+            tp->len = data_len - 0x14U;
+            tp->ts = GET_LE64(&data[data_len - 8U]);
             now = 0;
             get_wall_clock_ms(&now);
             G1_LOG_ERR("*******************------ received app send timestamp = "
@@ -1535,13 +1677,13 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             tp_buf.scroll_pct = data[0xb];
             tp_buf.mark_pos = 0;
             tp_buf.ts = 0;
-            memcpy(tp_buf.text, &data[0xc], data_len - 0xc);
-            tp_len = data_len - 0xc;
+            memcpy(tp_buf.text, &data[0xc], data_len - 0xcU);
+            tp_len = data_len - 0xcU;
             multi_packet_cnt++;
             PUT_RSP_NC(9, 0);
             POST_TO_HOST(10);
           } else if (idx < total) {
-            if (multi_packet_cnt != idx - 1) {
+            if (multi_packet_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -1553,7 +1695,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            if (data_len < 0xc || tp_len + data_len - 0xc > sizeof(tp_buf.text)) {
+            if ((data_len < 0xcU) || ((tp_len + data_len - 0xc) > sizeof(tp_buf.text))) {
               G1_LOG_ERR("teleprompter text too long\n");
               multi_packet_total = 0;
               multi_packet_cnt = 0;
@@ -1563,8 +1705,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy(&tp_buf.text[tp_len], &data[0xc], data_len - 0xc);
-            tp_len += data_len - 0xc;
+            memcpy(&tp_buf.text[tp_len], &data[0xc], data_len - 0xcU);
+            tp_len += data_len - 0xcU;
             G1_LOG_INF("ACTION ID = 1,Successfully received the subpackage "
                        "content, the packet sequence is %d\n",
                        idx);
@@ -1574,7 +1716,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           } else if (idx == total) {
             int64_t now;
 
-            if (multi_packet_cnt != idx - 1 || multi_packet_total != idx) {
+            if ((multi_packet_cnt != (idx - 1)) || (multi_packet_total != idx)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -1585,7 +1727,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            if (data_len < 0x14 || tp_len + data_len - 0x14 > sizeof(tp_buf.text)) {
+            if ((data_len < 0x14U) || ((tp_len + data_len - 0x14) > sizeof(tp_buf.text))) {
               G1_LOG_ERR("teleprompter text too long\n");
               multi_packet_total = 0;
               multi_packet_cnt = 0;
@@ -1597,10 +1739,10 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
             globle->esb_down_id = data[3];
             set_esb_recv_state(data[3], 0, 0);
-            memcpy(&tp_buf.text[tp_len], &data[0xc], data_len - 0x14);
-            tp_len += data_len - 0x14;
+            memcpy(&tp_buf.text[tp_len], &data[0xc], data_len - 0x14U);
+            tp_len += data_len - 0x14U;
             tp_buf.len = tp_len;
-            tp_buf.ts = GET_LE64(&data[data_len - 8]);
+            tp_buf.ts = GET_LE64(&data[data_len - 8U]);
             now = 0;
             get_wall_clock_ms(&now);
             G1_LOG_INF("*******************------ received app send timestamp "
@@ -1639,7 +1781,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           globle->teleprompter->mark_pos = *(uint16_t *)&data[6];
           globle->teleprompter->scroll_pct = data[5];
           globle->teleprompter->action = 2;
-          globle->teleprompter->ts = GET_LE64(&data[data_len - 8]);
+          globle->teleprompter->ts = GET_LE64(&data[data_len - 8U]);
           G1_LOG_INF("MARK POSITION = %d\n", globle->teleprompter->mark_pos);
           PUT_RSP(5, 0);
           if (is_master() == 1) {
@@ -1664,9 +1806,9 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             globle->teleprompter->scroll_pct = data[9];
             globle->teleprompter->mark_pos = *(uint16_t *)&data[10];
             memset(globle->teleprompter->text, 0, sizeof(globle->teleprompter->text));
-            memcpy(globle->teleprompter->text, &data[0xc], data_len - 0x14);
-            globle->teleprompter->len = data_len - 0x14;
-            globle->teleprompter->ts = GET_LE64(&data[data_len - 8]);
+            memcpy(globle->teleprompter->text, &data[0xc], data_len - 0x14U);
+            globle->teleprompter->len = data_len - 0x14U;
+            globle->teleprompter->ts = GET_LE64(&data[data_len - 8U]);
             now = 0;
             get_wall_clock_ms(&now);
             G1_LOG_INF("*******************------ received app send timestamp = "
@@ -1690,14 +1832,14 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             multi_packet_cnt = 0;
             multi_packet_len = 0;
             memset(&tp_buf, 0, sizeof(tp_buf));
-            memcpy(&tp_buf, &data[0xc], data_len - 0xc);
-            multi_packet_len = data_len - 0xc;
+            memcpy(&tp_buf, &data[0xc], data_len - 0xcU);
+            multi_packet_len = data_len - 0xcU;
             multi_packet_cnt++;
             globle->teleprompter->ts = 0;
             PUT_RSP_NC(9, 0);
             POST_TO_HOST(10);
           } else if (idx < total) {
-            if (multi_packet_cnt != idx - 1) {
+            if (multi_packet_cnt != (idx - 1)) {
               G1_LOG_WRN("ACTION ID = 3,There is a packet order error, current "
                          "packet order = %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -1709,7 +1851,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            if (data_len < 0xc || multi_packet_len + data_len - 0xc > sizeof(globle->teleprompter->text)) {
+            if ((data_len < 0xcU) || ((multi_packet_len + data_len - 0xc) > sizeof(globle->teleprompter->text))) {
               G1_LOG_ERR("teleprompter text too long\n");
               multi_packet_total = 0;
               multi_packet_cnt = 0;
@@ -1719,8 +1861,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            memcpy((uint8_t *)&tp_buf + multi_packet_len, &data[0xc], data_len - 0xc);
-            multi_packet_len += data_len - 0xc;
+            memcpy((uint8_t *)&tp_buf + multi_packet_len, &data[0xc], data_len - 0xcU);
+            multi_packet_len += data_len - 0xcU;
             G1_LOG_INF("ACTION ID = 3,Successfully received the subpackage "
                        "content, the packet sequence is %d\n",
                        idx);
@@ -1730,7 +1872,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           } else if (idx == total) {
             int64_t now;
 
-            if (multi_packet_cnt != idx - 1 || multi_packet_total != idx) {
+            if ((multi_packet_cnt != (idx - 1)) || (multi_packet_total != idx)) {
               G1_LOG_WRN("ACTION ID = 3,There is a packet order error, current "
                          "packet order = %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -1742,7 +1884,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               POST_TO_HOST(10);
               return;
             }
-            if (data_len < 0x14 || multi_packet_len + data_len - 0x14 > sizeof(globle->teleprompter->text)) {
+            if ((data_len < 0x14U) || ((multi_packet_len + data_len - 0x14) > sizeof(globle->teleprompter->text))) {
               G1_LOG_ERR("teleprompter text too long\n");
               multi_packet_total = 0;
               multi_packet_cnt = 0;
@@ -1754,8 +1896,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
             globle->esb_down_id = data[3];
             set_esb_recv_state(data[3], 0, 0);
-            memcpy((uint8_t *)&tp_buf + multi_packet_len, &data[0xc], data_len - 0x14);
-            multi_packet_len += data_len - 0x14;
+            memcpy((uint8_t *)&tp_buf + multi_packet_len, &data[0xc], data_len - 0x14U);
+            multi_packet_len += data_len - 0x14U;
             multi_packet_cnt++;
             memset(globle->teleprompter->text, 0, sizeof(globle->teleprompter->text));
             memcpy(globle->teleprompter->text, &tp_buf, multi_packet_len);
@@ -1766,7 +1908,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             G1_LOG_INF("ACTIION ID = 3,Successfully assembled multiple packages "
                        "of data, and updated the complete content to the UI "
                        "thread for data update.\n");
-            globle->teleprompter->ts = GET_LE64(&data[data_len - 8]);
+            globle->teleprompter->ts = GET_LE64(&data[data_len - 8U]);
             now = 0;
             get_wall_clock_ms(&now);
             G1_LOG_INF("*******************------ received app send timestamp "
@@ -1830,8 +1972,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       } else {
         globle->teleprompter->suspend = 0;
       }
-      globle->teleprompter->ts = GET_LE64(&data[data_len - 0xc]);
-      globle->teleprompter->counter = GET_LE32(&data[data_len - 4]);
+      globle->teleprompter->ts = GET_LE64(&data[data_len - 0xcU]);
+      globle->teleprompter->counter = GET_LE32(&data[data_len - 4U]);
       G1_LOG_INF("SUSPEND status ,app send counter time = %d\n", globle->teleprompter->counter);
       ctx->tx_len = ((struct ble_req_hdr *)tx)->len + 4;
       memset(resp, 0, sizeof(resp));
@@ -1860,7 +2002,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       }
       break;
     case BLE_CMD_QUICK_NOTE_CONTROL: { /* quick note / audio */
-      struct put_pkt_hdr *ph = (struct put_pkt_hdr *)data;
+      const struct put_pkt_hdr *ph = (const struct put_pkt_hdr *)data;
 
       data_len = ph->len;
       if (data_len != hdr->len) {
@@ -1871,16 +2013,16 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       }
       switch (data[4]) {
         case 1:
-          if (is_master() == 1 && data_len == 6 && data[5] == 1) {
+          if ((is_master() == 1) && (data_len == 6U) && (data[5] == 1)) {
             requestAudioInfoToApp(0);
           }
           break;
         case 2:
           if (is_master() == 1) {
-            if (data_len == 6) {
+            if (data_len == 6U) {
               G1_LOG_INF("received request voice data commmand\n");
               sendAudioStreamFileToApp(0, data[5]);
-            } else if (data_len == 0xb) {
+            } else if (data_len == 0xbU) {
               if (data[10] == 0) {
                 G1_LOG_INF("received request voice data next data\n");
               } else if (data[10] == 0xaa) {
@@ -1899,6 +2041,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               } else {
                 G1_LOG_ERR("app return error response information\n");
               }
+            } else {
+              /* nothing to do */
             }
           }
           break;
@@ -1910,7 +2054,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             uint8_t flag = data[10];
             int n = num - 1;
 
-            if (num > 4 || num == 0) {
+            if ((num > 4) || (num == 0)) {
               G1_LOG_ERR("quick note num error %d\n", num);
               PUT_RSP_NC(9, 1);
               ctx->write(resp, 10);
@@ -1930,7 +2074,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               uint8_t tl = data[0xb];
               uint16_t xl;
 
-              memcpy(QN_ITEM(n).title, &data[0xc], MIN(tl, sizeof(QN_ITEM(n).title) - 1));
+              memcpy(QN_ITEM(n).title, &data[0xc], MIN(tl, sizeof(QN_ITEM(n).title) - 1U));
               xl = data[tl + 0xc] | ((uint32_t)data[tl + 0xd] << 8U);
               memcpy(QN_ITEM(n).text, &data[tl + 0xe], MIN(xl, sizeof(QN_ITEM(n).text)));
               G1_LOG_INF("title length = %d,text length = %d\n", tl, xl);
@@ -1947,7 +2091,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             qn_cnt = 0;
             qn_total = total;
             qn_num = data[9];
-            if (qn_num > 4 || qn_num == 0) {
+            if ((qn_num > 4) || (qn_num == 0)) {
               G1_LOG_ERR("app send parameter error,qucik note num = %d\n", qn_num);
               PUT_RSP_NC(9, 1);
               ctx->write(resp, 10);
@@ -1956,8 +2100,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               uint16_t xl;
 
               QN_ITEM(qn_num - 1).valid = 0;
-              memcpy(qn_title_buf.str, &data[0xc], MIN(tl, sizeof(qn_title_buf) - 1));
-              xl = data_len - 0xe - tl;
+              memcpy(qn_title_buf.str, &data[0xc], MIN(tl, sizeof(qn_title_buf) - 1U));
+              xl = data_len - 0xeU - tl;
               memcpy(&qn_text_buf[qn_len], &data[tl + 0xe], MIN(xl, sizeof(qn_text_buf)));
               qn_len = xl;
               qn_cnt++;
@@ -1965,7 +2109,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 10);
             }
           } else if (idx < total) {
-            if (qn_cnt != idx - 1) {
+            if (qn_cnt != (idx - 1)) {
               G1_LOG_WRN("ACTION ID = 3,There is a packet order error, current "
                          "packet order = %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -1978,7 +2122,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 10);
               return;
             }
-            if (data_len < 9 || qn_len + data_len - 9 > sizeof(qn_text_buf)) {
+            if ((data_len < 9U) || ((qn_len + data_len - 9) > sizeof(qn_text_buf))) {
               G1_LOG_ERR("quick note text too long\n");
               qn_total = 0;
               qn_cnt = 0;
@@ -1989,13 +2133,13 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 10);
               return;
             }
-            memcpy(&qn_text_buf[qn_len], &data[9], data_len - 9);
-            qn_len += data_len - 9;
+            memcpy(&qn_text_buf[qn_len], &data[9], data_len - 9U);
+            qn_len += data_len - 9U;
             qn_cnt++;
             PUT_RSP_NC(9, 0);
             ctx->write(resp, 10);
           } else if (idx == total) {
-            if (qn_cnt != total - 1 || qn_total != total) {
+            if ((qn_cnt != (total - 1)) || (qn_total != total)) {
               G1_LOG_WRN("ACTION ID = 3,There is a packet order error, current "
                          "packet order = %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -2008,7 +2152,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 10);
               return;
             }
-            if (data_len < 9 || qn_len + data_len - 9 > sizeof(qn_text_buf)) {
+            if ((data_len < 9U) || ((qn_len + data_len - 9) > sizeof(qn_text_buf))) {
               G1_LOG_ERR("quick note text too long\n");
               memset(qn_text_buf, 0, sizeof(qn_text_buf));
               memset(&qn_title_buf, 0, sizeof(qn_title_buf));
@@ -2019,8 +2163,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 10);
               return;
             }
-            memcpy(&qn_text_buf[qn_len], &data[9], data_len - 9);
-            qn_len += data_len - 9;
+            memcpy(&qn_text_buf[qn_len], &data[9], data_len - 9U);
+            qn_len += data_len - 9U;
             memset(&QN_ITEM(qn_num - 1).title, 0, sizeof(QN_ITEM(0).title));
             memcpy(QN_ITEM(qn_num - 1).title, qn_title_buf.str, sizeof(qn_title_buf));
             memset(QN_ITEM(qn_num - 1).text, 0, sizeof(QN_ITEM(0).text));
@@ -2034,6 +2178,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             qn_len = 0;
             qn_cnt = 0;
             qn_total = 0;
+          } else {
+            /* nothing to do */
           }
           break;
         case 4:
@@ -2092,8 +2238,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           total = *(uint16_t *)&data[5];
           if (total == 1) {
             G1_LOG_INF("received quick note packet,total packet = 1\n");
-            data_len -= 0xb;
-            if (data_len > 0x14a) {
+            data_len -= 0xbU;
+            if (data_len > 0x14aU) {
               G1_LOG_ERR("quick note data is too long, the current data length "
                          "0,wait write data length = %d\n",
                          data_len);
@@ -2121,10 +2267,10 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             multi_packet_total = total;
             multi_packet_cnt = 1;
             memset(text_packet_buf, 0, sizeof(text_packet_buf));
-            memcpy(text_packet_buf, &data[0xb], data_len - 0xb);
-            multi_packet_len = data_len - 0xb;
+            memcpy(text_packet_buf, &data[0xb], data_len - 0xbU);
+            multi_packet_len = data_len - 0xbU;
           } else if (idx < total) {
-            if (multi_packet_cnt != idx - 1) {
+            if (multi_packet_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order = %d\n",
                          idx, multi_packet_cnt + 1);
@@ -2136,22 +2282,22 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, rh->len);
               return;
             }
-            if (multi_packet_len - 0xb + data_len > 0x14a) {
+            if ((multi_packet_len - 0xb + data_len) > 0x14a) {
               G1_LOG_ERR("quick note data is too long, the current data length "
                          "%d,wait write data length = %d\n",
-                         multi_packet_len, data_len - 0xb);
+                         multi_packet_len, data_len - 0xbU);
               resp[9] = 1;
               ctx->write(resp, rh->len);
               return;
             }
-            memcpy(&text_packet_buf[multi_packet_len], &data[0xb], data_len - 0xb);
-            multi_packet_len += data_len - 0xb;
+            memcpy(&text_packet_buf[multi_packet_len], &data[0xb], data_len - 0xbU);
+            multi_packet_len += data_len - 0xbU;
             G1_LOG_INF("Successfully received the subpackage content, the packet "
                        "sequence is %d\n",
                        idx);
             multi_packet_cnt++;
           } else if (idx == total) {
-            if (multi_packet_cnt != idx - 1 || idx != multi_packet_total) {
+            if ((multi_packet_cnt != (idx - 1)) || (idx != multi_packet_total)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order = %d\n",
                          idx, multi_packet_cnt + 1);
@@ -2162,10 +2308,10 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, rh->len);
               return;
             }
-            if (multi_packet_len - 0xb + data_len > 0x14a) {
+            if ((multi_packet_len - 0xb + data_len) > 0x14a) {
               G1_LOG_ERR("quick note data is too long, the current data length "
                          "%d,wait write data length = %d\n",
-                         multi_packet_len, data_len - 0xb);
+                         multi_packet_len, data_len - 0xbU);
               resp[9] = 1;
               ctx->write(resp, rh->len);
               return;
@@ -2177,8 +2323,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             get_dashboard_state()->quicknote_show_info->result_code = data[9];
             get_dashboard_state()->quicknote_show_info->scroll_line = data[10];
             if (get_dashboard_state()->quicknote_show_info->result_code == 0) {
-              memcpy(&text_packet_buf[multi_packet_len], &data[0xb], data_len - 0xb);
-              multi_packet_len += data_len - 0xb;
+              memcpy(&text_packet_buf[multi_packet_len], &data[0xb], data_len - 0xbU);
+              multi_packet_len += data_len - 0xbU;
               memset(get_dashboard_state()->quicknote_show_info->data, 0,
                      sizeof(get_dashboard_state()->quicknote_show_info->data));
               memcpy(get_dashboard_state()->quicknote_show_info->data, text_packet_buf, multi_packet_len);
@@ -2190,6 +2336,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             multi_packet_total = 0;
             multi_packet_cnt = 0;
             multi_packet_len = 0;
+          } else {
+            /* nothing to do */
           }
           ctx->write(resp, rh->len);
           break;
@@ -2227,7 +2375,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       break;
     }
     case BLE_CMD_NAVIGATION_INFO: { /* navigation */
-      struct put_pkt_hdr *ph = (struct put_pkt_hdr *)data;
+      const struct put_pkt_hdr *ph = (const struct put_pkt_hdr *)data;
       struct nav_info *nav;
 
       data_len = ph->len;
@@ -2261,29 +2409,30 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           break;
         case 1: {
           uint32_t len;
-          uint32_t pos, end;
+          uint32_t pos;
+          uint32_t end;
 
           nav = get_dashboard_state()->nav;
           get_dashboard_state()->esb_down_id = data[3];
           nav->direction = data[5];
           memcpy(&nav->x, &data[6], sizeof(nav->x));
           memcpy(&nav->y, &data[8], sizeof(nav->y));
-          if (nav->x != nav_last_x || nav->y != nav_last_y) {
+          if ((nav->x != nav_last_x) || (nav->y != nav_last_y)) {
             nav_last_x = nav->x;
             nav_last_y = nav->y;
             nav_pos_updated = 1;
           }
-          if (nav->x > 0x1e8 || nav->y > 0x88) {
+          if ((nav->x > 0x1e8) || (nav->y > 0x88)) {
             G1_LOG_ERR("app send x/y parameter overstep!!! x= %d,y= %d\n", nav->x, nav->y);
           }
           /*
            * Five NUL-terminated strings follow each other from data[10];
            * pos is the index of the terminator of the previous one.
            */
-          end = data_len - 1;
+          end = data_len - 1U;
           /* time remaining */
-          len = nav_field_len(&data[10], data_len - 10);
-          if (len == 0 || len > sizeof(nav->time_remaining)) {
+          len = nav_field_len(&data[10], data_len - 10U);
+          if ((len == 0U) || (len > sizeof(nav->time_remaining))) {
             G1_LOG_ERR("TIME_REMAINNING_STRING_SIZE oversize\n");
             PUT_RSP(5, 1);
             ctx->write(resp, 6);
@@ -2291,50 +2440,50 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           }
           memset(nav->time_remaining, 0, sizeof(nav->time_remaining));
           memcpy(nav->time_remaining, &data[10], len);
-          pos = 10 + len - 1;
+          pos = 10U + len - 1U;
           /* remaining kilometers */
-          len = nav_field_len(&data[pos + 1], end - pos);
-          if (len == 0 || len > sizeof(nav->km_remaining)) {
+          len = nav_field_len(&data[pos + 1U], end - pos);
+          if ((len == 0U) || (len > sizeof(nav->km_remaining))) {
             G1_LOG_ERR("KILOMETER_REMAINNING_STRING_SIZE oversize\n");
             PUT_RSP(5, 1);
             ctx->write(resp, 6);
             return;
           }
           memset(nav->km_remaining, 0, sizeof(nav->km_remaining));
-          memcpy(nav->km_remaining, &data[pos + 1], len);
+          memcpy(nav->km_remaining, &data[pos + 1U], len);
           pos += len;
           /* road name */
-          len = nav_field_len(&data[pos + 1], end - pos);
-          if (len == 0 || len > sizeof(nav->road_name)) {
+          len = nav_field_len(&data[pos + 1U], end - pos);
+          if ((len == 0U) || (len > sizeof(nav->road_name))) {
             G1_LOG_ERR("ROAD_NAME_STRING_SIZE oversize\n");
             PUT_RSP(5, 1);
             ctx->write(resp, 6);
             return;
           }
           memset(nav->road_name, 0, sizeof(nav->road_name));
-          memcpy(nav->road_name, &data[pos + 1], len);
+          memcpy(nav->road_name, &data[pos + 1U], len);
           pos += len;
           /* remaining distance */
-          len = nav_field_len(&data[pos + 1], end - pos);
-          if (len == 0 || len > sizeof(nav->remaining_distance)) {
+          len = nav_field_len(&data[pos + 1U], end - pos);
+          if ((len == 0U) || (len > sizeof(nav->remaining_distance))) {
             G1_LOG_ERR("REMAINING_DISTANCE_STRING_SIZE oversize\n");
             PUT_RSP(5, 1);
             ctx->write(resp, 6);
             return;
           }
           memset(nav->remaining_distance, 0, sizeof(nav->remaining_distance));
-          memcpy(nav->remaining_distance, &data[pos + 1], len);
+          memcpy(nav->remaining_distance, &data[pos + 1U], len);
           pos += len;
           /* current speed */
-          len = nav_field_len(&data[pos + 1], end - pos);
-          if (len == 0 || len > sizeof(nav->speed)) {
+          len = nav_field_len(&data[pos + 1U], end - pos);
+          if ((len == 0U) || (len > sizeof(nav->speed))) {
             G1_LOG_ERR("CURRENT_SPEED_STRING_SIZE oversize\n");
             PUT_RSP(5, 1);
             ctx->write(resp, 6);
             return;
           }
           memset(nav->speed, 0, sizeof(nav->speed));
-          memcpy(nav->speed, &data[pos + 1], len);
+          memcpy(nav->speed, &data[pos + 1U], len);
           G1_LOG_INF("direction = %d,x = %d,y = %d,time_remaining = "
                      "%s,remainning_kilometers = %s,road_name_info = %s,                "
                      "            remaining_distance_info= %s,current speed = %s\n",
@@ -2367,9 +2516,9 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             nav_overview_map_ready = 0;
             lock_nav_map_mutex(K_FOREVER);
             memset(nav_overview_map_buf, 0, sizeof(nav_overview_map_buf));
-            memcpy(nav_overview_map_buf, &data[9], data_len - 9);
+            memcpy(nav_overview_map_buf, &data[9], data_len - 9U);
             unlock_nav_map_mutex();
-            multi_packet_len = data_len - 9;
+            multi_packet_len = data_len - 9U;
             multi_packet_cnt++;
             if (total == 1) {
               nav_overview_map_updated = 1;
@@ -2387,7 +2536,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             PUT_RSP_NC(9, 0);
             ctx->write(resp, 10);
           } else if (idx < total) {
-            if (multi_packet_cnt != idx - 1) {
+            if (multi_packet_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -2403,7 +2552,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 10);
               return;
             }
-            if (multi_packet_len - 9 + data_len >= sizeof(nav_overview_map_buf)) {
+            if ((multi_packet_len - 9 + data_len) >= sizeof(nav_overview_map_buf)) {
               G1_LOG_ERR("overview map : The data length of the current "
                          "packet is too long, the current data length "
                          "%d,wait write data length = %d\n",
@@ -2412,16 +2561,16 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             }
             get_dashboard_state();
             lock_nav_map_mutex(K_FOREVER);
-            memcpy(&nav_overview_map_buf[multi_packet_len], &data[9], data_len - 9);
+            memcpy(&nav_overview_map_buf[multi_packet_len], &data[9], data_len - 9U);
             unlock_nav_map_mutex();
             nav_overview_map_ready = 0;
-            multi_packet_len += data_len - 9;
+            multi_packet_len += data_len - 9U;
             G1_LOG_INF("Successfully received the subpackage content, "
                        "the packet sequence is %d,total size = %d\n",
                        idx, multi_packet_len);
             multi_packet_cnt++;
           } else if (idx == total) {
-            if (multi_packet_cnt != idx - 1 || idx != multi_packet_total) {
+            if ((multi_packet_cnt != (idx - 1)) || (idx != multi_packet_total)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, multi_packet_cnt + 1);
@@ -2437,7 +2586,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 10);
               return;
             }
-            if (multi_packet_len - 9 + data_len > sizeof(nav_overview_map_buf)) {
+            if ((multi_packet_len - 9 + data_len) > sizeof(nav_overview_map_buf)) {
               G1_LOG_ERR("overview map : The data length of the current "
                          "packet is too long, the current data length "
                          "%d,wait write data length = %d\n",
@@ -2447,9 +2596,9 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             globle->esb_down_id = data[3];
             nav = get_dashboard_state()->nav;
             lock_nav_map_mutex(K_FOREVER);
-            memcpy(&nav_overview_map_buf[multi_packet_len], &data[9], data_len - 9);
+            memcpy(&nav_overview_map_buf[multi_packet_len], &data[9], data_len - 9U);
             unlock_nav_map_mutex();
-            multi_packet_len += data_len - 9;
+            multi_packet_len += data_len - 9U;
             G1_LOG_INF("Successfully received the last packet,packet "
                        "length = %d,total packet size = %d\n",
                        idx, multi_packet_len);
@@ -2459,7 +2608,6 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             nav->type = 2;
             nav->sync_id = data[3];
             nav->map_size = multi_packet_len;
-            multi_packet_cnt++;
             multi_packet_total = 0;
             multi_packet_cnt = 0;
             multi_packet_len = 0;
@@ -2496,8 +2644,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             citywalk_canvas_valid = 0;
             nav->panoramic = data[9];
             memset(panoramic_map_buf, 0, PANORAMIC_MAP_SIZE);
-            memcpy(panoramic_map_buf, &data[10], data_len - 10);
-            pano_len = data_len - 10;
+            memcpy(panoramic_map_buf, &data[10], data_len - 10U);
+            pano_len = data_len - 10U;
             G1_LOG_INF("Successfully received multiple initialization packets, "
                        "currently the first packet of data,received data size = "
                        "%d,total packet len = %d\n",
@@ -2507,7 +2655,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             ctx->write(resp, 11);
           } else if (idx < total) {
             get_dashboard_state();
-            if (pano_cnt != idx - 1) {
+            if (pano_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, pano_cnt + 1);
@@ -2520,7 +2668,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 11);
               return;
             }
-            if (pano_len - 10 + data_len >= PANORAMIC_MAP_SIZE) {
+            if ((pano_len - 10 + data_len) >= PANORAMIC_MAP_SIZE) {
               G1_LOG_ERR("Panoramic map : The data length of the current "
                          "packet is too long, the current data length "
                          "%d,wait write data length = %d\n",
@@ -2528,8 +2676,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               return;
             }
             nav_panoramic_map_ready = 0;
-            memcpy(&panoramic_map_buf[pano_len], &data[10], data_len - 10);
-            pano_len += data_len - 10;
+            memcpy(&panoramic_map_buf[pano_len], &data[10], data_len - 10U);
+            pano_len += data_len - 10U;
             G1_LOG_INF("Successfully received the subpackage content, "
                        "the packet sequence is %d,total received size "
                        "= %d\n",
@@ -2537,7 +2685,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             pano_cnt++;
           } else if (idx == total) {
             nav = get_dashboard_state()->nav;
-            if (pano_cnt != idx - 1 || idx != pano_total) {
+            if ((pano_cnt != (idx - 1)) || (idx != pano_total)) {
               G1_LOG_WRN("There is a packet order error, current packet order "
                          "= %d, expected packet order =%d\n",
                          idx, pano_cnt + 1);
@@ -2550,7 +2698,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, 11);
               return;
             }
-            if (pano_len - 10 + data_len > PANORAMIC_MAP_SIZE) {
+            if ((pano_len - 10 + data_len) > PANORAMIC_MAP_SIZE) {
               G1_LOG_ERR("Panoramic map : The data length of the current "
                          "packet is too long, the current data length "
                          "%d,wait write data length = %d\n",
@@ -2558,8 +2706,8 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               return;
             }
             globle->esb_down_id = data[3];
-            memcpy(&panoramic_map_buf[pano_len], &data[10], data_len - 10);
-            pano_len += data_len - 10;
+            memcpy(&panoramic_map_buf[pano_len], &data[10], data_len - 10U);
+            pano_len += data_len - 10U;
             G1_LOG_INF("Successfully received panoramic map  last "
                        "packet,Packet id = %d,total received size = "
                        "%d\n",
@@ -2610,7 +2758,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           G1_LOG_INF("received navigation func exit packet ....\n");
           nav = get_dashboard_state()->nav;
           globle->esb_down_id = data[3];
-          memset((uint8_t *)nav + 1, 0, sizeof(*nav) - 1);
+          memset((uint8_t *)nav + 1, 0, sizeof(*nav) - 1U);
           nav->running = 0;
           PUT_RSP(5, 1);
           ctx->write(resp, 6);
@@ -2628,11 +2776,11 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           memset(resp, 0, sizeof(resp));
           memcpy(resp, data, 6);
           memset(nav->prompt, 0, sizeof(nav->prompt));
-          if (data_len - 6 >= sizeof(nav->prompt)) {
+          if ((data_len - 6U) >= sizeof(nav->prompt)) {
             G1_LOG_ERR("app send prompt word oversize,drop it...\n");
             resp[5] = 1;
           } else {
-            memcpy(nav->prompt, &data[6], data_len - 6);
+            memcpy(nav->prompt, &data[6], data_len - 6U);
             G1_LOG_INF("received arrived status packet. arrived status = %d "
                        ",arrived prompt word = %s\n",
                        status, nav->prompt);
@@ -2653,14 +2801,14 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
     case BLE_CMD_TRANSLATE_SRC_TEXT: { /* translate: source text */
       size_t n;
 
-      if (hdr->len < 7 || hdr->len > sizeof(text_packet_buf) + 7) {
+      if ((hdr->len < 7) || (hdr->len > (sizeof(text_packet_buf) + 7U))) {
         resp[1] = PKCS7_PACK_ERR;
         ctx->write(resp, 20);
         break;
       }
       if (hdr->len != 0) {
         memset(text_packet_buf, 0, sizeof(text_packet_buf));
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           resp[1] = PKCS7_PACK_DONE;
         } else {
           save_esb_snapshot(globle->translate_src, sizeof(struct translate_buf), globle->esb_down_id, 0);
@@ -2673,21 +2821,21 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         memset(globle->translate_src->data, 0, sizeof(globle->translate_src->data));
         globle->translate_src->len = 0;
         globle->translate_src->screen_status = data[4];
-        globle->translate_src->char_pos = data[6] + data[5] * 256;
+        globle->translate_src->char_pos = data[6] + (data[5] * 256);
       }
       n = MIN(hdr->len - 7u, sizeof(globle->translate_src->data) - globle->translate_src->len);
       memcpy((uint8_t *)globle->translate_src + globle->translate_src->len + 6, text_packet_buf, n);
       globle->translate_src->len += n;
       ((struct ble_req_hdr *)tx)->len = hdr->len;
       ctx->tx_len = hdr->len + 4;
-      if (data[3] == data[2] - 1) {
+      if (data[3] == (data[2] - 1)) {
         spim_transfer(ctx, rx, 8);
       }
       resp[2] = data[1];
       resp[3] = data[2];
       resp[4] = data[3];
       if (is_master() == 1) {
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           deferred_text_ack_cmd = BLE_CMD_TRANSLATE_SRC_TEXT;
           deferred_text_ack_total = data[2];
           deferred_text_ack_idx = data[3];
@@ -2696,7 +2844,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           ctx->write(resp, 20);
         }
       } else {
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           set_esb_recv_state(data[1], 0, 0);
         }
         ctx->write(resp, 20);
@@ -2706,14 +2854,14 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
     case BLE_CMD_TRANSLATE_DST_TEXT: { /* translate: translated text */
       size_t n;
 
-      if (hdr->len < 7 || hdr->len > sizeof(text_packet_buf) + 7) {
+      if ((hdr->len < 7) || (hdr->len > (sizeof(text_packet_buf) + 7U))) {
         resp[1] = PKCS7_PACK_ERR;
         ctx->write(resp, 20);
         break;
       }
       if (hdr->len != 0) {
         memset(text_packet_buf, 0, sizeof(text_packet_buf));
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           resp[1] = PKCS7_PACK_DONE;
         } else {
           save_esb_snapshot(globle->translate_dst, sizeof(struct translate_buf), globle->esb_up_id, 1);
@@ -2726,21 +2874,21 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         memset(globle->translate_dst->data, 0, sizeof(globle->translate_dst->data));
         globle->translate_dst->len = 0;
         globle->translate_dst->screen_status = data[4];
-        globle->translate_dst->char_pos = data[6] + data[5] * 256;
+        globle->translate_dst->char_pos = data[6] + (data[5] * 256);
       }
       n = MIN(hdr->len - 7u, sizeof(globle->translate_dst->data) - globle->translate_dst->len);
       memcpy((uint8_t *)globle->translate_dst + globle->translate_dst->len + 6, text_packet_buf, n);
       globle->translate_dst->len += n;
       ((struct ble_req_hdr *)tx)->len = hdr->len;
       ctx->tx_len = hdr->len + 4;
-      if (data[3] == data[2] - 1) {
+      if (data[3] == (data[2] - 1)) {
         spim_transfer(ctx, rx, 8);
       }
       resp[2] = data[1];
       resp[3] = data[2];
       resp[4] = data[3];
       if (is_master() == 1) {
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           deferred_text_ack_cmd = BLE_CMD_TRANSLATE_DST_TEXT;
           deferred_text_ack_total = data[2];
           deferred_text_ack_idx = data[3];
@@ -2749,7 +2897,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           ctx->write(resp, 20);
         }
       } else {
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           set_esb_up_recv_state(data[1], 0);
         }
         ctx->write(resp, 20);
@@ -2758,12 +2906,12 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
     }
     case BLE_CMD_MICROPHONE_SET: /* microphone */
       if (data[1] == 1) {
-        if (is_idle() || get_dashboard_state()->task_status->task == 9 ||
-            get_dashboard_state()->task_status->task == 0x10 || get_dashboard_state()->task_status->task == 0xb ||
-            get_dashboard_state()->task_status->task == 0x13 || get_dashboard_state()->task_status->task == 0x14 ||
-            get_dashboard_state()->task_status->task == 0xc ||
-            (get_dashboard_state()->dashboard_mode == 0 && get_dashboard_state()->suspend_state == 0)) {
-          if (get_dashboard_state()->task_status->task == 0x10 && get_dashboard_state()->dash_buf->type == 2) {
+        if (is_idle() || (get_dashboard_state()->task_status->task == 9U) ||
+            (get_dashboard_state()->task_status->task == 0x10U) || (get_dashboard_state()->task_status->task == 0xbU) ||
+            (get_dashboard_state()->task_status->task == 0x13U) ||
+            (get_dashboard_state()->task_status->task == 0x14U) || (get_dashboard_state()->task_status->task == 0xcU) ||
+            ((get_dashboard_state()->dashboard_mode == 0) && (get_dashboard_state()->suspend_state == 0))) {
+          if ((get_dashboard_state()->task_status->task == 0x10U) && (get_dashboard_state()->dash_buf->type == 2)) {
             get_dashboard_state()->dash_buf->type = 3;
           }
           G1_LOG_INF("received open dmic command\n");
@@ -2782,7 +2930,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       ctx->write(resp, 20);
       break;
     case BLE_CMD_TRANSLATE_CONTROL:
-      if (data[2] != 0 && data[3] != 0) {
+      if ((data[2] != 0) && (data[3] != 0)) {
         globle->translate_src->translation_type = data[3];
         globle->translate_src->original_type = data[2];
         globle->translate_dst->translation_type = data[3];
@@ -2814,7 +2962,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       globle->last_sync_ts = k_uptime_get();
       break;
     case BLE_CMD_FILE_UPLOAD_COMPLETE:
-      if (hdr->len < 0x15 && data[1] == 0xd && data[2] == 0xe) {
+      if ((hdr->len < 0x15) && (data[1] == 0xd) && (data[2] == 0xe)) {
         enqueue_file(&data[1], (uint8_t)(hdr->len - 1));
         globle->dashboard_cmd = 0x20;
         k_sem_give(&globle->dashboard_position_sem);
@@ -2864,10 +3012,10 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
     case BLE_CMD_BITMAP_HIDE:
       resp[1] = PKCS7_PACK_DONE;
       ctx->write(resp, 20);
-      if (get_dashboard_state()->dashboard_mode == 0xb || get_dashboard_state()->dashboard_mode == 0x10) {
+      if ((get_dashboard_state()->dashboard_mode == 0xb) || (get_dashboard_state()->dashboard_mode == 0x10)) {
         exit_running_task_keep_status(globle, 0);
       } else {
-        if (get_dashboard_state()->is_master == 2 && get_dashboard_state()->dashboard_mode == 6) {
+        if ((get_dashboard_state()->is_master == 2) && (get_dashboard_state()->dashboard_mode == 6)) {
           k_msleep(50);
         }
         exit_running_task(globle, 0);
@@ -2893,7 +3041,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       resp[3] = data[3];
       resp[2] = 0;
       resp[4] = data[4];
-      if (hdr->len == dlen && data[4] < 9) {
+      if ((hdr->len == dlen) && (data[4] < 9)) {
         uint8_t v;
 
         resp[5] = PKCS7_PACK_DONE;
@@ -2902,7 +3050,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             globle->user_data_reset_pending = 1;
             break;
           case HW_SUB_HEIGHT_DEPTH:
-            if (data[6] > 8 || data[7] > 9) {
+            if ((data[6] > 8) || (data[7] > 9)) {
               resp[5] = PKCS7_PACK_ERR;
               break;
             }
@@ -2951,7 +3099,7 @@ static void ble_process_put_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               case 2:
                 v = data[6];
                 G1_LOG_WRN("ble set lum coeffic:%d\n", v);
-                if (globle->dashboard_ts->dashboard_hold != 1 || v < 70 || v > 100) {
+                if ((globle->dashboard_ts->dashboard_hold != 1) || (v < 70) || (v > 100)) {
                   resp[5] = PKCS7_PACK_ERR;
                   break;
                 }
@@ -3019,12 +3167,13 @@ int spim_transfer(struct ble_context *ctx, uint8_t *buf, uint32_t len) {
   int ret;
 
   if (LOG_LEVEL == 5) {
-    printk("spim tx(len=%d): %02x,%02x,%02x,%02x, %02x,%02x,%02x,%02x\n", ctx->tx_len, ctx->tx_buf[0], ctx->tx_buf[1],
+    printk("spim tx(len=%u): %02x,%02x,%02x,%02x, %02x,%02x,%02x,%02x\n", ctx->tx_len, ctx->tx_buf[0], ctx->tx_buf[1],
            ctx->tx_buf[2], ctx->tx_buf[3], ctx->tx_buf[0], ctx->tx_buf[1], ctx->tx_buf[2], ctx->tx_buf[3]);
   }
+  // cppcheck-suppress [misra-c2012-11.2] ; the request header overlays the transfer buffer
   ret = master_process_put_req(state, (struct ble_req *)ctx->tx_buf, buf, len);
   if (LOG_LEVEL == 5) {
-    printk("spim ret(len=%d): %02x,%02x,%02x,%02x, %02x,%02x,%02x,%02x\n", len, buf[0], buf[1], buf[2], buf[3], buf[0],
+    printk("spim ret(len=%u): %02x,%02x,%02x,%02x, %02x,%02x,%02x,%02x\n", len, buf[0], buf[1], buf[2], buf[3], buf[0],
            buf[1], buf[2], buf[3]);
   }
   return ret;
@@ -3040,7 +3189,10 @@ static void ble_dispatch_raw_packet(uint8_t *data, uint32_t len) {
   ble_process_req_dispatch(ctx, &hdr, data);
 }
 int parse_receiver_msg_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint16_t req_len) {
-  uint8_t cmd, msg_id, total, idx;
+  uint8_t cmd;
+  uint8_t msg_id;
+  uint8_t total;
+  uint8_t idx;
 
   if (req == NULL) {
     BLE_PRINTK("[%s-%d]error, req is NULL ! \n", __func__, __LINE__);
@@ -3099,14 +3251,14 @@ int parse_receiver_msg_pack_pkcs7(uint8_t *origin_data, const uint8_t *req, uint
     return PKCS7_PACK_MORE;
   }
   /* the last byte stays 0 to end the string */
-  if (msg_pack_offset + req_len - 4 >= PKCS7_MSG_PACK_BUF_SIZE) {
+  if ((msg_pack_offset + req_len - 4) >= PKCS7_MSG_PACK_BUF_SIZE) {
     BLE_PRINTK("[%s-%d]error, chunk %d overflows the buffer ! \n", __func__, __LINE__, idx);
     return PKCS7_PACK_ERR;
   }
   memcpy(origin_data + msg_pack_offset, req + 4, req_len - 4);
   msg_pack_offset += req_len - 4;
   msg_pack_next_idx = idx + 1;
-  if (idx != total - 1) {
+  if (idx != (total - 1)) {
     return PKCS7_PACK_MORE;
   }
   BLE_PRINTK("origin_data is %s \n", origin_data);
@@ -3116,39 +3268,40 @@ static int debug_init(void) {
   int ret;
 
   ret = k_msgq_alloc_init(&debug_msgq, DEBUG_MSG_SIZE, DEBUG_MSGQ_MAX);
-  if (ret) {
+  if (ret != 0) {
     printk("debug init failed\r\n");
   } else {
     printk("debug init success\r\n");
   }
   return ret;
 }
-static int enqueue_debug(void *msg) {
+static int enqueue_debug(const void *msg) {
   int ret;
 
-  if (debug_msgq.used_msgs == DEBUG_MSGQ_MAX) {
+  if (debug_msgq.used_msgs == (uint32_t)DEBUG_MSGQ_MAX) {
     /* drop the oldest message */
     k_msgq_get(&debug_msgq, debug_buf, K_NO_WAIT);
   }
   memcpy(debug_buf, msg, DEBUG_MSG_SIZE);
   ret = k_msgq_put(&debug_msgq, debug_buf, K_NO_WAIT);
-  if (ret) {
+  if (ret != 0) {
     printk("enqueue_debug failed\r\n");
   }
   return ret;
 }
 int send_dmic_msg(struct ble_context *ctx) {
   uint8_t buf[203] = {0};
-  int ret;
 
   buf[0] = 0xf1;
   do {
+    int ret;
+
     buf[1] = dmic_seq;
-    if (get_dmic_num_messages() == 0) {
+    if (get_dmic_num_messages() == 0U) {
       return 0;
     }
     ret = dequeue_dmic(&buf[2]);
-    if (ret) {
+    if (ret != 0) {
       return ret;
     }
     ret = ctx->write(buf, 0xca);
@@ -3170,15 +3323,16 @@ int send_dmic_msg(struct ble_context *ctx) {
       }
     } else if (send_fail_count > 0) {
       send_fail_count--;
+    } else {
+      /* nothing to do */
     }
     if (++dmic_pkt_count >= 10) {
       dmic_pkt_count = 0;
-      int64_t now = k_uptime_ticks();
+      uint32_t now_ms = (uint32_t)k_ticks_to_ms_ceil64(k_uptime_ticks());
 
       dmic_send_count++;
-      G1_LOG_ERR("time %d dmic_send_count %d send_fail_count %d\n", (uint32_t)k_ticks_to_ms_ceil64(now),
-                 dmic_send_count * 10,
-                 get_dashboard_state()->dashboard_mode == 6 ? dashboard_send_fail_count : send_fail_count);
+      G1_LOG_ERR("time %d dmic_send_count %d send_fail_count %d\n", now_ms, dmic_send_count * 10,
+                 (get_dashboard_state()->dashboard_mode == 6) ? dashboard_send_fail_count : send_fail_count);
     }
     dmic_seq++;
   } while (dmic_seq & 3U);
@@ -3206,10 +3360,12 @@ static void ble_process_get_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       ctx->write(resp, 20);
       return;
     case BLE_CMD_DEVICE_INFO_GET:
-      if (hdr->len > 1 && data[1] == 1) {
+      if ((hdr->len > 1) && (data[1] == 1)) {
         globle->phone_is_ios = 0;
-      } else if (hdr->len > 1 && data[1] == 2) {
+      } else if ((hdr->len > 1) && (data[1] == 2)) {
         globle->phone_is_ios = 1;
+      } else {
+        /* nothing to do */
       }
       G1_LOG_INF("%s mobile phone is connected,raw_data[1] = %d\n", globle->phone_is_ios ? "IOS" : "Android", data[1]);
       spim_transfer(ctx, rx, 0x18);
@@ -3338,7 +3494,7 @@ static void ble_process_get_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       uint8_t lang;
       uint8_t master;
 
-      if (data_len != hdr->len || data_len > sizeof(resp)) {
+      if ((data_len != hdr->len) || (data_len > sizeof(resp))) {
         G1_LOG_WRN("packet length error,input data length = %d,packet data length = "
                    "%d\n",
                    hdr->len, data_len);
@@ -3420,7 +3576,7 @@ static __noinline void ble_vprintk(const char *fmt, va_list ap) {
   vsnprintf(buf, sizeof(buf), fmt, ap);
   enqueue_debug(buf);
 
-  if (!ctx->receiver_thd_is_running && k_sem_count_get(&ctx->rx_sem) == 0) {
+  if (!ctx->receiver_thd_is_running && (k_sem_count_get(&ctx->rx_sem) == 0U)) {
     debug_pending = 1;
     k_sem_give(&ctx->rx_sem);
   }
@@ -3436,7 +3592,7 @@ void g1_printk(const char *fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);
-  if (BLE_DEBUG) {
+  if (BLE_DEBUG != 0) {
     ble_vprintk(fmt, ap);
   } else {
     vprintk(fmt, ap);
@@ -3453,7 +3609,7 @@ static void ble_work_thread(void *p1, void *p2, void *p3) {
   G1_LOG_INF("start\n\n");
   err = ancs_main(ctx);
   debug_init();
-  if (err) {
+  if (err != 0) {
     G1_LOG_INF("err:%d\n\n", err);
   }
   ctx->tx_buf = malloc(BLE_TX_BUF_SIZE);
@@ -3478,7 +3634,7 @@ static void ble_work_thread(void *p1, void *p2, void *p3) {
       ctx->receiver_thd_is_running = 0;
       k_sem_take(&ctx->rx_sem, K_FOREVER);
       ctx->receiver_thd_is_running = 1;
-      if (ctx->rx_pending == 0 && ctx->rx_len == 0) {
+      if ((ctx->rx_pending == 0U) && (ctx->rx_len == 0U)) {
         if (last_ble_cmd != 0xff) {
           ctx->rx_pending = 1;
           ctx->small_buf[0] = 0xf5;
@@ -3487,7 +3643,7 @@ static void ble_work_thread(void *p1, void *p2, void *p3) {
           ctx->small_buf[2] = PKCS7_PACK_MORE;
           ctx->rx_len = 0;
           ctx->small_len = 3;
-          if (ctx->small_buf[1] == 9 || ctx->small_buf[1] == 10) {
+          if ((ctx->small_buf[1] == 9) || (ctx->small_buf[1] == 10)) {
             ctx->small_buf[2] = ctx->charging;
           }
         } else if (dmic_send_pending) {
@@ -3497,7 +3653,7 @@ static void ble_work_thread(void *p1, void *p2, void *p3) {
           ctx->small_buf[1] = 0;
           ctx->small_buf[2] = 0xcc;
           ctx->rx_len = 0;
-        } else if (debug_pending) {
+        } else if (debug_pending != 0) {
           ctx->rx_pending = 1;
           ctx->small_buf[0] = 0xf4;
           ctx->small_buf[1] = 0;
@@ -3512,19 +3668,19 @@ static void ble_work_thread(void *p1, void *p2, void *p3) {
 
     if (ctx->restart_adv) {
       err = stop_ble_advertising();
-      if (err) {
+      if (err != 0) {
         G1_LOG_WRN("bt_le_adv_stop failed!!! err=%d\n\n", err);
       } else {
         G1_LOG_INF("charge plug off, call bt_start. \n\n");
         err = bt_start();
-        if (err) {
+        if (err != 0) {
           printk("Advertising failed to start (err %d)\n", err);
         }
       }
       ctx->restart_adv = 0;
       continue;
     }
-    if (ctx->rx_len) {
+    if (ctx->rx_len != 0U) {
       ble_handle_rx_data(ctx->rx_data, ctx->rx_len, 0);
       memset(ctx->rx_data, 0, sizeof(ctx->rx_data));
     } else {
@@ -3535,7 +3691,7 @@ static void ble_work_thread(void *p1, void *p2, void *p3) {
   }
 }
 static int set_esb_recv_state(uint8_t a, uint8_t b, int sel) {
-  if (sel) {
+  if (sel != 0) {
     set_esb_up_recv_state(a, b);
   } else {
     get_dashboard_state()->esb_down_recving = b;
@@ -3543,7 +3699,7 @@ static int set_esb_recv_state(uint8_t a, uint8_t b, int sel) {
   }
   return 0;
 }
-int deal_event_to_phone(struct ble_context *ctx, uint8_t *evt) {
+int deal_event_to_phone(struct ble_context *ctx, const uint8_t *evt) {
   struct GlassesState *state = CONTAINER_OF(ctx, struct GlassesState, ble_context);
   uint8_t buf[21] = {0};
 
@@ -3605,7 +3761,7 @@ int deal_event_to_phone(struct ble_context *ctx, uint8_t *evt) {
           buf[2] = 0x63;
           break;
         default:
-          buf[2] = state->battery_left > 0x60 ? 0x64 : state->battery_left;
+          buf[2] = (state->battery_left > 0x60) ? 0x64 : state->battery_left;
           break;
       }
       break;
@@ -3628,18 +3784,18 @@ int deal_event_to_phone(struct ble_context *ctx, uint8_t *evt) {
 int ble_process_req_dispatch(struct ble_context *ctx, struct ble_req_hdr *hdr, uint8_t *data) {
   uint8_t cmd = hdr->cmd;
 
-  if (cmd >= 0x01 && cmd <= 0x27) {
+  if ((cmd >= 0x01) && (cmd <= 0x27)) {
     ble_process_put_req(ctx, hdr, data);
     return 0;
   }
-  if (cmd >= 0x29 && cmd <= 0x45) {
+  if ((cmd >= 0x29) && (cmd <= 0x45)) {
     ble_process_get_req(ctx, hdr, data);
     return 0;
   }
-  if (cmd >= 0x47 && cmd <= 0x56) {
+  if ((cmd >= 0x47) && (cmd <= 0x56)) {
     return ble_process_post_req(ctx, hdr, data);
   }
-  if (cmd >= 0xf1 && cmd <= 0xf6) {
+  if ((cmd >= 0xf1) && (cmd <= 0xf6)) {
     return ble_process_report_response(ctx, hdr, data);
   }
   G1_LOG_ERR("tx error req_type. %d\n", cmd);
@@ -3652,7 +3808,7 @@ int send_debug_msg(struct ble_context *ctx) {
   while (1) {
     memset(&buf[1], 0, 0xca);
     buf[0] = 0xf4;
-    if (dequeue_debug(&buf[1])) {
+    if (dequeue_debug(&buf[1]) != 0) {
       break;
     }
     ctx->write(buf, strlen(buf) + 1);
@@ -3660,13 +3816,13 @@ int send_debug_msg(struct ble_context *ctx) {
   return 0;
 }
 void ble_handle_rx_data(uint8_t *data, uint32_t len, int dump) {
-  if (len == 0) {
+  if (len == 0U) {
     return;
   }
-  if (dump) {
+  if (dump != 0) {
     dump_hex("BLE-rec", data, (int)len);
   }
-  if (spec_ble_command_hook(data, len)) {
+  if (spec_ble_command_hook(data, len) != 0) {
     ble_dispatch_raw_packet(data, len);
   }
 }
@@ -3682,7 +3838,7 @@ int subcontracing_send_data_pkcs7(const uint8_t *data, int len, uint8_t cmd, ble
   G1_LOG_INF("integer_num: %d, tail_len: %d, raw_data_len: %d\n", integer_num + 1, tail_len, len);
   for (i = 0; i < integer_num; i++) {
     buf[2] = i;
-    memcpy(&buf[3], data + i * 17, 17);
+    memcpy(&buf[3], data + (i * 17), 17);
     G1_LOG_INF("#发送: %d/%d\n", i + 1, integer_num + 1);
     dump_hex("body", buf, sizeof(buf));
     send(buf, sizeof(buf));
@@ -3696,7 +3852,7 @@ int subcontracing_send_data_pkcs7(const uint8_t *data, int len, uint8_t cmd, ble
     dump_hex("tail", buf, sizeof(buf));
   } else {
     memset(&buf[3] + tail_len, 17 - tail_len, 17 - tail_len);
-    memcpy(&buf[3], data + integer_num * 17, tail_len);
+    memcpy(&buf[3], data + (integer_num * 17), tail_len);
     G1_LOG_INF("PKCS-7#发送tail: %d/%d\n", n, integer_num + 1);
     dump_hex("tail", buf, sizeof(buf));
   }
@@ -3740,7 +3896,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       resp[1] = PKCS7_PACK_DONE;
       ctx->write(resp, sizeof(resp));
       err = bt_unpair(BT_ID_DEFAULT, NULL);
-      if (err) {
+      if (err != 0) {
         G1_LOG_WRN("bt_unpair fail: %d\n\n", err);
       }
       conn = get_current_conn();
@@ -3755,14 +3911,14 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       struct dash_data_buf *dash;
       size_t n;
 
-      if (hdr->len < 9 || hdr->len > MULTI_PACKET_BUF_SIZE + 9) {
+      if ((hdr->len < 9) || (hdr->len > (MULTI_PACKET_BUF_SIZE + 9))) {
         resp[1] = PKCS7_PACK_ERR;
         ctx->write(&resp[0], sizeof(resp));
         return 0;
       }
       if (hdr->len != 0) {
         memset(multi_packet_buf, 0, MULTI_PACKET_BUF_SIZE);
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           resp[1] = PKCS7_PACK_DONE;
         } else {
           save_esb_snapshot(get_dashboard_state()->dash_buf, sizeof(struct dash_data_buf),
@@ -3776,7 +3932,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         memset(get_dashboard_state()->dash_buf->data, 0, sizeof(get_dashboard_state()->dash_buf->data));
         get_dashboard_state()->dash_buf->len = 0;
         get_dashboard_state()->dash_buf->screen_status = data[4];
-        get_dashboard_state()->dash_buf->char_pos = data[5] * 256 + data[6];
+        get_dashboard_state()->dash_buf->char_pos = (data[5] * 256) + data[6];
         get_dashboard_state()->dash_buf->scroll_pct = data[7];
         get_dashboard_state()->dash_buf->page_count = data[8];
       }
@@ -3786,7 +3942,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       get_dashboard_state()->dash_buf->len += n;
       ((struct ble_req_hdr *)tx)->len = hdr->len;
       ctx->tx_len = hdr->len + 4;
-      if (data[3] == data[2] - 1) {
+      if (data[3] == (data[2] - 1)) {
         uint8_t kind;
 
         spim_transfer(ctx, rx, 8);
@@ -3803,12 +3959,14 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           if (kind == 0x40) {
             get_dashboard_state()->dash_buf->type = 8;
             get_dashboard_state()->stay_time_left_s = 8;
-          } else if (type_6 || kind == 0x30) {
+          } else if (type_6 || (kind == 0x30)) {
             get_dashboard_state()->dash_buf->type = 7;
             get_dashboard_state()->stay_time_left_s = 0x10;
-          } else if (get_dashboard_state()->dash_buf->type > 6 && kind == 0x50) {
+          } else if ((get_dashboard_state()->dash_buf->type > 6) && (kind == 0x50)) {
             get_dashboard_state()->dash_buf->type = 9;
             get_dashboard_state()->stay_time_left_s = 0;
+          } else {
+            /* nothing to do */
           }
         }
       }
@@ -3816,15 +3974,17 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       resp[3] = data[2];
       resp[4] = data[3];
       if (is_master() == 1) {
-        if (data[3] == data[2] - 1) {
+        if (data[3] == (data[2] - 1)) {
           deferred_text_ack_cmd = BLE_CMD_TEXT_SET;
           deferred_text_ack_total = data[2];
           deferred_text_ack_idx = data[3];
           set_esb_up_recv_state(data[1], 0);
           return 0;
         }
-      } else if (data[3] == data[2] - 1) {
+      } else if (data[3] == (data[2] - 1)) {
         set_esb_up_recv_state(data[1], 0);
+      } else {
+        /* nothing to do */
       }
       break;
     }
@@ -3876,7 +4036,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       resp[3] = data[3];
       resp[2] = 0;
       resp[4] = data[4];
-      if (hdr->len == data_len && data[4] <= 2) {
+      if ((hdr->len == data_len) && (data[4] <= 2)) {
         if (data[5] == 1) {
           get_dashboard_state()->ts_info->enable = 1;
           get_dashboard_state()->ts_info->action_cmd = data[4];
@@ -3894,9 +4054,10 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
     }
     case BLE_CMD_TRANSCRIBE_CONTROL: {
       uint16_t data_len = ble_get_u16(&data[1]);
-      uint16_t total, idx;
+      uint16_t total;
+      uint16_t idx;
 
-      if (hdr->len != data_len || data[4] > 3) {
+      if ((hdr->len != data_len) || (data[4] > 3)) {
         resp[1] = 6;
         resp[2] = 0;
         resp[3] = data[3];
@@ -3919,7 +4080,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           if (mode == 0) {
             get_dashboard_state()->transcribe_buf->running = mode;
             dmic_stream_stop();
-          } else if (mode == 1 || mode == 2) {
+          } else if ((mode == 1) || (mode == 2)) {
             memset(get_dashboard_state()->transcribe_buf, 0, sizeof(struct transcribe_buf));
             get_dashboard_state()->transcribe_buf->running = true;
             get_dashboard_state()->transcribe_buf->mode = mode;
@@ -3938,6 +4099,8 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             if (get_dashboard_state()->transcribe_buf->mode != 2) {
               get_dashboard_state()->transcribe_buf->flags |= 1U;
             }
+          } else {
+            /* nothing to do */
           }
           break;
         }
@@ -3955,7 +4118,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           if (total == 1) {
             G1_LOG_INF("received transcribe packet,total packet = 1\n");
             get_dashboard_state()->transcribe_buf->status = data[9];
-            if (data[10] == 1 || get_dashboard_state()->transcribe_buf->mode == 2) {
+            if ((data[10] == 1) || (get_dashboard_state()->transcribe_buf->mode == 2)) {
               get_dashboard_state()->transcribe_buf->flags &= ~1U;
             } else {
               get_dashboard_state()->transcribe_buf->flags |= 1U;
@@ -3978,7 +4141,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             memcpy(multi_packet_buf, data + 12, data_len - 12);
             multi_packet_len = data_len - 12;
           } else if (idx < total) {
-            if (multi_packet_cnt != idx - 1) {
+            if (multi_packet_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet "
                          "order = %d, expected packet order = %d\n",
                          idx, multi_packet_cnt + 1);
@@ -3987,7 +4150,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               multi_packet_len = 0;
               memset(multi_packet_buf, 0, MULTI_PACKET_BUF_SIZE);
               resp[9] = PKCS7_PACK_ERR;
-            } else if (multi_packet_len + data_len > 0x20c) {
+            } else if ((multi_packet_len + data_len) > 0x20c) {
               G1_LOG_ERR("transcribe data is too long, the current data "
                          "length %d,wait write data length = %d\n",
                          multi_packet_len, data_len - 12);
@@ -4001,7 +4164,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               multi_packet_cnt++;
             }
           } else if (idx == total) {
-            if (multi_packet_cnt != total - 1 || multi_packet_total != total) {
+            if ((multi_packet_cnt != (total - 1)) || (multi_packet_total != total)) {
               G1_LOG_WRN("There is a packet order error, current packet "
                          "order = %d, expected packet order = %d\n",
                          idx, multi_packet_cnt + 1);
@@ -4009,7 +4172,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               multi_packet_cnt = 0;
               memset(multi_packet_buf, 0, MULTI_PACKET_BUF_SIZE);
               resp[9] = PKCS7_PACK_ERR;
-            } else if (multi_packet_len + data_len > 0x20c) {
+            } else if ((multi_packet_len + data_len) > 0x20c) {
               G1_LOG_ERR("transcribe data is too long, the current data "
                          "length %d,wait write data length = %d\n",
                          multi_packet_len, data_len - 12);
@@ -4019,7 +4182,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                          "and updated the complete content to the UI thread "
                          "for data update.\n");
               get_dashboard_state()->transcribe_buf->status = data[9];
-              if (data[10] == 1 || get_dashboard_state()->transcribe_buf->mode == 2) {
+              if ((data[10] == 1) || (get_dashboard_state()->transcribe_buf->mode == 2)) {
                 get_dashboard_state()->transcribe_buf->flags &= ~1U;
               } else {
                 get_dashboard_state()->transcribe_buf->flags |= 1U;
@@ -4060,7 +4223,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       return 0;
     }
     case BLE_CMD_TRANSCRIBE_STATUS:
-      if (hdr->len == ble_get_u16(&data[1]) && data[4] <= 3) {
+      if ((hdr->len == ble_get_u16(&data[1])) && (data[4] <= 3)) {
         transcribe_info_timeout_reset();
         if (data[4] == 3) {
           resp[1] = 7;
@@ -4089,7 +4252,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       uint16_t data_len = ble_get_u16(&data[1]);
       uint8_t sub;
 
-      if (hdr->len != data_len || data[4] > 7) {
+      if ((hdr->len != data_len) || (data[4] > 7)) {
         resp[1] = 6;
         resp[2] = 0;
         resp[3] = data[3];
@@ -4132,7 +4295,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             ctx->write(resp, POST_RESP_LEN(resp));
             return 0;
           }
-          if (get_dashboard_state()->task_status->task != 0x14) {
+          if (get_dashboard_state()->task_status->task != 0x14U) {
             update_persist_task_status(get_dashboard_state(), 0x14, 2);
           }
           set_esb_recv_state(data[3], 0, 0);
@@ -4142,7 +4305,8 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         case 3:
         case 4: {
           int hlen;
-          uint16_t total, idx;
+          uint16_t total;
+          uint16_t idx;
 
           memcpy(resp, data, 9);
           resp[1] = 10;
@@ -4159,7 +4323,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           total = ble_get_u16(&data[5]);
           if (total == 1) {
             int n;
-            uint8_t *payload;
+            const uint8_t *body;
 
             G1_LOG_INF("received evenai_v2 packet,total packet = 1\n");
             n = data_len - hlen;
@@ -4171,7 +4335,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, POST_RESP_LEN(resp));
               return 0;
             }
-            payload = data + hlen;
+            body = data + hlen;
             get_dashboard_state()->evenai_buf->sub = sub;
             get_dashboard_state()->evenai_buf->action_status = data[9];
             if (sub != 4) {
@@ -4185,22 +4349,24 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               if (get_dashboard_state()->evenai_buf->action_status == 1) {
                 get_dashboard_state()->dashboard_ts->dashboard_hold = 2;
               } else if (get_dashboard_state()->evenai_buf->action_status == 0x13) {
-                if (get_dashboard_state()->task_status->task != 0x14) {
-                  if (get_dashboard_state()->dashboard_mode == 6 &&
-                      get_dashboard_state()->dashboard_ts->exit_pending == 0) {
+                if (get_dashboard_state()->task_status->task != 0x14U) {
+                  if ((get_dashboard_state()->dashboard_mode == 6) &&
+                      (get_dashboard_state()->dashboard_ts->exit_pending == 0)) {
                     get_dashboard_state()->dashboard_ts->exit_pending = 1;
                   }
                   get_dashboard_state()->evenai_buf->state = 1;
                   update_persist_task_status(get_dashboard_state(), 0x14, 2);
                 }
                 get_dashboard_state()->evenai_buf->ts = k_uptime_get();
+              } else {
+                /* nothing to do */
               }
             }
-            if (sub != 2 || get_dashboard_state()->evenai_buf->action_status != 1 || payload[0] != 0) {
+            if ((sub != 2) || (get_dashboard_state()->evenai_buf->action_status != 1) || (body[0] != 0)) {
               memset(multi_packet_buf, 0, MULTI_PACKET_BUF_SIZE);
               memset(get_dashboard_state()->evenai_buf->data, 0, sizeof(get_dashboard_state()->evenai_buf->data));
               get_dashboard_state()->evenai_buf->len = n;
-              memcpy(get_dashboard_state()->evenai_buf->data, payload, get_dashboard_state()->evenai_buf->len);
+              memcpy(get_dashboard_state()->evenai_buf->data, body, get_dashboard_state()->evenai_buf->len);
             }
             set_esb_recv_state(data[3], 0, 0);
           } else if (idx == 1) {
@@ -4212,7 +4378,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             memcpy(multi_packet_buf, data + hlen, data_len - hlen);
             multi_packet_len = data_len - hlen;
           } else if (idx < total) {
-            if (multi_packet_cnt != idx - 1) {
+            if (multi_packet_cnt != (idx - 1)) {
               G1_LOG_WRN("There is a packet order error, current packet order = "
                          "%d, expected packet order = %d\n",
                          idx, multi_packet_cnt + 1);
@@ -4224,7 +4390,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, POST_RESP_LEN(resp));
               return 0;
             }
-            if (multi_packet_len + data_len - hlen > 0x200) {
+            if ((multi_packet_len + data_len - hlen) > 0x200) {
               G1_LOG_ERR("evenai_v2 data is too long, the current data length "
                          "%d,wait write data length = %d\n",
                          multi_packet_len, data_len - hlen);
@@ -4239,7 +4405,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
                        idx);
             multi_packet_cnt++;
           } else if (idx == total) {
-            if (multi_packet_cnt != idx - 1 || idx != multi_packet_total) {
+            if ((multi_packet_cnt != (idx - 1)) || (idx != multi_packet_total)) {
               G1_LOG_WRN("There is a packet order error, current packet order = "
                          "%d, expected packet order = %d\n",
                          idx, multi_packet_cnt + 1);
@@ -4250,7 +4416,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               ctx->write(resp, POST_RESP_LEN(resp));
               return 0;
             }
-            if (multi_packet_len + data_len - hlen > 0x200) {
+            if ((multi_packet_len + data_len - hlen) > 0x200) {
               G1_LOG_ERR("evenai_v2 data is too long, the current data length "
                          "%d,wait write data length = %d\n",
                          multi_packet_len, data_len - hlen);
@@ -4274,20 +4440,22 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
               if (get_dashboard_state()->evenai_buf->action_status == 1) {
                 get_dashboard_state()->dashboard_ts->dashboard_hold = 2;
               } else if (get_dashboard_state()->evenai_buf->action_status == 0x13) {
-                if (get_dashboard_state()->task_status->task != 0x14) {
-                  if (get_dashboard_state()->dashboard_mode == 6 &&
-                      get_dashboard_state()->dashboard_ts->exit_pending == 0) {
+                if (get_dashboard_state()->task_status->task != 0x14U) {
+                  if ((get_dashboard_state()->dashboard_mode == 6) &&
+                      (get_dashboard_state()->dashboard_ts->exit_pending == 0)) {
                     get_dashboard_state()->dashboard_ts->exit_pending = 1;
                   }
                   get_dashboard_state()->evenai_buf->state = 1;
                   update_persist_task_status(get_dashboard_state(), 0x14, 2);
                 }
                 get_dashboard_state()->evenai_buf->ts = k_uptime_get();
+              } else {
+                /* nothing to do */
               }
             }
             memcpy(multi_packet_buf + multi_packet_len, data + hlen, data_len - hlen);
             multi_packet_len = multi_packet_len + data_len - hlen;
-            if (sub != 2 || get_dashboard_state()->evenai_buf->action_status != 1 || data[hlen] != 0) {
+            if ((sub != 2) || (get_dashboard_state()->evenai_buf->action_status != 1) || (data[hlen] != 0)) {
               memset(get_dashboard_state()->evenai_buf->data, 0, sizeof(get_dashboard_state()->evenai_buf->data));
               memcpy(get_dashboard_state()->evenai_buf->data, multi_packet_buf, multi_packet_len);
               get_dashboard_state()->evenai_buf->len = multi_packet_len;
@@ -4296,6 +4464,8 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
             multi_packet_total = 0;
             multi_packet_cnt = 0;
             multi_packet_len = 0;
+          } else {
+            /* nothing to do */
           }
           break;
         }
@@ -4305,10 +4475,8 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
           resp[3] = data[3];
           resp[4] = 5;
           resp[5] = PKCS7_PACK_DONE;
-          if (get_dashboard_state()->evenai_buf->state == 0 || get_dashboard_state()->evenai_buf->state > 1) {
+          if ((get_dashboard_state()->evenai_buf->state == 0) || (get_dashboard_state()->evenai_buf->state > 1)) {
             resp[5] = PKCS7_PACK_ERR;
-          } else {
-            resp[5] = PKCS7_PACK_DONE;
           }
           resp[6] = data[5];
           break;
@@ -4324,7 +4492,7 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       return 0;
     }
     case BLE_CMD_EVENAI_STATUS:
-      if (ble_get_u16(&data[1]) != hdr->len || data[4] > 7) {
+      if ((ble_get_u16(&data[1]) != hdr->len) || (data[4] > 7)) {
         resp[1] = 6;
         resp[2] = 0;
         resp[3] = data[3];
@@ -4340,10 +4508,8 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
         resp[3] = data[3];
         resp[4] = 5;
         resp[5] = PKCS7_PACK_DONE;
-        if (get_dashboard_state()->evenai_buf->state == 0 || get_dashboard_state()->evenai_buf->state > 1) {
+        if ((get_dashboard_state()->evenai_buf->state == 0) || (get_dashboard_state()->evenai_buf->state > 1)) {
           resp[5] = PKCS7_PACK_ERR;
-        } else {
-          resp[5] = PKCS7_PACK_DONE;
         }
         resp[6] = data[5];
       } else {
@@ -4357,7 +4523,9 @@ static int ble_process_post_req(struct ble_context *ctx, struct ble_req_hdr *hdr
       return 0;
     case BLE_CMD_EVENAI_EXIT:
       if (ble_get_u16(&data[1]) == hdr->len) {
-        uint8_t sub, seq, flag;
+        uint8_t sub;
+        uint8_t seq;
+        uint8_t flag;
 
         even_ai_v2_info_timeout_reset();
         sub = data[4];
@@ -4412,7 +4580,9 @@ static int mobile_send_notification_to_ble_device_test(const char *title, const 
   cJSON *root;
   char *str;
   uint8_t chunk[BLE_SMALL_PKT_MAX] = {0};
-  int len, total, i, n;
+  int len;
+  int total;
+  int i;
 
   cJSON_AddStringToObject(notif, "app_identifier", "com.tencent.xin");
   cJSON_AddStringToObject(notif, "title", title);
@@ -4429,9 +4599,10 @@ static int mobile_send_notification_to_ble_device_test(const char *title, const 
   chunk[0] = BLE_CMD_NOTIFICATION_SEND;
   chunk[2] = total;
   for (i = 0; i < total; i++) {
-    n = MIN(len - i * NOTIF_CHUNK_DATA_SIZE, NOTIF_CHUNK_DATA_SIZE);
+    int n = MIN(len - (i * NOTIF_CHUNK_DATA_SIZE), NOTIF_CHUNK_DATA_SIZE);
+
     chunk[3] = i;
-    memcpy(&chunk[NOTIF_CHUNK_HDR_SIZE], str + i * NOTIF_CHUNK_DATA_SIZE, n);
+    memcpy(&chunk[NOTIF_CHUNK_HDR_SIZE], str + (i * NOTIF_CHUNK_DATA_SIZE), n);
     send(chunk, NOTIF_CHUNK_HDR_SIZE + n);
   }
   cJSON_Delete(root);
@@ -4461,14 +4632,14 @@ static void set_esb_up_recv_state(uint8_t a, uint8_t b) {
 /* audio upload test ("#a"): payload bytes per packet */
 #define AUDIO_TEST_CHUNK_LEN 0x68
 
-static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
+static int spec_ble_command_hook(const uint8_t *data, uint32_t len) {
   struct ble_context *ctx = get_ble_context();
   struct GlassesState *state = CONTAINER_OF(ctx, struct GlassesState, ble_context);
   char buf[256] = {0};
   char *pos;
   int val;
 
-  memcpy(buf, data, MIN(len, sizeof(buf) - 1));
+  memcpy(buf, data, MIN(len, sizeof(buf) - 1U));
 
   if (strcmp(buf, "#c") == 0) {
     G1_LOG_INF("test:BLE_REQ_POST_BT_UNPAIR\n\n");
@@ -4481,15 +4652,15 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (pos == buf) {
     char title[32] = {0};
     char message[128] = {0};
-    char *p;
+    const char *p;
 
     pos += 3;
     p = strchr(pos, '@');
     if (p == NULL) {
       return -1;
     }
-    memcpy(title, pos, MIN((size_t)(p - pos), sizeof(title) - 1));
-    strncpy(message, p + 1, sizeof(message) - 1);
+    memcpy(title, pos, MIN((size_t)(p - pos), sizeof(title) - 1U));
+    strncpy(message, p + 1, sizeof(message) - 1U);
     G1_LOG_INF("模拟接收到新通知 title:%s, message:%s\n", title, message);
     return mobile_send_notification_to_ble_device_test(title, message, ble_dispatch_raw_packet);
   }
@@ -4535,8 +4706,10 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   pos = strstr(buf, "#5@");
   if (pos == buf) {
     char str[16] = {0};
-    char *p, *q;
-    int sec, enable;
+    const char *p;
+    const char *q;
+    int sec;
+    int enable;
 
     memcpy(str, pos + 3, 4);
     G1_LOG_INF("buf:%s\n\n", str);
@@ -4557,7 +4730,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     }
     memcpy(en, p, q - p);
     G1_LOG_INF("en:%s\n\n", en);
-    sec = (int)strtol(cmd, NULL, 10) * 60 + 3610;
+    sec = ((int)strtol(cmd, NULL, 10) * 60) + 3610;
     buf[0] = 7;
     memcpy(&buf[1], &sec, sizeof(sec));
     enable = (int)strtol(en, NULL, 10);
@@ -4569,8 +4742,9 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
 
   pos = strstr(buf, "#cmd@");
   if (pos == buf) {
-    char *p;
-    int n, cmd;
+    const char *p;
+    int n;
+    int cmd;
 
     pos += 5;
     G1_LOG_INF("pos=%s, tx_data_len=%d\n\n", pos, len);
@@ -4601,7 +4775,8 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       return 0;
     }
     if (cmd == 9) {
-      cJSON *info, *root;
+      cJSON *info;
+      cJSON *root;
       char *str;
 
       G1_LOG_INF("simulator->BLE_REQ_PUT_TELEPROMPTER_INFO.\n\n");
@@ -4620,7 +4795,8 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       return 0;
     }
     if (cmd == 10) {
-      cJSON *info, *root;
+      cJSON *info;
+      cJSON *root;
       char *str;
 
       G1_LOG_INF("simulator->BLE_REQ_PUT_NAVIGATION_INFO.\n\n");
@@ -4645,10 +4821,10 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     if (cmd == 0x4b) {
       char title[32];
       char msg[128];
-      char *q;
+      const char *q;
 
       p++;
-      strncpy(value, p, sizeof(value) - 1);
+      strncpy(value, p, sizeof(value) - 1U);
       n = (int)strlen(value);
       G1_LOG_INF("22 len=%d\n", n);
       q = strchr(value, '#');
@@ -4693,7 +4869,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
       char audio[1024] = {0};
       const char *p = audio;
 
-      for (i = 0; i < sizeof(audio); i++) {
+      for (i = 0; (size_t)i < sizeof(audio); i++) {
         audio[i] = (char)(((uint32_t)i & 0xfU) + '0');
       }
       t0 = k_uptime_get();
@@ -4779,7 +4955,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
 
   if (strncmp(buf, "#l", 2) == 0) {
     /* off: 0xc1 or ASCII "1"; on: anything else */
-    if ((uint8_t)buf[2] == 0xc1 || (int)strtol(&buf[2], NULL, 10) == 1) {
+    if (((uint8_t)buf[2] == 0xc1) || ((int)strtol(&buf[2], NULL, 10) == 1)) {
       BLE_DEBUG = 0;
     } else {
       BLE_DEBUG = 1;
@@ -4791,7 +4967,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     char out[20] = {0};
 
     state->imu.ref = (int)imu_pitch_x100;
-    sprintf(out, "base: %d", imu_pitch_x100);
+    sprintf(out, "base: %d", (int)imu_pitch_x100);
     ctx->write(out, sizeof(out));
     state->dashboard_cmd = 0;
     sys_settings_dirty = 1;
@@ -4804,17 +4980,22 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
     uint32_t lux = opt3007_get_max_lux();
 
     if (buf[2] != '\0') {
-      if ((int)strtol(&buf[2], NULL, 10) < 2U) {
-        state->opt3007_context.auto_brightness = (int)strtol(&buf[2], NULL, 10);
-      } else {
+      long arg = strtol(&buf[2], NULL, 10);
+
+      /* 0 and 1 switch auto brightness, 2 .. 42 are a manual level, anything else is no level */
+      if ((arg == 0) || (arg == 1)) {
+        state->opt3007_context.auto_brightness = (uint8_t)arg;
+      } else if ((arg > 1) && (arg <= BLE_BRIGHTNESS_LEVEL_MAX)) {
         state->opt3007_context.auto_brightness = 0;
-        state->panel.panel_brightness_level = (int)strtol(&buf[2], NULL, 10);
+        state->panel.panel_brightness_level = (uint8_t)arg;
+      } else {
+        G1_LOG_ERR("#i: %ld is not a brightness level\n", arg);
       }
     }
-    if (lux == 0xffffffff) {
+    if (lux == 0xffffffffU) {
       sprintf(out, "base: %d", 80000);
     } else {
-      sprintf(out, "base: %d", lux);
+      sprintf(out, "base: %d", (int)lux);
     }
     ctx->write(out, sizeof(out));
     state->dashboard_cmd = 0;
@@ -4845,7 +5026,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#p", 2) == 0) {
     char out[20] = {0};
 
-    sprintf(out, "pitch: %d", imu_pitch_x100);
+    sprintf(out, "pitch: %d", (int)imu_pitch_x100);
     ctx->write(out, sizeof(out));
     return 0;
   }
@@ -4871,7 +5052,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#k", 2) == 0) {
     char out[64] = {0};
 
-    sprintf(out, "VADC:%d TMR:%d", chargerGetVdcRect(), 0);
+    sprintf(out, "VADC:%d TMR:%d", (int)chargerGetVdcRect(), 0);
     ctx->write(out, sizeof(out));
     return 0;
   }
@@ -4882,7 +5063,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
 
     if ((int)strtol(&buf[2], NULL, 10) == 1) {
       state->spi.init_cb(&state->spi);
-      if (state->flash_ops.fn) {
+      if (state->flash_ops.fn != NULL) {
         state->flash_ops.fn(&state->flash_ops);
       }
       strcpy(out, "init flash");
@@ -4897,7 +5078,7 @@ static int spec_ble_command_hook(uint8_t *data, uint32_t len) {
   if (strncmp(buf, "#s", 2) == 0) {
     char out[20] = {0};
 
-    change_work_mode(buf[2] != '\0' ? (int)strtol(&buf[2], NULL, 10) : 7);
+    change_work_mode((buf[2] != '\0') ? (int)strtol(&buf[2], NULL, 10) : 7);
     ctx->write(out, sizeof(out));
     return 0;
   }
@@ -4940,14 +5121,14 @@ int start_ble_work_thread(struct ble_context *ctx) {
                   ble_work_thread, ctx, NULL, NULL, BLE_WORK_THREAD_PRIORITY, 0, K_NO_WAIT);
   return 0;
 }
-static int ble_process_report_response(struct ble_context *ctx, struct ble_req_hdr *hdr, uint8_t *data) {
+static int ble_process_report_response(struct ble_context *ctx, const struct ble_req_hdr *hdr, const uint8_t *data) {
   uint8_t cmd = hdr->cmd;
   uint8_t resp[21] = {0};
 
   resp[0] = cmd;
   switch (cmd) {
     case BLE_CMD_AUDIO:
-      if (data[2] == PKCS7_PACK_DONE || data[2] == PKCS7_PACK_MORE) {
+      if ((data[2] == PKCS7_PACK_DONE) || (data[2] == PKCS7_PACK_MORE)) {
         return 0;
       }
       if (data[2] == 0xcc) {

@@ -42,7 +42,8 @@ int draw_template_translate_screen(struct jbd_panel_context *panel, void *arg) {
 
   set_frame_buffer(panel->panel_buffer);
 
-  if (ti->original_type >= 9 || ti->translation_type == 0 || ti->translation_type >= 9 || ti->original_type == 0) {
+  if ((ti->original_type >= 9) || (ti->translation_type == 0) || (ti->translation_type >= 9) ||
+      (ti->original_type == 0)) {
     G1_LOG_ERR("translate language type error! trans_info->original_type %d "
                "trans_info->translation_type %d\n",
                ti->original_type, ti->translation_type);
@@ -107,6 +108,8 @@ void translate_draw_hint_page(int which) {
     }
     gui_bmp_bitmap_draw(0x40, X0 + x, Y0 + 0x3a, 0, 0, 0);
     gui_utf_draw(0, get_string(0x55), 0, X0 + x + 0x2c, Y0 + 0x36, X0 + 0x240, Y0 + 0x88, 3, 0, 0, NULL, 0);
+  } else {
+    /* nothing to do */
   }
 }
 
@@ -148,8 +151,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
 
         /* fade in */
         for (int i = 0; i < 4; i++) {
-          if (ti->original_type >= 26 || ti->translation_type == 0 || ti->translation_type >= 26 ||
-              ti->original_type == 0) {
+          if ((ti->original_type >= 26) || (ti->translation_type == 0) || (ti->translation_type >= 26) ||
+              (ti->original_type == 0)) {
             G1_LOG_ERR("translate language type error! "
                        "trans_info->original_type %d "
                        "trans_info->translation_type %d\n",
@@ -215,8 +218,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
         translate_draw_hint_page(1);
         return 0;
       }
-    } else if (event == UI_EVT_REFRESH || event == UI_EVT_ENTER) {
-      if (trans_mode == 5 || trans_mode == 6) {
+    } else if ((event == UI_EVT_REFRESH) || (event == UI_EVT_ENTER)) {
+      if ((trans_mode == 5) || (trans_mode == 6)) {
         trans_mode = mode;
         gui_screen_clear();
       }
@@ -233,14 +236,14 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
           gui_bmp_bitmap_draw(0x1b, X0, Y0 + 0x36, 0, 0, 0);
         }
 
-        if (ti->original_type >= 26 || ti->translation_type == 0 || ti->translation_type >= 26 ||
-            ti->original_type == 0) {
+        if ((ti->original_type >= 26) || (ti->translation_type == 0) || (ti->translation_type >= 26) ||
+            (ti->original_type == 0)) {
           G1_LOG_ERR("translate language type error! "
                      "trans_info->original_type %d "
                      "trans_info->translation_type %d\n",
                      ti->original_type, ti->translation_type);
         } else {
-          if (trans_ui.original_type != ti->original_type || trans_ui.translation_type != ti->translation_type) {
+          if ((trans_ui.original_type != ti->original_type) || (trans_ui.translation_type != ti->translation_type)) {
             char pair[10] = {0};
 
             snprintf(pair, sizeof(pair), "%s>%s", trans_lang_name[ti->original_type - 1],
@@ -252,7 +255,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
           }
         }
 
-        if (trans_mode == 3 || trans_mode == 4) {
+        if ((trans_mode == 3) || (trans_mode == 4)) {
           uint8_t **fb = get_dashboard_state()->panel.panel_buffer;
 
           /* fade the old text out */
@@ -283,7 +286,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
             int y1 = Y0 + 0x88;
             int xs = x0 / 2;
 
-            for (int r = 0; r < y1 - y0; r++) {
+            for (int r = 0; r < (y1 - y0); r++) {
               for (int c = 0; c < (x1 - x0) / 2; c++) {
                 const uint8_t steps[8] = {1, 3, 5, 7, 7, 7, 7, 7};
                 uint8_t *line = fb[y0 + r] + xs;
@@ -309,7 +312,7 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
       struct g1_date date = {0};
 
       timestamp_to_date(get_date(), &date);
-      if (trans_ui.minute == date.minute && trans_ui.hour == date.hour) {
+      if ((trans_ui.minute == date.minute) && (trans_ui.hour == date.hour)) {
         return 0;
       }
       trans_ui.minute = date.minute;
@@ -318,6 +321,8 @@ int ui_translate_task(struct jbd_panel_context *panel, void *arg, int event) {
 
       gui_clock_draw(get_date(), X0, Y0 + 2, X0 + 0x50, Y0 + 0x1d, 3, is_24h);
       return 0;
+    } else {
+      /* nothing to do */
     }
 
     if (event != UI_EVT_EXIT) {

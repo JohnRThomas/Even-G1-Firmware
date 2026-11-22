@@ -411,3 +411,38 @@ ZTEST(proto_dispatch, test_debug_marker_inside_a_packet_is_not_a_debug_command) 
   zassert_equal(trigger_imu_state_change_fake.call_count, 0, "head-up simulated");
   expect_only_frame("04 c9");
 }
+
+static void send_text(const char *text) {
+  g1_send((const uint8_t *)text, strlen(text));
+}
+
+/* "#i<n>": 0 and 1 switch auto brightness, 2 .. 42 set a manual level, anything else changes nothing. */
+ZTEST(proto_dispatch, test_0x23_i_takes_only_brightness_levels) {
+  static const uint8_t reply[20] = "base: 0";
+
+  g1_state()->panel.panel_brightness_level = 0x15;
+  g1_state()->opt3007_context.auto_brightness = 1;
+
+  send_text("#i-1");
+  zassert_equal(g1_state()->panel.panel_brightness_level, 0x15, "\"#i-1\" set level %d",
+                g1_state()->panel.panel_brightness_level);
+  zassert_equal(g1_state()->opt3007_context.auto_brightness, 1, "\"#i-1\" switched auto brightness off");
+  expect_only_frame_bytes(reply, sizeof(reply));
+
+  send_text("#i43");
+  zassert_equal(g1_state()->panel.panel_brightness_level, 0x15, "\"#i43\" set level %d",
+                g1_state()->panel.panel_brightness_level);
+  zassert_equal(g1_state()->opt3007_context.auto_brightness, 1, "\"#i43\" switched auto brightness off");
+
+  send_text("#i42");
+  zassert_equal(g1_state()->panel.panel_brightness_level, 42);
+  zassert_equal(g1_state()->opt3007_context.auto_brightness, 0);
+
+  send_text("#i1");
+  zassert_equal(g1_state()->opt3007_context.auto_brightness, 1);
+  zassert_equal(g1_state()->panel.panel_brightness_level, 42, "\"#i1\" is not a level");
+
+  send_text("#i0");
+  zassert_equal(g1_state()->opt3007_context.auto_brightness, 0);
+  zassert_equal(g1_state()->panel.panel_brightness_level, 42, "\"#i0\" is not a level");
+}

@@ -42,7 +42,7 @@ static int transcribe_info_reflash(uint8_t **fb, int force) {
                              gui_screen_y_offset() + 84);
     }
   }
-  if (transcribe_ui.state == 0 || force == 1) {
+  if ((transcribe_ui.state == 0) || (force == 1)) {
     gui_utf_draw_darkword_by_lines(0, gs->ui.gui.text, 0, gui_screen_x_offset() + 88, gui_screen_y_offset(),
                                    gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 5, gs->ui.gui.dark_cnt, 0,
                                    NULL, 0);
@@ -94,10 +94,12 @@ int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event)
         gui_utf_adv_draw_reset();
         memset(&transcribe_ui, 0, sizeof(transcribe_ui));
         dmic_stream_stop();
+      } else {
+        /* nothing to do */
       }
       break;
     case 1:
-      if (event == 0 || event == 1) {
+      if ((event == 0) || (event == 1)) {
         transcribe_info_reflash(ctx->panel_buffer, event);
       } else if (event == 2) {
         G1_LOG_INF("set_imu_pitch process received exit packet ...\n");
@@ -105,8 +107,10 @@ int ui_transcribe_info_task(struct jbd_panel_context *ctx, void *arg, int event)
         gui_utf_adv_draw_reset();
         memset(&transcribe_ui, 0, sizeof(transcribe_ui));
         dmic_stream_stop();
+      } else {
+        /* nothing to do */
       }
-      if (get_dashboard_state()->is_master == 1 && abs_diff_u64(k_uptime_get(), transcribe_ui.ts) > 1000) {
+      if ((get_dashboard_state()->is_master == 1) && (abs_diff_u64(k_uptime_get(), transcribe_ui.ts) > 1000)) {
         transcribe_ui.timeout_cnt++;
         transcribe_ui.ts = k_uptime_get();
         if (transcribe_ui.timeout_cnt >= 30) {

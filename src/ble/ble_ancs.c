@@ -44,11 +44,11 @@
 #define ATTR_DATA_SIZE 32
 
 /* every buffer ancs_c_init() registers has to fit the ANCS client's limit */
-_Static_assert(sizeof(((struct notif_msg *)0)->message) <= BT_ANCS_ATTR_DATA_MAX, "");
-_Static_assert(sizeof(((struct notif_msg *)0)->display_name) <= BT_ANCS_ATTR_DATA_MAX, "");
+_Static_assert(sizeof(((struct notif_msg){0}).message) <= (size_t)BT_ANCS_ATTR_DATA_MAX, "");
+_Static_assert(sizeof(((struct notif_msg){0}).display_name) <= (size_t)BT_ANCS_ATTR_DATA_MAX, "");
 
-#define ANCS_MSGQ_MAX 10
-#define UID_MSGQ_MAX  10
+#define ANCS_MSGQ_MAX 10U
+#define UID_MSGQ_MAX  10U
 
 #define ANCS_THREAD_STACK_SIZE 5120
 #define ANCS_THREAD_PRIORITY   (-11)
@@ -63,7 +63,7 @@ enum {
 static void discover_ancs_error_found_cb(struct bt_conn *conn, int err, void *ctx);
 static void discover_ancs_completed_cb(struct bt_gatt_dm *dm, void *ctx);
 static void discover_ancs_not_found_cb(struct bt_conn *conn, void *ctx);
-static void indicate_sc_cb(struct bt_gattp *gattp, const struct bt_gattp_handle_range *handle_range, int err);
+static void indicate_sc_cb(struct bt_gattp *gattp_client, const struct bt_gattp_handle_range *handle_range, int err);
 static void start_ancs_work_thread(struct ble_context *ctx);
 
 /* current connection */
@@ -101,9 +101,9 @@ static struct k_thread ancs_work_thread;
 
 static const char *lit_eventid[BT_ANCS_EVT_ID_COUNT] = {"Added", "Modified", "Removed"};
 
-static void bt_ancs_notification_source_handler(struct bt_ancs_client *ancs_c, int err,
+static void bt_ancs_notification_source_handler(struct bt_ancs_client *client, int err,
                                                 const struct bt_ancs_evt_notif *notif);
-static void bt_ancs_data_source_handler(struct bt_ancs_client *ancs_c, const struct bt_ancs_attr_response *response);
+static void bt_ancs_data_source_handler(struct bt_ancs_client *client, const struct bt_ancs_attr_response *response);
 
 static const struct bt_gatt_dm_cb discover_ancs_cb = {
   .completed = discover_ancs_completed_cb,
@@ -134,8 +134,8 @@ static void err_code_print(uint8_t err_code_np) {
   }
 }
 
-static void bt_ancs_write_response_handler(struct bt_ancs_client *ancs_c, uint8_t err) {
-  ARG_UNUSED(ancs_c);
+static void bt_ancs_write_response_handler(struct bt_ancs_client *client, uint8_t err) {
+  ARG_UNUSED(client);
   err_code_print(err);
 }
 
@@ -153,7 +153,7 @@ static void discover_gattp(struct bt_conn *conn) {
   int err;
 
   err = bt_gatt_dm_start(conn, BT_UUID_GATT, &discover_gattp_cb, &gattp);
-  if (err) {
+  if (err != 0) {
     printk("Failed to start discovery for GATT Service (err %d)\n", err);
   }
 }
@@ -217,7 +217,7 @@ static void ancs_security_changed(struct bt_conn *conn, bt_security_t level, enu
 
       ancs_discovery_flags = ATOMIC_INIT(0);
       dst = bt_conn_get_dst(conn);
-      if (!get_pt_test_mode() && get_dashboard_state()->bonded == 1 &&
+      if (!get_pt_test_mode() && (get_dashboard_state()->bonded == 1) &&
           !memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t))) {
         discover_gattp(conn);
       }
@@ -247,7 +247,7 @@ static void ancs_connected(struct bt_conn *conn, uint8_t err) {
   }
 
   if (!get_pt_test_mode() && !get_dashboard_state()->force_bind &&
-      memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t)) != 0) {
+      (memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t)) != 0)) {
     G1_LOG_ERR("disconnect because invalid mac %s -- type: 0x%x, role:0x%x \n\n", addr, conn->type, conn->role);
     bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
     return;
@@ -261,6 +261,7 @@ static void ancs_connected(struct bt_conn *conn, uint8_t err) {
   current_conn = conn;
 }
 
+// cppcheck-suppress constParameterCallback
 static void on_pairing_complete(struct bt_conn *conn, bool bonded) {
   char addr[BT_ADDR_LE_STR_LEN];
   const bt_addr_le_t *dst = bt_conn_get_dst(conn);
@@ -269,7 +270,7 @@ static void on_pairing_complete(struct bt_conn *conn, bool bonded) {
   if (get_dashboard_state()->force_bind) {
     get_dashboard_state()->force_bind = 0;
   }
-  if (!get_pt_test_mode() && memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t)) != 0) {
+  if (!get_pt_test_mode() && (memcmp(&get_dashboard_state()->bonded_addr, dst, sizeof(bt_addr_le_t)) != 0)) {
     bt_unpair(BT_ID_DEFAULT, &get_dashboard_state()->bonded_addr);
     get_dashboard_state()->bonded = 0;
     get_dashboard_state()->dashboard_cmd = 0;
@@ -292,12 +293,12 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 
 static struct bt_gatt_cb gatt_callbacks = {.att_mtu_updated = mtu_updated};
 
-static uint32_t last_notif_uid = 0xffffffff;
+static uint32_t last_notif_uid = 0xffffffffU;
 
 static void discover_ancs(struct bt_conn *conn, bool retry) {
   int err;
 
-  if (get_dashboard_state()->is_master != 2 || get_pt_test_mode() == 1) {
+  if ((get_dashboard_state()->is_master != 2) || (get_pt_test_mode() == 1)) {
     return;
   }
 
@@ -319,7 +320,7 @@ static void discover_ancs(struct bt_conn *conn, bool retry) {
   }
 
   err = bt_gatt_dm_start(conn, BT_UUID_ANCS, &discover_ancs_cb, &ancs_c);
-  if (err) {
+  if (err != 0) {
     printk("Failed to start discovery for ANCS (err %d)\n", err);
     atomic_clear_bit(&ancs_discovery_flags, DISCOVERY_ANCS_ONGOING);
   }
@@ -346,37 +347,37 @@ static void discover_ancs_error_found_cb(struct bt_conn *conn, int err, void *ct
   discover_ancs_again(conn);
 }
 
-static void enable_ancs_notifications(struct bt_ancs_client *ancs_c) {
+static void enable_ancs_notifications(struct bt_ancs_client *client) {
   int err;
 
-  err = bt_ancs_subscribe_notification_source(ancs_c, bt_ancs_notification_source_handler);
-  if (err) {
+  err = bt_ancs_subscribe_notification_source(client, bt_ancs_notification_source_handler);
+  if (err != 0) {
     printk("Failed to enable Notification Source notification (err %d)\n", err);
   }
 
-  err = bt_ancs_subscribe_data_source(ancs_c, bt_ancs_data_source_handler);
-  if (err) {
+  err = bt_ancs_subscribe_data_source(client, bt_ancs_data_source_handler);
+  if (err != 0) {
     printk("Failed to enable Data Source notification (err %d)\n", err);
   }
 }
 
 static void discover_ancs_completed_cb(struct bt_gatt_dm *dm, void *ctx) {
   int err;
-  struct bt_ancs_client *ancs_c = (struct bt_ancs_client *)ctx;
+  struct bt_ancs_client *client = (struct bt_ancs_client *)ctx;
   struct bt_conn *conn = bt_gatt_dm_conn_get(dm);
 
   printk("The discovery procedure for ANCS succeeded\n");
 
-  err = bt_ancs_handles_assign(dm, ancs_c);
-  if (err) {
+  err = bt_ancs_handles_assign(dm, client);
+  if (err != 0) {
     printk("Could not init ANCS client object, error: %d\n", err);
   } else {
     atomic_set_bit(&ancs_discovery_flags, DISCOVERY_ANCS_SUCCEEDED);
-    enable_ancs_notifications(ancs_c);
+    enable_ancs_notifications(client);
   }
 
   err = bt_gatt_dm_data_release(dm);
-  if (err) {
+  if (err != 0) {
     printk("Could not release the discovery data, error "
            "code: %d\n",
            err);
@@ -393,18 +394,18 @@ static void discover_ancs_not_found_cb(struct bt_conn *conn, void *ctx) {
   discover_ancs_again(conn);
 }
 
-static void enable_gattp_indications(struct bt_gattp *gattp) {
+static void enable_gattp_indications(struct bt_gattp *gattp_client) {
   int err;
 
-  err = bt_gattp_subscribe_service_changed(gattp, indicate_sc_cb);
-  if (err) {
+  err = bt_gattp_subscribe_service_changed(gattp_client, indicate_sc_cb);
+  if (err != 0) {
     printk("Cannot subscribe to Service Changed indication (err %d)\n", err);
   }
 }
 
 static void discover_gattp_completed_cb(struct bt_gatt_dm *dm, void *ctx) {
   int err;
-  struct bt_gattp *gattp = (struct bt_gattp *)ctx;
+  struct bt_gattp *gattp_client = (struct bt_gattp *)ctx;
   struct bt_conn *conn = bt_gatt_dm_conn_get(dm);
 
   /* Checks if the service is empty.
@@ -412,18 +413,18 @@ static void discover_gattp_completed_cb(struct bt_gatt_dm *dm, void *ctx) {
    */
   if (bt_gatt_dm_attr_cnt(dm) > 1) {
     printk("The discovery procedure for GATT Service succeeded\n");
-    err = bt_gattp_handles_assign(dm, gattp);
-    if (err) {
+    err = bt_gattp_handles_assign(dm, gattp_client);
+    if (err != 0) {
       printk("Could not init GATT Service client object, error: %d\n", err);
     } else {
-      enable_gattp_indications(gattp);
+      enable_gattp_indications(gattp_client);
     }
   } else {
     printk("GATT Service could not be found during the discovery\n");
   }
 
   err = bt_gatt_dm_data_release(dm);
-  if (err) {
+  if (err != 0) {
     printk("Could not release the discovery data, error "
            "code: %d\n",
            err);
@@ -444,6 +445,7 @@ static void clear_ancs_discovery_flags(void) {
   atomic_clear_bit(&ancs_discovery_flags, SERVICE_CHANGED_INDICATED);
 }
 
+// cppcheck-suppress constParameterCallback
 static void ancs_disconnected(struct bt_conn *conn, uint8_t reason) {
   char addr[BT_ADDR_LE_STR_LEN];
 
@@ -452,7 +454,7 @@ static void ancs_disconnected(struct bt_conn *conn, uint8_t reason) {
   bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
   G1_LOG_ERR("from %s (reason 0x%02x)\n", addr, reason);
   ancs_ble_ctx->security_pending = 0;
-  while (k_sem_count_get(&get_dashboard_state()->ble_context.tx_sem)) {
+  while (k_sem_count_get(&get_dashboard_state()->ble_context.tx_sem) != 0U) {
     k_sem_take(&get_dashboard_state()->ble_context.tx_sem, K_FOREVER);
   }
   clear_ancs_discovery_flags();
@@ -464,18 +466,18 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
   .security_changed = ancs_security_changed,
 };
 
-static void indicate_sc_cb(struct bt_gattp *gattp, const struct bt_gattp_handle_range *handle_range, int err) {
+static void indicate_sc_cb(struct bt_gattp *gattp_client, const struct bt_gattp_handle_range *handle_range, int err) {
   ARG_UNUSED(handle_range);
   if (!err) {
     indicate_sc_count++;
     if (indicate_sc_count >= 5) {
       indicate_sc_count = 0;
       G1_LOG_ERR("disconnect because can not discover ancs.\n");
-      bt_conn_disconnect(gattp->conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+      bt_conn_disconnect(gattp_client->conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
       return;
     }
     atomic_set_bit(&ancs_discovery_flags, SERVICE_CHANGED_INDICATED);
-    discover_ancs_again(gattp->conn);
+    discover_ancs_again(gattp_client->conn);
   }
 }
 
@@ -483,18 +485,18 @@ static int init_msgq_ancs(void) {
   int err;
 
   err = k_msgq_alloc_init(&ancs_msgq, sizeof(struct notif_msg), ANCS_MSGQ_MAX);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("k_msgq alloc failed\n");
   }
   return err;
 }
 
-static int enqueue_ancs(struct notif_msg *data) {
+static int enqueue_ancs(const struct notif_msg *data) {
   struct notif_msg msg;
   int err;
 
   memset(&msg, 0, sizeof(msg));
-  if (ancs_msgq.max_msgs == 0) {
+  if (ancs_msgq.max_msgs == 0U) {
     return 1;
   }
   if (k_msgq_num_used_get(&ancs_msgq) == ANCS_MSGQ_MAX) {
@@ -503,7 +505,7 @@ static int enqueue_ancs(struct notif_msg *data) {
   }
   memcpy(&msg, data, sizeof(msg));
   err = k_msgq_put(&ancs_msgq, &msg, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("en ancs F\n");
   }
   return err;
@@ -511,38 +513,39 @@ static int enqueue_ancs(struct notif_msg *data) {
 
 /* the dashboard is not in a mode that suppresses notifications */
 #define ANCS_NOTIF_MODE_ALLOWED()                                                                                      \
-  (get_dashboard_state()->dashboard_mode != 11 && get_dashboard_state()->dashboard_mode != 10 &&                       \
-   get_dashboard_state()->dashboard_mode != 9 && get_dashboard_state()->dashboard_mode != 12 &&                        \
-   get_dashboard_state()->dashboard_mode != 16 && get_dashboard_state()->dashboard_mode != 20 &&                       \
-   get_dashboard_state()->dashboard_mode != 14 && get_dashboard_state()->dashboard_mode != 15 &&                       \
-   get_dashboard_state()->dashboard_mode != 17 && get_dashboard_state()->dashboard_mode != 18 &&                       \
-   get_dashboard_state()->dashboard_mode != 19)
+  ((get_dashboard_state()->dashboard_mode != 11) && (get_dashboard_state()->dashboard_mode != 10) &&                   \
+   (get_dashboard_state()->dashboard_mode != 9) && (get_dashboard_state()->dashboard_mode != 12) &&                    \
+   (get_dashboard_state()->dashboard_mode != 16) && (get_dashboard_state()->dashboard_mode != 20) &&                   \
+   (get_dashboard_state()->dashboard_mode != 14) && (get_dashboard_state()->dashboard_mode != 15) &&                   \
+   (get_dashboard_state()->dashboard_mode != 17) && (get_dashboard_state()->dashboard_mode != 18) &&                   \
+   (get_dashboard_state()->dashboard_mode != 19))
 
 /* wait while the ESB link is busy */
-#define ANCS_WAIT_ESB_IDLE()                                                                                           \
-  while (get_dashboard_state()->work_mode == 1 || get_dashboard_state()->work_mode == 8) {                             \
-    k_sleep(K_MSEC(5000));                                                                                             \
+static inline void ancs_wait_esb_idle(void) {
+  while ((get_dashboard_state()->work_mode == 1) || (get_dashboard_state()->work_mode == 8)) {
+    k_sleep(K_MSEC(5000));
   }
+}
 
-static void bt_ancs_data_source_handler(struct bt_ancs_client *ancs_c, const struct bt_ancs_attr_response *response) {
-  ARG_UNUSED(ancs_c);
+static void bt_ancs_data_source_handler(struct bt_ancs_client *client, const struct bt_ancs_attr_response *response) {
+  ARG_UNUSED(client);
   struct ble_context *ctx = get_ble_context();
 
   G1_LOG_ERR("bt_ancs_data_source_handler response->command_id %d\n", response->command_id);
 
   switch (response->command_id) {
     case BT_ANCS_COMMAND_ID_GET_NOTIF_ATTRIBUTES:
-      if (response->attr.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) {
+      if (response->attr.attr_id == (uint32_t)BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) {
         notif_attr_app_id_latest = response->attr;
         app_id_received = 1;
       }
       break;
     case BT_ANCS_COMMAND_ID_GET_APP_ATTRIBUTES:
-      if (app_id_received && notification_latest.notif_uid != last_notif_uid) {
-        if (k_uptime_get_32() - get_dashboard_state()->ble_context.connected_time < 10000) {
+      if (app_id_received && (notification_latest.notif_uid != last_notif_uid)) {
+        if ((k_uptime_get_32() - get_dashboard_state()->ble_context.connected_time) < 10000U) {
           break;
         }
-        ANCS_WAIT_ESB_IDLE();
+        ancs_wait_esb_idle();
         if (ANCS_NOTIF_MODE_ALLOWED()) {
           last_notif_uid = notification_latest.notif_uid;
           ctx->notif.action = notification_latest.evt_id;
@@ -566,11 +569,11 @@ static int dequeue_ancs(struct notif_msg *data) {
   int err;
 
   memset(&msg, 0, sizeof(msg));
-  if (ancs_msgq.max_msgs == 0) {
+  if (ancs_msgq.max_msgs == 0U) {
     return 1;
   }
   err = k_msgq_get(&ancs_msgq, &msg, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("D ancs F\n");
   } else {
     memcpy(data, &msg, sizeof(msg));
@@ -582,7 +585,7 @@ static int init_msgq_uid(void) {
   int err;
 
   err = k_msgq_alloc_init(&uid_msgq, sizeof(struct bt_ancs_evt_notif), UID_MSGQ_MAX);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("k_msgq alloc failed\n");
   }
   return err;
@@ -593,7 +596,7 @@ static int enqueue_uid(const struct bt_ancs_evt_notif *notif) {
   int err;
 
   memset(&local_data, 0, sizeof(local_data));
-  if (uid_msgq.max_msgs == 0) {
+  if (uid_msgq.max_msgs == 0U) {
     return 1;
   }
   if (k_msgq_num_used_get(&uid_msgq) == UID_MSGQ_MAX) {
@@ -603,29 +606,29 @@ static int enqueue_uid(const struct bt_ancs_evt_notif *notif) {
   memcpy(&local_data, notif, sizeof(local_data));
   G1_LOG_ERR("local_data uid %d\n", local_data.notif_uid);
   err = k_msgq_put(&uid_msgq, &local_data, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("en uid F\n");
   }
   return err;
 }
 
-static void bt_ancs_notification_source_handler(struct bt_ancs_client *ancs_c, int err,
+static void bt_ancs_notification_source_handler(struct bt_ancs_client *client, int err,
                                                 const struct bt_ancs_evt_notif *notif) {
-  ARG_UNUSED(ancs_c);
+  ARG_UNUSED(client);
   struct ble_context *ctx = get_ble_context();
 
-  if (err) {
+  if (err != 0) {
     return;
   }
   printk("\nNotification UID:         %u\nEvent:       %s\n", notif->notif_uid, lit_eventid[notif->evt_id]);
-  if (k_uptime_get_32() - get_dashboard_state()->ble_context.connected_time < 10000) {
+  if ((k_uptime_get_32() - get_dashboard_state()->ble_context.connected_time) < 10000U) {
     return;
   }
-  ANCS_WAIT_ESB_IDLE();
-  if (!ANCS_NOTIF_MODE_ALLOWED() || notif->evt_id >= BT_ANCS_EVT_ID_COUNT) {
+  ancs_wait_esb_idle();
+  if ((!ANCS_NOTIF_MODE_ALLOWED()) || ((uint32_t)notif->evt_id >= (uint32_t)BT_ANCS_EVT_ID_COUNT)) {
     return;
   }
-  if (enqueue_uid(notif)) {
+  if (enqueue_uid(notif) != 0) {
     return;
   }
   G1_LOG_ERR("============================>bt_ancs_get_attr_req_sem %d count %d notif->evt_id %d\n", notif->notif_uid,
@@ -642,11 +645,11 @@ static int dequeue_uid(struct bt_ancs_evt_notif *notif) {
   int err;
 
   memset(&local_data, 0, sizeof(local_data));
-  if (uid_msgq.max_msgs == 0) {
+  if (uid_msgq.max_msgs == 0U) {
     return 1;
   }
   err = k_msgq_get(&uid_msgq, &local_data, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("D uid F\n");
   } else {
     memcpy(notif, &local_data, sizeof(local_data));
@@ -658,44 +661,44 @@ static int ancs_c_init(struct notif_msg *data) {
   int err;
 
   err = bt_ancs_client_init(&ancs_c);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("%d: err=%d\n", __LINE__, err);
     return err;
   }
 
   err = bt_ancs_register_attr(&ancs_c, BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER, data->app_identifier, ATTR_DATA_SIZE);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("%d: err=%d\n", __LINE__, err);
     return err;
   }
 
   err = bt_ancs_register_app_attr(&ancs_c, BT_ANCS_APP_ATTR_ID_DISPLAY_NAME, data->display_name,
                                   sizeof(data->display_name));
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("%d: err=%d\n", __LINE__, err);
     return err;
   }
 
   err = bt_ancs_register_attr(&ancs_c, BT_ANCS_NOTIF_ATTR_ID_TITLE, data->title, ATTR_DATA_SIZE);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("%d: err=%d\n", __LINE__, err);
     return err;
   }
 
   err = bt_ancs_register_attr(&ancs_c, BT_ANCS_NOTIF_ATTR_ID_SUBTITLE, data->subtitle, ATTR_DATA_SIZE);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("%d: err=%d\n", __LINE__, err);
     return err;
   }
 
   err = bt_ancs_register_attr(&ancs_c, BT_ANCS_NOTIF_ATTR_ID_MESSAGE, data->message, sizeof(data->message));
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("%d: err=%d\n", __LINE__, err);
     return err;
   }
 
   err = bt_ancs_register_attr(&ancs_c, BT_ANCS_NOTIF_ATTR_ID_DATE, data->date, ATTR_DATA_SIZE);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("%d: err=%d\n", __LINE__, err);
     return err;
   }
@@ -717,9 +720,9 @@ static int request_ancs_attr_ext(void) {
 
   /* wait up to about one second for the app identifier attribute */
   do {
-    if (notif_attr_app_id_latest.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER &&
-        notif_attr_app_id_latest.attr_len != 0 && notif_attr_app_id_latest.attr_data[0] != '\0' &&
-        ctx->notif.app_identifier[0] != '\0') {
+    if ((notif_attr_app_id_latest.attr_id == (uint32_t)BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) &&
+        (notif_attr_app_id_latest.attr_len != 0) && (notif_attr_app_id_latest.attr_data[0] != '\0') &&
+        (ctx->notif.app_identifier[0] != '\0')) {
       app_id_ready = true;
       break;
     }
@@ -736,8 +739,8 @@ static int request_ancs_attr_ext(void) {
                strlen(notif_attr_app_id_latest.attr_data), ctx->notif.app_identifier[0]);
   }
 
-  if ((app_id_ready || notif_attr_app_id_latest.attr_id == BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER) &&
-      notif_attr_app_id_latest.attr_len != 0 && notif_attr_app_id_latest.attr_data[0] != '\0') {
+  if ((app_id_ready || (notif_attr_app_id_latest.attr_id == (uint32_t)BT_ANCS_NOTIF_ATTR_ID_APP_IDENTIFIER)) &&
+      (notif_attr_app_id_latest.attr_len != 0) && (notif_attr_app_id_latest.attr_data[0] != '\0')) {
     BLE_PRINTK("Request for %s: retry_time %d\n", notif_attr_app_id_latest.attr_data, retry_time);
     while (retry_time < 200) {
       err = bt_ancs_request_app_attr(&ancs_c, notif_attr_app_id_latest.attr_data, notif_attr_app_id_latest.attr_len,
@@ -748,7 +751,7 @@ static int request_ancs_attr_ext(void) {
       retry_time++;
       k_sleep(K_MSEC(5));
     }
-    if (err) {
+    if (err != 0) {
       printk("Failed requesting attributes for a given app (err: %d)\n", err);
     }
   }
@@ -766,7 +769,7 @@ int bt_start(void) {
   }
   bt_start_busy = 1;
 
-  if (get_dashboard_state()->bt_state == 2 || get_dashboard_state()->bt_state == 0) {
+  if ((get_dashboard_state()->bt_state == 2) || (get_dashboard_state()->bt_state == 0)) {
     bt_start_busy = 0;
     return 0;
   }
@@ -831,19 +834,19 @@ int bt_start(void) {
   sd[0].data_len = strlen(device_name);
 
   err = bt_set_name(device_name);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("Failed to set device name (err %d)\n\n", err);
   } else {
     err = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE, 0x160, 0x1e0, NULL), ad, ARRAY_SIZE(ad), sd,
                           ARRAY_SIZE(sd));
     if (!err) {
       get_dashboard_state()->bt_state = 2;
-      printk("Advertising %s successfully started uptime %lld\n", device_name, k_ticks_to_ms_ceil64(k_uptime_ticks()));
+      printk("Advertising %s successfully started uptime %llu\n", device_name, k_ticks_to_ms_ceil64(k_uptime_ticks()));
     }
   }
 
   bt_start_busy = 0;
-  if (err) {
+  if (err != 0) {
     system_reboot_delayed();
   }
   return err;
@@ -868,20 +871,20 @@ static void format_ancs_date(uint8_t *s) {
 static void recv_ble_data(struct ble_context *ctx) {
   uint8_t hdr[4] = {0x4b, 0, 0, 0};
   struct notif_msg data;
-  int ret;
 
   memset(&data, 0, sizeof(data));
-  if (dequeue_ancs(&data) == 0 && (data.action >= 2 || data.app_identifier[0] != '\0')) {
+  if ((dequeue_ancs(&data) == 0) && ((data.action >= 2U) || (data.app_identifier[0] != '\0'))) {
     data.recv_time = get_date();
-    if (data.recv_time == 0) {
+    if (data.recv_time == 0U) {
       data.recv_time = 1;
     }
     data.uid = notification_latest.notif_uid;
     dump_ancs("FROM:ancs", &data);
-    if (data.action >= 2) {
+    if (data.action >= 2U) {
       hdr[1] = 2;
     } else {
-      ret = is_on_whitelist_by_identifier(data.app_identifier);
+      int ret = is_on_whitelist_by_identifier(data.app_identifier);
+
       if (ret == 2) {
         hdr[1] = 2;
       } else if (ret == 3) {
@@ -915,7 +918,7 @@ static void ble_ancs_data_req_thread(void *p1, void *p2, void *p3) {
   k_sleep(K_MSEC(5000));
 
   while (1) {
-    while (get_dashboard_state()->work_mode == 1 || get_dashboard_state()->work_mode == 8) {
+    while ((get_dashboard_state()->work_mode == 1) || (get_dashboard_state()->work_mode == 8)) {
       k_sleep(K_MSEC(5000));
     }
     if (!(get_dashboard_state()->module_mask & BIT(7))) {
@@ -924,7 +927,7 @@ static void ble_ancs_data_req_thread(void *p1, void *p2, void *p3) {
     }
     G1_LOG_ERR("!!!!!!!!!wait -> ancs_get_attr_req_sem\n");
     k_sem_take(&ctx->ancs_get_attr_req_sem, K_FOREVER);
-    if (dequeue_uid(&notification_latest)) {
+    if (dequeue_uid(&notification_latest) != 0) {
       continue;
     }
     G1_LOG_ERR("!!!!!!!!!!!!!!get -> ancs_get_attr_req_sem %d evt_id %d\n", notification_latest.notif_uid,
@@ -938,10 +941,8 @@ static void ble_ancs_data_req_thread(void *p1, void *p2, void *p3) {
       ctx->notif.action = BT_ANCS_EVENT_ID_NOTIFICATION_REMOVED;
       ctx->notif.uid = notification_latest.notif_uid;
       ctx->notif.sync_state = 0;
-      /* a string literal is stored into a char (keeps the
-       * low byte of its address) */
-      ctx->notif.app_identifier[0] = (char)(uintptr_t)"\r";
-      ctx->notif.display_name[0] = (char)(uintptr_t)"\r";
+      ctx->notif.app_identifier[0] = '\r';
+      ctx->notif.display_name[0] = '\r';
       ctx->notif.busy = 0;
       enqueue_ancs(&ctx->notif);
       memset(&ctx->notif, 0, sizeof(ctx->notif));
@@ -961,8 +962,8 @@ int ancs_main(struct ble_context *ctx) {
   ancs_ble_ctx = ctx;
   G1_LOG_ERR("Starting Apple Notification Center Service client\n\n");
 
-  while (bt_retry_count) {
-    while (get_dashboard_state()->bt_state == 0 && wait != 0) {
+  while (bt_retry_count != 0) {
+    while ((get_dashboard_state()->bt_state == 0) && (wait != 0)) {
       wait--;
       k_msleep(100);
     }
@@ -980,7 +981,7 @@ int ancs_main(struct ble_context *ctx) {
   settings_load();
 
   err = ancs_c_init(&ctx->notif);
-  if (err) {
+  if (err != 0) {
     printk("ANCS client init failed (err %d)\n", err);
   } else {
     err = gattp_init();
@@ -998,7 +999,7 @@ int ancs_main(struct ble_context *ctx) {
           bt_gatt_cb_register(&gatt_callbacks);
 
           err = init_nus();
-          if (err) {
+          if (err != 0) {
             printk("Failed to init nus.\n");
           } else {
             err = bt_start();
@@ -1021,7 +1022,7 @@ int ancs_main(struct ble_context *ctx) {
 }
 
 static void start_ancs_work_thread(struct ble_context *ctx) {
-  if (get_dashboard_state()->is_master != 2 || get_pt_test_mode() == 1) {
+  if ((get_dashboard_state()->is_master != 2) || (get_pt_test_mode() == 1)) {
     return;
   }
   k_thread_create(&ancs_work_thread, ancs_work_thread_stack, K_THREAD_STACK_SIZEOF(ancs_work_thread_stack),
@@ -1042,7 +1043,7 @@ void ancs_delete_notification(uint32_t uid) {
 
 int set_ancs_enable(int enable) {
   clear_ancs_discovery_flags();
-  if (enable) {
+  if (enable != 0) {
     if (current_conn == NULL) {
       return 0;
     }

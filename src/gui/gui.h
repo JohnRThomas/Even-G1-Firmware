@@ -66,13 +66,13 @@ extern const uint8_t gui_fade_mask_bits[GUI_FADE_PATTERN_ROWS][GUI_FADE_STORED_S
 static ALWAYS_INLINE uint8_t gui_fade_mask_at(unsigned int row, unsigned int step, unsigned int col) {
   static const uint8_t expand[4] = {0x00, 0x0f, 0xf0, 0xff};
 
-  if (step == 0) {
+  if (step == 0U) {
     return 0x00;
   }
-  if (step >= GUI_FADE_STEPS - 1) {
+  if (step >= ((unsigned int)GUI_FADE_STEPS - 1U)) {
     return 0xff;
   }
-  return expand[(unsigned int)(gui_fade_mask_bits[row][step - 1][col >> 2U] >> (6U - 2U * (col & 3U))) & 3U];
+  return expand[(unsigned int)(gui_fade_mask_bits[row][step - 1U][col >> 2U] >> (6U - (2U * (col & 3U)))) & 3U];
 }
 
 atomic_val_t gui_flags_get(void);

@@ -54,7 +54,7 @@ void init_box_status(void);
 #define DMIC_MSG_SIZE 200
 extern atomic_t audio_stream_recording;
 extern uint8_t dmic_send_pending; /* pending 0xf1 dmic request */
-int enqueue_dmic(void *msg);
+int enqueue_dmic(const void *msg);
 uint32_t get_dmic_num_messages(void);
 int dequeue_dmic(void *msg);
 void app_codec_lc3_test(void *pcm, int len);
@@ -67,7 +67,7 @@ int erase_audio_buffer(void);
 /* audio_stream.c */
 extern struct k_msgq audio_stream_msgq;
 int clearAudioMessageQueue(void);
-int sendAudioStram2Cache(void *data);
+int sendAudioStram2Cache(const void *data);
 uint32_t getAudioMessageQueueNum(void);
 int startAudioStreamRecord(void);
 int stopAudioStreamRecord(void);

@@ -32,11 +32,11 @@ extern uint32_t nfc_field_mv;
 /* what pt_comm.c, production_test.c and threads.c use that the nfc app does not link */
 DEFINE_FAKE_VALUE_FUNC(int, dmic_stream_stop);
 DEFINE_FAKE_VALUE_FUNC(int, request_dmic_stream_start);
-FAKE_VALUE_FUNC(int, lpuart_async_b, const struct device *, uint8_t *, size_t);
+FAKE_VALUE_FUNC(int, lpuart_async_b, const struct device *, const uint8_t *, size_t);
 FAKE_VALUE_FUNC(int, read_serial_data, const struct device *, uint8_t **, uint32_t *);
 FAKE_VOID_FUNC(serial_rx_clear);
 FAKE_VALUE_FUNC(int, get_work_mode);
-FAKE_VALUE_FUNC(int, is_task_running, struct GlassesState *);
+FAKE_VALUE_FUNC(int, is_task_running, const struct GlassesState *);
 FAKE_VALUE_FUNC(int, update_persist_task_status_to_idle, struct GlassesState *);
 FAKE_VOID_FUNC(aw93203_init);
 FAKE_VALUE_FUNC(int32_t, aw9320x_read_chipid);
@@ -60,7 +60,7 @@ FUNC_NORETURN void sys_reboot(int type) {
 /* the F5 events threads.c sends to the phone */
 static struct g1_pkt_log events_sent;
 
-int enqueue_bt_data(void *data, uint8_t len) {
+int enqueue_bt_data(const void *data, uint8_t len) {
   g1_pkt_log_add(&events_sent, data, len);
   return 0;
 }

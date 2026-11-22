@@ -21,7 +21,7 @@ static int init_serial_port(void) {
 
   __ASSERT(device_is_ready(lpuart), "LPUART device not ready");
 
-  if (lpuart_async_a(lpuart)) {
+  if (lpuart_async_a(lpuart) != 0) {
     lpuart_ready = 0;
     printk("init_serial_port is failed\n");
     return -1;
@@ -32,11 +32,11 @@ static int init_serial_port(void) {
 }
 
 int init_serial_comm(void) {
-  if (init_serial_port()) {
+  if (init_serial_port() != 0) {
     return -1;
   }
 
-  if (setUARTDevice(DEVICE_DT_GET(DT_NODELABEL(uart0)))) {
+  if (setUARTDevice(DEVICE_DT_GET(DT_NODELABEL(uart0))) != 0) {
     printk("init_serial_comm is failed\n");
     k_sleep(K_MSEC(500));
     return -2;

@@ -291,7 +291,7 @@ struct notif_msg {
 };
 
 /* the master/slave ESB sync sends a notification as two 0xda-byte halves */
-#define NOTIF_MSG_HALF (sizeof(struct notif_msg) / 2)
+#define NOTIF_MSG_HALF (sizeof(struct notif_msg) / 2U)
 
 struct ble_context {
   int (*init_cb)(struct ble_context *ctx);

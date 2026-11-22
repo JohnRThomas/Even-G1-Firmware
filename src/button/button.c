@@ -39,7 +39,7 @@ static void button2_pressed(const struct device *dev, struct gpio_callback *cb, 
   ARG_UNUSED(pins);
 
   trigger_nfc_event();
-  if (get_dashboard_state()->work_mode == 8 || can_enter_low_power == 2) {
+  if ((get_dashboard_state()->work_mode == 8) || (can_enter_low_power == 2)) {
     if (++button2_count > 4) {
       can_enter_low_power = 0;
       nfc_deadline_set(0);
@@ -177,6 +177,8 @@ uint8_t button_init(void) {
       gpio_pin_interrupt_configure_dt(&button_irq_gpio_spec, GPIO_INT_EDGE_TO_ACTIVE);
       G1_LOG(1, "done, pin= %d\n\n", button_irq_gpio_spec.pin);
     }
+  } else {
+    /* nothing to do */
   }
 
   nfc_gpo_init();

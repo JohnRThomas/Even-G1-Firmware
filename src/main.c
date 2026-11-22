@@ -99,8 +99,6 @@ static void update_work_module(int enable, uint16_t module);
 #define PMIC_BUCK2 DEVICE_DT_GET(DT_NODELABEL(pmic_buck2))
 #define DFU_FLASH  DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
-#define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
-
 static void periodic_timer_expiry(struct k_timer *timer) {
   ARG_UNUSED(timer);
   if (get_pt_test_mode() == 1) {
@@ -145,7 +143,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
   struct GlassesState *g;
   struct notif_msg *slot;
   uint32_t id;
-  uint8_t cmd, dist;
+  uint8_t cmd;
 
   memcpy(new_data_pkg, &data[11], sizeof(*new_data_pkg));
   if (new_data_pkg->package_id == data_pkg->package_id) {
@@ -164,49 +162,58 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       G1_LOG(0, "slave recv suspend package\n");
       return 0;
     }
-  } else if (cmd == 2 && gs->suspend_state == 0) {
+  } else if ((cmd == 2) && (gs->suspend_state == 0)) {
     data_pkg->package_id++;
     G1_LOG(0, "slave recv resume package\n");
+  } else {
+    /* nothing to do */
   }
-  if (data_pkg->screen_id != new_data_pkg->screen_id && cmd == 8) {
+  if ((data_pkg->screen_id != new_data_pkg->screen_id) && (cmd == 8)) {
     data_pkg->package_id++;
     G1_LOG(0, "screen id is not same\n");
     return 0;
   }
 
-  if (data_pkg->screen_id == 9 || data_pkg->screen_id == 11 || data_pkg->screen_id == 10) {
+  if ((data_pkg->screen_id == 9) || (data_pkg->screen_id == 11) || (data_pkg->screen_id == 10)) {
     if ((buf[0] & ESB_DIR_MASK) == ESB_DIR_UP) {
       if (gs->esb_up_recving) {
         data_pkg->package_id++;
         G1_LOG(0, "slave recv up recving\n");
         return 0;
       }
-    } else if ((buf[0] & ESB_DIR_MASK) == ESB_DIR_DOWN && gs->esb_down_recving) {
+    } else if (((buf[0] & ESB_DIR_MASK) == ESB_DIR_DOWN) && gs->esb_down_recving) {
       data_pkg->package_id++;
       G1_LOG(0, "slave recv down recving\n");
       return 0;
+    } else {
+      /* nothing to do */
     }
-  } else if (data_pkg->screen_id == 0x10 && gs->esb_up_recving) {
+  } else if ((data_pkg->screen_id == 0x10) && gs->esb_up_recving) {
     G1_LOG(0, "slave even ai recv down recving\n");
     data_pkg->package_id++;
     return 0;
+  } else {
+    /* nothing to do */
   }
 
-  if (new_data_pkg->screen_id != 6 && new_data_pkg->screen_id != 0) {
+  if ((new_data_pkg->screen_id != 6) && (new_data_pkg->screen_id != 0)) {
     gs->esb_up_seq = data[3];
     gs->esb_down_seq = data[4];
     if (cmd == 0) {
-      if ((buf[0] & ESB_DIR_MASK) == ESB_DIR_UP ||
-          (new_data_pkg->screen_id == 0x10 && GLOBAL_STATE->dash_buf->type >= 6 && GLOBAL_STATE->dash_buf->type <= 9)) {
-        if (gs->esb_up_id != data[3] && gs->esb_up_snapshot[ESB_SNAPSHOT_SEQ] != data[3]) {
+      if (((buf[0] & ESB_DIR_MASK) == ESB_DIR_UP) ||
+          ((new_data_pkg->screen_id == 0x10) && (GLOBAL_STATE->dash_buf->type >= 6) &&
+           (GLOBAL_STATE->dash_buf->type <= 9))) {
+        if ((gs->esb_up_id != data[3]) && (gs->esb_up_snapshot[ESB_SNAPSHOT_SEQ] != data[3])) {
           data_pkg->package_id++;
           G1_LOG(0, "slave recv wrong up package\n");
           return 0;
         }
-      } else if (gs->esb_down_id != data[4] && gs->esb_down_snapshot[ESB_SNAPSHOT_SEQ] != data[4]) {
+      } else if ((gs->esb_down_id != data[4]) && (gs->esb_down_snapshot[ESB_SNAPSHOT_SEQ] != data[4])) {
         data_pkg->package_id++;
         G1_LOG(0, "slave recv wrong down package\n");
         return 0;
+      } else {
+        /* nothing to do */
       }
     }
   }
@@ -219,7 +226,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
   *data_pkg = *new_data_pkg;
   gs->imu.mode = new_data_pkg->hdr.dir;
   gs->dashboard_ts->ts = UNALIGNED_GET((const uint32_t *)&data[7]);
-  if (gs->user_sched_info->ts) {
+  if (gs->user_sched_info->ts != 0U) {
     gs->user_sched_info->ts = gs->dashboard_ts->ts;
   }
   gs->esb_dir = new_data_pkg->hdr.dir;
@@ -231,12 +238,12 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
 
   switch (new_data_pkg->hdr.cmd) {
     case 8:
-      if (data_pkg->screen_id != new_data_pkg->screen_id && cmd == 8) {
+      if ((data_pkg->screen_id != new_data_pkg->screen_id) && (cmd == 8)) {
         G1_LOG(0, "screen id is not same, exit\n");
         return 0;
       }
       exit_running_task_keep_status(GLOBAL_STATE, 0);
-      if (new_data_pkg->arg[0] && GLOBAL_STATE->sync.screen_id == 4) {
+      if (new_data_pkg->arg[0] && (GLOBAL_STATE->sync.screen_id == 4)) {
         expire_cur_message();
         if (GLOBAL_STATE->sync.unread_msg_num) {
           set_msg_show_state(6);
@@ -256,7 +263,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       }
       slot = find_push_message_by_uid(UNALIGNED_GET((uint32_t *)new_data_pkg->arg));
       G1_LOG(0, "##########%s %d SYNC_DISPLAY_CMD_COMFIRM_NOTIFY_FIRST slave before\n", __func__, __LINE__);
-      if (slot && slot->sync_state == 0) {
+      if (slot && (slot->sync_state == 0)) {
         slot->sync_state = 2;
       }
       break;
@@ -268,7 +275,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       id = UNALIGNED_GET((uint32_t *)new_data_pkg->arg);
       slot = find_push_message_by_uid(id);
       G1_LOG(0, "##########%s %d SYNC_DISPLAY_CMD_COMFIRM_NOTIFY_END slave before\n", __func__, __LINE__);
-      if (slot && slot->sync_state == 2) {
+      if (slot && (slot->sync_state == 2)) {
         slot->sync_state = 4;
         confirm_message(id);
         push_msg_syncing = 0;
@@ -278,7 +285,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       reset_dash_buf(0);
       g = GLOBAL_STATE;
       g->dash_buf->type = 2;
-      if (g->task_status->task != 0x10) {
+      if (g->task_status->task != 0x10U) {
         update_persist_task_status(g, 0x10, 2);
       }
       break;
@@ -301,9 +308,10 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       break;
     case 12:
       if (new_data_pkg->arg[0] == 11) {
-        dist = new_data_pkg->arg[1];
+        uint8_t dist = new_data_pkg->arg[1];
+
         G1_LOG(1, "slave rcv canvas_distance_gear:%d,raster_height_gear:%d\n", dist, new_data_pkg->arg[2]);
-        if (dist < 10 && new_data_pkg->arg[2] < 9) {
+        if ((dist < 10) && (new_data_pkg->arg[2] < 9)) {
           g = GLOBAL_STATE;
           g->panel.canvas_distance_gear = dist;
           g->panel.raster_height_offset = new_data_pkg->arg[2];
@@ -319,7 +327,7 @@ static int local_esbs_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       break;
   }
 
-  if (gs->esb_hdr.cmd == 3 && gs->esb_hdr.dir == 2 && gs->esb_arg1 == 1) {
+  if ((gs->esb_hdr.cmd == 3) && (gs->esb_hdr.dir == 2) && (gs->esb_arg1 == 1)) {
     switch_to_dfu_mode(&gs->main_sem);
   }
   return 0;
@@ -510,13 +518,13 @@ enum {
 static void timeout_handler(struct k_timer *timer) {
   uint32_t ticks = sys_clock_tick_get_32();
 
-  if (RTC_SYNC_WORD == 0xa5a5a5a5) {
+  if (RTC_SYNC_WORD == 0xa5a5a5a5U) {
     G1_LOG(1, "RTC has sync at %lld ms\n", k_uptime_get());
   } else {
     RTC_SYNC_WORD = ticks;
     nrf_ipc_task_trigger(NRF_IPC, NRF_IPC_TASK_SEND_2);
     G1_LOG(1, "IPC send at %d ticks %lld ms\n", ticks, k_uptime_get());
-    if (ticks <= 0x28000) {
+    if (ticks <= 0x28000U) {
       return;
     }
   }
@@ -529,14 +537,14 @@ static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, 
 
   switch (data[0]) {
     case IPC_MSG_TICK_SYNC:
-      if (k_sem_count_get(&gs->ipc_sem) == 0) {
+      if (k_sem_count_get(&gs->ipc_sem) == 0U) {
         k_sem_give(&gs->ipc_sem);
       }
       break;
     case IPC_MSG_RUNTIME_INFO:
       uptime = k_ticks_to_ms_ceil64(k_uptime_ticks());
       G1_LOG(1, "cpunet request send info uptime %lld\n", uptime);
-      if (uptime > 10000) {
+      if (uptime > 10000U) {
         G1_LOG(0, "sys reboot because recv cpunet sync package\n");
         system_reboot_delayed();
       }
@@ -551,7 +559,7 @@ static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, 
       }
       G1_LOG(1, "cpunet request update macaddr info uptime %lld bt macaddr esb_master_addr %02X esb_slave_addr %02X \n",
              uptime, gs->esb_master_addr, gs->esb_slave_addr);
-      if (k_sem_count_get(&gs->ipc_sem) == 0) {
+      if (k_sem_count_get(&gs->ipc_sem) == 0U) {
         k_sem_give(&gs->ipc_sem);
       }
       break;
@@ -560,11 +568,11 @@ static int local_ipc_service_recv(struct GlassesState *gs, const uint8_t *data, 
         gs->bt_state = 1;
       }
       G1_LOG(1, "bt_ready\n");
-      if (k_sem_count_get(&gs->ipc_sem) == 0) {
+      if (k_sem_count_get(&gs->ipc_sem) == 0U) {
         k_sem_give(&gs->ipc_sem);
       }
       strncpy(net_build_time, &data[1], len - 1);
-      net_build_time[sizeof(net_build_time) - 1] = 0;
+      net_build_time[sizeof(net_build_time) - 1U] = 0;
       break;
     case IPC_RESP_CPUNET_ESB_PACKAGES:
       memcpy(&esb_tx_count, &data[1], 4);
@@ -620,11 +628,11 @@ void set_ncs_mem_initialized(void) {
 }
 
 int is_ncs_mem_initialized(void) {
-  return NCS_MEM->magic == NCS_MEM_MAGIC ? 0 : -1;
+  return (NCS_MEM->magic == NCS_MEM_MAGIC) ? 0 : -1;
 }
 
 void save_dashboard_ts_to_ncs_mem(void) {
-  struct dashboard_ts_context *ts = GLOBAL_STATE->dashboard_ts;
+  const struct dashboard_ts_context *ts = GLOBAL_STATE->dashboard_ts;
 
   NCS_MEM->ts = ts->ts;
   NCS_MEM->weather_icon = ts->weather_icon;
@@ -641,7 +649,7 @@ void save_dashboard_ts_to_ncs_mem(void) {
 void restore_dashboard_ts_from_ncs_mem(void) {
   struct GlassesState *gs = GLOBAL_STATE;
 
-  gs->dashboard_ts->ts = NCS_MEM->ts + 1;
+  gs->dashboard_ts->ts = NCS_MEM->ts + 1U;
   gs->dashboard_ts->weather_icon = NCS_MEM->weather_icon;
   gs->dashboard_ts->temperature = NCS_MEM->temperature;
   gs->dashboard_ts->ms_ts = NCS_MEM->ms_ts;
@@ -723,6 +731,8 @@ static void imu_module_set_mode(int enable) {
     mode = 1;
   } else if (enable == 2) {
     mode = 2;
+  } else {
+    /* nothing to do */
   }
   update_imu_mode(&GLOBAL_STATE->imu, mode);
 }
@@ -730,7 +740,7 @@ static void imu_module_set_mode(int enable) {
 static void update_work_module(int enable, uint16_t module) {
   struct GlassesState *gs = GLOBAL_STATE;
 
-  if (enable) {
+  if (enable != 0) {
     gs->module_mask |= module;
   } else {
     gs->module_mask &= ~(uint32_t)module;
@@ -747,14 +757,14 @@ static void update_work_module(int enable, uint16_t module) {
       }
       break;
     case WORK_MODULE_TOUCH:
-      if (enable) {
+      if (enable != 0) {
         touch_power_on();
       } else {
         touch_power_off();
       }
       break;
     case WORK_MODULE_NFC:
-      if (enable) {
+      if (enable != 0) {
         nfc_lpd_off();
       } else {
         nfc_lpd_on();
@@ -762,7 +772,7 @@ static void update_work_module(int enable, uint16_t module) {
       break;
     case WORK_MODULE_SYSTEM:
       if (get_pt_test_mode() == 0) {
-        if (enable) {
+        if (enable != 0) {
           global_system_resume(GLOBAL_STATE);
         } else {
           global_system_suspend(GLOBAL_STATE);
@@ -770,7 +780,7 @@ static void update_work_module(int enable, uint16_t module) {
       }
       break;
     case WORK_MODULE_BLE:
-      if (enable) {
+      if (enable != 0) {
         bt_start();
       } else {
         stop_ble_advertising();
@@ -813,7 +823,7 @@ int change_work_mode(int mode) {
     k_msleep(1);
   }
   work_mode_busy = 1;
-  if (GLOBAL_STATE->work_mode != mode || GLOBAL_STATE->suspend_state == 5) {
+  if ((GLOBAL_STATE->work_mode != mode) || (GLOBAL_STATE->suspend_state == 5)) {
     GLOBAL_STATE->work_mode = mode;
     G1_LOG(0, "change_work_mode to %d\n", (uint8_t)mode);
 
@@ -929,7 +939,7 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
   struct notif_msg *slot;
   uint8_t cmd = data[0] & 0x3fU;
 
-  if (cmd != 0 && cmd != 12 && cmd != 13) {
+  if ((cmd != 0) && (cmd != 12) && (cmd != 13)) {
     if (esbm_last_seq == data[0x15]) {
       return 0;
     }
@@ -982,6 +992,8 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
         gs->quicknote_show_info->longpress_req = 1;
       } else if (gs->esb_pkt.subcmd == 0) {
         gs->quicknote_show_info->longpress_req = 2;
+      } else {
+        /* nothing to do */
       }
       break;
     case 7:
@@ -999,7 +1011,7 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       src = (const struct notif_msg *)&data[1];
       slot = get_message_by_index(data[0xd]);
       if (slot && !slot->busy &&
-          (src->uid != slot->uid || src->recv_time != slot->recv_time || slot->sync_state != 1)) {
+          ((src->uid != slot->uid) || (src->recv_time != slot->recv_time) || (slot->sync_state != 1))) {
         memcpy(slot, &data[1], NOTIF_MSG_HALF);
         slot->sync_state = 1;
       }
@@ -1009,7 +1021,7 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
         break;
       }
       slot = get_push_message();
-      if (slot && !slot->busy && slot->sync_state != 3) {
+      if (slot && !slot->busy && (slot->sync_state != 3)) {
         memcpy((uint8_t *)slot + NOTIF_MSG_HALF, &data[1], NOTIF_MSG_HALF);
         slot->sync_state = 3;
       }
@@ -1019,6 +1031,8 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
         GLOBAL_STATE->onboarding->action = gs->esb_pkt.value;
       } else if (gs->esb_pkt.subcmd == 5) {
         request_not_disturb_bitmap(gs->esb_pkt.value);
+      } else {
+        /* nothing to do */
       }
       break;
     case 15:
@@ -1037,12 +1051,14 @@ static int local_esbm_ipc_service_recv(struct GlassesState *gs, const uint8_t *d
       if (gs->esb_pkt.subcmd == 6) {
         struct GlassesState *g = GLOBAL_STATE;
 
-        if (g->task_status->task == 0x14 && g->evenai_buf->state == 1 && g->evenai_buf->sub == 4 &&
-            g->evenai_buf->action_status == 0x13) {
+        if ((g->task_status->task == 0x14U) && (g->evenai_buf->state == 1) && (g->evenai_buf->sub == 4) &&
+            (g->evenai_buf->action_status == 0x13)) {
           G1_LOG(1, "evenai_v2 need to show network_err tip\n");
         } else if (gs->esb_pkt.value < 3) {
           g->evenai_buf->sub = 6;
           g->evenai_buf->action_status = gs->esb_pkt.value;
+        } else {
+          /* nothing to do */
         }
       }
       break;
@@ -1100,6 +1116,11 @@ static struct GlassesState *init_context(void) {
   G1_LOG(1, "[cpuapp] global context init\n\n");
 
   s = malloc(sizeof(*s));
+  if (s == NULL) {
+    /* nothing runs without the global state */
+    k_panic();
+    CODE_UNREACHABLE;
+  }
   memset(s, 0, sizeof(*s));
   memset(s->master_mac, 0xff, sizeof(s->master_mac));
   memset(s->slave_mac, 0xff, sizeof(s->slave_mac));
@@ -1121,19 +1142,19 @@ static struct GlassesState *init_context(void) {
   change_work_mode(0);
 
   s->dashboard_ts = malloc(sizeof(struct dashboard_ts_context));
-  if (s->dashboard_ts) {
+  if (s->dashboard_ts != NULL) {
     memset(s->dashboard_ts, 0, sizeof(struct dashboard_ts_context));
   }
   set_date(1704067200); /* 2024-01-01 00:00:00 */
 
   s->countdown_ts = malloc(sizeof(struct countdown_ts_context));
   s->task_status = malloc(sizeof(struct msg_status));
-  if (s->task_status) {
+  if (s->task_status != NULL) {
     s->task_status->task = 0;
     s->task_status->status = 0;
   }
   s->teleprompter = malloc(sizeof(struct teleprompter_info));
-  if (s->teleprompter) {
+  if (s->teleprompter != NULL) {
     memset(s->teleprompter, 0, sizeof(struct teleprompter_info));
   }
   s->nav = malloc(sizeof(struct nav_info));
@@ -1141,15 +1162,15 @@ static struct GlassesState *init_context(void) {
   s->translate_dst = malloc(sizeof(struct translate_buf));
   s->dash_buf = malloc(sizeof(struct dash_data_buf));
   s->evenai_buf = malloc(sizeof(struct evenai_buf));
-  if (s->evenai_buf) {
+  if (s->evenai_buf != NULL) {
     memset(s->evenai_buf, 0, sizeof(struct evenai_buf));
   }
   s->quicknote = malloc(sizeof(struct quicknote_ctx));
-  if (s->quicknote) {
+  if (s->quicknote != NULL) {
     memset(s->quicknote, 0, sizeof(struct quicknote_ctx));
   }
   s->quicknote_show_info = malloc(sizeof(struct quicknote_show_info));
-  if (s->quicknote_show_info) {
+  if (s->quicknote_show_info != NULL) {
     memset(s->quicknote_show_info, 0, sizeof(struct quicknote_show_info));
   }
   s->esb_up_snapshot = malloc(ESB_SNAPSHOT_SIZE);
@@ -1161,13 +1182,13 @@ static struct GlassesState *init_context(void) {
     memset(s->esb_down_snapshot, 0, ESB_SNAPSHOT_SIZE);
   }
   s->user_sched_info = malloc(sizeof(struct user_schedule_context));
-  if (s->user_sched_info) {
+  if (s->user_sched_info != NULL) {
     s->user_sched_info->f_168 = 0;
     s->user_sched_info->ts = 0;
   }
   s->schedule_notif = malloc(sizeof(struct schedule_notif));
   s->bitmap_info = malloc(sizeof(struct bitmap_show_info));
-  if (s->bitmap_info) {
+  if (s->bitmap_info != NULL) {
     memset(s->bitmap_info, 0, sizeof(struct bitmap_show_info));
   }
   s->onboarding = malloc(sizeof(struct onboarding_ctx));
@@ -1181,13 +1202,13 @@ static struct GlassesState *init_context(void) {
     memset(s->horiz_pitch_cfg, 0, HORIZ_PITCH_CFG_SIZE);
   }
   s->ts_info = malloc(sizeof(struct prompt_info));
-  if (s->ts_info) {
+  if (s->ts_info != NULL) {
     s->ts_info->init.word_a = 0;
     s->ts_info->init.word_b = 0;
     s->ts_info->init.half_c = 0;
   }
   s->transcribe_buf = malloc(sizeof(struct transcribe_buf));
-  if (s->transcribe_buf) {
+  if (s->transcribe_buf != NULL) {
     memset(s->transcribe_buf, 0, sizeof(struct transcribe_buf));
   }
   memset(&s->bonded_addr, 0xff, sizeof(s->bonded_addr));
@@ -1241,6 +1262,8 @@ static struct GlassesState *init_context(void) {
     register_opt3007_context(&s->opt3007_context);
   } else if (s->is_master == 2) {
     s->imu.dev = DEVICE_DT_GET(DT_NODELABEL(lsm6dso));
+  } else {
+    /* nothing to do */
   }
   register_jdb_panel_context(&s->panel);
   nfc_init();
@@ -1264,16 +1287,16 @@ static void component_init(struct GlassesState *s) {
   G1_LOG(1, "enter\n");
   get_settings_from_flash(s);
   ret = s->ble_context.init_cb(&s->ble_context);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG(1, "[ble_context init] fail: 0x%x\n\n", ret);
   }
   if (s->is_master == 1) {
     ret = s->imu.init_cb(&s->imu);
-    if (ret) {
+    if (ret != 0) {
       G1_LOG(1, "[imu_context init] fail: 0x%x\n\n", ret);
     }
     ret = s->opt3007_context.init_cb(&s->opt3007_context);
-    if (ret) {
+    if (ret != 0) {
       G1_LOG(1, "[opt3007 init] fail: 0x%x\n\n", ret);
     }
   }
@@ -1304,11 +1327,11 @@ static void component_init(struct GlassesState *s) {
   }
   power_for_panel();
   ret = s->spi.init_cb(&s->spi);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG(1, "[spi_master init] fail: 0x%x\n\n", ret);
   }
   ret = s->panel.init_cb(&s->panel);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG(1, "[panel_controler init] fail: 0x%x\n\n", ret);
   }
   aw93203_init();
@@ -1355,6 +1378,8 @@ int main(void) {
       } else if (s->pending & BIT(3)) {
         erase_dfu_flash();
         s->pending &= ~BIT(3);
+      } else {
+        /* nothing to do */
       }
     }
     k_msleep(1);

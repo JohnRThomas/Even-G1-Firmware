@@ -26,7 +26,7 @@
 #define FLASH_DEV DEVICE_DT_GET(DT_NODELABEL(mx25r64))
 
 #define VOICE_MANAGER_ADDR  0x400000
-#define VOICE_MANAGER_MAGIC 0x5aa5aa5a
+#define VOICE_MANAGER_MAGIC 0x5aa5aa5aU
 #define VOICE_BLOCK_NUM     4
 #define AUDIO_CHUNK_SIZE    0xbe
 #define AUDIO_PKT_HDR_SIZE  10
@@ -79,7 +79,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
 
   memset(&msg, 0, sizeof(msg));
   while (1) {
-    if (gs->work_mode == 1 || gs->work_mode == 8) {
+    if ((gs->work_mode == 1) || (gs->work_mode == 8)) {
       k_sleep(K_MSEC(5000));
       continue;
     }
@@ -125,22 +125,22 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
           }
           memset(audio_file_buf, 0, sizeof(audio_file_buf));
           if (get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR, audio_file_buf,
-                                                sizeof(audio_file_buf))) {
+                                                sizeof(audio_file_buf)) != 0) {
             G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
             break;
           }
-          if (VOICE_MGR->magic == VOICE_MANAGER_MAGIC && VOICE_MGR->blocks[audio_block_idx].state == 2) {
+          if ((VOICE_MGR->magic == VOICE_MANAGER_MAGIC) && (VOICE_MGR->blocks[audio_block_idx].state == 2U)) {
             audio_file_start = VOICE_MGR->blocks[audio_block_idx].start_addr;
             audio_file_end = VOICE_MGR->blocks[audio_block_idx].end_addr;
           }
           memset(audio_file_buf, 0, sizeof(audio_file_buf));
           if (get_dashboard_state()->flash_read(get_dashboard_state(), audio_file_start, audio_file_buf,
-                                                AUDIO_CHUNK_SIZE)) {
+                                                AUDIO_CHUNK_SIZE) != 0) {
             G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
             break;
           }
           audio_pkt_total = (audio_file_end - audio_file_start) / AUDIO_CHUNK_SIZE;
-          if ((audio_file_end - audio_file_start) % AUDIO_CHUNK_SIZE) {
+          if (((audio_file_end - audio_file_start) % AUDIO_CHUNK_SIZE) != 0) {
             audio_pkt_total++;
           }
           audio_file_size = audio_file_end - audio_file_start;
@@ -215,7 +215,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
             audio_response_packet_buf[9] = audio_block_idx + 1;
             memset(audio_file_buf, 0, sizeof(audio_file_buf));
             if (get_dashboard_state()->flash_read(get_dashboard_state(), audio_file_start + audio_file_sent,
-                                                  audio_file_buf, n)) {
+                                                  audio_file_buf, n) != 0) {
               G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
               audio_sending = 0;
               clearAudioBlockInUse();
@@ -242,6 +242,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
               }
             }
           }
+        } else {
+          /* nothing to do */
         }
         break;
 
@@ -255,7 +257,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
         }
         memset(audio_file_buf, 0, sizeof(audio_file_buf));
         if (get_dashboard_state()->flash_read(get_dashboard_state(), VOICE_MANAGER_ADDR, audio_file_buf,
-                                              sizeof(audio_file_buf))) {
+                                              sizeof(audio_file_buf)) != 0) {
           G1_LOG_ERR(" form address [%d] read data failed.\n\n", VOICE_MANAGER_ADDR);
           break;
         }
@@ -271,7 +273,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
         audio_response_packet_buf[4] = 1;
         p = &audio_response_packet_buf[6];
         for (int i = 0; i < VOICE_BLOCK_NUM; i++) {
-          if (VOICE_MGR->blocks[i].state == 2) {
+          if (VOICE_MGR->blocks[i].state == 2U) {
             p[0] = i + 1;
             cnt++;
             sys_put_le32(VOICE_MGR->blocks[i].timestamp, &p[1]);
@@ -279,7 +281,7 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
             p += 9;
           }
         }
-        audio_response_packet_buf[1] = cnt * 9 + 6;
+        audio_response_packet_buf[1] = (cnt * 9) + 6;
         audio_response_packet_buf[5] = cnt;
         for (int i = 0; i < audio_response_packet_buf[1]; i++) {
           G1_LOG_DBG("audio_response_packet_buf[%d] = %d\n\n", i, audio_response_packet_buf[i]);
@@ -344,8 +346,8 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
       }
 
       case PROXY_MSG_DOUBLE_CLICK:
-        if (get_dashboard_state()->double_tap_customize == 4 && get_dashboard_state()->dashboard_mode == 0 &&
-            get_dashboard_state()->is_master == 1) {
+        if ((get_dashboard_state()->double_tap_customize == 4) && (get_dashboard_state()->dashboard_mode == 0) &&
+            (get_dashboard_state()->is_master == 1)) {
           buf[0] = 0x0a;
           buf[1] = 1;
 
@@ -359,9 +361,9 @@ void proxy_thread_handler(void *p1, void *p2, void *p3) {
             }
           }
         }
-        if (get_dashboard_state()->dashboard_mode == 6 &&
+        if ((get_dashboard_state()->dashboard_mode == 6) &&
             (get_dashboard_state()->double_tap_dashboard_on || get_dashboard_state()->dashboard_ts->dashboard_hold) &&
-            get_dashboard_state()->is_master == 1) {
+            (get_dashboard_state()->is_master == 1)) {
           buf[0] = 0x0a;
           buf[1] = 2;
 
@@ -426,11 +428,11 @@ int send_response_data_to_msgqueue(const void *data, uint32_t len) {
     return 0;
   }
   memset(&msg, 0, sizeof(msg));
-  if (len > PROXY_MSG_DATA_MAX) {
+  if (len > (uint32_t)PROXY_MSG_DATA_MAX) {
     G1_LOG_ERR("send data length more than %d,can't load it,exit ...\n", PROXY_MSG_DATA_MAX);
     return -1;
   }
-  if (data) {
+  if (data != NULL) {
     memcpy(msg.data, data, len);
     msg.len = len;
   }
@@ -445,7 +447,7 @@ int send_response_data_to_ble(void) {
   if (get_dashboard_state()->is_master != 2) {
     struct proxy_msg msg = {.type = PROXY_MSG_RESPONSE_SEND};
 
-    if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+    if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
       printk("message queue send failed %s\r\n", __func__);
       return -1;
     }
@@ -456,7 +458,7 @@ int send_response_data_to_ble(void) {
 int sendAudioStreamFileToApp(uint8_t cmd, uint8_t block) {
   struct proxy_msg msg = {.type = PROXY_MSG_AUDIO_FILE, .len = 2, .data = {cmd, block}};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }
@@ -466,7 +468,7 @@ int sendAudioStreamFileToApp(uint8_t cmd, uint8_t block) {
 int requestAudioInfoToApp(uint8_t cmd) {
   struct proxy_msg msg = {.type = PROXY_MSG_AUDIO_INFO, .len = 1, .data = {cmd}};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }
@@ -476,7 +478,7 @@ int requestAudioInfoToApp(uint8_t cmd) {
 int SendPowerInfoToSlave(uint8_t on) {
   struct proxy_msg msg = {.type = PROXY_MSG_POWER, .len = 1, .data = {on}};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }
@@ -486,7 +488,7 @@ int SendPowerInfoToSlave(uint8_t on) {
 int SendSystemLanguageInfoToSlave(uint8_t lang) {
   struct proxy_msg msg = {.type = PROXY_MSG_LANGUAGE, .len = 1, .data = {lang}};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }
@@ -496,7 +498,7 @@ int SendSystemLanguageInfoToSlave(uint8_t lang) {
 int SendDashBoardStartupModeInfoToSlave(uint8_t mode) {
   struct proxy_msg msg = {.type = PROXY_MSG_STARTUP_MODE, .len = 1, .data = {mode}};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }
@@ -506,7 +508,7 @@ int SendDashBoardStartupModeInfoToSlave(uint8_t mode) {
 int SlaveDoubleClickEventInject(void) {
   struct proxy_msg msg = {.type = PROXY_MSG_DOUBLE_CLICK};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }
@@ -516,7 +518,7 @@ int SlaveDoubleClickEventInject(void) {
 int SendDoubleTapCustomizeToSlave(uint8_t mode) {
   struct proxy_msg msg = {.type = PROXY_MSG_DOUBLE_TAP, .len = 1, .data = {mode}};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }
@@ -526,7 +528,7 @@ int SendDoubleTapCustomizeToSlave(uint8_t mode) {
 int SendLongpressTapCustomizeToSlave(uint8_t mode) {
   struct proxy_msg msg = {.type = PROXY_MSG_LONGPRESS_TAP, .len = 1, .data = {mode}};
 
-  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&proxy_msgq, &msg, K_NO_WAIT) != 0) {
     printk("message queue send failed %s\r\n", __func__);
     return -1;
   }

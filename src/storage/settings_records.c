@@ -62,7 +62,7 @@ int load_sys_setting(struct GlassesState *gs) {
   struct sys_settings s;
 
   memset(&s, 0, sizeof(s));
-  if (flash_settings_read(SYS_SETTINGS_ADDR, &s, sizeof(s))) {
+  if (flash_settings_read(SYS_SETTINGS_ADDR, &s, sizeof(s)) != 0) {
     G1_LOG_WRN("sys_flash_settings_read error!\n");
     return -1;
   }
@@ -73,10 +73,10 @@ int load_sys_setting(struct GlassesState *gs) {
   gs->imu.ref = (int)s.imu_base;
   gs->opt3007_context.lux_base_max = s.lux_base_max;
   gs->panel.voltage = s.panel_voltage;
-  if (s.sn[0] != 0xff) {
+  if ((uint8_t)s.sn[0] != 0xffU) {
     memcpy(SERIAL_NUMBER, s.sn, 16);
   }
-  if (s.name[0] != 0xff) {
+  if ((uint8_t)s.name[0] != 0xffU) {
     memcpy(glasses_name, s.name, 16);
   }
   gs->esb_master_addr = s.esb_master_addr;
@@ -99,7 +99,7 @@ int load_sys_setting(struct GlassesState *gs) {
   gs->aging_elapsed_s = s.aging_elapsed_s;
   gs->aging_touch_count = s.aging_touch_count;
   gs->aging_charge_check_result = s.aging_charge_check_result;
-  if (s.valid != 1) {
+  if (s.valid != 1U) {
     G1_LOG_WRN("FIRST BOOT, full default sys value!\n");
     gs->esb_channel = 0xff;
     gs->aging_discharge_time_s = 0;
@@ -130,18 +130,20 @@ int load_sys_setting(struct GlassesState *gs) {
   if (gs->panel.voltage != 1) {
     gs->panel.voltage = 0;
   }
-  if (gs->luminance_curve == 0 || gs->luminance_curve == -1) {
+  if ((gs->luminance_curve == 0) || (gs->luminance_curve == -1)) {
     gs->luminance_curve = 128000;
   }
-  if (gs->canvas_x < 22 || gs->canvas_x > 42) {
+  if ((gs->canvas_x < 22) || (gs->canvas_x > 42)) {
     gs->canvas_x = 0x20;
   }
   if (gs->canvas_y > 64) {
     gs->canvas_y = 0x20;
   } else if (gs->canvas_y < 4) {
     gs->canvas_y = 4;
+  } else {
+    /* nothing to do */
   }
-  if (gs->panel.lum_gear == 0 || gs->panel.lum_gear > 63) {
+  if ((gs->panel.lum_gear == 0) || (gs->panel.lum_gear > 63)) {
     gs->panel.lum_gear = 0x3f;
   }
   if (gs->aging_touch_count == 0xff) {
@@ -213,7 +215,7 @@ int load_usr_setting(struct GlassesState *gs) {
   uint8_t test_mode;
 
   memset(&s, 0, sizeof(s));
-  if (flash_settings_read(USR_SETTINGS_ADDR, &s, sizeof(s))) {
+  if (flash_settings_read(USR_SETTINGS_ADDR, &s, sizeof(s)) != 0) {
     G1_LOG_WRN("usr_flash_settings_read error!\n");
     return -1;
   }
@@ -222,15 +224,16 @@ int load_usr_setting(struct GlassesState *gs) {
   gs->panel.panel_brightness_level = s.brightness_level;
   gs->imu.level = s.wakeup_angle;
   gs->imu.dof3_enable = s.dof3_enable;
-  gs->imu.div = (int)(s.imu_div ? s.imu_div : 400);
+  // cppcheck-suppress [misra-c2012-10.8] ; the stored divider or its default
+  gs->imu.div = (int)(s.imu_div ? s.imu_div : 400U);
   gs->opt3007_context.auto_brightness = s.auto_brightness;
   gs->bonded = s.bonded;
   gs->check_mode = s.check_mode;
   gs->panel.raster_height_offset = s.raster_height_gear;
   gs->bonded_addr_raw = s.bonded_addr;
   gs->imu.wear = s.imu_wear;
-  gs->message_mode = s.message_mode > 1 ? 0 : s.message_mode;
-  gs->message_stay_time = (s.message_stay_time == 0 || s.message_stay_time == 0xff) ? 15 : s.message_stay_time;
+  gs->message_mode = (s.message_mode > 1) ? 0 : s.message_mode;
+  gs->message_stay_time = ((s.message_stay_time == 0) || (s.message_stay_time == 0xff)) ? 15 : s.message_stay_time;
   gs->charge_limit_upper = s.charge_limit_upper;
   gs->charge_limit_lower = s.charge_limit_lower;
   test_mode = s.test_mode;
@@ -240,13 +243,13 @@ int load_usr_setting(struct GlassesState *gs) {
   gs->dashboard_ts->date_format = s.date_format;
   gs->panel.brightness_percent = s.brightness_percent;
   gs->f_1246_pair = s.longpress_head_up_mic;
-  if (gs->display_mode == 0xff && gs->imu.dof3_enable == 0xff) {
+  if ((gs->display_mode == 0xff) && (gs->imu.dof3_enable == 0xff)) {
     clear_user_settings(gs);
   }
   if (gs->panel.raster_height_offset > 8) {
     gs->panel.raster_height_offset = 3;
   }
-  if (gs->panel.canvas_distance_gear == 0 || gs->panel.canvas_distance_gear > 9) {
+  if ((gs->panel.canvas_distance_gear == 0) || (gs->panel.canvas_distance_gear > 9)) {
     gs->panel.canvas_distance_gear = 3;
   }
   if (gs->display_mode == 11) {
@@ -266,7 +269,7 @@ int load_usr_setting(struct GlassesState *gs) {
   } else {
     gs->display_mode = 10;
   }
-  if (gs->imu.base == 0xffffffff) {
+  if ((uint32_t)gs->imu.base == 0xffffffffU) {
     gs->imu.base = 0;
   }
   if (gs->double_tap_customize > 5) {
@@ -275,7 +278,7 @@ int load_usr_setting(struct GlassesState *gs) {
   if (gs->dashboard_ts->date_format > 2) {
     gs->dashboard_ts->date_format = 0;
   }
-  if (gs->panel.brightness_percent < 70 || gs->panel.brightness_percent > 100) {
+  if ((gs->panel.brightness_percent < 70) || (gs->panel.brightness_percent > 100)) {
     gs->panel.brightness_percent = 100;
   }
   if (gs->f_1246_pair.a > 1) {
@@ -326,7 +329,7 @@ void reset_all_usr_data(struct GlassesState *gs, int reboot) {
   deinit_ncs_memory();
   k_msleep(500);
   bt_unpair(BT_ID_DEFAULT, NULL);
-  if (reboot) {
+  if (reboot != 0) {
     G1_LOG_ERR("sys reboot because enter ship mode failed\n");
     system_reboot_delayed();
     return;
@@ -369,7 +372,7 @@ int read_sys_settting_from_flash(struct sys_settings *out) {
   struct sys_settings s;
 
   memset(&s, 0, sizeof(s));
-  if (flash_settings_read(SYS_SETTINGS_ADDR, &s, sizeof(s))) {
+  if (flash_settings_read(SYS_SETTINGS_ADDR, &s, sizeof(s)) != 0) {
     G1_LOG_WRN("sys_flash_settings_read error!\n");
     return -1;
   }
@@ -380,10 +383,10 @@ int read_sys_settting_from_flash(struct sys_settings *out) {
   out->imu_base = s.imu_base;
   out->lux_base_max = s.lux_base_max;
   out->panel_voltage = s.panel_voltage;
-  if (s.sn[0] != 0xff) {
+  if ((uint8_t)s.sn[0] != 0xffU) {
     memcpy(out->sn, s.sn, 16);
   }
-  if (s.name[0] != 0xff) {
+  if ((uint8_t)s.name[0] != 0xffU) {
     memcpy(out->name, s.name, 16);
   }
   out->esb_master_addr = s.esb_master_addr;
@@ -413,7 +416,7 @@ int read_usr_settting_from_flash(struct usr_settings *out) {
   struct usr_settings s;
 
   memset(&s, 0, sizeof(s));
-  if (flash_settings_read(USR_SETTINGS_ADDR, &s, sizeof(s))) {
+  if (flash_settings_read(USR_SETTINGS_ADDR, &s, sizeof(s)) != 0) {
     G1_LOG_WRN("usr_flash_settings_read error!\n");
     return -1;
   }
@@ -425,7 +428,7 @@ int read_usr_settting_from_flash(struct usr_settings *out) {
 }
 
 int load_settings_from_flash(struct GlassesState *gs) {
-  if (load_sys_setting(gs) == 0 && load_usr_setting(gs) == 0) {
+  if ((load_sys_setting(gs) == 0) && (load_usr_setting(gs) == 0)) {
     countdown_reset(get_dashboard_state()->countdown_ts);
   }
   return 0;

@@ -9,6 +9,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
 #include <zephyr/toolchain.h>
 
 #include "g1_log.h"
@@ -16,6 +17,9 @@
 
 #define BUF_SIZE 256
 K_MEM_SLAB_DEFINE_STATIC(uart_slab, BUF_SIZE, 3, 4);
+
+/* the shortest frame: 5a a5 7f, the payload length and the sum, around an empty payload */
+#define SERIAL_FRAME_MIN 5
 
 /* last complete frame received on the lpuart */
 static uint8_t serial_rx_buf[BUF_SIZE];
@@ -32,19 +36,16 @@ static void serial_rx_dump(struct uart_event *evt, size_t offset) {
   printk("\n");
 }
 
+// cppcheck-suppress constParameterCallback
 static void uart_callback(const struct device *dev, struct uart_event *evt, void *user_data) {
   ARG_UNUSED(dev);
-  struct device *uart = user_data;
-  uint8_t *p;
   uint8_t *buf;
-  uint16_t len;
   uint8_t sum;
   uint16_t i;
   uint32_t j;
   size_t tx_len;
   size_t offset;
   int k;
-  int err;
 
   switch (evt->type) {
     case UART_TX_DONE:
@@ -63,14 +64,14 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
     case UART_RX_RDY:
       offset = evt->data.rx.offset;
       for (i = offset; i < 248; i++) {
-        p = &evt->data.rx.buf[i];
-        if (p[0] == 0x5a && p[1] == 0xa5 && p[2] == 0x7f) {
-          len = p[3] + 5;
-          if (len > BUF_SIZE - i) {
+        const uint8_t *p = &evt->data.rx.buf[i];
+        if ((p[0] == 0x5a) && (p[1] == 0xa5) && (p[2] == 0x7f)) {
+          uint16_t len = p[3] + 5;
+          if (len > (BUF_SIZE - i)) {
             continue;
           }
           sum = 0;
-          for (k = 0; k < len - 1; k++) {
+          for (k = 0; k < (len - 1); k++) {
             sum += evt->data.rx.buf[i + k];
           }
           if (sum == evt->data.rx.buf[i + len - 1]) {
@@ -85,6 +86,9 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
       break;
 
     case UART_RX_BUF_REQUEST: {
+      const struct device *uart = user_data;
+      int err;
+
       printk("*************alloc new rx buf*************\n");
       err = k_mem_slab_alloc(&uart_slab, (void **)&buf, K_NO_WAIT);
       __ASSERT(err == 0, "Failed to allocate slab");
@@ -106,31 +110,33 @@ static void uart_callback(const struct device *dev, struct uart_event *evt, void
 }
 
 int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len) {
-  uint8_t *p;
-  uint8_t *d;
-  uint8_t n;
+  int i;
   int j;
-  uint16_t i;
-  uint8_t sum;
+  int last;
 
-  if (dev == NULL || data == NULL || len == NULL) {
+  if ((dev == NULL) || (data == NULL) || (len == NULL)) {
     return -1;
   }
   if (serial_rx_len == 0) {
     return -2;
   }
 
-  for (i = 0; i <= BUF_SIZE - serial_rx_len; i++) {
-    if (serial_rx_buf[i] == 0x5a && serial_rx_buf[i + 1] == 0xa5 && serial_rx_buf[i + 2] == 0x7f &&
-        serial_rx_buf[i + 3] + 4 < BUF_SIZE - i) {
-      n = serial_rx_buf[i + 3];
-      sum = 0;
-      for (j = 0; j <= n + 3; j++) {
+  /*
+   * The last place a frame can start. The shortest frame is 5 bytes (header, length, sum), so the
+   * header test below stays inside the buffer whatever length is stored.
+   */
+  last = BUF_SIZE - MAX((int)serial_rx_len, SERIAL_FRAME_MIN);
+  for (i = 0; i <= last; i++) {
+    if ((serial_rx_buf[i] == 0x5a) && (serial_rx_buf[i + 1] == 0xa5) && (serial_rx_buf[i + 2] == 0x7f) &&
+        ((serial_rx_buf[i + 3] + 4) < (BUF_SIZE - i))) {
+      uint8_t n = serial_rx_buf[i + 3];
+      uint8_t sum = 0;
+      for (j = 0; j <= (n + 3); j++) {
         sum += serial_rx_buf[i + j];
       }
       if (serial_rx_buf[i + n + 4] == sum) {
-        d = *data;
-        p = &serial_rx_buf[i + 4];
+        uint8_t *d = *data;
+        const uint8_t *p = &serial_rx_buf[i + 4];
         memcpy(d, p, n);
         *len = n;
         printk("use read_serial_data:");
@@ -143,7 +149,7 @@ int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len) {
     }
   }
 
-  if (i > BUF_SIZE - serial_rx_len) {
+  if (i > last) {
     serial_rx_len = 0;
     printk("Err:serial recv data does not meet the protocol\n");
     return -3;
@@ -153,15 +159,15 @@ int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len) {
   return 0;
 }
 
-int lpuart_async_b(const struct device *dev, uint8_t *data, size_t len) {
+int lpuart_async_b(const struct device *dev, const uint8_t *data, size_t len) {
   int err;
 
-  if (dev == NULL || data == NULL || len == 0) {
+  if ((dev == NULL) || (data == NULL) || (len == 0U)) {
     return -1;
   }
 
   err = uart_tx(dev, data, len, 10000);
-  if (err) {
+  if (err != 0) {
     printk("Failed to initiate transmission\n");
     return -2;
   }
@@ -182,19 +188,20 @@ int lpuart_async_a(const struct device *dev) {
   }
 
   err = k_mem_slab_alloc(&uart_slab, (void **)&buf, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     printk("Failed to alloc slab\n");
     return -1;
   }
 
+  // cppcheck-suppress [misra-c2012-11.8] ; the UART API takes its user data as void *
   err = uart_callback_set(dev, uart_callback, (void *)dev);
-  if (err) {
+  if (err != 0) {
     printk("Failed to set callback\n");
     return -2;
   }
 
   err = uart_rx_enable(dev, buf, BUF_SIZE, 10000);
-  if (err) {
+  if (err != 0) {
     printk("Failed to enable RX\n");
     return -3;
   }

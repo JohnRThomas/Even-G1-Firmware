@@ -64,8 +64,6 @@ static uint8_t hide_icon_on_exit;
 static uint8_t particle_pending;
 
 int panel_related(struct jbd_panel_context *panel, int idx, void *arg) {
-  struct ui_task *t;
-
   if (!CONTAINER_OF(panel, struct GlassesState, panel)->panel_on) {
     return -1;
   }
@@ -73,16 +71,18 @@ int panel_related(struct jbd_panel_context *panel, int idx, void *arg) {
   panel->current_column = 176;
   if (idx != 7) {
     /* called without an argument (clear_cb takes the panel) */
+    // cppcheck-suppress [misra-c2012-11.1] ; clear_cb is called without its argument here
     ((void (*)(void))panel->clear_cb)();
   }
-  if (idx >= 1 && idx <= 20) {
-    t = ui_task_table + idx - 1;
+  if ((idx >= 1) && (idx <= (int)ARRAY_SIZE(ui_task_table))) {
+    struct ui_task *t = &ui_task_table[idx - 1];
+
     if (t->has_pre && t->pre) {
       t->pre(arg);
     }
     t->task(panel, arg);
   }
-  if (panel->init_done) {
+  if (panel->init_done != 0U) {
     panel->draw_image_cb(panel);
   }
   return 0;
@@ -96,25 +96,25 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
   uint8_t lang;
 
   memset(buf, 0, 32);
-  elapsed = (int)diff < 0 ? 0 : diff;
+  elapsed = ((int)diff < 0) ? 0U : diff;
   BLE_PRINTK("currentTime is %d,recvTime is %d,unReadTime is %d \n", now, recv_time, elapsed);
   lang = get_current_language();
   if (lang == LANGUAGE_GERMAN) {
     struct g1_date date;
 
-    if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
+    if (((int)diff < 0) || (diff < (uint32_t)SECONDS_PER_MIN)) {
       sprintf(buf, "Jetzt");
-    } else if (elapsed >= SECONDS_PER_MIN && elapsed < SECONDS_PER_HOUR) {
-      sprintf(buf, "Vor %d Min.", elapsed / SECONDS_PER_MIN);
-    } else if (elapsed >= SECONDS_PER_HOUR && elapsed < 3 * SECONDS_PER_HOUR) {
-      sprintf(buf, "Vor %d Std.", elapsed / SECONDS_PER_HOUR);
-    } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_MIN) && (elapsed < (uint32_t)SECONDS_PER_HOUR)) {
+      sprintf(buf, "Vor %u Min.", elapsed / (uint32_t)SECONDS_PER_MIN);
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_HOUR) && (elapsed < (3U * (uint32_t)SECONDS_PER_HOUR))) {
+      sprintf(buf, "Vor %u Std.", elapsed / (uint32_t)SECONDS_PER_HOUR);
+    } else if ((elapsed >= (3U * (uint32_t)SECONDS_PER_HOUR)) && (elapsed < (uint32_t)SECONDS_PER_DAY)) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
       sprintf(buf, "%02d:%02d", date.hour, date.minute);
-    } else if (elapsed >= SECONDS_PER_DAY && elapsed < 2 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_DAY) && (elapsed < (2U * (uint32_t)SECONDS_PER_DAY))) {
       sprintf(buf, "Gestern");
-    } else if (elapsed >= 2 * SECONDS_PER_DAY && elapsed < 7 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (2U * (uint32_t)SECONDS_PER_DAY)) && (elapsed < (7U * (uint32_t)SECONDS_PER_DAY))) {
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
@@ -124,13 +124,13 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
   } else if (lang == LANGUAGE_FRENCH) {
     struct g1_date date;
 
-    if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
+    if (((int)diff < 0) || (diff < (uint32_t)SECONDS_PER_MIN)) {
       sprintf(buf, "Maintenant");
-    } else if (elapsed >= SECONDS_PER_MIN && elapsed < SECONDS_PER_HOUR) {
-      sprintf(buf, "%d min", elapsed / SECONDS_PER_MIN);
-    } else if (elapsed >= SECONDS_PER_HOUR && elapsed < 3 * SECONDS_PER_HOUR) {
-      sprintf(buf, "%d h", elapsed / SECONDS_PER_HOUR);
-    } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_MIN) && (elapsed < (uint32_t)SECONDS_PER_HOUR)) {
+      sprintf(buf, "%u min", elapsed / (uint32_t)SECONDS_PER_MIN);
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_HOUR) && (elapsed < (3U * (uint32_t)SECONDS_PER_HOUR))) {
+      sprintf(buf, "%u h", elapsed / (uint32_t)SECONDS_PER_HOUR);
+    } else if ((elapsed >= (3U * (uint32_t)SECONDS_PER_HOUR)) && (elapsed < (uint32_t)SECONDS_PER_DAY)) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
@@ -149,9 +149,9 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
           sprintf(buf, "%02d:%02dam", date.hour, date.minute);
         }
       }
-    } else if (elapsed >= SECONDS_PER_DAY && elapsed < 2 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_DAY) && (elapsed < (2U * (uint32_t)SECONDS_PER_DAY))) {
       sprintf(buf, "Hier");
-    } else if (elapsed >= 2 * SECONDS_PER_DAY && elapsed < 7 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (2U * (uint32_t)SECONDS_PER_DAY)) && (elapsed < (7U * (uint32_t)SECONDS_PER_DAY))) {
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
@@ -161,13 +161,13 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
   } else if (lang == LANGUAGE_SPANISH) {
     struct g1_date date;
 
-    if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
+    if (((int)diff < 0) || (diff < (uint32_t)SECONDS_PER_MIN)) {
       sprintf(buf, "Ahora");
-    } else if (elapsed >= SECONDS_PER_MIN && elapsed < SECONDS_PER_HOUR) {
-      sprintf(buf, "hace %d'", elapsed / SECONDS_PER_MIN);
-    } else if (elapsed >= SECONDS_PER_HOUR && elapsed < 3 * SECONDS_PER_HOUR) {
-      sprintf(buf, "hace %d h", elapsed / SECONDS_PER_HOUR);
-    } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_MIN) && (elapsed < (uint32_t)SECONDS_PER_HOUR)) {
+      sprintf(buf, "hace %u'", elapsed / (uint32_t)SECONDS_PER_MIN);
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_HOUR) && (elapsed < (3U * (uint32_t)SECONDS_PER_HOUR))) {
+      sprintf(buf, "hace %u h", elapsed / (uint32_t)SECONDS_PER_HOUR);
+    } else if ((elapsed >= (3U * (uint32_t)SECONDS_PER_HOUR)) && (elapsed < (uint32_t)SECONDS_PER_DAY)) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
@@ -186,9 +186,9 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
           sprintf(buf, "%02d:%02dam", date.hour, date.minute);
         }
       }
-    } else if (elapsed >= SECONDS_PER_DAY && elapsed < 2 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_DAY) && (elapsed < (2U * (uint32_t)SECONDS_PER_DAY))) {
       sprintf(buf, "Ayer");
-    } else if (elapsed >= 2 * SECONDS_PER_DAY && elapsed < 7 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (2U * (uint32_t)SECONDS_PER_DAY)) && (elapsed < (7U * (uint32_t)SECONDS_PER_DAY))) {
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
@@ -198,13 +198,13 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
   } else if (lang == LANGUAGE_ITALIAN) {
     struct g1_date date;
 
-    if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
+    if (((int)diff < 0) || (diff < (uint32_t)SECONDS_PER_MIN)) {
       sprintf(buf, "Adesso");
-    } else if (elapsed >= SECONDS_PER_MIN && elapsed < SECONDS_PER_HOUR) {
-      sprintf(buf, "%d min fa", elapsed / SECONDS_PER_MIN);
-    } else if (elapsed >= SECONDS_PER_HOUR && elapsed < 3 * SECONDS_PER_HOUR) {
-      sprintf(buf, "%d ore fa", elapsed / SECONDS_PER_HOUR);
-    } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_MIN) && (elapsed < (uint32_t)SECONDS_PER_HOUR)) {
+      sprintf(buf, "%u min fa", elapsed / (uint32_t)SECONDS_PER_MIN);
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_HOUR) && (elapsed < (3U * (uint32_t)SECONDS_PER_HOUR))) {
+      sprintf(buf, "%u ore fa", elapsed / (uint32_t)SECONDS_PER_HOUR);
+    } else if ((elapsed >= (3U * (uint32_t)SECONDS_PER_HOUR)) && (elapsed < (uint32_t)SECONDS_PER_DAY)) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
@@ -223,9 +223,9 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
           sprintf(buf, "%02d:%02dam", date.hour, date.minute);
         }
       }
-    } else if (elapsed >= SECONDS_PER_DAY && elapsed < 2 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_DAY) && (elapsed < (2U * (uint32_t)SECONDS_PER_DAY))) {
       sprintf(buf, "Ieri");
-    } else if (elapsed >= 2 * SECONDS_PER_DAY && elapsed < 7 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (2U * (uint32_t)SECONDS_PER_DAY)) && (elapsed < (7U * (uint32_t)SECONDS_PER_DAY))) {
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
@@ -235,13 +235,13 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
   } else {
     struct g1_date date;
 
-    if ((int)diff < 0 || diff < SECONDS_PER_MIN) {
+    if (((int)diff < 0) || (diff < (uint32_t)SECONDS_PER_MIN)) {
       sprintf(buf, "Now");
-    } else if (elapsed >= SECONDS_PER_MIN && elapsed < SECONDS_PER_HOUR) {
-      sprintf(buf, "%dm ago", elapsed / SECONDS_PER_MIN);
-    } else if (elapsed >= SECONDS_PER_HOUR && elapsed < 3 * SECONDS_PER_HOUR) {
-      sprintf(buf, "%dh ago", elapsed / SECONDS_PER_HOUR);
-    } else if (elapsed >= 3 * SECONDS_PER_HOUR && elapsed < SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_MIN) && (elapsed < (uint32_t)SECONDS_PER_HOUR)) {
+      sprintf(buf, "%um ago", elapsed / (uint32_t)SECONDS_PER_MIN);
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_HOUR) && (elapsed < (3U * (uint32_t)SECONDS_PER_HOUR))) {
+      sprintf(buf, "%uh ago", elapsed / (uint32_t)SECONDS_PER_HOUR);
+    } else if ((elapsed >= (3U * (uint32_t)SECONDS_PER_HOUR)) && (elapsed < (uint32_t)SECONDS_PER_DAY)) {
       memset(&date, 0, sizeof(date));
       timestamp_to_date(recv_time, &date);
       BLE_PRINTK("date: %u: %04d/%02d/%02d-%02d:%02d:%02d", recv_time, date.year, date.month, date.day, date.hour,
@@ -260,9 +260,9 @@ static __noinline void draw_time(char *buf, uint32_t recv_time) {
           sprintf(buf, "%02d:%02dam", date.hour, date.minute);
         }
       }
-    } else if (elapsed >= SECONDS_PER_DAY && elapsed < 2 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (uint32_t)SECONDS_PER_DAY) && (elapsed < (2U * (uint32_t)SECONDS_PER_DAY))) {
       sprintf(buf, "Yesterday");
-    } else if (elapsed >= 2 * SECONDS_PER_DAY && elapsed < 7 * SECONDS_PER_DAY) {
+    } else if ((elapsed >= (2U * (uint32_t)SECONDS_PER_DAY)) && (elapsed < (7U * (uint32_t)SECONDS_PER_DAY))) {
       strcpy(buf, get_weekday_name(recv_time));
     } else {
       memset(&date, 0, sizeof(date));
@@ -299,7 +299,7 @@ void draw_message(uint8_t unread, struct notif_msg *msg) {
       gui_bmp_bitmap_draw(0x36, gui_screen_x_offset(), gui_screen_y_offset() + 58, 0, 0, 0);
       memset(body, 0, sizeof(body));
       snprintf(body, sizeof(body), "%s", msg->title);
-      if (body[0] == 0) {
+      if (body[0] == '\0') {
         return;
       }
       gui_utf_draw_middle(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 81, gui_screen_x_offset() + 576,
@@ -328,7 +328,7 @@ void draw_message(uint8_t unread, struct notif_msg *msg) {
     default:
       gui_bmp_bitmap_draw(0x38, gui_screen_x_offset(), gui_screen_y_offset() + 4, 0, 0, 0);
       memset(title, 0, sizeof(title));
-      if (msg->subtitle[0]) {
+      if (msg->subtitle[0] != '\0') {
         snprintf(title, sizeof(title), "%s | %s", msg->display_name, msg->subtitle);
       } else {
         snprintf(title, sizeof(title), "%s", msg->display_name);
@@ -347,25 +347,25 @@ void draw_message(uint8_t unread, struct notif_msg *msg) {
   memset(body, 0, sizeof(body));
   if (type == 1) {
     snprintf(body, sizeof(body), "%s", msg->title);
-    if (body[0] == 0) {
+    if (body[0] == '\0') {
       return;
     }
     gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
                           gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
   } else if (type == 4) {
     snprintf(body, sizeof(body), "%s\n%s", msg->title, msg->message);
-    if (body[0] == 0) {
+    if (body[0] == '\0') {
       return;
     }
     gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
                           gui_screen_y_offset() + 135, 3, 0, 0, NULL, 0);
   } else {
-    if (msg->title[0] == 0) {
+    if (msg->title[0] == '\0') {
       snprintf(body, sizeof(body), "%s", msg->message);
     } else {
       snprintf(body, sizeof(body), "%s - %s", msg->title, msg->message);
     }
-    if (body[0] == 0) {
+    if (body[0] == '\0') {
       return;
     }
     gui_utf_Wordwrap_draw(0, body, 0, gui_screen_x_offset(), gui_screen_y_offset() + 54, gui_screen_x_offset() + 576,
@@ -388,9 +388,9 @@ static __noinline void draw_particle_effects(uint8_t **fb, uint8_t unread, struc
     draw_message(unread, msg);
     for (int y = 0; y < 199; y++) {
       for (int x = 0; x < 320; x++) {
-        uint8_t level[8] = {1, 3, 5, 7, 7, 7, 7, 7};
-
         if (fb[y][x]) {
+          uint8_t level[8] = {1, 3, 5, 7, 7, 7, 7, 7};
+
           fb[y][x] &= gui_fade_mask_at(y % 26, level[step], x);
         }
       }

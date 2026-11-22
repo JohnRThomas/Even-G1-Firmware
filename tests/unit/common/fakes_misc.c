@@ -28,7 +28,7 @@ DEFINE_FAKE_VOID_FUNC(set_test_mode, uint8_t);
 
 DEFINE_FAKE_VOID_FUNC(system_reboot_delayed);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, get_wear_state_event);
-DEFINE_FAKE_VALUE_FUNC(int, trigger_imu_state_change, void *, struct GlassesState *, bool);
+DEFINE_FAKE_VALUE_FUNC(int, trigger_imu_state_change, const void *, struct GlassesState *, bool);
 DEFINE_FAKE_VOID_FUNC(report_event_to_phone, int);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, get_dashboard_startup_mode);
 DEFINE_FAKE_VALUE_FUNC(uint8_t, cur_message_show_state);

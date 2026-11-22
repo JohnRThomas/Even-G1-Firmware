@@ -50,8 +50,10 @@ static K_SEM_DEFINE(ipc_bound_sem, 0, 1);
 
 #define DBG_PIN BIT(30)
 
-static struct net_buf *hci_rpmsg_cmd_recv(uint8_t *data, size_t remaining) {
-  struct bt_hci_cmd_hdr *hdr = (void *)data;
+static struct net_buf *hci_rpmsg_cmd_recv(uint8_t *pkt, size_t pkt_len) {
+  uint8_t *data = pkt;
+  size_t remaining = pkt_len;
+  const struct bt_hci_cmd_hdr *hdr = (const void *)data;
   struct net_buf *buf;
 
   if (remaining < sizeof(*hdr)) {
@@ -60,7 +62,7 @@ static struct net_buf *hci_rpmsg_cmd_recv(uint8_t *data, size_t remaining) {
   }
 
   buf = bt_buf_get_tx(BT_BUF_CMD, K_NO_WAIT, hdr, sizeof(*hdr));
-  if (buf) {
+  if (buf != NULL) {
     data += sizeof(*hdr);
     remaining -= sizeof(*hdr);
   } else {
@@ -85,8 +87,10 @@ static struct net_buf *hci_rpmsg_cmd_recv(uint8_t *data, size_t remaining) {
   return buf;
 }
 
-static struct net_buf *hci_rpmsg_acl_recv(uint8_t *data, size_t remaining) {
-  struct bt_hci_acl_hdr *hdr = (void *)data;
+static struct net_buf *hci_rpmsg_acl_recv(uint8_t *pkt, size_t pkt_len) {
+  uint8_t *data = pkt;
+  size_t remaining = pkt_len;
+  const struct bt_hci_acl_hdr *hdr = (const void *)data;
   struct net_buf *buf;
 
   if (remaining < sizeof(*hdr)) {
@@ -95,7 +99,7 @@ static struct net_buf *hci_rpmsg_acl_recv(uint8_t *data, size_t remaining) {
   }
 
   buf = bt_buf_get_tx(BT_BUF_ACL_OUT, K_NO_WAIT, hdr, sizeof(*hdr));
-  if (buf) {
+  if (buf != NULL) {
     data += sizeof(*hdr);
     remaining -= sizeof(*hdr);
   } else {
@@ -120,8 +124,10 @@ static struct net_buf *hci_rpmsg_acl_recv(uint8_t *data, size_t remaining) {
   return buf;
 }
 
-static struct net_buf *hci_rpmsg_iso_recv(uint8_t *data, size_t remaining) {
-  struct bt_hci_iso_hdr *hdr = (void *)data;
+static struct net_buf *hci_rpmsg_iso_recv(uint8_t *pkt, size_t pkt_len) {
+  uint8_t *data = pkt;
+  size_t remaining = pkt_len;
+  const struct bt_hci_iso_hdr *hdr = (const void *)data;
   struct net_buf *buf;
 
   if (remaining < sizeof(*hdr)) {
@@ -130,7 +136,7 @@ static struct net_buf *hci_rpmsg_iso_recv(uint8_t *data, size_t remaining) {
   }
 
   buf = bt_buf_get_tx(BT_BUF_ISO_OUT, K_NO_WAIT, hdr, sizeof(*hdr));
-  if (buf) {
+  if (buf != NULL) {
     data += sizeof(*hdr);
     remaining -= sizeof(*hdr);
   } else {
@@ -155,12 +161,14 @@ static struct net_buf *hci_rpmsg_iso_recv(uint8_t *data, size_t remaining) {
   return buf;
 }
 
-static void hci_rpmsg_rx(uint8_t *data, size_t len) {
+static void hci_rpmsg_rx(uint8_t *pkt, size_t len) {
+  uint8_t *data = pkt;
   uint8_t pkt_indicator;
   struct net_buf *buf = NULL;
   size_t remaining = len;
 
-  pkt_indicator = *data++;
+  pkt_indicator = *data;
+  data++;
   remaining -= sizeof(pkt_indicator);
 
   switch (pkt_indicator) {
@@ -181,7 +189,7 @@ static void hci_rpmsg_rx(uint8_t *data, size_t len) {
       return;
   }
 
-  if (buf) {
+  if (buf != NULL) {
     net_buf_put(&tx_queue, buf);
   }
 }
@@ -199,7 +207,7 @@ static void tx_thread(void *p1, void *p2, void *p3) {
     buf = net_buf_get(&tx_queue, K_FOREVER);
     /* Pass buffer to the stack */
     err = bt_send(buf);
-    if (err) {
+    if (err != 0) {
       NET_ERR("Unable to send, err %d\n", err);
       net_buf_unref(buf);
     }
@@ -224,7 +232,7 @@ static void hci_rpmsg_send(struct net_buf *buf) {
       pkt_indicator = HCI_RPMSG_ISO;
       break;
     default:
-      NET_ERR("Unknown type %u\n", bt_buf_get_type(buf));
+      NET_ERR("Unknown type %d\n", bt_buf_get_type(buf));
       net_buf_unref(buf);
       return;
   }
@@ -251,7 +259,7 @@ void bt_ctlr_assert_handle(char *file, uint32_t line) {
   /* Disable interrupts, this is unrecoverable */
   (void)irq_lock();
 
-  NET_ERR("Controller assert in: %s at %d\n", file, line);
+  NET_ERR("Controller assert in: %s at %u\n", file, line);
 
   while (true) {
   };
@@ -313,12 +321,12 @@ int hci_rpmsg_init(void) {
 
   /* Initialize IPC service instance and register endpoint. */
   err = ipc_service_open_instance(hci_ipc_instance);
-  if (err < 0 && err != -EALREADY) {
+  if ((err < 0) && (err != -EALREADY)) {
     NET_ERR("IPC service init failed %d\n\n", err);
   }
 
   err = ipc_service_register_endpoint(hci_ipc_instance, &hci_ept, &hci_ept_cfg);
-  if (err) {
+  if (err != 0) {
     NET_ERR("IPC reg endpoint failed %d\n", err);
   }
 
@@ -328,7 +336,6 @@ int hci_rpmsg_init(void) {
 /* Read the random static address from FICR (cf. hci_vendor_read_static_addr). */
 int hci_rpmsg_get_static_addr(uint8_t *addr) {
   struct bt_hci_vs_static_addr addrs[1];
-  char str[18];
 
   if (((NRF_FICR->DEVICEADDR[0] != UINT32_MAX) || ((NRF_FICR->DEVICEADDR[1] & UINT16_MAX) != UINT16_MAX)) &&
       (NRF_FICR->DEVICEADDRTYPE & 0x01U)) {
@@ -345,6 +352,8 @@ int hci_rpmsg_get_static_addr(uint8_t *addr) {
     } else {
       (void)memset(addrs[0].ir, 0x00, sizeof(addrs[0].ir));
     }
+
+    char str[18];
 
     memcpy(addr, addrs[0].bdaddr.val, 6);
     snprintf(str, sizeof(str), "%02X:%02X:%02X:%02X:%02X:%02X", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);

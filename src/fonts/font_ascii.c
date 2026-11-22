@@ -27,11 +27,11 @@ const uint8_t *font_ascii_lookup(uint8_t c, int w, int h, uint8_t *cell) {
   glyph_w /= 2;
   top = MAX(h - glyph_h, 0) / 2;
   for (int row = 0; row < MIN(glyph_h, h); row++) {
-    memcpy(cell + (top + row) * w, glyph + row * glyph_w, MIN(glyph_w, w));
+    memcpy(cell + ((top + row) * w), glyph + (row * glyph_w), MIN(glyph_w, w));
   }
   return cell;
 }
 
 int check_printable_code(uint32_t code) {
-  return code > 0x1f ? 0 : -1;
+  return (code > 0x1fU) ? 0 : -1;
 }

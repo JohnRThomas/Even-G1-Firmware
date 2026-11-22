@@ -67,7 +67,7 @@ int config_watchdog_wait_reset(void) {
     return -1;
   }
   err = wdt_disable(wdt);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("wdt_disable failed (%d)\n", err);
     return -2;
   }
@@ -85,7 +85,7 @@ int config_watchdog_wait_reset(void) {
     return -3;
   }
   err = wdt_setup(wdt, WDT_OPT_PAUSE_HALTED_BY_DBG);
-  if (err) {
+  if (err != 0) {
     G1_LOG_ERR("wdt_setup failed (%d)\n", err);
     return -4;
   }

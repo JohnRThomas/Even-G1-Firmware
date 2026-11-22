@@ -6,10 +6,8 @@
 #include <stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
-#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/mfd/npm1300.h>
-#include <zephyr/drivers/regulator.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util_macro.h>
@@ -18,6 +16,7 @@
 #include "g1_log.h"
 #include "glasses_state.h"
 #include "sensors_audio.h"
+#include "vendor_drivers.h"
 
 #define OPT3001_I2C_ADDR 0x45
 
@@ -35,19 +34,7 @@
 #define OPT3001_SAMPLE_EXPONENT_SHIFT 12U
 #define OPT3001_MANTISSA_MASK         0xfffU
 
-/* Copy of the private config struct of drivers/regulator/regulator_npm1300.c */
-struct regulator_npm1300_config {
-  struct regulator_common_config common;
-  const struct device *mfd;
-  uint8_t source;
-  int32_t retention_uv;
-  struct gpio_dt_spec enable_gpios;
-  struct gpio_dt_spec retention_gpios;
-  struct gpio_dt_spec pwm_gpios;
-};
-
-#define PMIC_LDO1    DEVICE_DT_GET(DT_NODELABEL(pmic_ldo1))
-#define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
+#define PMIC_LDO1 DEVICE_DT_GET(DT_NODELABEL(pmic_ldo1))
 
 /* bus + address; only .bus is used, the transfers pass OPT3001_I2C_ADDR directly */
 static struct i2c_dt_spec opt3001_i2c_device = {
@@ -125,13 +112,13 @@ static uint8_t als_lux_to_level(int lux) {
   if (lux < 50) {
     level = lux / 5;
   } else if (lux < 200) {
-    level = (lux - 50) / 10 + 10;
+    level = ((lux - 50) / 10) + 10;
   } else if (lux < 1000) {
-    level = (lux - 200) / 50 + 25;
+    level = ((lux - 200) / 50) + 25;
   } else if (lux < 10000) {
-    level = (lux - 1000) / 1000 + 41;
+    level = ((lux - 1000) / 1000) + 41;
   } else if (lux < 80000) {
-    level = (lux - 10000) / 5000 + 50;
+    level = ((lux - 10000) / 5000) + 50;
   } else {
     return 42;
   }
@@ -157,12 +144,12 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) {
     return 0xff;
   }
   lux = opt3007_read(0);
-  if (lux == 0 || lux == -1) {
+  if ((lux == 0) || (lux == -1)) {
     return 0xff;
   }
 
-  if (get_dashboard_state()->luminance_curve == 0 || get_dashboard_state()->luminance_curve == -1 ||
-      get_dashboard_state()->luminance_curve <= 60000) {
+  if ((get_dashboard_state()->luminance_curve == 0) || (get_dashboard_state()->luminance_curve == -1) ||
+      (get_dashboard_state()->luminance_curve <= 60000)) {
     return als_lux_to_level(lux);
   }
 
@@ -179,6 +166,8 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) {
         level = 6;
       } else if (l < 1.6) {
         level = 0;
+      } else {
+        /* nothing to do */
       }
       break;
     case 6:
@@ -186,6 +175,8 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) {
         level = 12;
       } else if (l < 4.0) {
         level = 3;
+      } else {
+        /* nothing to do */
       }
       break;
     case 12:
@@ -193,6 +184,8 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) {
         level = 19;
       } else if (l < 8.0) {
         level = 6;
+      } else {
+        /* nothing to do */
       }
       break;
     case 19:
@@ -200,6 +193,8 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) {
         level = 26;
       } else if (l < 75.0) {
         level = 12;
+      } else {
+        /* nothing to do */
       }
       break;
     case 26:
@@ -207,6 +202,8 @@ uint8_t opt3007_get_brightness_level(struct opt3007_context *ctx) {
         level = 42;
       } else if (l < 372.0) {
         level = 19;
+      } else {
+        /* nothing to do */
       }
       break;
     case 42:
@@ -230,9 +227,10 @@ int opt3007_get_max_lux(void) {
     return -1;
   }
   lux = opt3007_read(0);
-  if (lux == 0 || lux == -1) {
+  if ((lux == 0) || (lux == -1)) {
     return lux;
   }
+  // cppcheck-suppress [misra-c2012-10.8] ; the product is taken in 64 bits before it is scaled
   max_lux = (double)((int64_t)lux * get_dashboard_state()->luminance_curve) / 1000000.0;
   G1_LOG_INF("opt3007_get_max_lux %d %f luminance_curve_a0 %d\n", lux, max_lux, get_dashboard_state()->luminance_curve);
   return (int)max_lux;
@@ -241,10 +239,12 @@ int opt3007_get_max_lux(void) {
 int opt3007_chip_init(struct opt3007_context *ctx) {
   uint16_t value = 0;
 
-  if (ctx == NULL) {
-    ctx = &get_dashboard_state()->opt3007_context;
+  struct opt3007_context *context = ctx;
+
+  if (context == NULL) {
+    context = &get_dashboard_state()->opt3007_context;
   }
-  opt3007_ctx = ctx;
+  opt3007_ctx = context;
 
   G1_LOG_INF("opt3007 init start:\n");
 

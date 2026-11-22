@@ -62,14 +62,16 @@ void jbd_clear_cache_sync(uint8_t val) {
 void display_image(uint32_t col, uint32_t row, uint8_t *buf, int len) {
   uint16_t y = row;
   uint16_t x = col;
+  int remaining = len;
+  uint8_t *cur = buf;
 
-  while (len > 0xf000) {
-    spi_wr_buffer(x, y, buf, 0xf000);
-    len -= 0xf000;
-    buf += 0xf000;
+  while (remaining > 0xf000) {
+    spi_wr_buffer(x, y, cur, 0xf000);
+    remaining -= 0xf000;
+    cur += 0xf000;
     y += 192;
   }
-  spi_wr_buffer(x, y, buf, len);
+  spi_wr_buffer(x, y, cur, remaining);
   send_cmd(SPI_SYNC);
   delay_ms(1);
 }

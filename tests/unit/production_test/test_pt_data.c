@@ -353,6 +353,30 @@ ZTEST(production_test, test_pt_case_battery_repeated_reply_has_valid_checksum) {
   zassert_equal(mailbox_tx.data[4][10], g1_sum8(mailbox_tx.data[4], 10), "sum byte 0x%02x", mailbox_tx.data[4][10]);
 }
 
+/*
+ * Over the lpuart the reply sits behind the frame header (5a a5 ff n), so the flag is byte 13 of
+ * what is sent, and the resend goes out on the lpuart too: not to the tag the lens used before.
+ */
+ZTEST(production_test, test_pt_case_battery_flagged_reply_over_uart_is_sent_again_on_the_uart) {
+  battery_charging();
+  nfc_get_field_mv_fake.return_val = 6000;
+  g1_clock_advance_ms(10001);
+  setNFCDevice(&nfc_dev);
+  zassert_equal(setUARTDevice(&g1_pt_uart_dev), 0);
+
+  for (int poll = 0; poll < 4; poll++) {
+    pt_test_uart_receive("5a a5 7f 04 13 01 02 00 98", 0);
+    zassert_equal(process_pt_data(NULL), 0);
+  }
+
+  /* every frame is followed by the stray 0x5a */
+  zassert_equal(g1_pt_uart_tx_log.count, 10, "%d writes: 3 plain replies, then 2 for the fourth poll",
+                g1_pt_uart_tx_log.count);
+  expect_pkt(&g1_pt_uart_tx_log, 6, "5a a5 ff 0a 13 01 02 06 00 17 70 32 00 80 5d");
+  expect_pkt(&g1_pt_uart_tx_log, 8, "5a a5 ff 0a 13 01 02 06 00 17 70 32 00 00 dd");
+  zassert_equal(mailbox_tx.count, 0, "%d write(s) to the NFC mailbox", mailbox_tx.count);
+}
+
 ZTEST(production_test, test_pt_long_trip_from_case_arms_low_power) {
   zassert_equal(nfc_request("06 01 02 00"), 0);
   expect_pkt(&mailbox_tx, 0, "06 01 02 01 00 0a");

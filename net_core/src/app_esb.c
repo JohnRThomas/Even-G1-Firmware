@@ -84,7 +84,7 @@ static void esb_thread(void) {
       continue;
     }
 
-    if (esb_tx_done == 2 && esb_evt_active == 0) {
+    if ((esb_tx_done == 2) && (esb_evt_active == 0)) {
       esb_tx_buf_clear();
       ipc_send_esb_status(2);
       esb_tx_done = 0;
@@ -154,35 +154,35 @@ static int esb_initialize(uint8_t prx) {
   config.use_fast_ramp_up = true;
 
   err = esb_init(&config);
-  if (err) {
+  if (err != 0) {
     return err;
   }
 
   esb_set_tx_power(3);
 
   if (esb_link_state == 2) {
-    uint8_t channel = esb_channel / 5 + 80;
+    uint8_t channel = (esb_channel / 5) + 80;
 
     esb_set_rf_channel(channel);
   }
 
   err = esb_set_base_address_0(base_addr_0);
-  if (err) {
+  if (err != 0) {
     return err;
   }
 
   err = esb_set_base_address_1(base_addr_1);
-  if (err) {
+  if (err != 0) {
     return err;
   }
 
   err = esb_set_prefixes(addr_prefix, ARRAY_SIZE(addr_prefix));
-  if (err) {
+  if (err != 0) {
     return err;
   }
 
   err = esb_enable_pipes(3);
-  if (err) {
+  if (err != 0) {
     return err;
   }
 
@@ -190,7 +190,7 @@ static int esb_initialize(uint8_t prx) {
 
   if (prx == 1) {
     err = esb_start_rx();
-    if (err) {
+    if (err != 0) {
       NET_ERR("esb_start_rx fail\n");
       return err;
     }
@@ -201,12 +201,10 @@ static int esb_initialize(uint8_t prx) {
 
 static void esb_send(uint8_t load) {
   uint8_t tmp[CONFIG_ESB_MAX_PAYLOAD_LENGTH] = {0};
-  int len;
-
   if (load) {
     tx_payload.length = 0;
-    len = (int)esb_tx_buf_len_get();
-    if (len) {
+    int len = (int)esb_tx_buf_len_get();
+    if (len != 0) {
       tx_payload.pipe = 0;
       tx_payload.noack = 0;
       memcpy(tx_payload.data, esb_tx_buf, len);
@@ -214,27 +212,27 @@ static void esb_send(uint8_t load) {
     } else {
       tx_payload.pipe = 0;
       tx_payload.noack = 0;
-      tmp[0] = esb_prx == 0 ? 0x11 : 0x10;
+      tmp[0] = (esb_prx == 0) ? 0x11 : 0x10;
       memcpy(tx_payload.data, tmp, sizeof(tmp));
       tx_payload.length = 32;
     }
 
-    if (esb_write_payload(&tx_payload)) {
+    if (esb_write_payload(&tx_payload) != 0) {
       return;
     }
 
-    if (esb_prx == 1 && !esb_tx_full()) {
+    if ((esb_prx == 1) && !esb_tx_full()) {
       esb_write_payload(&tx_payload);
     }
 
-    if (len) {
+    if (len != 0) {
       esb_tx_kind = 1;
     } else {
       esb_tx_kind = 2;
     }
   }
 
-  if (esb_prx == 0 && esb_start_tx() == 0) {
+  if ((esb_prx == 0) && (esb_start_tx() == 0)) {
     tx_count++;
   }
 }
@@ -248,11 +246,11 @@ static void esb_send_idle(void) {
   memcpy(ack_payload.data, tmp, sizeof(tmp));
   ack_payload.length = CONFIG_ESB_MAX_PAYLOAD_LENGTH;
 
-  if (esb_write_payload(&ack_payload)) {
+  if (esb_write_payload(&ack_payload) != 0) {
     NET_ERR("esb_write_payload failed\n");
   }
 
-  if (esb_start_tx()) {
+  if (esb_start_tx() != 0) {
     NET_ERR("esb_start_tx failed\n");
   }
 }
@@ -279,7 +277,7 @@ static void event_handler(struct esb_evt const *event) {
         esb_send(1);
       }
       while (esb_read_rx_payload(&rx_payload) == 0) {
-        if (esb_prx == 0 && rx_payload.data[0] == 0x11) {
+        if ((esb_prx == 0) && (rx_payload.data[0] == 0x11)) {
           tx_busy = 1;
           esb_send_idle();
           continue;
@@ -291,6 +289,8 @@ static void event_handler(struct esb_evt const *event) {
         app_evt.rssi = rx_payload.rssi;
         app_evt_cb(&app_evt);
       }
+      break;
+    default:
       break;
   }
 }
@@ -321,7 +321,7 @@ static int clocks_start(void) {
       NET_ERR("Clock can not starte %d\n", res);
       return res;
     }
-  } while (err);
+  } while (err != 0);
 
   return 0;
 }
@@ -332,8 +332,8 @@ int app_esb_init(uint8_t prx, app_esb_cb_t cb) {
   app_evt_cb = cb;
   esb_prx = prx;
 
-  NRF_P0->DIRSET = 0xF0000010;
-  NRF_P0->OUTCLR = 0xF0000000;
+  NRF_P0->DIRSET = 0xF0000010U;
+  NRF_P0->OUTCLR = 0xF0000000U;
 
   err = clocks_start();
   if (err < 0) {
@@ -357,10 +357,10 @@ static int app_esb_suspend(void) {
     NRF_RADIO->SHORTS = 0;
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    while (NRF_RADIO->EVENTS_DISABLED == 0) {
+    while (NRF_RADIO->EVENTS_DISABLED == 0U) {
     }
     NRF_TIMER2->TASKS_STOP = 1;
-    NRF_RADIO->INTENCLR = 0xFFFFFFFF;
+    NRF_RADIO->INTENCLR = 0xFFFFFFFFU;
 
     esb_disable();
 
@@ -368,6 +368,8 @@ static int app_esb_suspend(void) {
     irq_unlock(key);
   } else if (esb_prx == 1) {
     esb_stop_rx();
+  } else {
+    /* nothing to do */
   }
 
   NRF_P0->OUTCLR = BIT(29);

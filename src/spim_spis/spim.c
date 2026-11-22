@@ -17,9 +17,9 @@ static uint8_t spim4_irq_connected;
 static uint8_t spim3_irq_connected;
 
 static void spim_event_handler(nrfx_spim_evt_t const *p_event, void *p_context) {
-  struct spi_master_ctx *ctx = p_context;
-
   if (p_event->type == NRFX_SPIM_EVENT_DONE) {
+    struct spi_master_ctx *ctx = p_context;
+
     ctx->xfer_done = 1;
   }
 }
@@ -46,7 +46,12 @@ static int spi_master_trans_data_tx_rx(struct spi_master_ctx *ctx, const uint8_t
 static int spi_master_deinit(struct spi_master_ctx *ctx) {
   nrfx_spim_t spim3;
   nrfx_spim_t spim4;
-  uint8_t bus, sck, mosi, miso, ss, speed;
+  uint8_t bus;
+  uint8_t sck;
+  uint8_t mosi;
+  uint8_t miso;
+  uint8_t ss;
+  uint8_t speed;
 
   spim3.p_reg = NRF_SPIM3;
   spim3.drv_inst_idx = NRFX_SPIM3_INST_IDX;
@@ -95,7 +100,7 @@ static int spi_master_init(struct spi_master_ctx *ctx) {
   nrfx_err_t status;
   uint8_t bus;
 
-  if (ctx->is_initialized == 1) {
+  if (ctx->is_initialized == 1U) {
     return 0;
   }
   config.frequency = ctx->speed_mhz * 1000000;

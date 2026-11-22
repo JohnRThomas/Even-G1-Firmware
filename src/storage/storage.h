@@ -71,7 +71,7 @@ struct usr_settings {
 #define USR_SETTINGS_ADDR 0x134000
 
 #define FLASH_DEV             DEVICE_DT_GET(DT_NODELABEL(mx25r64))
-#define EXT_FLASH_SECTOR_SIZE 4096
+#define EXT_FLASH_SECTOR_SIZE 4096U
 
 /* QuickNote context behind GLOBAL_STATE->quicknote */
 #define QUICKNOTE_TITLE_LEN 0x29

@@ -108,7 +108,7 @@ struct aw9320x_func {
 #define AW_I2C_RW_RETRY_TIME_MIN (2000)
 #define AW_I2C_RW_RETRY_TIME_MAX (3000)
 
-#define AW_FLASH_DEFAULT_VAL (0xffffffff)
+#define AW_FLASH_DEFAULT_VAL (0xffffffffU)
 
 #define AW_PROT_STOP_WAIT_IRQ_CYCLES (100)
 #define AW_REG_UPDATA_DIS_MASK       (0x00ffffffU)
@@ -542,7 +542,7 @@ enum aw9320x_word {
   AW_BIT_12_EN = 0x00001000,
   AW_HALF_WORD_1 = 0xffff,
   AW_THREE_BYTE_1 = 0xffffff,
-  AW_ONE_WORD_1 = 0xffffffff,
+  AW_ONE_WORD_1 = 0xffffffffU,
 };
 
 typedef struct aw_app_prf {

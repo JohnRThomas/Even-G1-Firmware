@@ -61,17 +61,18 @@ int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf,
   const struct eeprom_st25dv_config *config = dev->config;
   struct k_mutex *lock = dev->data;
   const uint8_t *data = buf;
-  int retries;
-  size_t n;
+  off_t pos = offset;
+  size_t remaining = len;
   int ret = 0;
 
   /* in writes of at most ST25DV_WRITE_MAX bytes, each with its own retries */
-  for (; len; offset += (off_t)n, data += n, len -= n) {
-    n = MIN(len, ST25DV_WRITE_MAX);
-    retries = ST25DV_RETRIES;
+  while (remaining != 0U) {
+    int retries = ST25DV_RETRIES;
+
+    size_t n = MIN(remaining, ST25DV_WRITE_MAX);
     while (1) {
       k_mutex_lock(lock, K_FOREVER);
-      ret = st25dv_write(config, config->addr, offset, data, n);
+      ret = st25dv_write(config, config->addr, pos, data, n);
       k_mutex_unlock(lock);
       if (!ret || !--retries) {
         break;
@@ -79,10 +80,13 @@ int eeprom_st25dv_write(const struct device *dev, off_t offset, const void *buf,
       i2c_delay();
     }
 
-    if (ret) {
-      printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n", config->addr, (uint32_t)offset, ret);
+    if (ret != 0) {
+      printk("eeprom_st25dv_write addr %04X offset %04X failed %d\r\n", config->addr, (uint32_t)pos, ret);
       break;
     }
+    pos += (off_t)n;
+    data += n;
+    remaining -= n;
   }
 
   return ret;
@@ -132,7 +136,7 @@ int eeprom_st25dv_read(const struct device *dev, off_t offset, void *buf, size_t
     i2c_delay();
   }
 
-  if (ret) {
+  if (ret != 0) {
     printk("eeprom_st25dv_read addr %04X offset %04X failed %d\r\n", config->addr, (uint32_t)offset, ret);
   }
 
@@ -167,7 +171,7 @@ int eeprom_st25dv_read_sys(const struct device *dev, off_t offset, void *buf, si
     i2c_delay();
   }
 
-  if (ret) {
+  if (ret != 0) {
     printk("eeprom_st25dv_read_sys addr %04X offset %04X failed %d\r\n", config->addr | ST25DV_ADDR_SYST_I2C_BIT,
            (uint32_t)offset, ret);
   }
@@ -195,7 +199,7 @@ int eeprom_st25dv_write_sys(const struct device *dev, off_t offset, const void *
     i2c_delay();
   }
 
-  if (ret) {
+  if (ret != 0) {
     printk("eeprom_st25dv_write_sys addr %04X offset %04X failed %d\r\n", config->addr | ST25DV_ADDR_SYST_I2C_BIT,
            (uint32_t)offset, ret);
   }
@@ -213,7 +217,7 @@ int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **bu
   }
 
   mb_ctrl = 0;
-  if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1)) {
+  if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1) != 0) {
     printk("eeprom_st25dv_read ST25DV_REG_MB_CTRL_DYN is failed\n");
     return -2;
   }
@@ -224,13 +228,13 @@ int eeprom_st25dv_read_i2c_mb_mailbox_ram(const struct device *dev, uint8_t **bu
   }
 
   mb_len = 0;
-  if (eeprom_st25dv_read(dev, ST25DV_MB_LEN_DYN_REG, &mb_len, 1)) {
+  if (eeprom_st25dv_read(dev, ST25DV_MB_LEN_DYN_REG, &mb_len, 1) != 0) {
     printk("eeprom_st25dv_read ST25DV_REG_MB_LEN_DYN is failed\n");
     return -4;
   }
   *len = mb_len;
 
-  if (eeprom_st25dv_read(dev, ST25DV_MAILBOX_RAM_REG, *buf, mb_len + 1)) {
+  if (eeprom_st25dv_read(dev, ST25DV_MAILBOX_RAM_REG, *buf, mb_len + 1U) != 0) {
     printk("eeprom_st25dv_read ST25DV_REG_MAILBOX_DYN is failed\n");
     return -5;
   }
@@ -246,7 +250,7 @@ int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void 
   }
 
   mb_ctrl = 0;
-  if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1)) {
+  if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1) != 0) {
     printk("eeprom_st25dv_read ST25DV_REG_MB_CTRL_DYN is failed\n");
     return -2;
   }
@@ -257,12 +261,12 @@ int eeprom_st25dv_write_i2c_mb_mailbox_ram(const struct device *dev, const void 
     return -3;
   }
 
-  if (eeprom_st25dv_write(dev, ST25DV_MAILBOX_RAM_REG, buf, len)) {
+  if (eeprom_st25dv_write(dev, ST25DV_MAILBOX_RAM_REG, buf, len) != 0) {
     printk("eeprom_st25dv_write ST25DV_REG_MAILBOX_DYN failed\n");
     return -3;
   }
 
-  if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1)) {
+  if (eeprom_st25dv_read(dev, ST25DV_MB_CTRL_DYN_REG, &mb_ctrl, 1) != 0) {
     printk("eeprom_st25dv_read ST25DV_REG_MB_CTRL_DYN is failed\n");
     return -2;
   }
@@ -310,14 +314,14 @@ const struct device *eeprom_st25dv_init(void) {
 
 /* Lock / unlock with dev->data; both always return 0. */
 uint8_t eeprom_st25dv_lock(const struct device *dev) {
-  if (dev) {
+  if (dev != NULL) {
     k_mutex_lock(dev->data, K_FOREVER);
   }
   return 0;
 }
 
 uint8_t eeprom_st25dv_unlock(const struct device *dev) {
-  if (dev) {
+  if (dev != NULL) {
     k_mutex_unlock(dev->data);
   }
   return 0;

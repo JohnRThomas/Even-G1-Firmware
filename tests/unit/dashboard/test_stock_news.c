@@ -312,3 +312,32 @@ ZTEST(dashboard, test_0x06_news_delete_action_clears_the_item) {
   expect_chunk_reply(pkt, 0x00);
   assert_news_empty(0);
 }
+
+/* ---- chunk buffers ---- */
+
+/*
+ * A pane collects its chunks in a buffer (calendar 0x538, stock 0x812, news 0x161 bytes): the
+ * chunk that no longer fits is refused, and the transfer with it.
+ */
+ZTEST(dashboard, test_0x06_chunk_past_the_end_of_the_pane_buffer_is_refused_with_status_1) {
+  static const struct {
+    uint8_t sub;
+    size_t size;
+  } rows[] = {
+    {DASH_SUB_CALENDAR, 0x538},
+    {DASH_SUB_STOCK, 0x812},
+    {DASH_SUB_NEWS, 0x161},
+  };
+  uint8_t data[DASH_CHUNK_DATA] = {0};
+
+  for (unsigned int row = 0; row < ARRAY_SIZE(rows); row++) {
+    uint16_t fit = rows[row].size / DASH_CHUNK_DATA;
+
+    /* the one past the end, and the next one, which has nothing to continue */
+    for (uint16_t chunk = 1; chunk <= fit + 2; chunk++) {
+      g1_send(pkt, g1_put_chunk(pkt, 0x06, chunk, rows[row].sub, 100, chunk, data, sizeof(data)));
+      expect_chunk_reply(pkt, chunk <= fit ? 0x00 : 0x01);
+    }
+  }
+  expect_no_frame();
+}

@@ -87,6 +87,8 @@ int ui_prompt_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
         gui_screen_clear();
         gui_utf_adv_draw_reset();
         memset(&prompt_ui, 0, sizeof(prompt_ui));
+      } else {
+        /* nothing to do */
       }
       break;
     case 1:
@@ -97,6 +99,8 @@ int ui_prompt_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
         gui_screen_fade_out();
         gui_utf_adv_draw_reset();
         memset(&prompt_ui, 0, sizeof(prompt_ui));
+      } else {
+        /* nothing to do */
       }
       break;
     default:

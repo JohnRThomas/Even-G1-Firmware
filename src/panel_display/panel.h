@@ -28,7 +28,7 @@
 #define SPI_DEEP_POWER_DOWN      0xb9
 #define SPI_WR_BUFFER            0x02
 
-#define JBD_PANEL_DEVICE_ID 0x4010
+#define JBD_PANEL_DEVICE_ID 0x4010U
 
 #define PANEL_WIDTH     640
 #define PANEL_FB_STRIDE (PANEL_WIDTH / 2)          /* 4 bpp */

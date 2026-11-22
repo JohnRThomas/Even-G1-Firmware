@@ -31,7 +31,7 @@ static void ipc0_ept_recv(const void *data, size_t len, void *priv);
 int global_ipc_service_send(const void *data, size_t len) {
   int ret;
 
-  if (ipc_ready == 1 && get_dashboard_state()->work_mode != 8 && get_dashboard_state()->work_mode != 9) {
+  if ((ipc_ready == 1) && (get_dashboard_state()->work_mode != 8) && (get_dashboard_state()->work_mode != 9)) {
     ret = ipc_service_send(&ipc0_ept, data, len);
     if (ret < 0) {
       G1_LOG_ERR("ipc_service_send data failed with ret %d %d\n", ret, ipc_send_fail_cnt);
@@ -99,7 +99,6 @@ static void ipc0_ept_recv(const void *data, size_t len, void *priv) {
   struct ipc_service_context *ctx = GLOBAL_IPC_SERVICE_CONTEXT;
   const uint8_t *buf = data;
   uint8_t cmd;
-  struct ipc_ep_cfg *ep;
   int i;
 
   if (len == 0) {
@@ -108,8 +107,8 @@ static void ipc0_ept_recv(const void *data, size_t len, void *priv) {
   }
   cmd = buf[0];
   for (i = 0; i < ctx->count; i++) {
-    ep = ctx->receivers[i];
-    if (ep && ep->id == cmd) {
+    struct ipc_ep_cfg *ep = ctx->receivers[i];
+    if (ep && (ep->id == cmd)) {
       ep->recv_cb(CONTAINER_OF(ctx, struct GlassesState, ipc_ctx), buf + 1, len - 1);
       return;
     }

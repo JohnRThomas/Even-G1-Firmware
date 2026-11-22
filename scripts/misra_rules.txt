@@ -1,0 +1,327 @@
+One-line reminders of what each MISRA C:2012 rule is about, for the messages of
+`scripts/cppcheck.py --misra`.  The numbers and categories are MISRA's; the wording is this
+project's own shorthand, not the text of the guidelines, and it leaves out their conditions
+and exceptions.  The guidelines themselves are published by MISRA (misra.org.uk); pass a
+copy of their summary appendix with --rule-texts to get the official headlines instead.
+
+The lines below are in the layout cppcheck's addon reads: every reminder is one line and
+starts with a capital letter or '#'.
+
+Appendix A Summary of guidelines
+
+Rule 1.1 Required
+Not valid standard C, or beyond the compiler's translation limits
+Rule 1.2 Advisory
+Compiler language extension used
+Rule 1.3 Required
+Undefined or critical unspecified behaviour
+Rule 1.4 Required
+C11 feature that the guidelines exclude (_Generic, _Atomic, _Noreturn, ...)
+Rule 2.1 Required
+Unreachable code
+Rule 2.2 Required
+Dead code: removing the operation would change nothing
+Rule 2.3 Advisory
+Type declared but never used
+Rule 2.4 Advisory
+Tag of a struct, union or enum declared but never used
+Rule 2.5 Advisory
+Macro defined but never used
+Rule 2.6 Advisory
+Label declared but never used
+Rule 2.7 Advisory
+Function parameter never used
+Rule 3.1 Required
+Comment opener inside a comment
+Rule 3.2 Required
+Backslash line continuation inside a // comment
+Rule 4.1 Required
+Octal or hexadecimal escape sequence runs into the following characters
+Rule 4.2 Advisory
+Trigraph
+Rule 5.1 Required
+External identifiers not distinct
+Rule 5.2 Required
+Identifiers of one scope and name space not distinct
+Rule 5.3 Required
+Identifier hides one of an enclosing scope
+Rule 5.4 Required
+Macro names not distinct
+Rule 5.5 Required
+Identifier has the name of a macro
+Rule 5.6 Required
+Name of a typedef used for something else as well
+Rule 5.7 Required
+Tag name used for something else as well
+Rule 5.8 Required
+Name of an object or function with external linkage used for something else as well
+Rule 5.9 Advisory
+Name of an object or function with internal linkage used for something else as well
+Rule 6.1 Required
+Bit-field of an unsuitable type
+Rule 6.2 Required
+Signed bit-field of one bit
+Rule 7.1 Required
+Octal constant
+Rule 7.2 Required
+Unsigned integer constant without a u or U suffix
+Rule 7.3 Required
+Lower-case l in a literal suffix
+Rule 7.4 Required
+String literal assigned to a pointer that is not to const char
+Rule 8.1 Required
+Type not stated explicitly
+Rule 8.2 Required
+Function type not a prototype with named parameters
+Rule 8.3 Required
+Declarations of one object or function differ in names or type qualifiers
+Rule 8.4 Required
+Object or function with external linkage defined without a visible declaration
+Rule 8.5 Required
+External object or function declared in more than one place
+Rule 8.6 Required
+More than one external definition, or none, for an identifier with external linkage
+Rule 8.7 Advisory
+External linkage for something that only one translation unit refers to
+Rule 8.8 Required
+Declaration of an object or function with internal linkage lacks static
+Rule 8.9 Advisory
+Object used by one function only is not defined inside it
+Rule 8.10 Required
+Inline function not declared static
+Rule 8.11 Advisory
+Extern array declared without its size
+Rule 8.12 Required
+Implicit enumerator value repeats another enumerator's value
+Rule 8.13 Advisory
+Pointer could point to a const-qualified type
+Rule 8.14 Required
+Use of the restrict qualifier
+Rule 9.1 Mandatory
+Automatic object read before it is set
+Rule 9.2 Required
+Initializer of an aggregate or union without its braces
+Rule 9.3 Required
+Array initialised only in part
+Rule 9.4 Required
+Element initialised more than once
+Rule 9.5 Required
+Designated initializers for an array whose size is not stated
+Rule 10.1 Required
+Operand of an unsuitable essential type for the operator
+Rule 10.2 Required
+Character operand in an addition or subtraction that makes no sense for characters
+Rule 10.3 Required
+Value assigned to a narrower essential type or to another essential type category
+Rule 10.4 Required
+Operands of an arithmetic conversion differ in essential type category (signed with unsigned, ...)
+Rule 10.5 Advisory
+Cast to an unsuitable essential type
+Rule 10.6 Required
+Composite expression assigned to a wider essential type
+Rule 10.7 Required
+Composite expression operand narrower than the other operand
+Rule 10.8 Required
+Composite expression cast to a wider essential type or another essential type category
+Rule 11.1 Required
+Conversion between a function pointer and another type
+Rule 11.2 Required
+Conversion between a pointer to an incomplete type and another type
+Rule 11.3 Required
+Cast between pointers to different object types
+Rule 11.4 Advisory
+Conversion between an object pointer and an integer
+Rule 11.5 Advisory
+Conversion from pointer to void to an object pointer
+Rule 11.6 Required
+Cast between pointer to void and an arithmetic type
+Rule 11.7 Required
+Cast between an object pointer and a non-integer arithmetic type
+Rule 11.8 Required
+Cast removes const or volatile from the pointed-to type
+Rule 11.9 Required
+Integer null pointer constant other than NULL
+Rule 12.1 Advisory
+Operator precedence left implicit: parentheses wanted
+Rule 12.2 Required
+Shift count negative or not smaller than the width of the left operand's essential type
+Rule 12.3 Advisory
+Comma operator
+Rule 12.4 Advisory
+Constant expression wraps around as unsigned
+Rule 12.5 Mandatory
+Operand of sizeof is a parameter declared as an array
+Rule 13.1 Required
+Initializer list with persistent side effects
+Rule 13.2 Required
+Value or side effects depend on the order of evaluation
+Rule 13.3 Advisory
+Increment or decrement in an expression that has another side effect
+Rule 13.4 Advisory
+Result of an assignment used
+Rule 13.5 Required
+Right-hand operand of && or || has persistent side effects
+Rule 13.6 Mandatory
+Operand of sizeof with potential side effects
+Rule 14.1 Required
+Floating-point loop counter
+Rule 14.2 Required
+A for loop not in the well-formed shape (one counter, set, tested and stepped in the three clauses only)
+Rule 14.3 Required
+Controlling expression never changes
+Rule 14.4 Required
+Controlling expression of if or of a loop is not essentially Boolean
+Rule 15.1 Advisory
+Use of goto
+Rule 15.2 Required
+Backward goto
+Rule 15.3 Required
+Jump by goto into a block it is not in
+Rule 15.4 Advisory
+More than one break or goto leaves the loop
+Rule 15.5 Advisory
+Function has more than one point of exit
+Rule 15.6 Required
+Body of a loop or selection statement is not a compound statement
+Rule 15.7 Required
+An if ... else if chain without a final else
+Rule 16.1 Required
+Switch statement not well-formed
+Rule 16.2 Required
+Switch label nested deeper than the switch body
+Rule 16.3 Required
+Switch clause does not end in an unconditional break
+Rule 16.4 Required
+Switch without a default label
+Rule 16.5 Required
+Default label neither first nor last
+Rule 16.6 Required
+Switch with fewer than two clauses
+Rule 16.7 Required
+Switch on an essentially Boolean expression
+Rule 17.1 Required
+Feature of <stdarg.h>
+Rule 17.2 Required
+Recursion, direct or indirect
+Rule 17.3 Mandatory
+Function called without a declaration
+Rule 17.4 Mandatory
+Exit path of a non-void function without an explicit return value
+Rule 17.5 Advisory
+Array argument too small for the parameter's declared array size
+Rule 17.6 Mandatory
+Keyword static inside the [] of an array parameter
+Rule 17.7 Required
+Return value of a non-void function not used
+Rule 17.8 Advisory
+Function parameter modified
+Rule 18.1 Required
+Pointer arithmetic leaves the array the pointer points into
+Rule 18.2 Required
+Subtraction of pointers into different arrays
+Rule 18.3 Required
+Relational comparison (<, <=, >, >=) of pointers into different objects
+Rule 18.4 Advisory
+Pointer arithmetic with +, -, += or -=
+Rule 18.5 Advisory
+More than two levels of pointer nesting
+Rule 18.6 Required
+Address of an automatic object kept beyond its lifetime
+Rule 18.7 Required
+Flexible array member
+Rule 18.8 Required
+Variable-length array
+Rule 19.1 Mandatory
+Object assigned or copied to an overlapping object
+Rule 19.2 Advisory
+Use of a union
+Rule 20.1 Advisory
+#include after code
+Rule 20.2 Required
+Quote, backslash or comment characters in a header file name
+Rule 20.3 Required
+#include not followed by <file> or "file"
+Rule 20.4 Required
+Macro named like a keyword
+Rule 20.5 Advisory
+#undef
+Rule 20.6 Required
+Macro argument looks like a preprocessing directive
+Rule 20.7 Required
+Macro parameter expands to an expression without parentheses around it
+Rule 20.8 Required
+#if or #elif condition evaluates to something other than 0 or 1
+Rule 20.9 Required
+Identifier in an #if or #elif condition is not defined
+Rule 20.10 Advisory
+Use of the # or ## operator
+Rule 20.11 Required
+Macro parameter after # is followed directly by ##
+Rule 20.12 Required
+Macro parameter used both as an operand of # or ## and in normal replacement
+Rule 20.13 Required
+Line starting with # is not a valid preprocessing directive
+Rule 20.14 Required
+#else, #elif or #endif in another file than its #if
+Rule 21.1 Required
+#define or #undef of a reserved identifier or reserved macro name
+Rule 21.2 Required
+Declaration of a reserved identifier or macro name
+Rule 21.3 Required
+Memory allocation function of <stdlib.h> (malloc, calloc, realloc, free)
+Rule 21.4 Required
+Use of <setjmp.h>
+Rule 21.5 Required
+Use of <signal.h>
+Rule 21.6 Required
+Standard library input/output function
+Rule 21.7 Required
+Use of atof, atoi, atol or atoll
+Rule 21.8 Required
+Use of abort, exit, getenv or system
+Rule 21.9 Required
+Use of bsearch or qsort
+Rule 21.10 Required
+Standard library time or date function
+Rule 21.11 Required
+Use of <tgmath.h>
+Rule 21.12 Advisory
+Exception handling feature of <fenv.h>
+Rule 21.13 Mandatory
+Function of <ctype.h> called with a value that is neither an unsigned char nor EOF
+Rule 21.14 Required
+Use of memcmp to compare null-terminated strings
+Rule 21.15 Required
+Pointer arguments of memcpy, memmove or memcmp are of incompatible types
+Rule 21.16 Required
+Use of memcmp on a type it cannot compare reliably (struct, union, float, char array as string, ...)
+Rule 21.17 Mandatory
+Function of <string.h> may access beyond the bounds of its arguments
+Rule 21.18 Mandatory
+The size_t argument of a <string.h> function has an unsuitable value
+Rule 21.19 Mandatory
+Result of localeconv, getenv, setlocale or strerror used as a pointer to non-const
+Rule 21.20 Mandatory
+Result of asctime, ctime, gmtime, localtime, localeconv, getenv, setlocale or strerror used after another such call
+Rule 21.21 Required
+Use of the system function of <stdlib.h>
+Rule 22.1 Required
+Resource obtained from the standard library never released
+Rule 22.2 Mandatory
+Memory freed that the standard library did not allocate
+Rule 22.3 Required
+One file open for reading and for writing on different streams
+Rule 22.4 Mandatory
+Write to a stream opened read-only
+Rule 22.5 Mandatory
+Pointer to FILE dereferenced
+Rule 22.6 Mandatory
+Pointer to FILE used after the stream was closed
+Rule 22.7 Required
+EOF compared with something other than the unmodified result of a function that can return it
+Rule 22.8 Required
+No errno = 0 before a call that sets errno
+Rule 22.9 Required
+No test of errno after a call that sets errno
+Rule 22.10 Required
+Test of errno although the last call does not set it

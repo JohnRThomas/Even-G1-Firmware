@@ -78,6 +78,22 @@ python3 tests/reg/check_packets.py      # the packet buffers are what their gene
 ```
 The screens a test expects have names (tests/reg/g1/frames.txt); tests/reg/g1/frames holds a picture of each name that has been taken so far (`python3 tests/reg/frames.py` lists the ones still missing and takes them from kept runs).
 
+### Static Analysis
+
+Three analysers run over the firmware's own sources (src/ and net_core/src/). They take the compiler flags from an existing build (`build/`, or the directory `G1_BUILD_DIR` names), check every source when none is named, and exit with 1 if anything is reported.
+
+```sh
+scripts/clang_tidy.py src/main.c      # clang-tidy with the checks of .clang-tidy
+scripts/gcc_analyzer.py               # GCC's -fanalyzer, with the cross compiler of the build
+scripts/cppcheck.py                   # cppcheck: defects only
+scripts/cppcheck.py --style           #   ... and style findings
+scripts/cppcheck.py --misra           #   ... and the MISRA C:2012 rules (about 5 minutes)
+```
+
+cppcheck is not part of the nRF Connect SDK toolchain: install it from your distribution (2.22 was used here) or point `CPPCHECK` at its binary.
+
+The firmware does not claim MISRA compliance. The rules it does not follow, and the ones cppcheck cannot check in this setup, are listed with their reasons in scripts/misra_deviations.txt; the others are kept clean. The message of a MISRA finding is a one-line reminder from scripts/misra_rules.txt, not the text of the guideline.
+
 ## Contributing
 
 Contributions are welcome via pull request. Pull requests may be rejected if they do not pass clang tidy and a static analysis run. Please test your change in the simulator before opening the pull request.

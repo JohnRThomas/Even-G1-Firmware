@@ -51,7 +51,7 @@ int upgradeAppLanguageInfoToFlash(uint8_t language) {
     .value = language,
   };
 
-  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("setting flash store queue fill failed\r\n\n");
     return -1;
   }
@@ -65,7 +65,7 @@ int cleanAppLanguageInfo(void) {
     .cmd = SETTING_CMD_LANGUAGE_CLEAN,
   };
 
-  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("setting flash store queue fill failed\r\n\n");
     return -1;
   }
@@ -81,7 +81,7 @@ int upgradeDashboardStartupModeInfoToFlash(uint8_t mode) {
     .value = mode,
   };
 
-  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("setting flash store queue fill failed\r\n\n");
     return -1;
   }
@@ -95,7 +95,7 @@ int cleanDashBoardStartUpModeInfo(void) {
     .cmd = SETTING_CMD_STARTUP_MODE_CLEAN,
   };
 
-  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&setting_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("setting flash store queue fill failed\r\n\n");
     return -1;
   }
@@ -105,7 +105,7 @@ int cleanDashBoardStartUpModeInfo(void) {
 }
 
 int upgradeDoubleTapCustomizeToFlash(uint32_t mode) {
-  if (mode > 5) {
+  if (mode > 5U) {
     G1_LOG_ERR("Err:double_tap_customize is out of range!\n");
     return -1;
   }
@@ -125,7 +125,7 @@ int upgradeDoubleTapCustomizeToFlash(uint32_t mode) {
 }
 
 int upgradeLongpressTapCustomizeToFlash(uint32_t mode) {
-  if (mode > 1) {
+  if (mode > 1U) {
     G1_LOG_ERR("Err:longpress_tap_customize is out of range!\n");
     return -1;
   }
@@ -145,11 +145,11 @@ uint8_t getAppLanguageInfofromFlash(void) {
     return 0xff;
   }
   memset(&rec, 0, sizeof(rec));
-  if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec))) {
+  if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec)) != 0) {
     G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
     return 0;
   }
-  if (rec.magic == SETTING_MAGIC && rec.language != 0xff) {
+  if ((rec.magic == SETTING_MAGIC) && (rec.language != 0xff)) {
     CURRENT_LANGUAGE.language = rec.language;
   } else {
     CURRENT_LANGUAGE.language = 2;
@@ -166,11 +166,11 @@ uint8_t getDashboardStartUpModeInfofromFlash(void) {
     return 0xff;
   }
   memset(&rec, 0, sizeof(rec));
-  if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec))) {
+  if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec)) != 0) {
     G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
     return 0;
   }
-  if (rec.magic == SETTING_MAGIC && rec.startup_mode != 0xff) {
+  if ((rec.magic == SETTING_MAGIC) && (rec.startup_mode != 0xff)) {
     CURRENT_LANGUAGE.startup_mode = rec.startup_mode;
   } else {
     CURRENT_LANGUAGE.startup_mode = 0;
@@ -195,7 +195,7 @@ static int getSettingStorageQueueCacheData(struct setting_msg *msg) {
   int ret;
 
   ret = k_msgq_get(&setting_msgq, msg, K_NO_WAIT);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG_ERR("setting storage queue get failed\r\n\n");
   }
   return ret;
@@ -209,7 +209,7 @@ int SettingStoreHandler(void) {
   int ret;
 
   ret = getSettingStorageQueueCacheData(&msg);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG_ERR("setting storage get queue data failed\n");
     return -1;
   }
@@ -218,7 +218,7 @@ int SettingStoreHandler(void) {
     case SETTING_CMD_LANGUAGE:
       value = msg.value;
       G1_LOG_INF("start setting  parameter check. language type = %d\n", value);
-      if (value < 1 || value > 25) {
+      if ((value < 1) || (value > 25)) {
         G1_LOG_ERR("Setting Task received error language parameters.\n");
         ret = -1;
         break;
@@ -234,7 +234,7 @@ int SettingStoreHandler(void) {
         break;
       }
       memset(&rec, 0, sizeof(rec));
-      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec))) {
+      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec)) != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;
@@ -242,18 +242,18 @@ int SettingStoreHandler(void) {
       rec.magic = SETTING_MAGIC;
       rec.language = value;
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), SETTING_FLASH_ADDR, 0x1000);
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
         break;
       }
       ret = get_dashboard_state()->flash_write(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR("Flash write failed! %d\n\n", ret);
         break;
       }
       memset(&rec, 0, sizeof(rec));
       ret = get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;
@@ -268,7 +268,7 @@ int SettingStoreHandler(void) {
         break;
       }
       memset(&rec, 0, sizeof(rec));
-      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec))) {
+      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec)) != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;
@@ -276,18 +276,18 @@ int SettingStoreHandler(void) {
       rec.magic = SETTING_MAGIC;
       rec.language = 2;
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), SETTING_FLASH_ADDR, 0x1000);
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
         break;
       }
       ret = get_dashboard_state()->flash_write(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR("Flash write failed! %d\n\n", ret);
         break;
       }
       memset(&rec, 0, sizeof(rec));
       ret = get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;
@@ -314,7 +314,7 @@ int SettingStoreHandler(void) {
         break;
       }
       memset(&rec, 0, sizeof(rec));
-      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec))) {
+      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec)) != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;
@@ -322,25 +322,25 @@ int SettingStoreHandler(void) {
       rec.magic = SETTING_MAGIC;
       rec.startup_mode = value;
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), SETTING_FLASH_ADDR, 0x1000);
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
         break;
       }
       ret = get_dashboard_state()->flash_write(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR("Flash write failed! %d\n\n", ret);
         break;
       }
       memset(&rec, 0, sizeof(rec));
       ret = get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;
       }
       CURRENT_LANGUAGE.startup_mode = rec.startup_mode;
       G1_LOG_INF("startup mode  infomation  %d store sucess\n", CURRENT_LANGUAGE.startup_mode);
-      if (CURRENT_LANGUAGE.startup_mode == 0 && get_dashboard_state()->double_tap_customize == 4) {
+      if ((CURRENT_LANGUAGE.startup_mode == 0) && (get_dashboard_state()->double_tap_customize == 4)) {
         upgradeDoubleTapCustomizeToFlash(0);
       }
       break;
@@ -351,7 +351,7 @@ int SettingStoreHandler(void) {
         break;
       }
       memset(&rec, 0, sizeof(rec));
-      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec))) {
+      if (get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec)) != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;
@@ -359,18 +359,18 @@ int SettingStoreHandler(void) {
       rec.magic = SETTING_MAGIC;
       rec.startup_mode = 0;
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), SETTING_FLASH_ADDR, 0x1000);
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
         break;
       }
       ret = get_dashboard_state()->flash_write(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR("Flash write failed! %d\n\n", ret);
         break;
       }
       memset(&rec, 0, sizeof(rec));
       ret = get_dashboard_state()->flash_read(get_dashboard_state(), SETTING_FLASH_ADDR, &rec, sizeof(rec));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", SETTING_FLASH_ADDR);
         ret = -1;
         break;

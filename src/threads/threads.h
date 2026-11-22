@@ -37,8 +37,8 @@ uint8_t get_wearing_state(void);
 uint8_t get_wear_state_event(void);
 uint8_t get_glasses_ble_status(void);
 const struct device *get_charger_device(void);
-int sync_to_slave(struct GlassesState *state, int cmd, void *data, size_t len);
-unsigned int sync_to_master(struct GlassesState *state, int cmd, void *data, size_t len);
+int sync_to_slave(struct GlassesState *state, int cmd, const void *data, size_t len);
+unsigned int sync_to_master(struct GlassesState *state, int cmd, const void *data, size_t len);
 void report_event_to_phone(int cmd);
 void exit_running_task_keep_status(struct GlassesState *state, int notify);
 void exit_temp_task(struct GlassesState *state, int flag);
@@ -65,14 +65,14 @@ int master_process_put_req(struct GlassesState *state, struct ble_req *head, uin
 /* system_state.c */
 int trigger_screen_state_change(const char *who, struct GlassesState *state, uint8_t on);
 int set_imu_on_state(struct GlassesState *state, uint32_t on);
-int trigger_imu_state_change(void *dev, struct GlassesState *state, bool on);
+int trigger_imu_state_change(const void *dev, struct GlassesState *state, bool on);
 int global_system_suspend(struct GlassesState *state);
 int global_system_resume(struct GlassesState *state);
 
 /* task_status.c */
 extern uint8_t task_status_lock;
 uint8_t is_persist_task_active(struct GlassesState *state, int mode);
-int is_task_running(struct GlassesState *state);
+int is_task_running(const struct GlassesState *state);
 int update_persist_task_status(struct GlassesState *state, int task, int status);
 int update_temp_task_status(struct GlassesState *state, int task, int status);
 int update_persist_task_status_to_idle(struct GlassesState *state);

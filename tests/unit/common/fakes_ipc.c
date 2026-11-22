@@ -5,12 +5,12 @@
 
 #include "threads/threads.h"
 
-DEFINE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, int, void *, size_t);
-DEFINE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, int, void *, size_t);
+DEFINE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, int, const void *, size_t);
+DEFINE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, int, const void *, size_t);
 
 struct g1_pkt_log g1_sync_to_slave_log;
 
-static int sync_to_slave_default(struct GlassesState *state, int cmd, void *data, size_t len) {
+static int sync_to_slave_default(struct GlassesState *state, int cmd, const void *data, size_t len) {
   sync_to_slave_Fake *fake = &sync_to_slave_fake;
 
   ARG_UNUSED(state);

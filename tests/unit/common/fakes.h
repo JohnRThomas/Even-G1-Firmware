@@ -78,8 +78,8 @@ DECLARE_FAKE_VALUE_FUNC(int, g1_fake_ipc_send, const void *, size_t);
  * ipc: sync_to_slave() logs the data and returns the ack wait in ms (0 = at once; >= 3000 counts
  * as failed).
  */
-DECLARE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, int, void *, size_t);
-DECLARE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, int, void *, size_t);
+DECLARE_FAKE_VALUE_FUNC(int, sync_to_slave, struct GlassesState *, int, const void *, size_t);
+DECLARE_FAKE_VALUE_FUNC(unsigned int, sync_to_master, struct GlassesState *, int, const void *, size_t);
 extern struct g1_pkt_log g1_sync_to_slave_log;
 
 /* misc: production test, threads, main.c, sensors and panel */
@@ -89,7 +89,7 @@ DECLARE_FAKE_VALUE_FUNC(uint8_t, get_pt_test_mode);
 DECLARE_FAKE_VOID_FUNC(set_test_mode, uint8_t);
 DECLARE_FAKE_VOID_FUNC(system_reboot_delayed);
 DECLARE_FAKE_VALUE_FUNC(uint8_t, get_wear_state_event);
-DECLARE_FAKE_VALUE_FUNC(int, trigger_imu_state_change, void *, struct GlassesState *, bool);
+DECLARE_FAKE_VALUE_FUNC(int, trigger_imu_state_change, const void *, struct GlassesState *, bool);
 DECLARE_FAKE_VOID_FUNC(report_event_to_phone, int);
 DECLARE_FAKE_VALUE_FUNC(uint8_t, get_dashboard_startup_mode);
 DECLARE_FAKE_VALUE_FUNC(uint8_t, cur_message_show_state);

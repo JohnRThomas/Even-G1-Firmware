@@ -129,8 +129,10 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
             if (dmic_get_stop_state() == 1) {
               request_dmic_stream_start();
             }
-          } else if (atomic_get(&audio_stream_recording) != 1 || dmic_get_stop_state() == 1) {
+          } else if ((atomic_get(&audio_stream_recording) != 1) || (dmic_get_stop_state() == 1)) {
             dmic_record_start();
+          } else {
+            /* nothing to do */
           }
         }
       } else if (event == UI_EVT_EXIT) {
@@ -146,6 +148,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
         get_dashboard_state()->quicknote_show_info->enable = 0;
         memset(qn, 0, sizeof(*qn));
         quicknote_result_shown = 0;
+      } else {
+        /* nothing to do */
       }
       break;
 
@@ -172,7 +176,7 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
                              gui_screen_x_offset() + 0x1dc, gui_screen_y_offset() + 0x88, 5, 0, 0, NULL, 0);
               }
             }
-          } else if (status == 10 && quicknote_result_shown == 0) {
+          } else if ((status == 10) && (quicknote_result_shown == 0)) {
             quicknote_result_shown = 1;
             gui_screen_clear();
             qn->ts = k_uptime_get();
@@ -208,13 +212,16 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
               default:
                 break;
             }
+          } else {
+            /* nothing to do */
           }
         }
-        if ((event == UI_EVT_ENTER || event == UI_EVT_REFRESH) && (gs->ui.qn.status == 7 || gs->ui.qn.status == 8)) {
+        if (((event == UI_EVT_ENTER) || (event == UI_EVT_REFRESH)) &&
+            ((gs->ui.qn.status == 7) || (gs->ui.qn.status == 8))) {
           gui_bmp_dynamic_bitmap_draw(1, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0, 0);
         }
       }
-      if (quicknote_result_shown != 0 && qn->ts + 3999 < k_uptime_get()) {
+      if ((quicknote_result_shown != 0) && ((qn->ts + 3999) < k_uptime_get())) {
         get_dashboard_state()->quicknote_show_info->enable = 0;
       }
       if (event == UI_EVT_EXIT) {
@@ -246,6 +253,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
         quicknote_result_shown = 0;
         gui_dynamic_bitmap_reset();
         G1_LOG_INF("exec even logo reflash....\n");
+      } else {
+        /* nothing to do */
       }
       break;
 
@@ -267,13 +276,13 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
       } else {
         int64_t now = k_uptime_get();
 
-        if (qn->ts + qn->exit_delay < now) {
+        if ((qn->ts + qn->exit_delay) < now) {
           G1_LOG_INF("quick note function exit -164 ...\n");
           gui_screen_fade_out();
           get_dashboard_state()->quicknote_show_info->enable = 0;
           memset(qn, 0, sizeof(*qn));
           quicknote_result_shown = 0;
-        } else if (qn->ts + qn->exit_delay - exit_display_ms < now) {
+        } else if ((qn->ts + qn->exit_delay - exit_display_ms) < now) {
           if (quicknote_result_shown == 0) {
             G1_LOG_INF("exec quick note exit display...\n");
             gui_screen_clear();
@@ -286,6 +295,8 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
           gui_bmp_dynamic_bitmap_draw(9, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0, 0);
           gui_utf_draw_darkword_by_lines(0, gs->ui.qn.text, 0, gui_screen_x_offset() + 100, gui_screen_y_offset(),
                                          gui_screen_x_offset() + 0x1dc, gui_screen_y_offset() + 0x88, 5, 5, 0, NULL, 0);
+        } else {
+          /* nothing to do */
         }
       }
       break;
@@ -298,11 +309,16 @@ int ui_QuickNote_task(struct jbd_panel_context *panel, void *arg, int event) {
 
 /* day of the week (0 = Sunday), Zeller-like congruence */
 int day_of_week(int year, int month, int day) {
-  if (month == 1 || month == 2) {
-    month += 12;
-    year--;
+  int adj_year = year;
+  int adj_month = month;
+
+  if ((month == 1) || (month == 2)) {
+    adj_month += 12;
+    adj_year--;
   }
-  return (day + 2 * month + 3 * (month + 1) / 5 + year + year / 4 - year / 100 + year / 400 + 1) % 7;
+  return (day + (2 * adj_month) + 3 * (adj_month + 1) / 5 + adj_year + (adj_year / 4) - (adj_year / 100) +
+          (adj_year / 400) + 1) %
+         7;
 }
 
 void draw_countdown_running_status(uint8_t **fb, void *arg, int a, int b, int c) {

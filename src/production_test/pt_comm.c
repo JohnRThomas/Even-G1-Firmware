@@ -10,8 +10,8 @@
 #include "../nfc/st25dv.h"
 #include "production_test.h"
 
-int comm_write(int type, void *ctx, uint8_t *data, size_t len) {
-  if (ctx == NULL || data == NULL || len == 0 || type == PT_COMM_NONE) {
+int comm_write(int type, const void *ctx, const uint8_t *data, size_t len) {
+  if ((ctx == NULL) || (data == NULL) || (len == 0U) || (type == PT_COMM_NONE)) {
     printk("comm_write para is error\n");
     return -1;
   }
@@ -28,8 +28,8 @@ int comm_write(int type, void *ctx, uint8_t *data, size_t len) {
   return 0;
 }
 
-int comm_read(int type, void *ctx, uint8_t **data, uint32_t *len) {
-  if (ctx == NULL || data == NULL || len == NULL || type == PT_COMM_NONE) {
+int comm_read(int type, const void *ctx, uint8_t **data, uint32_t *len) {
+  if ((ctx == NULL) || (data == NULL) || (len == NULL) || (type == PT_COMM_NONE)) {
     return -1;
   }
 

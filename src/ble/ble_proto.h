@@ -141,7 +141,7 @@ int ble_process_req_dispatch(struct ble_context *ctx, struct ble_req_hdr *hdr, u
 int start_ble_work_thread(struct ble_context *ctx);
 int send_dmic_msg(struct ble_context *ctx);
 int send_debug_msg(struct ble_context *ctx);
-int deal_event_to_phone(struct ble_context *ctx, uint8_t *evt);
+int deal_event_to_phone(struct ble_context *ctx, const uint8_t *evt);
 typedef void (*ble_send_fn_t)(uint8_t *buf, uint32_t len);
 int subcontracing_send_data_pkcs7(const uint8_t *data, int len, uint8_t cmd, ble_send_fn_t send);
 void ble_handle_rx_data(uint8_t *data, uint32_t len, int dump);

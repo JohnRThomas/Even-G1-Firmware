@@ -19,9 +19,16 @@
 #include "whitelist.h"
 
 static char ios_mail_list[10][32] = {
-  "com.apple.mail",      "com.google.Gmail",         "com.microsoft.Office.Outlook",
-  "com.yahoo.Aerogram",  "ch.protonmail.protonmail", "com.easilydo.mail",
-  "Mailroom.Canary-iOS", "com.fastmail.FastMail",    "com.apple.samsung",
+  "com.apple.mail",
+  "com.google.Gmail",
+  "com.microsoft.Office.Outlook",
+  "com.yahoo.Aerogram",
+  "ch.protonmail.protonmail",
+  "com.easilydo.mail",
+  "Mailroom.Canary-iOS",
+  "com.fastmail.FastMail",
+  "com.apple.samsung",
+  "",
 };
 static char android_mail_list[10][32] = {
   "com.google.mail",
@@ -33,17 +40,16 @@ static char android_mail_list[10][32] = {
   "io.canarymail.android",
   "com.fastmail.app",
   "com.samsung.android.email.provid", /* truncated to 32 */
+  "",
 };
 static char ios_calendar_list[4][32] = {
   "com.apple.mobilecal",
   "com.cron.calendar",
   "com.google.calendar",
+  "",
 };
 static char android_calendar_list[5][32] = {
-  "com.android.even_calendar",
-  "com.google.android.calendar",
-  "com.samsung.android.calendar",
-  "com.cron.calendar",
+  "com.android.even_calendar", "com.google.android.calendar", "com.samsung.android.calendar", "com.cron.calendar", "",
 };
 
 struct notif_msg g_arrMsgContent[MSG_TOTAL_NUM];
@@ -61,7 +67,6 @@ static int send_notifi_app_white_list_app(struct ble_context *ctx, const char *a
   uint8_t total;
   uint8_t i;
   uint8_t retry;
-  uint8_t n;
   uint8_t last;
 
   memset(json, 0, sizeof(json));
@@ -80,7 +85,8 @@ static int send_notifi_app_white_list_app(struct ble_context *ctx, const char *a
   while (i < total) {
     memset(&pkt[3], 0, 18);
     pkt[0] = 0xf6;
-    n = (i < total - 1) ? 17 : last;
+    uint8_t n = (i < (total - 1)) ? 17 : last;
+
     pkt[1] = total;
     pkt[2] = i;
     memcpy(&pkt[3], &json[i * 17], n);
@@ -122,9 +128,8 @@ void send_whilelist_app_info_wrapper(struct notif_msg *msg) {
 int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, const uint8_t *src, uint8_t *hdr,
                                    const uint8_t *arg, uint8_t *out, uint32_t len) {
   ARG_UNUSED(len);
-  struct notif_msg *msg;
 
-  if (state == NULL || data == NULL || src == NULL || hdr == NULL || arg == NULL || out == NULL) {
+  if ((state == NULL) || (data == NULL) || (src == NULL) || (hdr == NULL) || (arg == NULL) || (out == NULL)) {
     G1_LOG_WRN("input parm invalid !\n");
     return 0;
   }
@@ -143,16 +148,19 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, co
       G1_LOG_ERR("[%s-%d] invliad  message len, data_len is %d\n\n", __FUNCTION__, __LINE__, *(uint16_t *)&hdr[2]);
       return 0;
     }
-    msg = (struct notif_msg *)(data + 4);
-    if (msg->action > 1) {
+    struct notif_msg *msg = (struct notif_msg *)(data + 4);
+
+    if (msg->action > 1U) {
       push_message(msg);
     } else {
       uint8_t ret = is_on_whitelist_by_identifier(msg->app_identifier);
 
-      if (ret == 2 || ret == 3) {
+      if ((ret == 2) || (ret == 3)) {
         push_message(msg);
       } else if (ret == 1) {
         send_whilelist_app_info_wrapper(msg);
+      } else {
+        /* nothing to do */
       }
     }
   }
@@ -160,18 +168,19 @@ int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, co
     G1_LOG_INF("ble:ANCS通知界面来新消息处理逻辑.\n");
   } else if (src[1] == 6) {
     G1_LOG_INF("ble:dashboard界面来新消息处理逻辑.\n");
+  } else {
+    /* nothing to do */
   }
   memcpy(out, "Good", 5);
   return 5;
 }
 
-void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, uint8_t *data) {
+void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, const uint8_t *data) {
   uint8_t resp[128];
   uint8_t *tx;
   struct notif_msg *msg;
-  int ret;
 
-  if (ctx == NULL || req == NULL || data == NULL) {
+  if ((ctx == NULL) || (req == NULL) || (data == NULL)) {
     G1_LOG_WRN("input param invalid !\n");
     return;
   }
@@ -183,7 +192,7 @@ void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, 
   tx[0] = req[0];
   tx[1] = req[1];
   ctx->tx_len = *(uint16_t *)&tx[2] + 4;
-  if (tx[1] == 2 || tx[1] == 4) {
+  if ((tx[1] == 2) || (tx[1] == 4)) {
     *(uint16_t *)&tx[2] = sizeof(struct notif_msg);
     memcpy(msg, data, sizeof(struct notif_msg));
     G1_LOG_INF("ANCS接收完成,封装头和数据,即将发送给master芯片,source:%d\n\n", tx[1]);
@@ -199,7 +208,8 @@ void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, 
     }
   }
   if (ncs_buf != NULL) {
-    ret = parse_receiver_msg_pack_pkcs7((uint8_t *)ncs_buf, data, tx[2]);
+    int ret = parse_receiver_msg_pack_pkcs7((uint8_t *)ncs_buf, data, tx[2]);
+
     rsp[1] = ret;
     rsp[2] = data[1];
     if (ret == PKCS7_PACK_DONE) {
@@ -218,8 +228,8 @@ void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, 
   ctx->write(rsp, 0x14);
 }
 
-int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *out) {
-  if (state == NULL || out == NULL) {
+int get_notification_counts_cmd_response(const struct GlassesState *state, uint8_t *out) {
+  if ((state == NULL) || (out == NULL)) {
     G1_LOG_WRN("input param is error !\n");
     return 0;
   }
@@ -253,7 +263,7 @@ static void push_g_arrMsgContent(void) {
 struct notif_msg *get_push_message_copy(void) {
   struct notif_msg *m = &g_arrMsgContent[MSG_NORMAL_NUM];
 
-  if (m->app_identifier[0] == 0) {
+  if (m->app_identifier[0] == '\0') {
     return NULL;
   }
   if (m->busy != 0) {
@@ -270,7 +280,7 @@ struct notif_msg *get_push_message_copy(void) {
 struct notif_msg *get_push_message(void) {
   struct notif_msg *m = &g_arrMsgContent[MSG_NORMAL_NUM];
 
-  if (m->app_identifier[0] == 0) {
+  if (m->app_identifier[0] == '\0') {
     return NULL;
   }
   if (m->busy != 0) {
@@ -293,7 +303,7 @@ uint8_t get_msg_sync_state(int idx) {
 
 struct notif_msg *find_push_message_by_uid(uint32_t uid) {
   for (int i = MSG_NORMAL_NUM; i < MSG_TOTAL_NUM; i++) {
-    if (g_arrMsgContent[i].app_identifier[0] && g_arrMsgContent[i].busy == 0 && g_arrMsgContent[i].uid == uid) {
+    if (g_arrMsgContent[i].app_identifier[0] && (g_arrMsgContent[i].busy == 0) && (g_arrMsgContent[i].uid == uid)) {
       return &g_arrMsgContent[i];
     }
   }
@@ -334,7 +344,7 @@ uint8_t count_messages(void) {
   uint8_t i;
 
   for (i = 0; i < MSG_NORMAL_NUM; i++) {
-    if (g_arrMsgContent[i].app_identifier[0] == 0) {
+    if (g_arrMsgContent[i].app_identifier[0] == '\0') {
       break;
     }
   }
@@ -347,7 +357,7 @@ uint8_t count_unread_messages(void) {
   uint8_t count;
 
   for (count = 0; count < MSG_NORMAL_NUM; count++) {
-    if (g_arrMsgContent[count].app_identifier[0] == 0) {
+    if (g_arrMsgContent[count].app_identifier[0] == '\0') {
       break;
     }
     if (g_arrMsgContent[count].read) {
@@ -381,18 +391,20 @@ void clear_timeout_message(int force) {
     uint32_t show = m->start_show_time;
     int j;
 
-    if (recv != 0) {
+    if (recv != 0U) {
       has_msg = true;
-    } else if (has_msg && offset == 0) {
+    } else if (has_msg && (offset == 0)) {
       offset = 1;
+    } else {
+      /* nothing to do */
     }
-    if (show != 0) {
+    if (show != 0U) {
       bool expired;
 
       if (m->read) {
-        expired = force || get_date() > m->start_show_time + get_dashboard_state()->message_stay_time;
+        expired = force || get_date() > (m->start_show_time + get_dashboard_state()->message_stay_time);
       } else {
-        expired = recv != 0 && get_date() > m->start_show_time + 5;
+        expired = (recv != 0U) && (get_date() > (m->start_show_time + 5U));
       }
       if (expired) {
         memset(m, 0, sizeof(*m));
@@ -400,12 +412,12 @@ void clear_timeout_message(int force) {
       }
     }
     j = i + offset;
-    if (j > MSG_NORMAL_NUM - 1) {
+    if (j > (MSG_NORMAL_NUM - 1)) {
       break;
     }
-    if (m->recv_time != 0 || offset == 0) {
+    if ((m->recv_time != 0U) || (offset == 0)) {
       i++;
-    } else if (g_arrMsgContent[j].app_identifier[0]) {
+    } else if (g_arrMsgContent[j].app_identifier[0] != '\0') {
       memcpy(m, &g_arrMsgContent[j], sizeof(struct notif_msg));
       memset(&g_arrMsgContent[j], 0, sizeof(struct notif_msg));
       G1_LOG_ERR("######clear_timeout_message copy data from %d to  i %d\n", j, i);
@@ -420,7 +432,7 @@ void clear_timeout_message(int force) {
 
 static int message_uid_exists(uint8_t num, uint32_t uid) {
   for (uint8_t i = 0; i < num; i++) {
-    if (g_arrMsgContent[i].app_identifier[0] && g_arrMsgContent[i].uid == uid) {
+    if (g_arrMsgContent[i].app_identifier[0] && (g_arrMsgContent[i].uid == uid)) {
       return 1;
     }
   }
@@ -434,11 +446,11 @@ void confirm_message(uint32_t uid) {
   int count;
   uint8_t i;
 
-  if (pending->app_identifier[0] == 0 || pending->uid != uid || pending->sync_state != 4) {
+  if ((pending->app_identifier[0] == '\0') || (pending->uid != uid) || (pending->sync_state != 4)) {
     return;
   }
   msg_array_busy = 1;
-  if (get_dashboard_state()->is_master == 1 && action == 0 && message_uid_exists(MSG_NORMAL_NUM, uid)) {
+  if ((get_dashboard_state()->is_master == 1) && (action == 0) && message_uid_exists(MSG_NORMAL_NUM, uid)) {
     G1_LOG_ERR("add found same message, uidtail %d\n", uid);
     duplicate = true;
     goto drop_head;
@@ -447,9 +459,9 @@ void confirm_message(uint32_t uid) {
     clear_timeout_message(0);
   }
   count = count_messages();
-  if (pending->action == 0) {
+  if (pending->action == 0U) {
     if (count == MSG_NORMAL_NUM) {
-      for (int j = 0; j < MSG_NORMAL_NUM - 1; j++) {
+      for (int j = 0; j < (MSG_NORMAL_NUM - 1); j++) {
         memcpy(&g_arrMsgContent[j], &g_arrMsgContent[j + 1], sizeof(struct notif_msg));
         g_arrMsgContent[j].pos = j;
       }
@@ -457,19 +469,19 @@ void confirm_message(uint32_t uid) {
     }
     memcpy(&g_arrMsgContent[count], pending, sizeof(struct notif_msg));
     g_arrMsgContent[count].pos = count;
-    if (g_arrMsgContent[count].recv_time == 0) {
+    if (g_arrMsgContent[count].recv_time == 0U) {
       g_arrMsgContent[count].recv_time = get_date();
     }
     g_arrMsgContent[count].busy = 1;
-    if (g_arrMsgContent[count].start_show_time != 0) {
+    if (g_arrMsgContent[count].start_show_time != 0U) {
       g_arrMsgContent[count].start_show_time = get_date();
     }
-  } else if (pending->action == 2) {
-    if (count) {
+  } else if (pending->action == 2U) {
+    if (count != 0) {
       bool found = false;
 
       for (i = 0; i < (uint8_t)count; i++) {
-        if (g_arrMsgContent[i].uid == pending->uid || found) {
+        if ((g_arrMsgContent[i].uid == pending->uid) || found) {
           memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1], sizeof(struct notif_msg));
           found = true;
           g_arrMsgContent[i].pos = i;
@@ -479,19 +491,21 @@ void confirm_message(uint32_t uid) {
         memset(&g_arrMsgContent[count - 1], 0, sizeof(struct notif_msg));
       }
     }
-  } else if (pending->action == 1 && count) {
+  } else if ((pending->action == 1U) && count) {
     for (i = 0; i < (uint8_t)count; i++) {
       if (g_arrMsgContent[i].uid == pending->uid) {
         memcpy(&g_arrMsgContent[i], pending, sizeof(struct notif_msg));
         break;
       }
     }
+  } else {
+    /* nothing to do */
   }
 drop_head:
   memset(pending, 0, sizeof(*pending));
 
   for (i = MSG_NORMAL_NUM; i < g_msg_num_push; i++) {
-    if (g_arrMsgContent[i + 1].app_identifier[0] == 0) {
+    if (g_arrMsgContent[i + 1].app_identifier[0] == '\0') {
       break;
     }
     memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1], sizeof(struct notif_msg));
@@ -519,11 +533,13 @@ drop_head:
       if (unread != 0xff) {
         set_msg_timeout_flag();
       }
-    } else if (is_in_box() != 1 &&
-               (get_dashboard_state()->dashboard_mode == 0 ||
+    } else if ((is_in_box() != 1) &&
+               ((get_dashboard_state()->dashboard_mode == 0) ||
                 (get_dashboard_state()->message_mode && get_dashboard_state()->dashboard_mode == 6)) &&
                cur_message_show_state() != 1) {
       msg_show_state = 1;
+    } else {
+      /* nothing to do */
     }
   }
   if (!msg_busy) {
@@ -540,8 +556,8 @@ uint8_t push_message(struct notif_msg *msg) {
     BLE_PRINTK("[%s-%d] message is NULL \n", __FUNCTION__, __LINE__);
     return 0;
   }
-  if (msg->action == 0) {
-    if (message_uid_exists(MSG_TOTAL_NUM, msg->uid)) {
+  if (msg->action == 0U) {
+    if (message_uid_exists(MSG_TOTAL_NUM, msg->uid) != 0) {
       G1_LOG_ERR("slave add found same message, uidtail %d\n", msg->uid);
       return 0;
     }
@@ -564,7 +580,7 @@ uint8_t push_message(struct notif_msg *msg) {
   } else {
     G1_LOG_ERR("update pos to %d, uidtail %d message->startShowTime %d\n", MSG_TOTAL_NUM - 1, msg->uid,
                msg->start_show_time);
-    for (int i = MSG_NORMAL_NUM; i < MSG_TOTAL_NUM - 1; i++) {
+    for (int i = MSG_NORMAL_NUM; i < (MSG_TOTAL_NUM - 1); i++) {
       if (g_arrMsgContent[i].sync_state == 0) {
         memcpy(&g_arrMsgContent[i], &g_arrMsgContent[i + 1], sizeof(*msg));
         g_arrMsgContent[i].pos = i;
@@ -589,7 +605,7 @@ uint8_t g_arrMsgContent_count(void) {
   if (num != 0) {
     int idx = num - 1;
 
-    if (g_arrMsgContent[idx].start_show_time != 0) {
+    if (g_arrMsgContent[idx].start_show_time != 0U) {
       clear_timeout_message(1);
       if (idx == 0) {
         g_curShowMsgIdx = 0;
@@ -627,9 +643,9 @@ void set_cur_message_state(void) {
 }
 
 void mark_cur_message_read(void) {
-  struct notif_msg *m = &g_arrMsgContent[g_curShowMsgIdx];
+  const struct notif_msg *m = &g_arrMsgContent[g_curShowMsgIdx];
 
-  if (m->recv_time != 0 && !m->read) {
+  if ((m->recv_time != 0U) && !m->read) {
     uint8_t idx;
 
     get_dashboard_state()->unread_msg_num = count_unread_messages();
@@ -650,7 +666,7 @@ uint8_t get_msg_show_state(void) {
 }
 
 void expire_cur_message(void) {
-  if (g_arrMsgContent[g_curShowMsgIdx].start_show_time != 0) {
+  if (g_arrMsgContent[g_curShowMsgIdx].start_show_time != 0U) {
     g_arrMsgContent[g_curShowMsgIdx].start_show_time -= get_dashboard_state()->message_stay_time;
   }
 }
@@ -671,8 +687,8 @@ uint8_t cur_message_show_state(void) {
   ret = g_arrMsgContent[g_curShowMsgIdx].read;
   if (ret) {
     ret = 0;
-    if (g_arrMsgContent[g_curShowMsgIdx].start_show_time != 0) {
-      if (get_date() > g_arrMsgContent[g_curShowMsgIdx].start_show_time + get_dashboard_state()->message_stay_time) {
+    if (g_arrMsgContent[g_curShowMsgIdx].start_show_time != 0U) {
+      if (get_date() > (g_arrMsgContent[g_curShowMsgIdx].start_show_time + get_dashboard_state()->message_stay_time)) {
         ret = 2;
       } else {
         ret = 1;
@@ -688,7 +704,7 @@ uint8_t cur_message_show_state(void) {
 static uint8_t latest_message_show_state(void) {
   uint8_t ret = 0;
 
-  if (g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time != 0) {
+  if (g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time != 0U) {
     if (get_date() > g_arrMsgContent[get_dashboard_state()->unread_msg_num - 1].recv_time +
                        get_dashboard_state()->message_stay_time) {
       ret = 2;
@@ -703,7 +719,7 @@ bool is_message_showing(void) {
   if (count_messages() == 0) {
     return false;
   }
-  if (msg_show_state == 5 && cur_message_show_state() == 1) {
+  if ((msg_show_state == 5) && (cur_message_show_state() == 1)) {
     return true;
   }
   if (msg_show_state == 3) {
@@ -717,16 +733,16 @@ uint8_t parse_message_type(int idx) {
   char (*list)[32];
   uint8_t len;
 
-  if (strncmp("com.android.phone_missed", id, 24) == 0 || strncmp("com.apple.mobilephone_missed", id, 28) == 0) {
+  if ((strncmp("com.android.phone_missed", id, 24) == 0) || (strncmp("com.apple.mobilephone_missed", id, 28) == 0)) {
     return 1;
   }
-  if (strncmp("com.android.phone_incall", id, 24) == 0 || strncmp("com.apple.mobilephone", id, 21) == 0) {
+  if ((strncmp("com.android.phone_incall", id, 24) == 0) || (strncmp("com.apple.mobilephone", id, 21) == 0)) {
     return 2;
   }
-  if (strncmp("com.apple.MobileSMS", id, 19) == 0 || strncmp("com.android.even_sms", id, 20) == 0) {
+  if ((strncmp("com.apple.MobileSMS", id, 19) == 0) || (strncmp("com.android.even_sms", id, 20) == 0)) {
     return 0;
   }
-  for (list = get_dashboard_state()->phone_is_ios ? ios_mail_list : android_mail_list; (*list)[0] != 0; list++) {
+  for (list = get_dashboard_state()->phone_is_ios ? ios_mail_list : android_mail_list; (*list)[0] != '\0'; list++) {
     len = strlen(*list);
     if (len > 31) {
       len = 31;
@@ -735,7 +751,7 @@ uint8_t parse_message_type(int idx) {
       return 3;
     }
   }
-  for (list = get_dashboard_state()->phone_is_ios ? ios_calendar_list : android_calendar_list; (*list)[0] != 0;
+  for (list = get_dashboard_state()->phone_is_ios ? ios_calendar_list : android_calendar_list; (*list)[0] != '\0';
        list++) {
     len = strlen(*list);
     if (len > 31) {

@@ -114,7 +114,7 @@ static const uint8_t *ndefRtdWlcCapabilityGetPayloadItem(const ndefType *type, n
 
   ndefData = &type->data.wlcCapability;
 
-  if (begin == true) {
+  if (begin) {
     wlcCapabilityItem = 0;
   }
 
@@ -176,7 +176,7 @@ static const uint8_t *ndefRtdWlcStatusInfoGetPayloadItem(const ndefType *type, n
 
   ndefData = &type->data.wlcStatusInfo;
 
-  if (begin == true) {
+  if (begin) {
     wlcStatusInfoItem = 0;
   }
 
@@ -265,10 +265,8 @@ static const struct adc_dt_spec adc_channels[] = {
 
 /* Zephyr ADC sample style channel loop (one channel) */
 int adc_nfc_init(void) {
-  int err;
-
   for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
-    err = 0;
+    int err = 0;
     if (adc_is_ready_dt(&adc_channels[i])) {
       err = adc_channel_setup_dt(&adc_channels[i]);
     } else {
@@ -313,7 +311,7 @@ uint32_t adc_nfc_run(void) {
     return 0;
   }
 
-  if (val_mv > 0 && val_mv < 1200) {
+  if ((val_mv > 0) && (val_mv < 1200)) {
     return val_mv;
   }
 
@@ -330,16 +328,18 @@ int nfc_i2c_session_open(int enable) {
 
   st25dv_read_i2c_security_session_dyn(global_st25dv_context_ptr, &session);
   if (session == 0) {
-    if (enable) {
+    if (enable != 0) {
       pwd.msb = 0;
       pwd.lsb = 0;
       st25dv_present_i2c_password(global_st25dv_context_ptr, &pwd);
     }
-  } else if (session == 1 && !enable) {
+  } else if ((session == 1) && !enable) {
     /* a wrong password closes the session */
     pwd.msb = 0x12345678;
     pwd.lsb = 0x13245678;
     st25dv_present_i2c_password(global_st25dv_context_ptr, &pwd);
+  } else {
+    /* nothing to do */
   }
 
   st25dv_read_i2c_security_session_dyn(global_st25dv_context_ptr, &session);
@@ -449,7 +449,7 @@ int NfcType5_NDEFDetection(void) {
       if (tlv_detect.Length == NFCT5_3_BYTES_L_TLV) {
         CCFileStruct.NDEF_offset += sizeof(TT5_TLV_t) + sys_be16_to_cpu(tlv_detect.Length16);
       } else {
-        CCFileStruct.NDEF_offset += 2 * sizeof(uint8_t) + tlv_detect.Length;
+        CCFileStruct.NDEF_offset += 2U * sizeof(uint8_t) + tlv_detect.Length;
       }
       continue;
     }
@@ -467,7 +467,7 @@ int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData) {
   uint32_t offset;
   int ret_value;
 
-  maxLength = BSP_NFCTAG_GetByteSize() - CCFileStruct.NDEF_offset - 1 - ((Length >= 0xFF) ? 4 : 2);
+  maxLength = BSP_NFCTAG_GetByteSize() - CCFileStruct.NDEF_offset - 1U - ((Length >= 0xFFU) ? 4U : 2U);
   if (Length > maxLength) {
     return NDEF_ERROR_MEMORY_TAG;
   }
@@ -478,7 +478,7 @@ int NfcType5_WriteTLV(uint8_t type, uint32_t Length, const uint8_t *pData) {
   }
 
   TLV_Header[0] = type;
-  if (Length >= 0xFF) {
+  if (Length >= 0xFFU) {
     TLV_Header[1] = NFCT5_3_BYTES_L_TLV;
     *(uint16_t *)&TLV_Header[2] = sys_cpu_to_be16(Length);
     TLVHeaderLength = 4;
@@ -532,10 +532,10 @@ int NfcType5_WriteCCFile(const uint8_t *pCCBuffer) {
 void nfc_configure_gpo(uint32_t gpo_conf) {
   uint8_t it_time;
 
-  if (st25dv_configure_gpo(global_st25dv_context_ptr, gpo_conf)) {
+  if (st25dv_configure_gpo(global_st25dv_context_ptr, gpo_conf) != 0) {
     return;
   }
-  if (st25dv_read_it_pulse(global_st25dv_context_ptr, &it_time)) {
+  if (st25dv_read_it_pulse(global_st25dv_context_ptr, &it_time) != 0) {
     return;
   }
 
@@ -1114,7 +1114,7 @@ const uint8_t *ndefRecordGetPayloadItem(const ndefRecord *record, ndefConstBuffe
   if ((record->ndeftype != NULL) && (record->ndeftype->getPayloadItem != NULL)) {
     record->ndeftype->getPayloadItem(record->ndeftype, bufPayloadItem, begin);
   } else {
-    if (begin == true) {
+    if (begin) {
       (void)ndefRecordGetPayload(record, bufPayloadItem);
     }
   }
@@ -1206,7 +1206,7 @@ ReturnCode ndefRecordEncode(const ndefRecord *record, ndefBuffer *bufRecord) {
 /* ------------------------------------------------------------------ */
 
 ReturnCode ndefMessageGetInfo(const ndefMessage *message, ndefMessageInfo *info) {
-  ndefRecord *record;
+  const ndefRecord *record;
   uint32_t length = 0;
   uint32_t recordCount = 0;
 
@@ -1394,7 +1394,7 @@ uint8_t nfc_is_tag_type_ok(void) {
 /* ------------------------------------------------------------------ */
 
 int nfc_read_field_mv(uint32_t *field_mv) {
-  *field_mv = adc_nfc_run() * 10;
+  *field_mv = adc_nfc_run() * 10U;
   return 1;
 }
 
@@ -1417,7 +1417,7 @@ int nfc_init(void) {
   ST25DV_GetUID(global_st25dv_context_ptr, uid);
   printk("UUID = %02X %02X %02X %02X %02X %02X %02X %02X.\n", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6],
          uid[7]);
-  if (uid[5] == 0x50 || uid[5] == 0x51) {
+  if ((uid[5] == 0x50) || (uid[5] == 0x51)) {
     nfc_tag_type_ok = 1;
   }
 
@@ -1434,7 +1434,7 @@ int nfc_init(void) {
 
 void nfc_charge_update_state(struct nfc_charge *chg) {
   /* states 1 and 4: the pass before had the field */
-  int status = nfc_charge_status(chg->state == 1 || chg->state == 4);
+  int status = nfc_charge_status((chg->state == 1) || (chg->state == 4));
 
   if (status == 1) {
     chg->state = 4;
@@ -1450,11 +1450,11 @@ void nfc_charge_update_state(struct nfc_charge *chg) {
  * regulates it down to 4.4..4.9 V, so a field that was there counts until NFC_FIELD_HOLD_MV.
  */
 int nfc_charge_status(bool had_field) {
-  if (nfc_field_mv <= (had_field ? NFC_FIELD_HOLD_MV : NFC_FIELD_ON_MV)) {
+  if (nfc_field_mv <= (had_field ? (uint32_t)NFC_FIELD_HOLD_MV : (uint32_t)NFC_FIELD_ON_MV)) {
     return 2;
   }
 
-  return get_dashboard_state()->battery_left >= 100 ? 1 : 0;
+  return (get_dashboard_state()->battery_left >= 100) ? 1 : 0;
 }
 
 static void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc) {
@@ -1465,7 +1465,7 @@ static void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc) 
       wlc->charging = 0;
       wlc->cap_info[5] = 9;
       wlc->field_lost = 0;
-      if (chg->field_mv < 500) {
+      if (chg->field_mv < 500U) {
         if (!nfc_low_field) {
           nfc_low_field = 1;
         }
@@ -1474,7 +1474,7 @@ static void nfc_charge_update(struct nfc_charge *chg, struct wlc_listener *wlc) 
       nfc_low_field = 0;
       break;
     case 2:
-      if (k_uptime_get_32() - nfc_charge_tick <= 3000) {
+      if ((k_uptime_get_32() - nfc_charge_tick) <= 3000U) {
         return;
       }
       if (wlc->state == 10) {
@@ -1521,7 +1521,7 @@ uint32_t chargerGetVdcRect(void) {
 
 bool nfc_field_detected(void) {
   nfc_field_voltage_update();
-  return nfc_field_mv > NFC_FIELD_ON_MV;
+  return nfc_field_mv > (uint32_t)NFC_FIELD_ON_MV;
 }
 
 int nfc_field_check(void) {
@@ -1531,7 +1531,8 @@ int nfc_field_check(void) {
     nfc_field_tick = k_uptime_ticks();
     ret = 1;
   } else {
-    if ((int32_t)((uint32_t)k_uptime_ticks() - nfc_field_tick) < 0) {
+    uint32_t tick_delta = (uint32_t)k_uptime_ticks() - nfc_field_tick;
+    if ((int32_t)tick_delta < 0) {
       k_uptime_ticks();
     }
     ret = 0;
@@ -1553,6 +1554,8 @@ void wlc_update_field_state(struct wlc_listener *wlc, uint8_t *present) {
     }
   } else if (!nfc_field_on) {
     nfc_field_on = 1;
+  } else {
+    /* nothing to do */
   }
 }
 
@@ -1675,7 +1678,7 @@ void wlc_listener_process(struct wlc_listener *wlc) {
         return;
       }
       if (!wlc->cap_info[0]) {
-        if (wlc_info_sent || wlc->cap_info[4] != wlc->cap_info[5] || wlc_battery_changed(wlc)) {
+        if (wlc_info_sent || (wlc->cap_info[4] != wlc->cap_info[5]) || wlc_battery_changed(wlc)) {
           wlc->cap_info[4] = wlc->cap_info[5];
           wlc_write_ndef_message(wlc->cap_info, wlc->stai_info, wlc->fod_info);
           wlc_info_sent = 0;
@@ -1722,9 +1725,13 @@ void wlc_listener_process(struct wlc_listener *wlc) {
           }
         } else if (!wlc->cap_info[0]) {
           wlc->state = 2;
+        } else {
+          /* nothing to do */
         }
       } else if (!wlc->cap_info[0]) {
         wlc->state = 3;
+      } else {
+        /* nothing to do */
       }
       return;
     case 12:
@@ -1747,7 +1754,8 @@ void wlc_listener_process(struct wlc_listener *wlc) {
 /* production-test protocol back end (pt_data.c) */
 
 int init_nfc_comm(void) {
-  if (setNFCDevice((void *)global_st25dv_context_ptr)) {
+  // cppcheck-suppress [misra-c2012-11.8] ; the transport keeps its context as a plain void pointer
+  if (setNFCDevice((void *)global_st25dv_context_ptr) != 0) {
     printk("init_nfc_comm is failed\n");
     return -1;
   }
@@ -1769,7 +1777,7 @@ int nfc_read_it_status(uint8_t *it_status) {
     if (!ret) {
       break;
     }
-  } while (--retries);
+  } while (--retries != 0);
 
   return ret;
 }

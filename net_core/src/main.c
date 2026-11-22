@@ -57,7 +57,7 @@ static int hwid_received(struct net_ctx *ctx, const uint8_t *data, size_t len) {
       ctx->role = data[1];
       ctx->mode = data[2];
       ctx->channel = data[3];
-      if (data[4] != 0xff && data[5] != 0 && data[5] != 0xff && data[4] != 0) {
+      if ((data[4] != 0xff) && (data[5] != 0) && (data[5] != 0xff) && (data[4] != 0)) {
         base_addr_0[0] = data[4];
         base_addr_0[1] = data[4];
         base_addr_0[2] = data[4];
@@ -174,7 +174,7 @@ int net_role_get(void) {
 }
 
 static void esb_thread_wake(void) {
-  if (k_sem_count_get(&net_ctx->sem1) == 0) {
+  if (k_sem_count_get(&net_ctx->sem1) == 0U) {
     k_sem_give(&net_ctx->sem1);
   }
 }
@@ -206,7 +206,7 @@ static void app_esb_event_handler(struct app_esb_evt *evt) {
         break;
       }
       if (net_ctx->role == 2) {
-        if (esb_tx_kind == 1 && esb_tx_state == 2 && ++rx_repeat > 1) {
+        if ((esb_tx_kind == 1) && (esb_tx_state == 2) && (++rx_repeat > 1)) {
           rx_repeat = 0;
           esb_tx_state = 0;
           esb_tx_kind = 0;
@@ -216,17 +216,21 @@ static void app_esb_event_handler(struct app_esb_evt *evt) {
       } else if (esb_tx_kind != 0) {
         if (esb_tx_kind == 2) {
           esb_tx_kind = 0;
-        } else if (esb_tx_kind == 1 && esb_tx_state == 2) {
+        } else if ((esb_tx_kind == 1) && (esb_tx_state == 2)) {
           esb_tx_kind = 0;
           esb_tx_done = 2;
           esb_thread_wake();
+        } else {
+          /* nothing to do */
         }
+      } else {
+        /* nothing to do */
       }
       esb_rssi = evt->rssi;
-      if (evt->data[0] == 0x10 || evt->data[0] == 0x11) {
+      if ((evt->data[0] == 0x10) || (evt->data[0] == 0x11)) {
         break;
       }
-      if (net_ctx->role == 2 && evt->len > 15) {
+      if ((net_ctx->role == 2) && (evt->len > 15U)) {
         if (last_seq == evt->data[0x11]) {
           break;
         }
@@ -254,7 +258,7 @@ static int rtc_sync_check(void) {
     return 1;
   }
   sync_offset = offset;
-  *(volatile uint32_t *)0x20070000 = 0xa5a5a5a5;
+  *(volatile uint32_t *)0x20070000 = 0xa5a5a5a5U;
   NET_INF("SYNC, offset %d\n", sync_offset);
 
   return 0;
@@ -263,7 +267,7 @@ static int rtc_sync_check(void) {
 int esb_rx_msgq_init(void) {
   int err = k_msgq_alloc_init(&esb_msgq, 0xfb, 4);
 
-  if (err) {
+  if (err != 0) {
     NET_ERR("k_msgq alloc failed\n");
   }
 
@@ -274,13 +278,13 @@ static int esb_rx_msgq_put(const uint8_t *data) {
   uint8_t buf[252];
   int err;
 
-  if (esb_msgq.max_msgs == 0) {
+  if (esb_msgq.max_msgs == 0U) {
     return 1;
   }
 
   memcpy(buf, data, 0xfb);
   err = k_msgq_put(&esb_msgq, buf, K_NO_WAIT);
-  if (err) {
+  if (err != 0) {
     NET_ERR("en ESB F\n");
   }
 
@@ -292,7 +296,7 @@ int esb_rx_msgq_get(uint8_t *data) {
   int err;
 
   memset(buf, 0, 0xfb);
-  if (esb_msgq.max_msgs == 0) {
+  if (esb_msgq.max_msgs == 0U) {
     return 1;
   }
 
@@ -362,6 +366,7 @@ int main(void) {
 
   /* Wait (up to 20 x 300 ms) for the app core to answer the role request. */
   i = 20;
+  // cppcheck-suppress [misra-c2012-13.4] ; the role is sampled and tested in one step
   while ((ret = net_ctx->role) == 0) {
     rtc_sync_check();
     {
@@ -387,6 +392,8 @@ int main(void) {
   } else if (net_ctx->role == 2) {
     hci_rpmsg_get_static_addr(net_ctx->mac1);
     NET_INF("S\n");
+  } else {
+    /* nothing to do */
   }
 
   for (i = 0; i < 20; i++) {
@@ -412,7 +419,7 @@ int main(void) {
   NET_INF("addr 0 0x%02X-0x%02X-0x%02X-0x%02X\n", base_addr_0[0], base_addr_0[1], base_addr_0[2], base_addr_0[3]);
   NET_INF("addr 1 0x%02X-0x%02X-0x%02X-0x%02X\n", base_addr_1[0], base_addr_1[1], base_addr_1[2], base_addr_1[3]);
 
-  if (net_ctx->role == 1 || net_ctx->role == 2) {
+  if ((net_ctx->role == 1) || (net_ctx->role == 2)) {
     esb_ops_init(&net_ctx->esb);
     hci_rpmsg_init();
     k_msleep(1000);
@@ -440,28 +447,32 @@ int main(void) {
 
   cnt = 0;
   while (1) {
-    if (esb_link_state_get() != 3 && net_ctx->mode != 1) {
+    if ((esb_link_state_get() != 3) && (net_ctx->mode != 1)) {
       now_ticks = k_uptime_ticks();
       now_ms = k_ticks_to_ms_ceil64(now_ticks);
 
       if (last_rssi > 50) {
-        if (esb_rssi >= 1 && esb_rssi <= 39) {
+        if ((esb_rssi >= 1) && (esb_rssi <= 39)) {
           cnt++;
         } else {
           cnt = 0;
         }
       } else if (last_rssi <= 39) {
         cnt = (esb_rssi > 50) ? 3 : 0;
+      } else {
+        /* nothing to do */
       }
 
-      if (now_ms - last_report_ms >= 10000) {
+      if ((now_ms - last_report_ms) >= 10000U) {
         last_report_ms = now_ms;
         send_esb_stats();
-      } else if (((esb_rssi <= 39 && last_rssi > 50) || (esb_rssi > 50 && last_rssi <= 39)) && cnt > 2 &&
+      } else if ((((esb_rssi <= 39) && (last_rssi > 50)) || ((esb_rssi > 50) && (last_rssi <= 39))) && (cnt > 2) &&
                  send_esb_stats()) {
         last_report_ms = now_ms;
         last_rssi = esb_rssi;
         cnt = 0;
+      } else {
+        /* nothing to do */
       }
     }
     k_msleep(1000);

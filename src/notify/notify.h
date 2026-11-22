@@ -34,8 +34,8 @@ extern uint8_t g_curShowMsgIdx;
 void send_whilelist_app_info_wrapper(struct notif_msg *msg);
 int post_notification_cmd_response(struct GlassesState *state, uint8_t *data, const uint8_t *src, uint8_t *hdr,
                                    const uint8_t *arg, uint8_t *out, uint32_t len);
-void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, uint8_t *data);
-int get_notification_counts_cmd_response(struct GlassesState *state, uint8_t *out);
+void post_notification_cmd_process(struct ble_context *ctx, const uint8_t *req, const uint8_t *data);
+int get_notification_counts_cmd_response(const struct GlassesState *state, uint8_t *out);
 void get_notification_counts_cmd_process(struct ble_context *ctx, uint8_t *buf, uint8_t *rsp);
 struct notif_msg *get_push_message_copy(void);
 struct notif_msg *get_push_message(void);
@@ -63,7 +63,7 @@ uint8_t parse_message_type(int idx);
 void app_list_init(void);
 
 /* ncs_notification.c */
-int parse_ncs_notification(char *json, struct notif_msg *msg);
+int parse_ncs_notification(const char *json, struct notif_msg *msg);
 
 /* ui_notification.c */
 int panel_related(struct jbd_panel_context *panel, int idx, void *arg);

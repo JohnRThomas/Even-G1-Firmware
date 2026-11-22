@@ -50,14 +50,14 @@ int sync_message_signal_to_slave(uint8_t signal) {
   } else {
     G1_PRINTK("%s successfully !", __func__);
   }
-  if (start + 3000 < k_uptime_get()) {
+  if ((start + 3000) < k_uptime_get()) {
     G1_PRINTK("retry sync_to_slave failed !");
   }
   return ret;
 }
 
 static void check_showing_message(void) {
-  while (get_msg_show_state() == 5 && cur_message_show_state() == 2) {
+  while ((get_msg_show_state() == 5) && (cur_message_show_state() == 2)) {
     G1_PRINTK("[csh_debug_msg] check showing msg timeout \n");
     if (sync_message_signal_to_slave(2) >= 3000) {
       continue;
@@ -74,21 +74,19 @@ static void check_showing_message(void) {
 
 int send_msg_key_to_master(void) {
   uint16_t retry = 1000;
-  int i;
   int ret;
-  struct notif_msg *msg;
 
   msg_busy = 1;
   do {
-    msg = get_message_by_index(10);
+    const struct notif_msg *msg = get_message_by_index(10);
     if (!msg->app_identifier[0] || !msg->pos) {
       break;
     }
     k_sleep(K_MSEC(1));
   } while (--retry);
 
-  if (sync_to_master(get_dashboard_state(), 10, NULL, 0) < 2000 && get_dashboard_state()->sync_ack == 2) {
-    for (i = 0; i < 10; i++) {
+  if ((sync_to_master(get_dashboard_state(), 10, NULL, 0) < 2000U) && (get_dashboard_state()->sync_ack == 2)) {
+    for (int i = 0; i < 10; i++) {
       if (new_msg_signal_received) {
         break;
       }
@@ -123,7 +121,7 @@ uint32_t get_msg_stay_time(int type, uint32_t def) {
 void handle_msg_touch_key(void) {
   k_uptime_get();
   G1_PRINTK("[csh_debug_msg] set touch key flag get_msg_show_state() %d\n", get_msg_show_state());
-  if (get_msg_show_state() == 2 || get_msg_show_state() == 4) {
+  if ((get_msg_show_state() == 2) || (get_msg_show_state() == 4)) {
     g_arrMsgContent_count();
     get_dashboard_state()->stay_time_left_s =
       get_msg_stay_time(get_dashboard_state()->display_mode, get_dashboard_state()->message_stay_time);
@@ -135,7 +133,7 @@ void handle_msg_touch_key(void) {
     msg_timeout_flag = 1;
   } else {
     set_msg_show_state(0);
-    if (get_dashboard_state()->dashboard_mode != 1 && get_dashboard_state()->imu.mode == 2) {
+    if ((get_dashboard_state()->dashboard_mode != 1) && (get_dashboard_state()->imu.mode == 2)) {
       trigger_screen_state_change("IMU:wakeup:dashboard", get_dashboard_state(), 1);
     }
     if (get_dashboard_state()->is_master == 1) {
@@ -175,10 +173,10 @@ static void clear_dashboard_flag(void) {
   } while (0)
 
 /* DFU in progress (local or reported by the box) */
-#define IS_DFU(state) ((state)->work_mode == 1 || get_dashboard_state()->work_mode == 8)
+#define IS_DFU(state) (((state)->work_mode == 1) || (get_dashboard_state()->work_mode == 8))
 
 /* stop the task on both sides */
-static void task_stop(struct GlassesState *state, struct imu_ctx *ctx) {
+static void task_stop(struct GlassesState *state, const struct imu_ctx *ctx) {
   sync_to_slave(state, 8, NULL, 0);
   if (ctx->mode == 2) {
     update_persist_task_status_to_wait_blow_head(state);
@@ -207,8 +205,6 @@ static void task_stop(struct GlassesState *state, struct imu_ctx *ctx) {
 static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
   struct msg_status *persist = state->task_status;
   int cnt;
-  int i;
-  bool next_msg;
   bool show;
 
   clear_dashboard_flag();
@@ -216,7 +212,7 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
   if (!is_persist_task_active(state, state->dashboard_mode)) {
     if (ctx->mode != 2) {
       trigger_screen_state_change("goto idle1", state, 0);
-      if (get_dashboard_state()->is_master == 2 && k_sem_count_get(&get_dashboard_state()->sem_2) == 0) {
+      if ((get_dashboard_state()->is_master == 2) && (k_sem_count_get(&get_dashboard_state()->sem_2) == 0U)) {
         k_sem_give(&get_dashboard_state()->sem_2);
       }
     }
@@ -226,7 +222,7 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
     msg_led_update();
     take_msg_timeout_flag();
     if (ctx->mode != 2) {
-      i = 100;
+      int i = 100;
       while (state->suspend_state != 1) {
         k_msleep(10);
         if (!--i) {
@@ -243,8 +239,9 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
     if (IS_DFU(state)) {
       break;
     }
-    next_msg = false;
-    if (!is_in_box() && !(state->display_mode == 12 && (persist->task != 7 || state->dashboard_mode != 7))) {
+    // cppcheck-suppress [variableScope] ; set and read across the nested blocks below
+    bool next_msg = false;
+    if (!is_in_box() && !((state->display_mode == 12) && ((persist->task != 7U) || (state->dashboard_mode != 7)))) {
       if (is_persist_task_active(state, state->dashboard_mode) == 1) {
         state->dashboard_mode = persist->task;
         if (state->dashboard_ts->exit_pending) {
@@ -270,8 +267,10 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
             k_msleep(50);
             if (cnt >= 80) {
               state->dashboard_ts->exit_pending = 0;
-            } else if (cnt % 40 == 0) {
+            } else if ((cnt % 40) == 0) {
               G1_LOG_WRN("dashboard wait for starting other task\n");
+            } else {
+              /* nothing to do */
             }
             continue;
           }
@@ -280,13 +279,15 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
             k_msleep(50);
             if (cnt >= 100) {
               state->evenai_buf->state = 0;
-            } else if (cnt % 40 == 0) {
+            } else if ((cnt % 40) == 0) {
               G1_LOG_WRN("evenai v2 wait for starting other task\n");
+            } else {
+              /* nothing to do */
             }
             continue;
           }
           if (ctx->mode == 2) {
-            if (get_dashboard_state()->suspend_state != 5 && is_message_showing()) {
+            if ((get_dashboard_state()->suspend_state != 5) && is_message_showing()) {
               set_particle_pending();
               if (state->is_master == 1) {
                 sync_message_signal_to_slave(1);
@@ -300,6 +301,8 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
                 cnt++;
                 k_sleep(K_MSEC(50));
                 continue;
+              } else {
+                /* nothing to do */
               }
               G1_LOG_ERR("goto message show task !\n");
               return SCREEN_CHANGED;
@@ -307,7 +310,7 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
             if (state->dashboard_ts->exit_pending) {
               show = false;
             } else {
-              show = (ctx->mode == 2 && get_dashboard_state()->suspend_state != 5 && !get_dashboard_startup_mode()) ||
+              show = ((get_dashboard_state()->suspend_state != 5) && !get_dashboard_startup_mode()) ||
                      state->double_tap_dashboard_on || state->dashboard_ts->dashboard_hold;
             }
           } else {
@@ -321,8 +324,8 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
                 continue;
               }
             }
-            if (get_dashboard_state()->is_master == 1 && get_glasses_ble_status() == 1 &&
-                !get_dashboard_state()->head_up_mic_disabled && dmic_get_stop_state() == 1) {
+            if ((get_dashboard_state()->is_master == 1) && (get_glasses_ble_status() == 1) &&
+                !get_dashboard_state()->head_up_mic_disabled && (dmic_get_stop_state() == 1)) {
               request_dmic_stream_start();
             }
             get_dashboard_state()->dashboard_ts->dashboard_on = 1;
@@ -331,8 +334,8 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
             return SCREEN_CHANGED;
           }
           if (state->message_mode) {
-            if (((ctx->mode == 1 && !get_dashboard_startup_mode()) || get_dashboard_startup_mode()) &&
-                (cur_message_show_state() == 1 || get_msg_show_state() == 1)) {
+            if ((((ctx->mode == 1) && !get_dashboard_startup_mode()) || get_dashboard_startup_mode()) &&
+                ((cur_message_show_state() == 1) || (get_msg_show_state() == 1))) {
               set_particle_pending();
               if (state->is_master == 1) {
                 sync_message_signal_to_slave(1);
@@ -353,7 +356,7 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
               next_msg = true;
             }
           }
-          if (!next_msg && get_msg_show_state() == 1) {
+          if (!next_msg && (get_msg_show_state() == 1)) {
             if (state->is_master == 1) {
               sync_message_signal_to_slave(0);
               update_temp_task_status(state, 5, 2);
@@ -366,8 +369,8 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
               return SCREEN_CHANGED;
             }
           }
-          if (state->message_mode && state->dashboard_mode == 4 &&
-              ((ctx->mode == 1 && !get_dashboard_startup_mode()) || get_dashboard_startup_mode())) {
+          if (state->message_mode && (state->dashboard_mode == 4) &&
+              (((ctx->mode == 1) && !get_dashboard_startup_mode()) || get_dashboard_startup_mode())) {
             trigger_screen_state_change("BLE:wakeup:next-unread_msg", state, 1);
             break;
           }
@@ -386,14 +389,15 @@ static int process_for_IDLE(struct GlassesState *state, struct imu_ctx *ctx) {
   return 0;
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_wait_blow_head(struct GlassesState *state, struct imu_ctx *ctx) {
   trigger_screen_state_change("WAIT_BLOW_HEAD", state, 0);
   while (1) {
-    if (ctx->mode == 1 || get_dashboard_state()->double_tap_customize == 4) {
+    if ((ctx->mode == 1) || (get_dashboard_state()->double_tap_customize == 4)) {
       state->dashboard_mode = 0;
       return SCREEN_CHANGED;
     }
-    if (state->task_status->status == 2 && state->task_status->task == 16) {
+    if ((state->task_status->status == 2) && (state->task_status->task == 16U)) {
       state->dashboard_mode = 16;
       trigger_screen_state_change("BLE:wakeup:persist_task", state, 1);
       return 0;
@@ -402,11 +406,10 @@ static int process_for_wait_blow_head(struct GlassesState *state, struct imu_ctx
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_countdown(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
-  struct countdown_ts_context *cd;
-
   while (1) {
-    if (!state->countdown_ts->enabled || state->display_mode != 10) {
+    if (!state->countdown_ts->enabled || (state->display_mode != 10)) {
       task_stop(state, ctx);
       if (state->is_master == 1) {
         k_sleep(K_MSEC(500));
@@ -417,8 +420,8 @@ static int process_for_countdown(struct GlassesState *state, struct imu_ctx *ctx
       update_persist_task_status_to_idle(state);
       TASK_EXIT("countdown:imu-trigger-off-imm");
     }
-    cd = state->countdown_ts;
-    if (cd->seconds == 0) {
+    struct countdown_ts_context *cd = state->countdown_ts;
+    if (cd->seconds == 0U) {
       cd->enabled = 0;
       update_persist_task_status(state, (int)state->task_status->task, 1);
       TASK_EXIT("countdown:ts is over");
@@ -441,11 +444,13 @@ static int process_for_countdown(struct GlassesState *state, struct imu_ctx *ctx
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_message_show(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
   uint16_t wait = 1000;
   int cnt;
 
-  while (get_dashboard_state()->unread_msg_num && get_msg_sync_state(get_dashboard_state()->unread_msg_num - 1) != 4) {
+  while (get_dashboard_state()->unread_msg_num &&
+         (get_msg_sync_state(get_dashboard_state()->unread_msg_num - 1) != 4)) {
     wait--;
     k_sleep(K_MSEC(1));
     if (!wait) {
@@ -457,13 +462,12 @@ static int process_for_message_show(struct GlassesState *state, struct imu_ctx *
   set_msg_show_state(4);
   state->stay_time_left_s = get_msg_stay_time(state->display_mode, get_dashboard_state()->message_stay_time);
   while (1) {
-    if ((!state->message_mode ? ctx->mode == 1 || !state->stay_time_left_s
-                              : cur_message_show_state() == 2 || !state->stay_time_left_s) &&
-        state->display_mode == 10) {
-      if (state->dashboard_mode == 6 ||
-          (state->dashboard_mode != 6 && ((!get_dashboard_startup_mode() && ctx->mode == 2) ||
-                                          (state->double_tap_customize == 4 && state->double_tap_dashboard_on == 1)))) {
-        if (get_dashboard_state()->message_mode && get_dashboard_state()->is_master == 1) {
+    if ((!state->message_mode ? ((ctx->mode == 1) || !state->stay_time_left_s)
+                              : ((cur_message_show_state() == 2) || !state->stay_time_left_s)) &&
+        (state->display_mode == 10)) {
+      if ((state->dashboard_mode == 6) || (!get_dashboard_startup_mode() && (ctx->mode == 2)) ||
+          ((state->double_tap_customize == 4) && (state->double_tap_dashboard_on == 1))) {
+        if (get_dashboard_state()->message_mode && (get_dashboard_state()->is_master == 1)) {
           get_dashboard_state()->last_sync_ts -= 1000;
         }
         if (state->is_master == 1) {
@@ -483,6 +487,8 @@ static int process_for_message_show(struct GlassesState *state, struct imu_ctx *
       } else if (state->dashboard_mode == 4) {
         k_sleep(K_MSEC(50));
         continue;
+      } else {
+        /* nothing to do */
       }
       set_msg_show_state(5);
       if (state->is_master == 1) {
@@ -493,7 +499,7 @@ static int process_for_message_show(struct GlassesState *state, struct imu_ctx *
       }
       TASK_EXIT("imu-trigger-off-imm");
     }
-    if (IS_DFU(state) || get_dashboard_state()->display_mode == 12) {
+    if (IS_DFU(state) || (get_dashboard_state()->display_mode == 12)) {
       update_persist_task_status_to_idle(state);
       set_msg_show_state(5);
       TASK_EXIT("imu-trigger-off-imm");
@@ -505,9 +511,9 @@ static int process_for_message_show(struct GlassesState *state, struct imu_ctx *
       return SCREEN_CHANGED;
     }
     cnt++;
-    if (state->message_mode && state->is_master == 1 &&
-        ((ctx->mode == 1 && !get_dashboard_startup_mode()) || get_dashboard_startup_mode()) && cnt % 20 == 0 &&
-        state->stay_time_left_s < 30) {
+    if (state->message_mode && (state->is_master == 1) &&
+        (((ctx->mode == 1) && !get_dashboard_startup_mode()) || get_dashboard_startup_mode()) && ((cnt % 20) == 0) &&
+        (state->stay_time_left_s < 30)) {
       state->stay_time_left_s--;
     }
     k_sleep(K_MSEC(50));
@@ -522,6 +528,7 @@ static int dashboard_goto_persist_task(struct GlassesState *state) {
   return SCREEN_CHANGED;
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_DASHBOARD_show(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
   bool held = false;
   uint8_t d[2];
@@ -538,14 +545,15 @@ static int process_for_DASHBOARD_show(struct GlassesState *state, struct imu_ctx
       held = true;
     }
     if (!held) {
-      do_close = (ctx->mode == 1 && !get_dashboard_startup_mode()) ||
-                 (!get_dashboard_state()->double_tap_dashboard_on && get_dashboard_state()->double_tap_customize == 4);
+      do_close =
+        ((ctx->mode == 1) && !get_dashboard_startup_mode()) ||
+        (!get_dashboard_state()->double_tap_dashboard_on && (get_dashboard_state()->double_tap_customize == 4));
     } else {
       do_close = !state->dashboard_ts->dashboard_hold;
     }
     if (do_close) {
       clear_dashboard_flag();
-      if (is_persist_task_active(state, state->dashboard_mode) == 1 && !state->dashboard_ts->exit_pending) {
+      if ((is_persist_task_active(state, state->dashboard_mode) == 1) && !state->dashboard_ts->exit_pending) {
         return dashboard_goto_persist_task(state);
       }
       dmic_stream_stop();
@@ -583,10 +591,10 @@ static int process_for_DASHBOARD_show(struct GlassesState *state, struct imu_ctx
         TASK_EXIT("dashboard:imu-trigger-off-imm");
       }
     }
-    if (is_master() == 1 && state->dashboard_ts->exit_pending == 1) {
+    if ((is_master() == 1) && (state->dashboard_ts->exit_pending == 1)) {
       state->dashboard_ts->exit_pending = 2;
     }
-    if (state->dashboard_ts->exit_pending == 2 && is_persist_task_active(state, state->dashboard_mode) == 1) {
+    if ((state->dashboard_ts->exit_pending == 2) && (is_persist_task_active(state, state->dashboard_mode) == 1)) {
       d[0] = 2;
       d[1] = 9;
       if (sync_to_slave(state, 6, d, 2) < 3000) {
@@ -625,6 +633,7 @@ static int process_for_DASHBOARD_show(struct GlassesState *state, struct imu_ctx
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_unread_msg(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
   state->schedule_notif_pending = 0;
   get_dashboard_state()->unread_msg_num = count_unread_messages();
@@ -633,7 +642,7 @@ static int process_for_unread_msg(struct GlassesState *state, struct imu_ctx *ct
       update_persist_task_status_to_idle(state);
       TASK_EXIT("imu-trigger-off-imm");
     }
-    if (ctx->mode == 1 && state->display_mode == 10) {
+    if ((ctx->mode == 1) && (state->display_mode == 10)) {
       sync_to_slave(state, 8, NULL, 0);
       update_persist_task_status_to_idle(state);
       if (state->is_master == 1) {
@@ -645,8 +654,9 @@ static int process_for_unread_msg(struct GlassesState *state, struct imu_ctx *ct
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_teleprompter(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
-  struct teleprompter_info *blk = state->teleprompter;
+  const struct teleprompter_info *blk = state->teleprompter;
 
   while (1) {
     if (IS_DFU(state)) {
@@ -681,8 +691,9 @@ static int process_for_teleprompter(struct GlassesState *state, struct imu_ctx *
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_navigation(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
-  struct nav_info *blk = state->nav;
+  const struct nav_info *blk = state->nav;
 
   while (1) {
     if (IS_DFU(state)) {
@@ -714,6 +725,7 @@ static int process_for_navigation(struct GlassesState *state, struct imu_ctx *ct
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_translate(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
   while (1) {
     if (IS_DFU(state)) {
@@ -744,6 +756,7 @@ static int process_for_translate(struct GlassesState *state, struct imu_ctx *ctx
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_quicknote(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
   while (1) {
     if (IS_DFU(state)) {
@@ -773,7 +786,7 @@ static int process_for_quicknote(struct GlassesState *state, struct imu_ctx *ctx
 static int process_for_not_disturb(struct GlassesState *state, const char **reason) {
   state->bitmap_info->sync_pending = 0;
   while (1) {
-    if (state->bitmap_info->enable && k_uptime_get() - state->bitmap_info->deadline > 1500) {
+    if (state->bitmap_info->enable && ((k_uptime_get() - state->bitmap_info->deadline) > 1500)) {
       state->bitmap_info->enable = 0;
     }
     if (IS_DFU(state)) {
@@ -792,6 +805,7 @@ static int process_for_not_disturb(struct GlassesState *state, const char **reas
 }
 
 /* simple tasks: run until the task flag drops */
+// cppcheck-suppress [misra-c2012-20.7] ; name is pasted into string literals
 #define SIMPLE_TASK(name, flag, sleep_ms)                                                                              \
   while (1) {                                                                                                          \
     if (IS_DFU(state)) {                                                                                               \
@@ -802,14 +816,14 @@ static int process_for_not_disturb(struct GlassesState *state, const char **reas
       sync_to_slave(state, 8, NULL, 0);                                                                                \
       update_persist_task_status_to_idle(state);                                                                       \
       if (state->is_master == 1) {                                                                                     \
-        k_sleep(K_MSEC(sleep_ms));                                                                                     \
+        k_msleep(sleep_ms);                                                                                            \
       }                                                                                                                \
       TASK_EXIT(name ":self exit");                                                                                    \
     }                                                                                                                  \
     if (state->dashboard_mode == 1) {                                                                                  \
       TASK_EXIT(name ":imu-trigger-off-imm");                                                                          \
     }                                                                                                                  \
-    k_sleep(K_MSEC(50));                                                                                               \
+    k_msleep(50);                                                                                                      \
   }
 
 static int process_for_onboarding(struct GlassesState *state, const char **reason) {
@@ -834,7 +848,7 @@ static int process_for_prompt(struct GlassesState *state, const char **reason) {
       update_persist_task_status_to_idle(state);
       TASK_EXIT("prompt:dfu");
     }
-    if (state->is_master == 1 && state->ts_info->enable && k_uptime_get() - state->ts_info->ts > 4000) {
+    if ((state->is_master == 1) && state->ts_info->enable && ((k_uptime_get() - state->ts_info->ts) > 4000)) {
       state->ts_info->enable = 0;
     }
     if (!state->ts_info->enable) {
@@ -852,10 +866,9 @@ static int process_for_prompt(struct GlassesState *state, const char **reason) {
   }
 }
 
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_evenai(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
-  struct dash_data_buf *ai;
   int cnt = 0;
-  uint8_t st;
 
   while (1) {
     if (state->display_mode == 12) {
@@ -868,13 +881,14 @@ static int process_for_evenai(struct GlassesState *state, struct imu_ctx *ctx, c
       reset_dash_buf(1);
       TASK_EXIT("evenai:self exit");
     }
-    if (!get_glasses_ble_status() && get_dashboard_state()->dash_buf->type > 1 &&
-        get_dashboard_state()->dash_buf->type < 10) {
+    if (!get_glasses_ble_status() && (get_dashboard_state()->dash_buf->type > 1) &&
+        (get_dashboard_state()->dash_buf->type < 10)) {
       get_dashboard_state()->dash_buf->type = 10;
     }
-    ai = state->dash_buf;
-    st = state->dash_buf->type;
-    if (!ai->data[0] || !get_dashboard_state()->dash_buf->type || ((st == 8 || st == 11) && !state->stay_time_left_s)) {
+    const struct dash_data_buf *ai = state->dash_buf;
+    uint8_t st = state->dash_buf->type;
+    if (!ai->data[0] || !get_dashboard_state()->dash_buf->type ||
+        (((st == 8) || (st == 11)) && !state->stay_time_left_s)) {
       if (state->is_master == 1) {
         report_event_to_phone(0);
       }
@@ -888,7 +902,7 @@ static int process_for_evenai(struct GlassesState *state, struct imu_ctx *ctx, c
       TASK_EXIT("evenai:imu-trigger-off-imm");
     }
     cnt++;
-    if (state->is_master == 1 && (st == 7 || st == 8 || st == 11) && cnt % 20 == 0) {
+    if ((state->is_master == 1) && ((st == 7) || (st == 8) || (st == 11)) && ((cnt % 20) == 0)) {
       state->stay_time_left_s--;
     }
     k_sleep(K_MSEC(50));
@@ -896,7 +910,7 @@ static int process_for_evenai(struct GlassesState *state, struct imu_ctx *ctx, c
 }
 
 static int process_for_even_ai_v2_show(struct GlassesState *state, const char **reason) {
-  if (get_dashboard_state()->is_master == 2 && k_sem_count_get(&get_dashboard_state()->sem_2) == 0) {
+  if ((get_dashboard_state()->is_master == 2) && (k_sem_count_get(&get_dashboard_state()->sem_2) == 0U)) {
     k_sem_give(&get_dashboard_state()->sem_2);
   }
   state->evenai_buf->ts = k_uptime_get();
@@ -906,17 +920,17 @@ static int process_for_even_ai_v2_show(struct GlassesState *state, const char **
       update_persist_task_status_to_idle(state);
       TASK_EXIT("evenai_v2:dfu");
     }
-    if (state->is_master == 1 && state->evenai_buf->state == 1 &&
-        ((k_uptime_get() - state->evenai_buf->ts > 5000 &&
-          ((state->evenai_buf->sub == 7 && state->evenai_buf->action_status == 1) ||
-           (state->evenai_buf->sub == 4 && state->evenai_buf->action_status == 0x13))) ||
-         (k_uptime_get() - state->evenai_buf->ts > 15000 && state->evenai_buf->sub == 2))) {
+    if ((state->is_master == 1) && (state->evenai_buf->state == 1) &&
+        ((((k_uptime_get() - state->evenai_buf->ts) > 5000) &&
+          (((state->evenai_buf->sub == 7) && (state->evenai_buf->action_status == 1)) ||
+           ((state->evenai_buf->sub == 4) && (state->evenai_buf->action_status == 0x13)))) ||
+         (((k_uptime_get() - state->evenai_buf->ts) > 15000) && (state->evenai_buf->sub == 2)))) {
       state->evenai_buf->state = 0;
     }
-    if (is_master() == 1 && state->evenai_buf->state == 2) {
+    if ((is_master() == 1) && (state->evenai_buf->state == 2)) {
       state->evenai_buf->state = 3;
     }
-    if (state->evenai_buf->state == 0 || state->evenai_buf->state == 3) {
+    if ((state->evenai_buf->state == 0) || (state->evenai_buf->state == 3)) {
       if (sync_to_slave(state, 8, NULL, 0) < 3000) {
         update_persist_task_status_to_idle(state);
         TASK_EXIT("evenai_v2:self exit");
@@ -931,10 +945,10 @@ static int process_for_even_ai_v2_show(struct GlassesState *state, const char **
 }
 
 /* screen 5: a new notification came in; show it until it times out or the user acts */
+// cppcheck-suppress [constParameterPointer] ; the screen handlers share one signature
 static int process_for_new_message_come_on(struct GlassesState *state, struct imu_ctx *ctx, const char **reason) {
   int cnt;
   uint32_t msg_id;
-  uint32_t id;
 
   state->stay_time_left_s = get_msg_stay_time(state->display_mode, get_dashboard_state()->message_stay_time);
   set_msg_show_state(2);
@@ -944,12 +958,12 @@ static int process_for_new_message_come_on(struct GlassesState *state, struct im
     msg_id = get_message_by_index(get_dashboard_state()->unread_msg_num - 1)->recv_time;
   }
   while (1) {
-    if (IS_DFU(state) || get_dashboard_state()->display_mode == 12) {
+    if (IS_DFU(state) || (get_dashboard_state()->display_mode == 12)) {
       update_persist_task_status_to_idle(state);
       TASK_EXIT("message:imu-trigger-off-imm");
     }
-    if (state->is_master == 1 && get_dashboard_state()->unread_msg_num) {
-      id = get_message_by_index(get_dashboard_state()->unread_msg_num - 1)->recv_time;
+    if ((state->is_master == 1) && get_dashboard_state()->unread_msg_num) {
+      uint32_t id = get_message_by_index(get_dashboard_state()->unread_msg_num - 1)->recv_time;
       if (msg_id != id) {
         state->stay_time_left_s = get_msg_stay_time(state->display_mode, get_dashboard_state()->message_stay_time);
         msg_id = id;
@@ -959,14 +973,14 @@ static int process_for_new_message_come_on(struct GlassesState *state, struct im
       G1_LOG_ERR("goto next screen, new screen %d !\r\n\n", state->dashboard_mode);
       return SCREEN_CHANGED;
     }
-    if (ctx->mode == 2 || state->display_mode == 11) {
+    if ((ctx->mode == 2) || (state->display_mode == 11)) {
       set_particle_pending();
       if (state->schedule_notif_pending == 1) {
         state->dashboard_mode = 8;
         set_msg_show_state(4);
         return SCREEN_CHANGED;
       }
-      if (state->dashboard_mode == 5 && state->is_master == 1) {
+      if ((state->dashboard_mode == 5) && (state->is_master == 1)) {
         sync_message_signal_to_slave(1);
         clear_timeout_message(0);
         set_msg_timeout_flag();
@@ -984,7 +998,7 @@ static int process_for_new_message_come_on(struct GlassesState *state, struct im
     }
     k_sleep(K_MSEC(50));
     cnt++;
-    if (state->is_master == 1 && cnt % 20 == 0 && state->stay_time_left_s) {
+    if ((state->is_master == 1) && ((cnt % 20) == 0) && state->stay_time_left_s) {
       state->stay_time_left_s--;
     }
     if (!state->stay_time_left_s) {
@@ -1011,7 +1025,7 @@ int screen_task_dispatch(struct GlassesState *state, struct imu_ctx *ctx) {
     if (state->dashboard_mode != 4) {
       msg_busy = 0;
     }
-    if (!state->screen_on && is_task_running(state) == 1) {
+    if (!state->screen_on && (is_task_running(state) == 1)) {
       trigger_screen_state_change("BLE:wakeup:running_task", state, 1);
     }
     switch (state->dashboard_mode) {
@@ -1094,7 +1108,7 @@ void reset_dash_buf(int clear) {
   get_dashboard_state()->esb_down_id = 0;
   get_dashboard_state()->esb_up_recving = 0;
   get_dashboard_state()->esb_down_recving = 0;
-  if (clear) {
+  if (clear != 0) {
     get_dashboard_state()->dash_buf->data[0] = 0;
     get_dashboard_state()->dash_buf->type = 0;
   } else {

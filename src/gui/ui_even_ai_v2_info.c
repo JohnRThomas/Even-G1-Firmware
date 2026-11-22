@@ -48,20 +48,23 @@ static int even_ai_v2_info_reflash(int force) {
   uint8_t lang = get_current_language();
   int x_off = 0;
   int text_w = 576;
-  int x, y;
+  int x;
+  int y;
 
-  if (get_dashboard_state()->head_up_mic_disabled == 1 &&
-      (gs->ui.gui.ui_action == 2
-         ? gs->ui.gui.ui_status == 1
-         : (gs->ui.gui.ui_action >= 3 && gs->ui.gui.ui_action <= 6 && gs->ui.gui.ui_action != 5))) {
+  if ((get_dashboard_state()->head_up_mic_disabled == 1) &&
+      ((gs->ui.gui.ui_action == 2)
+         ? (gs->ui.gui.ui_status == 1)
+         : ((gs->ui.gui.ui_action >= 3) && (gs->ui.gui.ui_action <= 6) && (gs->ui.gui.ui_action != 5)))) {
     dmic_stream_stop();
-  } else if (get_dashboard_state()->is_master == 1 && get_glasses_ble_status() == 1 &&
-             get_dashboard_state()->evenai_buf->state == 1 && dmic_get_stop_state() == 1) {
+  } else if ((get_dashboard_state()->is_master == 1) && (get_glasses_ble_status() == 1) &&
+             (get_dashboard_state()->evenai_buf->state == 1) && (dmic_get_stop_state() == 1)) {
     request_dmic_stream_start();
+  } else {
+    /* nothing to do */
   }
 
-  if (even_ai_v2_ui.last_action != gs->ui.gui.ui_action ||
-      (gs->ui.gui.ui_action != EVEN_AI_V2_ANSWER && even_ai_v2_ui.last_status != gs->ui.gui.ui_status)) {
+  if ((even_ai_v2_ui.last_action != gs->ui.gui.ui_action) ||
+      ((gs->ui.gui.ui_action != EVEN_AI_V2_ANSWER) && (even_ai_v2_ui.last_status != gs->ui.gui.ui_status))) {
     G1_LOG_WRN("even_ai_v2 action change, id:%d,status:%d, clear screen\n", gs->ui.gui.ui_action, gs->ui.gui.ui_status);
     even_ai_v2_ui.last_action = gs->ui.gui.ui_action;
     even_ai_v2_ui.last_status = gs->ui.gui.ui_status;
@@ -101,9 +104,9 @@ static int even_ai_v2_info_reflash(int force) {
 
   switch (gs->ui.gui.ui_action) {
     case EVEN_AI_V2_ERROR: {
-      int off;
-
       if (gs->ui.gui.ui_status == 1) {
+        int off;
+
         switch (lang) {
           case 5:
             off = 164;
@@ -131,6 +134,8 @@ static int even_ai_v2_info_reflash(int force) {
                             gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
         gui_utf_draw_middle(0, get_string(0x45), 0, gui_screen_x_offset(), gui_screen_y_offset() + 108,
                             gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
+      } else {
+        /* nothing to do */
       }
       break;
     }
@@ -139,7 +144,7 @@ static int even_ai_v2_info_reflash(int force) {
 
       gui_utf_draw_middle(0, get_string(0x56), 0, gui_screen_x_offset(), gui_screen_y_offset() + 54,
                           gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
-      if (gs->ui.gui.ui_status >= 1 && gs->ui.gui.ui_status <= 7) {
+      if ((gs->ui.gui.ui_status >= 1) && (gs->ui.gui.ui_status <= 7)) {
         id = gs->ui.gui.ui_status + 0x57;
       } else {
         id = 0x57;
@@ -475,17 +480,19 @@ static int even_ai_v2_info_reflash(int force) {
       if (gs->ui.gui.ui_status > 20) {
         break;
       }
-      if (gs->ui.gui.ui_status >= 5 && gs->ui.gui.ui_status <= 7) {
+      if ((gs->ui.gui.ui_status >= 5) && (gs->ui.gui.ui_status <= 7)) {
         gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset(), gui_screen_y_offset() + 108,
                             gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
-      } else if ((gs->ui.gui.ui_status == 15 && (lang == 5 || lang == 6)) ||
-                 (gs->ui.gui.ui_status == 16 && lang == 5) || (gs->ui.gui.ui_status == 17 && lang == 5) ||
-                 (gs->ui.gui.ui_status == 20 && (lang == 5 || lang == 6 || lang == 7 || lang == 14))) {
+      } else if (((gs->ui.gui.ui_status == 15) && ((lang == 5) || (lang == 6))) ||
+                 ((gs->ui.gui.ui_status == 16) && (lang == 5)) || ((gs->ui.gui.ui_status == 17) && (lang == 5)) ||
+                 ((gs->ui.gui.ui_status == 20) && ((lang == 5) || (lang == 6) || (lang == 7) || (lang == 14)))) {
         gui_utf_draw_middle(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + x_off + 44, gui_screen_y_offset() + 54,
                             gui_screen_x_offset() + x_off + 44 + text_w, gui_screen_y_offset() + 136, 3, 0, 0, NULL, 0);
       } else if (gs->ui.gui.ui_status != 18) {
         gui_utf_draw(0, gs->ui.gui.ai_text, 0, gui_screen_x_offset() + x_off + 44, gui_screen_y_offset() + 54,
                      gui_screen_x_offset() + 576, gui_screen_y_offset() + 136, 1, 0, 0, NULL, 0);
+      } else {
+        /* nothing to do */
       }
       break;
     default:
@@ -496,7 +503,7 @@ static int even_ai_v2_info_reflash(int force) {
 
 int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event) {
   ARG_UNUSED(arg);
-  struct GlassesState *gs = get_dashboard_state();
+  const struct GlassesState *gs = get_dashboard_state();
 
   set_frame_buffer(ctx->panel_buffer);
   set_showing_notification_on_gui();
@@ -504,7 +511,7 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
   switch (even_ai_v2_ui.state) {
     case 0:
       if (event == 1) {
-        if (gs->ui.gui.ui_action == 0 || even_ai_v2_ui.entered) {
+        if ((gs->ui.gui.ui_action == 0) || even_ai_v2_ui.entered) {
           return 0;
         }
         gui_utf_adv_draw_reset();
@@ -539,10 +546,12 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
         gui_utf_adv_draw_reset();
         memset(&even_ai_v2_ui, 0, sizeof(even_ai_v2_ui));
         dmic_stream_stop();
+      } else {
+        /* nothing to do */
       }
       break;
     case 1:
-      if (event == 0 || event == 1) {
+      if ((event == 0) || (event == 1)) {
         even_ai_v2_info_reflash(event);
       } else if (event == 2) {
         G1_LOG_INF("set_imu_pitch process received exit packet ...\n");
@@ -550,8 +559,10 @@ int ui_even_ai_v2_info_task(struct jbd_panel_context *ctx, void *arg, int event)
         gui_utf_adv_draw_reset();
         memset(&even_ai_v2_ui, 0, sizeof(even_ai_v2_ui));
         dmic_stream_stop();
+      } else {
+        /* nothing to do */
       }
-      if (get_dashboard_state()->is_master == 1 && abs_diff_u64(k_uptime_get(), even_ai_v2_ui.ts) > 1000) {
+      if ((get_dashboard_state()->is_master == 1) && (abs_diff_u64(k_uptime_get(), even_ai_v2_ui.ts) > 1000)) {
         even_ai_v2_ui.timeout_cnt++;
         even_ai_v2_ui.ts = k_uptime_get();
         if (even_ai_v2_ui.timeout_cnt >= 20) {

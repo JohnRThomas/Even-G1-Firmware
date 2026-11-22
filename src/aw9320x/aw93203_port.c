@@ -22,16 +22,18 @@ static uint8_t pt_comm_busy;
  */
 static struct i2c_dt_spec aw_i2c_dev = I2C_DT_SPEC_GET(DT_NODELABEL(lsm6dso));
 
+// cppcheck-suppress constParameterCallback
 static int32_t aw93203_i2c_read(uint8_t *addr, uint8_t addr_len, uint8_t *r_data, uint32_t r_len) {
-  if (i2c_write_read(aw_i2c_dev.bus, AW9320X_I2C_DEV_ADDR, addr, addr_len, r_data, r_len)) {
+  if (i2c_write_read(aw_i2c_dev.bus, AW9320X_I2C_DEV_ADDR, addr, addr_len, r_data, r_len) != 0) {
     return -1;
   }
 
   return 0;
 }
 
+// cppcheck-suppress constParameterCallback
 static int32_t aw93203_i2c_write(uint8_t *buf, uint32_t len) {
-  if (i2c_write(aw_i2c_dev.bus, buf, len, AW9320X_I2C_DEV_ADDR)) {
+  if (i2c_write(aw_i2c_dev.bus, buf, len, AW9320X_I2C_DEV_ADDR) != 0) {
     return -1;
   }
 

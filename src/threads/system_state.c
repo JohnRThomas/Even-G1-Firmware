@@ -26,7 +26,7 @@ int trigger_screen_state_change(const char *who, struct GlassesState *state, uin
 int set_imu_on_state(struct GlassesState *state, uint32_t on) {
   if (state->imu.on != on) {
     state->imu.on = on;
-    if (state->display_mode == 10 && on && !state->imu_busy) {
+    if ((state->display_mode == 10) && on && !state->imu_busy) {
       state->imu_event = 1;
       k_sem_give(&state->imu_sem);
     }
@@ -35,7 +35,7 @@ int set_imu_on_state(struct GlassesState *state, uint32_t on) {
   return -1;
 }
 
-int trigger_imu_state_change(void *dev, struct GlassesState *state, bool on) {
+int trigger_imu_state_change(const void *dev, struct GlassesState *state, bool on) {
   ARG_UNUSED(dev);
 
   set_imu_on_state(state, on);
@@ -44,7 +44,7 @@ int trigger_imu_state_change(void *dev, struct GlassesState *state, bool on) {
 }
 
 int global_system_suspend(struct GlassesState *state) {
-  if (state->suspend_state == 0 || state->suspend_state == 4) {
+  if ((state->suspend_state == 0) || (state->suspend_state == 4)) {
     state->suspend_state = 2;
     G1_LOG_WRN("begin.\n");
     k_sleep(K_MSEC(300));
@@ -56,7 +56,7 @@ int global_system_suspend(struct GlassesState *state) {
 }
 
 int global_system_resume(struct GlassesState *state) {
-  if (state->suspend_state == 1 || state->suspend_state == 5) {
+  if ((state->suspend_state == 1) || (state->suspend_state == 5)) {
     state->suspend_state = 3;
     G1_LOG_WRN("begin.\n");
     state->panel.resume_cb(&state->panel);

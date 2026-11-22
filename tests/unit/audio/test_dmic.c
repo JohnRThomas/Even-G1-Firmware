@@ -13,7 +13,7 @@
 /* ble_nus.c's BLE queue, not linked here */
 static struct g1_pkt_log bt_queue_log;
 
-int enqueue_bt_data(void *data, uint8_t len) {
+int enqueue_bt_data(const void *data, uint8_t len) {
   g1_pkt_log_add(&bt_queue_log, data, len);
   return 0;
 }

@@ -43,7 +43,7 @@ static __noinline void pixelto4bithex_for_flash(uint8_t pix, int width) {
     }
     memset(line_buf, 0, LINE_BYTES);
   }
-  for (unsigned int shift = 0; shift < 8; shift += 2) {
+  for (unsigned int shift = 0; shift < 8U; shift += 2U) {
     uint8_t v;
 
     if (line_x >= width) {
@@ -76,7 +76,7 @@ void get_demo_image_source_from_flash(void) {
   struct bmp_info_header ih;
   uint8_t *buf;
   uint32_t addr = FLASH_IMAGE_ADDR;
-  int width, off, height, bytes, stride, ret;
+  int ret;
 
   buf = malloc(BMP_READ_BUF_LEN);
   if (buf == NULL) {
@@ -85,7 +85,7 @@ void get_demo_image_source_from_flash(void) {
   }
   memset(buf, 0, BMP_READ_BUF_LEN);
   ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, BMP_READ_BUF_LEN);
-  if (ret) {
+  if (ret != 0) {
     printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
   } else {
     memcpy(&fh, buf, sizeof(fh));
@@ -93,9 +93,10 @@ void get_demo_image_source_from_flash(void) {
       printk("File is not BMP format \n");
     } else {
       memcpy(&ih, buf + sizeof(fh), sizeof(ih));
-      off = (int)bmp_read_u32(&fh.off_bits);
-      width = (int)bmp_read_u32(&ih.width);
-      height = (int)bmp_read_u32(&ih.height);
+      int off = (int)bmp_read_u32(&fh.off_bits);
+      int width = (int)bmp_read_u32(&ih.width);
+      int height = (int)bmp_read_u32(&ih.height);
+
       if (ih.bit_count != 1) {
         printf("Unsupported bit depth - %d\r\n", ih.bit_count);
       } else {
@@ -108,8 +109,9 @@ void get_demo_image_source_from_flash(void) {
          * 4 bpp panel byte.  line_buf collects one panel row and is copied
          * to the frame buffer when the row is complete.
          */
-        bytes = (width + 7) / 8;
-        stride = (width + 31) / 32 * 4;
+        int bytes = (width + 7) / 8;
+        int stride = (width + 31) / 32 * 4;
+
         line_x = 0;
         line_idx = 0;
         for (int y = 0; y < height; y++) {
@@ -117,7 +119,7 @@ void get_demo_image_source_from_flash(void) {
           memset(buf, 0, BMP_READ_BUF_LEN);
           addr = FLASH_IMAGE_ADDR + off + (height - 1 - y) * stride;
           ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, bytes);
-          if (ret) {
+          if (ret != 0) {
             printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
             break;
           }
@@ -144,7 +146,7 @@ static __noinline void pixelto4bithex(uint8_t pix, int width) {
     }
     memset(line_buf, 0, LINE_BYTES);
   }
-  for (unsigned int shift = 0; shift < 8; shift += 2) {
+  for (unsigned int shift = 0; shift < 8U; shift += 2U) {
     uint8_t v;
 
     if (line_x >= width) {
@@ -168,11 +170,11 @@ static __noinline void pixelto4bithex(uint8_t pix, int width) {
 }
 
 static void get_demo_image_source(uint32_t idx) {
+  uint32_t image = idx;
   struct bmp_file_header fh;
   struct bmp_info_header ih;
   uint8_t *buf;
-  uint32_t addr;
-  int off, width, height, bytes, stride, ret;
+  int ret;
 
   buf = malloc(BMP_READ_BUF_LEN);
   if (buf == NULL) {
@@ -180,13 +182,14 @@ static void get_demo_image_source(uint32_t idx) {
     return;
   }
   memset(buf, 0, BMP_READ_BUF_LEN);
-  if (idx >= DEMO_IMAGE_NUM) {
-    printk("error imgIdx is %d,reset as zero !\n", idx);
-    idx = 0;
+  if (image >= (uint32_t)DEMO_IMAGE_NUM) {
+    printk("error imgIdx is %u,reset as zero !\n", image);
+    image = 0;
   }
-  ret = get_dashboard_state()->flash_read(get_dashboard_state(), idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR, buf,
+  ret = get_dashboard_state()->flash_read(get_dashboard_state(),
+                                          (image * (uint32_t)DEMO_IMAGE_SIZE) + (uint32_t)DEMO_IMAGE_FLASH_ADDR, buf,
                                           BMP_READ_BUF_LEN);
-  if (ret) {
+  if (ret != 0) {
     printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
   } else {
     memcpy(&fh, buf, sizeof(fh));
@@ -194,9 +197,10 @@ static void get_demo_image_source(uint32_t idx) {
       printk("File is not BMP format \n");
     } else {
       memcpy(&ih, buf + sizeof(fh), sizeof(ih));
-      off = (int)bmp_read_u32(&fh.off_bits);
-      width = (int)bmp_read_u32(&ih.width);
-      height = (int)bmp_read_u32(&ih.height);
+      int off = (int)bmp_read_u32(&fh.off_bits);
+      int width = (int)bmp_read_u32(&ih.width);
+      int height = (int)bmp_read_u32(&ih.height);
+
       if (ih.bit_count != 1) {
         printf("Unsupported bit depth - %d\r\n", ih.bit_count);
       } else {
@@ -209,16 +213,19 @@ static void get_demo_image_source(uint32_t idx) {
          * first picture above, so the caller always gets a picture on the
          * panel.
          */
-        bytes = (width + 7) / 8;
-        stride = (width + 31) / 32 * 4;
+        int bytes = (width + 7) / 8;
+        int stride = (width + 31) / 32 * 4;
+
         line_x = 0;
         line_idx = 0;
         for (int y = 0; y < height; y++) {
           line_x = 0;
           memset(buf, 0, BMP_READ_BUF_LEN);
-          addr = idx * DEMO_IMAGE_SIZE + DEMO_IMAGE_FLASH_ADDR + off + (height - 1 - y) * stride;
+          int row_off = (height - 1 - y) * stride;
+          uint32_t addr =
+            (image * (uint32_t)DEMO_IMAGE_SIZE) + (uint32_t)DEMO_IMAGE_FLASH_ADDR + (uint32_t)off + (uint32_t)row_off;
           ret = get_dashboard_state()->flash_read(get_dashboard_state(), addr, buf, bytes);
-          if (ret) {
+          if (ret != 0) {
             printk("[%s-%d] read pic from flash failed !\n", __func__, __LINE__);
             break;
           }
@@ -237,11 +244,13 @@ static void get_demo_image_source(uint32_t idx) {
 }
 
 void demo_image_select(uint8_t idx) {
-  if (idx >= DEMO_IMAGE_NUM) {
-    idx = 0;
+  uint8_t image = idx;
+
+  if (image >= DEMO_IMAGE_NUM) {
+    image = 0;
   }
   demo_mode = 1;
-  demo_idx = idx;
+  demo_idx = image;
 }
 
 void demo_image_next(void) {
@@ -254,7 +263,8 @@ void demo_image_next(void) {
 
 int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event) {
   ARG_UNUSED(arg);
-  int w, h;
+  int w;
+  int h;
 
   if (event == 2) {
     gui_screen_clear();
@@ -264,7 +274,7 @@ int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event) {
     return 0;
   }
   if (demo_mode == 0) {
-    if (get_dashboard_state()->canvas_x != demo_x || get_dashboard_state()->canvas_y != demo_y) {
+    if ((get_dashboard_state()->canvas_x != demo_x) || (get_dashboard_state()->canvas_y != demo_y)) {
       gui_screen_clear();
       w = 6;
       h = 5;
@@ -332,6 +342,8 @@ int ui_demo_image_task(struct jbd_panel_context *panel, void *arg, int event) {
     get_demo_image_source(demo_idx);
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                            demo_x, demo_y, w + demo_x, h + demo_y);
+  } else {
+    /* nothing to do */
   }
   return 0;
 }

@@ -95,7 +95,8 @@ int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8
   ARG_UNUSED(b);
   ARG_UNUSED(c);
 
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
   const uint8_t *data = NULL;
   uint8_t frames;
 
@@ -105,16 +106,16 @@ int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8
   }
 
   dyn_frame_cnt = frames;
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     clean_fb_data(frame_buffer, 0, x, y, x + w, y + h);
   }
-  copy_to_frame_buffer(frame_buffer, data + h * ((w * dyn_frame_idx) / 2), w / 2, h, x, y);
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  copy_to_frame_buffer(frame_buffer, data + (h * ((w * dyn_frame_idx) / 2)), w / 2, h, x, y);
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x, y,
                            x + w, y + h);
   }
 
-  if (dyn_frame_idx < dyn_frame_cnt - 1 || loop == 0 || loop - 1 > dyn_loop_cnt) {
+  if ((dyn_frame_idx < (dyn_frame_cnt - 1)) || (loop == 0) || ((loop - 1) > dyn_loop_cnt)) {
     dyn_frame_idx++;
   }
   if (dyn_frame_idx >= dyn_frame_cnt) {
@@ -126,19 +127,20 @@ int gui_bmp_dynamic_bitmap_draw(int id, int x, int y, int a, int b, int c, uint8
 
 int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, int no_draw) {
   const uint8_t *data;
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect != 0 || cb != NULL || no_draw != 0) {
+  if ((effect != 0) || (cb != NULL) || (no_draw != 0)) {
     return 0;
   }
 
-  if (id < 0x16 || id > 0x87) {
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if ((id < 0x16) || (id > 0x87)) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x, y, x + 24, y + 24);
     }
     data = get_small_glyph_bitmap((uint8_t)id, 0x120);
     copy_to_frame_buffer(frame_buffer, data, 12, 24, x, y);
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x,
                              y, x + 24, y + 24);
     }
@@ -147,11 +149,11 @@ int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, in
       G1_LOG_WRN("can't find resource,please check resource name !\n");
       return -1;
     }
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x, y, w + 2 + x, y + h);
     }
     copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y);
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x,
                              y, w + 2 + x, y + h);
     }
@@ -160,7 +162,8 @@ int gui_bmp_bitmap_draw(int id, int x, int y, int effect, gui_effect_cb_t cb, in
 }
 
 int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level) {
-  int w, h;
+  int w;
+  int h;
   const uint8_t *data;
   size_t size;
 
@@ -182,11 +185,11 @@ int gui_bmp_bitmap_draw_ex(int id, int x, int y, uint8_t *buf, uint8_t level) {
     }
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     clean_fb_data(frame_buffer, 0, x, y, w + 2 + x, y + h);
   }
   copy_to_frame_buffer(frame_buffer, buf, w / 2, h, x, y);
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x, y,
                            w + 2 + x, y + h);
   }
@@ -204,12 +207,16 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect == 0 && cb == NULL && no_draw == 0) {
-    int x_off = 0, y_off = 0, line_w = 0, lines = 0;
+  if ((effect == 0) && (cb == NULL) && (no_draw == 0)) {
+    int x_off = 0;
+    int y_off = 0;
+    int line_w = 0;
+    int lines = 0;
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
     }
 
@@ -224,22 +231,22 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
           continue;
         }
         memcpy(glyph, data, h * (w / 2));
-        if (dark_cnt != 0 && i < dark_cnt) {
-          for (int k = 0; k < h * (w / 2); k++) {
+        if ((dark_cnt != 0U) && (i < dark_cnt)) {
+          for (int k = 0; k < (h * (w / 2)); k++) {
             glyph[k] &= text_grey_level;
           }
         }
         line_w += w + gui_font_kerning(code[-1], code[0]);
-        if (line_w > (uint32_t)(x1 - x0)) {
+        if ((uint32_t)line_w > (uint32_t)(x1 - x0)) {
           y_off += h;
           if (font == 0) {
             y_off++;
           }
           lines++;
-          if (lines >= max_lines) {
+          if ((uint32_t)lines >= max_lines) {
             break;
           }
-          if (y_off >= (uint32_t)(y1 - y0)) {
+          if ((uint32_t)y_off >= (uint32_t)(y1 - y0)) {
             break;
           }
           copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -249,7 +256,7 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
           copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[-1], code[0]) + w;
         }
-      } else if (ret == -1 && (c == '\r' || c == '\n')) {
+      } else if ((ret == -1) && ((c == '\r') || (c == '\n'))) {
         if (h != 0) {
           y_off += h;
           if (font == 0) {
@@ -263,24 +270,28 @@ int gui_utf_draw(int arg, const char *str, int font, int x0, int y0, int x1, int
           }
         }
         lines++;
-        if (lines >= max_lines) {
+        if ((uint32_t)lines >= max_lines) {
           break;
         }
-        if (y_off >= (uint32_t)(y1 - y0)) {
+        if ((uint32_t)y_off >= (uint32_t)(y1 - y0)) {
           break;
         }
         line_w = 0;
         x_off = 0;
+      } else {
+        /* nothing to do */
       }
     }
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
     return cb(0, str, font, x0, y0);
+  } else {
+    /* nothing to do */
   }
   return 0;
 }
@@ -293,12 +304,16 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect == 0 && cb == NULL && no_draw == 0) {
-    int x_off = 0, y_off = 0, line_w = 0, lines = 0;
+  if ((effect == 0) && (cb == NULL) && (no_draw == 0)) {
+    int x_off = 0;
+    int y_off = 0;
+    int line_w = 0;
+    int lines = 0;
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
     }
 
@@ -324,21 +339,21 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
         }
         memcpy(glyph, data, h * (w / 2));
         if (dark_light_flag == 1) {
-          for (int k = 0; k < h * (w / 2); k++) {
+          for (int k = 0; k < (h * (w / 2)); k++) {
             glyph[k] &= text_grey_level;
           }
         }
         line_w += w + gui_font_kerning(code[-1], code[0]);
-        if (line_w > (uint32_t)(x1 - x0)) {
+        if ((uint32_t)line_w > (uint32_t)(x1 - x0)) {
           y_off += h;
           if (font == 0) {
             y_off++;
           }
           lines++;
-          if (lines >= max_lines) {
+          if ((uint32_t)lines >= max_lines) {
             break;
           }
-          if (y_off >= (uint32_t)(y1 - y0)) {
+          if ((uint32_t)y_off >= (uint32_t)(y1 - y0)) {
             break;
           }
           copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -348,7 +363,7 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
           copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[-1], code[0]) + w;
         }
-      } else if (ret == -1 && (c == '\r' || c == '\n')) {
+      } else if ((ret == -1) && ((c == '\r') || (c == '\n'))) {
         if (h != 0) {
           y_off += h;
           if (font == 0) {
@@ -362,24 +377,28 @@ int gui_utf_draw_dark_light_split(int arg, const char *str, int font, int x0, in
           }
         }
         lines++;
-        if (lines >= max_lines) {
+        if ((uint32_t)lines >= max_lines) {
           break;
         }
-        if (y_off >= (uint32_t)(y1 - y0)) {
+        if ((uint32_t)y_off >= (uint32_t)(y1 - y0)) {
           break;
         }
         line_w = 0;
         x_off = 0;
+      } else {
+        /* nothing to do */
       }
     }
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
     return cb(0, str, font, x0, y0);
+  } else {
+    /* nothing to do */
   }
   dark_light_flag = 0;
   return 0;
@@ -392,14 +411,18 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect == 0 && cb == NULL && no_draw == 0) {
+  if ((effect == 0) && (cb == NULL) && (no_draw == 0)) {
     uint8_t glyph[676];
-    int x_off = 0, y_off = 0, line_w = 0, lines = 0;
+    int x_off = 0;
+    int y_off = 0;
+    int line_w = 0;
+    int lines = 0;
     int width;
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
     }
     width = x1 - x0;
@@ -414,20 +437,20 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
           continue;
         }
         memcpy(glyph, data, h * (w / 2));
-        if (i < dark_cnt) {
-          for (int k = 0; k < h * (w / 2); k++) {
+        if ((uint32_t)i < dark_cnt) {
+          for (int k = 0; k < (h * (w / 2)); k++) {
             glyph[k] &= text_grey_level;
           }
         }
         line_w += w + gui_font_kerning(code[0], code[1]);
-        if (line_w > (uint32_t)width) {
+        if ((uint32_t)line_w > (uint32_t)width) {
           lines++;
-          if (lines >= max_lines || y_off >= (uint32_t)(y1 - y0)) {
+          if (((uint32_t)lines >= max_lines) || ((uint32_t)y_off >= (uint32_t)(y1 - y0))) {
             /* last line is full: make room for an ellipsis */
             uint16_t *p = code;
             int k = i;
 
-            while (k != 0 && (uint32_t)(width - x_off) <= 3) {
+            while ((k != 0) && ((uint32_t)(width - x_off) <= 3U)) {
               uint16_t ch;
 
               p--;
@@ -449,8 +472,8 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
               continue;
             }
             memcpy(glyph, data, h * (w / 2));
-            if (i < dark_cnt) {
-              for (int n = 0; n < h * (w / 2); n++) {
+            if ((uint32_t)i < dark_cnt) {
+              for (int n = 0; n < (h * (w / 2)); n++) {
                 glyph[n] &= text_grey_level;
               }
             }
@@ -468,7 +491,7 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
           copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[0], code[1]) + w;
         }
-      } else if (ret == -1 && (c == '\r' || c == '\n')) {
+      } else if ((ret == -1) && ((c == '\r') || (c == '\n'))) {
         if (h != 0) {
           y_off += h;
           if (font == 0) {
@@ -482,21 +505,25 @@ int gui_utf_draw_truncate(int arg, const char *str, int font, int x0, int y0, in
           }
         }
         lines++;
-        if (lines >= max_lines || y_off >= (uint32_t)(y1 - y0)) {
+        if (((uint32_t)lines >= max_lines) || ((uint32_t)y_off >= (uint32_t)(y1 - y0))) {
           break;
         }
         x_off = 0;
         line_w = 0;
+      } else {
+        /* nothing to do */
       }
     }
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
     return cb(0, str, font, x0, y0);
+  } else {
+    /* nothing to do */
   }
   return 0;
 }
@@ -509,12 +536,16 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect == 0 && cb == NULL && no_draw == 0) {
-    int x_off = 0, y_off = 0, line_w = 0, lines = 0;
+  if ((effect == 0) && (cb == NULL) && (no_draw == 0)) {
+    int x_off = 0;
+    int y_off = 0;
+    int line_w = 0;
+    int lines = 0;
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
     }
 
@@ -531,21 +562,21 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
         memcpy(glyph, data, h * (w / 2));
         line_w += w + gui_font_kerning(code[-1], code[0]);
         /* dimmed by the line the glyph lands on, the next one when it wraps */
-        if (dark_lines != 0 && lines + (line_w > (uint32_t)(x1 - x0)) < dark_lines) {
-          for (int k = 0; k < h * (w / 2); k++) {
+        if ((dark_lines != 0) && ((lines + ((uint32_t)line_w > (uint32_t)(x1 - x0))) < dark_lines)) {
+          for (int k = 0; k < (h * (w / 2)); k++) {
             glyph[k] &= text_grey_level;
           }
         }
-        if (line_w > (uint32_t)(x1 - x0)) {
+        if ((uint32_t)line_w > (uint32_t)(x1 - x0)) {
           y_off += h;
           if (font == 0) {
             y_off++;
           }
           lines++;
-          if (lines >= max_lines) {
+          if ((uint32_t)lines >= max_lines) {
             break;
           }
-          if (y_off >= (uint32_t)(y1 - y0)) {
+          if ((uint32_t)y_off >= (uint32_t)(y1 - y0)) {
             break;
           }
           copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -555,7 +586,7 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
           copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0 + x_off, y0 + y_off);
           x_off += gui_font_kerning(code[-1], code[0]) + w;
         }
-      } else if (ret == -1 && (c == '\r' || c == '\n')) {
+      } else if ((ret == -1) && ((c == '\r') || (c == '\n'))) {
         if (h != 0) {
           y_off += h;
           if (font == 0) {
@@ -569,24 +600,28 @@ int gui_utf_draw_darkword_by_lines(int arg, const char *str, int font, int x0, i
           }
         }
         lines++;
-        if (lines >= max_lines) {
+        if ((uint32_t)lines >= max_lines) {
           break;
         }
-        if (y_off >= (uint32_t)(y1 - y0)) {
+        if ((uint32_t)y_off >= (uint32_t)(y1 - y0)) {
           break;
         }
         line_w = 0;
         x_off = 0;
+      } else {
+        /* nothing to do */
       }
     }
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
     return cb(0, str, font, x0, y0);
+  } else {
+    /* nothing to do */
   }
   return 0;
 }
@@ -598,9 +633,10 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect == 0 && cb == NULL && no_draw == 0) {
+  if ((effect == 0) && (cb == NULL) && (no_draw == 0)) {
     int x_start = (int)x0;
     uint32_t x_off = 0;
     uint32_t y_off = 0;
@@ -608,7 +644,7 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
     int lines = 0;
     bool new_line = true;
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, (int)x0, (int)y0, (int)x1, (int)y1);
     }
 
@@ -625,7 +661,7 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
         for (uint32_t j = i; j < count; j++, p++) {
           uint16_t ch = *p;
 
-          if (ch == '\r' || ch == '\n') {
+          if ((ch == '\r') || (ch == '\n')) {
             break;
           }
           if (check_printable_code(ch) == 0) {
@@ -636,10 +672,11 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
             }
           }
         }
-        x_start = (int)(x0 + ((x1 - x0 - lw) >> 1U));
+        x_start = (int)(x0 + ((x1 - x0 - (uint32_t)lw) >> 1U));
       }
 
-      c = *code++;
+      c = *code;
+      code++;
       ret = check_printable_code(c);
       if (ret == 0) {
         if (resource_manger_get(font, c, &w, &h, &data, NULL) < 0) {
@@ -647,50 +684,50 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
         } else {
           memcpy(glyph, data, h * (w / 2));
           if (i < dark_cnt) {
-            for (int k = 0; k < h * (w / 2); k++) {
+            for (int k = 0; k < (h * (w / 2)); k++) {
               glyph[k] &= text_grey_level;
             }
           }
           line_w += gui_font_kerning(code[-1], code[0]) + w;
-          if (line_w > x1 - x0) {
-            y_off += h;
+          if (line_w > (x1 - x0)) {
+            y_off += (uint32_t)h;
             if (font == 0) {
               y_off++;
             }
             lines++;
-            if (lines >= max_lines) {
+            if ((uint32_t)lines >= max_lines) {
               break;
             }
-            if (y_off >= y1 - y0) {
+            if (y_off >= (y1 - y0)) {
               break;
             }
             copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start, (int)(y0 + y_off));
             x_off = gui_font_kerning(code[-1], code[0]) + w;
             line_w = x_off;
           } else {
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, (int)(x_start + x_off), (int)(y0 + y_off));
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, (int)((uint32_t)x_start + x_off), (int)(y0 + y_off));
             x_off += gui_font_kerning(code[-1], code[0]) + w;
           }
         }
         new_line = false;
-      } else if (ret == -1 && (c == '\r' || c == '\n')) {
+      } else if ((ret == -1) && ((c == '\r') || (c == '\n'))) {
         if (h != 0) {
-          y_off += h;
+          y_off += (uint32_t)h;
           if (font == 0) {
             y_off++;
           }
         } else {
           if (font != 0) {
-            y_off += 26;
+            y_off += 26U;
           } else {
-            y_off += 27;
+            y_off += 27U;
           }
         }
         lines++;
-        if (lines >= max_lines) {
+        if ((uint32_t)lines >= max_lines) {
           break;
         }
-        if (y_off >= y1 - y0) {
+        if (y_off >= (y1 - y0)) {
           break;
         }
         new_line = true;
@@ -701,13 +738,15 @@ int gui_utf_draw_middle(int arg, const char *str, int font, uint32_t x0, uint32_
       }
     }
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                              (int)x0, (int)y0, (int)x1, (int)y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
     return cb(0, str, font, (int)x0, (int)y0);
+  } else {
+    /* nothing to do */
   }
   return 0;
 }
@@ -719,9 +758,10 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *code = utf8_to_unicode_buf(str, &count);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect == 0 && cb == NULL && no_draw == 0) {
+  if ((effect == 0) && (cb == NULL) && (no_draw == 0)) {
     uint32_t x_off = 0;
     uint32_t y_off = 0;
     uint32_t line_w = 0;
@@ -730,7 +770,7 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
     int x_start = x0;
     bool new_line = true;
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
     }
 
@@ -747,7 +787,7 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
         for (int j = i; j < count; j++, p++) {
           uint16_t ch = *p;
 
-          if (ch == '\r' || ch == '\n') {
+          if ((ch == '\r') || (ch == '\n')) {
             break;
           }
           if (check_printable_code(ch) == 0) {
@@ -758,59 +798,61 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
             }
           }
         }
-        x_start = lw <= (uint32_t)(x1 - x0) ? x1 - lw : x0;
+        x_start = (lw <= (uint32_t)(x1 - x0)) ? (x1 - lw) : x0;
         x_start = (int)((uint32_t)x_start & ~1U);
       }
 
-      c = *code++;
+      c = *code;
+      code++;
       ret = check_printable_code(c);
       if (ret == 0) {
         if (resource_manger_get(font, c, &w, &h, &data, NULL) < 0) {
           G1_LOG_WRN("can not find 0x%x font resource\n", c);
         } else {
           memcpy(glyph, data, h * (w / 2));
-          if (i < dark_cnt) {
-            for (int k = 0; k < h * (w / 2); k++) {
+          if ((uint32_t)i < dark_cnt) {
+            for (int k = 0; k < (h * (w / 2)); k++) {
               glyph[k] &= text_grey_level;
             }
           }
           line_w += gui_font_kerning(code[-1], code[0]) + w;
           if (line_w > (uint32_t)(x1 - x0)) {
-            y_off += h;
+            y_off += (uint32_t)h;
             if (font == 0) {
               y_off++;
             }
             lines++;
-            if (lines >= max_lines) {
+            if ((uint32_t)lines >= max_lines) {
               break;
             }
             if (y_off >= (uint32_t)(y1 - y0)) {
               break;
             }
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start, (int)(y0 + y_off));
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x_start, (int)((uint32_t)y0 + y_off));
             x_off = gui_font_kerning(code[-1], code[0]) + w;
             line_w = x_off;
           } else {
-            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, (int)(x_start + x_off), (int)(y0 + y_off));
+            copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, (int)((uint32_t)x_start + x_off),
+                                 (int)((uint32_t)y0 + y_off));
             x_off += gui_font_kerning(code[-1], code[0]) + w;
           }
         }
         new_line = false;
-      } else if (ret == -1 && (c == '\r' || c == '\n')) {
+      } else if ((ret == -1) && ((c == '\r') || (c == '\n'))) {
         if (h != 0) {
-          y_off += h;
+          y_off += (uint32_t)h;
           if (font == 0) {
             y_off++;
           }
         } else {
           if (font != 0) {
-            y_off += 26;
+            y_off += 26U;
           } else {
-            y_off += 27;
+            y_off += 27U;
           }
         }
         lines++;
-        if (lines >= max_lines) {
+        if ((uint32_t)lines >= max_lines) {
           break;
         }
         if (y_off >= (uint32_t)(y1 - y0)) {
@@ -824,13 +866,15 @@ int gui_utf_draw_align_right(int arg, const char *str, int font, int x0, int y0,
       }
     }
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
     return cb(0, str, font, x0, y0);
+  } else {
+    /* nothing to do */
   }
   return 0;
 }
@@ -842,9 +886,10 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
   uint16_t count = 0;
   const uint8_t *data = NULL;
   uint16_t *codes = utf8_to_unicode_buf(str, &count);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
 
-  if (effect == 0 && cb == NULL && no_draw == 0) {
+  if ((effect == 0) && (cb == NULL) && (no_draw == 0)) {
     int x_off = 0;
     int y_off = 0;
     uint32_t line_w = 0;
@@ -852,7 +897,7 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
     uint16_t *code = codes;
     int width;
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
     }
     width = x1 - x0;
@@ -867,13 +912,13 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
           G1_LOG_WRN("can not find 0x%x font resource\n", c);
         } else {
           memcpy(glyph, data, h * (w / 2));
-          if (dark_cnt != 0 && i < dark_cnt) {
-            for (int k = 0; k < h * (w / 2); k++) {
+          if ((dark_cnt != 0U) && (i < dark_cnt)) {
+            for (int k = 0; k < (h * (w / 2)); k++) {
               glyph[k] &= text_grey_level;
             }
           }
 
-          if (line_w > (uint32_t)width / 2 && lines < max_lines - 1) {
+          if ((line_w > ((uint32_t)width / 2U)) && ((uint32_t)lines < (max_lines - 1U))) {
             const uint16_t split_chars[5] = {' ', ',', '.', '?', '!'};
             int k;
 
@@ -882,9 +927,9 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
                 break;
               }
             }
-            if (k < 5 && c != 0) {
+            if ((k < 5) && (c != 0)) {
               const uint16_t end_chars[7] = {' ', ',', '.', '?', '!', '\r', '\n'};
-              uint32_t start = i + 1;
+              uint32_t start = i + 1U;
               uint32_t end;
 
               /* find the end of the next word */
@@ -898,12 +943,12 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
                     break;
                   }
                 }
-                if (found) {
+                if (found != 0) {
                   break;
                 }
               }
-              if (found) {
-                if (end - i > 40) {
+              if (found != 0) {
+                if ((end - i) > 40U) {
                   G1_LOG_WRN("The word is too long and will not be processed\n");
                 } else {
                   int wide = 0;
@@ -915,8 +960,9 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
                   }
                   if (end == i) {
                     G1_LOG_WRN("!!! end_split_character_index == start_split_character_index\n");
-                  } else if (wide == 0 || (float)wide / (float)(end - i) < 0.5f) {
-                    int gw = 0, gh = 0;
+                  } else if ((wide == 0) || (((float)wide / (float)(end - i)) < 0.5f)) {
+                    int gw = 0;
+                    int gh = 0;
                     const uint8_t *gdata;
                     uint16_t *p = code;
                     int len = (int)line_w;
@@ -930,6 +976,8 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
                         break;
                       }
                     }
+                  } else {
+                    /* nothing to do */
                   }
                 }
               }
@@ -943,10 +991,10 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
               y_off++;
             }
             lines++;
-            if (lines >= max_lines) {
+            if ((uint32_t)lines >= max_lines) {
               break;
             }
-            if (y_off >= (uint32_t)(y1 - y0)) {
+            if ((uint32_t)y_off >= (uint32_t)(y1 - y0)) {
               break;
             }
             copy_to_frame_buffer(frame_buffer, glyph, w / 2, h, x0, y0 + y_off);
@@ -960,8 +1008,10 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
         if (ret != 1) {
           continue;
         }
-      } else if (ret != -1 || (c != '\n' && c != '\r')) {
+      } else if ((ret != -1) || ((c != '\n') && (c != '\r'))) {
         continue;
+      } else {
+        /* nothing to do */
       }
 
       /* line break: CR/LF, or the next word does not fit on this line */
@@ -978,20 +1028,22 @@ int gui_utf_Wordwrap_draw(int arg, const char *str, int font, int x0, int y0, in
         }
       }
       lines++;
-      if (lines >= max_lines || y_off >= (uint32_t)(y1 - y0)) {
+      if (((uint32_t)lines >= max_lines) || ((uint32_t)y_off >= (uint32_t)(y1 - y0))) {
         break;
       }
       line_w = 0;
       x_off = 0;
     }
 
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                              y0, x1, y1);
     }
   } else if (cb != NULL) {
     G1_LOG_WRN("exex process effect callback function\n");
     return cb(0, str, font, x0, y0);
+  } else {
+    /* nothing to do */
   }
   return 0;
 }
@@ -1026,31 +1078,34 @@ int64_t abs_diff_u64(int64_t a, int64_t b) {
 }
 
 int gui_utf_adv_draw_reset(void) {
-  struct gui_utf_adv_cfg cfg;
+  struct gui_utf_adv_cfg cfg = {.cmd = 8};
 
-  cfg.cmd = 8;
   return gui_utf_adv_draw_configure(cfg);
 }
 
 /* horizontal text origin: the stored x shift plus the panel's per-eye offset */
 int gui_screen_x_offset(void) {
   /* an unset canvas (both 0) gets both defaults, so x and y may be read in either order */
-  if (get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) {
+  if ((get_dashboard_state()->canvas_x == 0) && (get_dashboard_state()->canvas_y == 0)) {
     get_dashboard_state()->canvas_x = 32;
     get_dashboard_state()->canvas_y = 32;
   } else if (get_dashboard_state()->canvas_x > 64) {
     get_dashboard_state()->canvas_x = 32;
+  } else {
+    /* nothing to do */
   }
   return (int)(get_dashboard_state()->canvas_x + get_dashboard_state()->panel.y_offset);
 }
 
 /* vertical text origin (display height setting, clamped to 4..64) */
 int gui_screen_y_offset(void) {
-  if (get_dashboard_state()->canvas_x == 0 && get_dashboard_state()->canvas_y == 0) {
+  if ((get_dashboard_state()->canvas_x == 0) && (get_dashboard_state()->canvas_y == 0)) {
     get_dashboard_state()->canvas_x = 32;
     get_dashboard_state()->canvas_y = 32;
   } else if (get_dashboard_state()->canvas_y > 64) {
     get_dashboard_state()->canvas_y = 32;
+  } else {
+    /* nothing to do */
   }
   if (get_dashboard_state()->canvas_y < 4) {
     get_dashboard_state()->canvas_y = 4;
@@ -1064,7 +1119,7 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
   ARG_UNUSED(font);
 
   if (gui_screen_y_offset() <= 32) {
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0 + 27, x1, y1 + 27);
     }
     clear_showing_notification_on_gui();
@@ -1077,12 +1132,12 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
                                 x0, y0, x1, y1, offs[i]);
     }
     copy_frame_buffer_rows(frame_buffer, x0, y0, x0, y0 + 27, 27, x1 - x0);
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y1, x1, y1 + 27);
     }
   } else if (gui_screen_y_offset() > 32) {
     copy_frame_buffer_rows(frame_buffer, x0, y0 - 27, x0, y0, 27, x1 - x0);
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
     }
     clear_showing_notification_on_gui();
@@ -1094,9 +1149,11 @@ int gui_utf_draw_scroll_line(int arg, const char *str, int font, int x0, int y0,
       reflash_fb_data_to_lcd_ex(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                                 x0, y0, x1, y1, offs[i]);
     }
-    if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+    if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
       clean_fb_data(frame_buffer, 0, x0, y0 - 27, x1, y0);
     }
+  } else {
+    /* nothing to do */
   }
   return 0;
 }
@@ -1105,7 +1162,8 @@ int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool i
   struct g1_date date = {0};
   size_t len;
   const uint8_t *data;
-  int w, h;
+  int w;
+  int h;
   int x;
 
   timestamp_to_date(ts, &date);
@@ -1118,6 +1176,8 @@ int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool i
       date.hour -= 12;
     } else if (date.hour == 0) {
       date.hour = 12;
+    } else {
+      /* nothing to do */
     }
     sprintf(buf, "%d%d%s%d%d", date.hour / 10, date.hour % 10, ":", date.minute / 10, date.minute % 10);
   }
@@ -1131,13 +1191,13 @@ int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool i
       gui_utf_draw(0, buf, 3, x0, y0, x1, y1, 1, 0, 0, NULL, 0);
       break;
     case 1:
-      if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+      if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
         clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
       }
       x = x0;
       for (int i = 0; i < len; i++) {
         data = NULL;
-        if (resource_manger_get(1, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 || data == NULL) {
+        if ((resource_manger_get(1, (uint8_t)buf[i], &w, &h, &data, NULL) != 0) || (data == NULL)) {
           G1_LOG_WRN(
             "The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
             (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
@@ -1146,19 +1206,19 @@ int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool i
           x += w + 6;
         }
       }
-      if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+      if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
         reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                                x0, y0, x1, y1);
       }
       break;
     case 2:
-      if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+      if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
         clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
       }
       x = x0;
       for (int i = 0; i < len; i++) {
         data = NULL;
-        if (resource_manger_get(2, (uint8_t)buf[i], &w, &h, &data, NULL) != 0 || data == NULL) {
+        if ((resource_manger_get(2, (uint8_t)buf[i], &w, &h, &data, NULL) != 0) || (data == NULL)) {
           G1_LOG_WRN(
             "The content cannot be found in the current font library,unicode content = %2d,font libray is %s\n",
             (uint8_t)buf[i], "EVEN_DASHBOARD_CLOCK_32x_TTF");
@@ -1174,7 +1234,7 @@ int gui_clock_draw(uint32_t ts, int x0, int y0, int x1, int y1, int mode, bool i
           }
         }
       }
-      if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+      if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
         reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                                x0, y0, x1, y1);
       }
@@ -1227,7 +1287,7 @@ int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, u
   int col;
   uint8_t **fb;
 
-  if (x0 != x1 || y0 > y1) {
+  if ((x0 != x1) || (y0 > y1)) {
     G1_LOG_WRN("input param error,please check postion content\n");
     return -1;
   }
@@ -1239,29 +1299,35 @@ int gui_verticalLine_process_bar(int x0, int y0, int x1, int y1, int reserved, u
   }
   col = x0 / 2;
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     clean_fb_data(frame_buffer, 0, x0 - 6, y0, x0 + 6, y1);
   }
   fb = frame_buffer;
-  for (int i = 0; i < y1 - y0; i++) {
+  for (int i = 0; i < (y1 - y0); i++) {
     fb[y0 + i][col] = color;
   }
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                            x0 - 6, y0, x1 + 6, y1);
   }
-  gui_bmp_bitmap_draw(0x17, x0 - 4, pct * (y1 - y0 - 13) / 100 + y0, 0, 0, 0);
+  gui_bmp_bitmap_draw(0x17, x0 - 4, (pct * (y1 - y0 - 13) / 100) + y0, 0, 0, 0);
   return 0;
 }
 
 int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segments, uint8_t gap, uint8_t percent) {
-  int width, bar_width, fill;
-  int seg_num, pct;
+  int width;
+  int bar_width;
+  int fill;
+  int seg_num;
+  int pct;
   uint8_t pix;
   int x;
-  int seg_len, seg, seg_w, col0;
+  int seg_len;
+  int seg;
+  int seg_w;
+  int col0;
 
-  if (x0 > x1 || y0 > y1) {
+  if ((x0 > x1) || (y0 > y1)) {
     G1_LOG_WRN("input param error,please check postion content\n");
     return -1;
   }
@@ -1274,13 +1340,13 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
   if (pct > 100) {
     pct = 100;
   }
-  bar_width = x1 - x0 - gap * (seg_num - 1);
+  bar_width = x1 - x0 - (gap * (seg_num - 1));
   width = x1 - x0;
   seg_w = bar_width / seg_num;
   fill = bar_width * pct / 100;
   col0 = x0 / 2;
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
   }
 
@@ -1299,28 +1365,28 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
       }
       seg_len = 0;
     }
-    int col = col0 + x / 2;
+    int col = col0 + (x / 2);
     uint8_t **rows = frame_buffer + y0;
 
     if (fill != 0) {
-      for (int r = 0; r < y1 - y0; r++) {
+      for (int r = 0; r < (y1 - y0); r++) {
         if ((int)((uint32_t)x & 1U) == 0) {
           pix = 0xf0;
         } else {
           pix |= 0x0fU;
         }
-        if (((uint32_t)(x + 1) & 1U) == 0) {
+        if (((uint32_t)(x + 1) & 1U) == 0U) {
           rows[r][col] = pix;
         }
       }
     } else {
-      for (int r = 0; r < y1 - y0; r++) {
+      for (int r = 0; r < (y1 - y0); r++) {
         if ((int)((uint32_t)x & 1U) == 0) {
           pix = text_grey_level & 0xf0U;
         } else {
           pix |= text_grey_level & 0x0fU;
         }
-        if (((uint32_t)(x + 1) & 1U) == 0) {
+        if (((uint32_t)(x + 1) & 1U) == 0U) {
           rows[r][col] = pix;
         }
       }
@@ -1330,7 +1396,7 @@ int gui_horizontal_percentage_bar(int x0, int y0, int x1, int y1, uint8_t segmen
     }
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                            y0, x1, y1);
   }
@@ -1341,16 +1407,16 @@ int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t 
   uint8_t **fb;
   int n;
 
-  if (x0 > x1 || y0 > y1 || color > 0x0f) {
+  if ((x0 > x1) || (y0 > y1) || (color > 0x0f)) {
     G1_LOG_WRN("input param error,please check postion content\n");
     return -1;
   }
-  if ((uint32_t)x0 & 1U) {
+  if (((uint32_t)x0 & 1U) != 0U) {
     G1_LOG_WRN("Scenarios where the starting point of x is an even number are not currently supported.\n");
     return -1;
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     clean_fb_data(frame_buffer, 0, x0 - 2, y0, x1 + 2, y1);
   }
 
@@ -1360,33 +1426,34 @@ int gui_bitmap_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp, uint8_t 
   /* bytes per bitmap row */
   n = (x1 - x0) / 8;
   int k = 0;
-  for (int r = 0; r < y1 - y0 && y0 + r < GUI_FB_ROWS; r++) {
+  for (int r = 0; (r < (y1 - y0)) && ((y0 + r) < GUI_FB_ROWS); r++) {
     for (int i = 0; i < n; i++) {
-      uint8_t bits = bmp[k++];
+      uint8_t bits = bmp[k];
+      k++;
       uint8_t pix = 0;
       uint8_t out[4] = {0};
 
       for (int b = 0; b < 8; b++) {
-        if ((uint32_t)(bits >> (uint8_t)b) & 1U) {
-          if ((uint32_t)b & 1U) {
+        if (((uint32_t)(bits >> (uint8_t)b) & 1U) != 0U) {
+          if (((uint32_t)b & 1U) != 0U) {
             pix |= color;
           } else {
             pix |= (uint8_t)(color << 4U);
           }
         }
-        if (((uint32_t)(b + 1) & 1U) == 0) {
+        if (((uint32_t)(b + 1) & 1U) == 0U) {
           out[b / 2] = pix;
           pix = 0;
         }
       }
       /* clipped at the right edge of the row */
-      if (x_byte + i * 4 < GUI_FB_ROW_BYTES) {
-        memcpy(&fb[y0 + r][x_byte + i * 4], out, MIN(4, GUI_FB_ROW_BYTES - (x_byte + i * 4)));
+      if ((x_byte + (i * 4)) < GUI_FB_ROW_BYTES) {
+        memcpy(&fb[y0 + r][x_byte + (i * 4)], out, MIN(4, GUI_FB_ROW_BYTES - (x_byte + (i * 4))));
       }
     }
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                            x0 - 2, y0, x1 + 2, y1);
   }
@@ -1398,16 +1465,16 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
   uint8_t **fb;
   int n;
 
-  if (x0 > x1 || y0 > y1 || (color1 | color2) > 0x0f) {
+  if ((x0 > x1) || (y0 > y1) || ((color1 | color2) > 0x0f)) {
     G1_LOG_WRN("input param error,please check postion content\n");
     return -1;
   }
-  if ((uint32_t)x0 & 1U) {
+  if (((uint32_t)x0 & 1U) != 0U) {
     G1_LOG_WRN("Scenarios where the starting point of x is an even number are not currently supported.\n");
     return -1;
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
   }
 
@@ -1416,7 +1483,7 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
   fb = frame_buffer;
   n = (x1 - x0) / 8;
   int k = 0;
-  for (int r = 0; r < y1 - y0; r++) {
+  for (int r = 0; r < (y1 - y0); r++) {
     for (int i = 0; i < n; i++) {
       uint8_t bits1 = bmp1[k];
       uint8_t bits2 = bmp2[k];
@@ -1425,30 +1492,30 @@ int gui_bitmps_merge_draw(int x0, int y0, int x1, int y1, const uint8_t *bmp1, c
       uint8_t out[4] = {0};
 
       for (int b = 0; b < 8; b++) {
-        if ((uint32_t)(bits1 >> (uint32_t)b) & 1U) {
-          if ((uint32_t)b & 1U) {
+        if (((uint32_t)(bits1 >> (uint32_t)b) & 1U) != 0U) {
+          if (((uint32_t)b & 1U) != 0U) {
             pix |= color1;
           } else {
             pix |= (uint8_t)(color1 << 4U);
           }
         }
-        if ((uint32_t)(bits2 >> (uint32_t)b) & 1U) {
-          if ((uint32_t)b & 1U) {
+        if (((uint32_t)(bits2 >> (uint32_t)b) & 1U) != 0U) {
+          if (((uint32_t)b & 1U) != 0U) {
             pix |= color2;
           } else {
             pix |= (uint8_t)(color2 << 4U);
           }
         }
-        if (((uint32_t)(b + 1) & 1U) == 0) {
+        if (((uint32_t)(b + 1) & 1U) == 0U) {
           out[b / 2] = pix;
           pix = 0;
         }
       }
-      *(uint32_t *)&fb[y0 + r][x_byte + i * 4] = *(uint32_t *)out;
+      *(uint32_t *)&fb[y0 + r][x_byte + (i * 4)] = *(uint32_t *)out;
     }
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                            y0, x1, y1);
   }
@@ -1459,11 +1526,11 @@ int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp,
   uint8_t **fb;
   int n;
 
-  if (x0 > x1 || y0 > y1 || color > 0x0f) {
+  if ((x0 > x1) || (y0 > y1) || (color > 0x0f)) {
     G1_LOG_WRN("input param error,please check postion content\n");
     return -1;
   }
-  if ((uint32_t)x0 & 1U) {
+  if (((uint32_t)x0 & 1U) != 0U) {
     G1_LOG_WRN("Scenarios where the starting point of x is an even number are not currently supported.\n");
     return -1;
   }
@@ -1473,32 +1540,33 @@ int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp,
   fb = frame_buffer;
   n = (x1 - x0) / 8;
   int k = 0;
-  for (int r = 0; r < y1 - y0; r++) {
+  for (int r = 0; r < (y1 - y0); r++) {
     for (int i = 0; i < n; i++) {
-      uint8_t bits = bmp[k++];
+      uint8_t bits = bmp[k];
+      k++;
       uint8_t pix = 0;
       uint8_t out[4] = {0};
 
       for (int b = 0; b < 8; b++) {
-        if ((uint32_t)(bits >> (uint8_t)b) & 1U) {
-          if ((uint32_t)b & 1U) {
+        if (((uint32_t)(bits >> (uint8_t)b) & 1U) != 0U) {
+          if (((uint32_t)b & 1U) != 0U) {
             pix |= color;
           } else {
             pix |= (uint8_t)(color << 4U);
           }
         }
-        if (((uint32_t)(b + 1) & 1U) == 0) {
+        if (((uint32_t)(b + 1) & 1U) == 0U) {
           out[b / 2] = pix;
           pix = 0;
         }
       }
       for (int j = 0; j < 4; j++) {
-        fb[y0 + r][x_byte + i * 4 + j] |= out[j];
+        fb[y0 + r][x_byte + (i * 4) + j] |= out[j];
       }
     }
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
                            x0 - 2, y0, x1 + 2, y1);
   }
@@ -1506,10 +1574,11 @@ int gui_1bit_bitmap_override(int x0, int y0, int x1, int y1, const uint8_t *bmp,
 }
 
 int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y) {
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
   const uint8_t *data = NULL;
 
-  if (x > 640 || y > 480) {
+  if ((x > 640U) || (y > 480U)) {
     G1_LOG_ERR("gui_4bit_bitmap_override parampter overstep!!! stop draw bitmap !!! x= %d,y= %d\n", x, y);
     return -1;
   }
@@ -1519,9 +1588,9 @@ int gui_4bit_bitmap_override(int id, uint32_t x, uint32_t y) {
   }
 
   or_to_frame_buffer(frame_buffer, data, w, h, (int)x, (int)y);
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column,
-                           (int)x, (int)y, (int)(w + x), (int)(h + y));
+                           (int)x, (int)y, (int)((uint32_t)w + x), (int)((uint32_t)h + y));
   }
   return 0;
 }
@@ -1544,12 +1613,13 @@ int gui_font_kerning(uint16_t cur, uint16_t next) {
 }
 
 int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, int *out_w) {
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
   const uint8_t *data = NULL;
   size_t len = strlen(str);
   int x;
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     clean_fb_data(frame_buffer, 0, x0, y0, x1, y1);
   }
 
@@ -1558,11 +1628,11 @@ int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, i
     if ((uint8_t)str[i] >= 0x20) {
       int ret = resource_manger_get(font, (uint8_t)str[i], &w, &h, &data, NULL);
 
-      if (data == NULL || ret != 0) {
+      if ((data == NULL) || (ret != 0)) {
         G1_LOG_WRN("find ascii postion failed\n");
       } else {
         copy_to_frame_buffer(frame_buffer, data, w / 2, h, x, y0);
-        if ((uint8_t)str[i] >= 0x20 && (uint8_t)str[i] < 0x7f && font == 3) {
+        if (((uint8_t)str[i] >= 0x20) && ((uint8_t)str[i] < 0x7f) && (font == 3)) {
           x = x + w + 3;
         } else {
           x += w;
@@ -1574,7 +1644,7 @@ int gui_string_draw(int font, const char *str, int x0, int y0, int x1, int y1, i
     }
   }
 
-  if ((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) {
+  if (((unsigned long)gui_flags_get() & GUI_FLAG_NOTIFICATION_SHOWING) != 0U) {
     reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row, get_dashboard_state()->panel.current_column, x0,
                            y0, x1, y1);
   }

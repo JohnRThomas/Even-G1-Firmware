@@ -103,11 +103,11 @@ static inline bool ext_flash_present(void) {
       G1_LOG_ERR("read flash fail\n\n");                                                                               \
       return -1;                                                                                                       \
     }                                                                                                                  \
-    if (entry[1] != 0xffff) {                                                                                          \
+    if (entry[1] != 0xffffU) {                                                                                         \
       idx = ((uint32_t)entry[1] << 8U) | ((uint32_t)entry[1] >> 8U);                                                   \
       memset(ext_glyph_buf, 0, sizeof(ext_glyph_buf));                                                                 \
-      ret = get_dashboard_state()->flash_read(get_dashboard_state(), (glyph_base) + idx * (glyph_size), ext_glyph_buf, \
-                                              (glyph_size));                                                           \
+      ret = get_dashboard_state()->flash_read(get_dashboard_state(), (glyph_base) + (idx * (glyph_size)),              \
+                                              ext_glyph_buf, (glyph_size));                                            \
       if (ret != 0) {                                                                                                  \
         G1_LOG_ERR("read flash fail: %d\n\n", ret);                                                                    \
         return -1;                                                                                                     \
@@ -123,7 +123,8 @@ static inline bool ext_flash_present(void) {
 #define EXT16(idx_addr) EXT_GLYPH_LOOKUP((idx_addr), EXT_GLYPH16, 0xd0, 16)
 
 int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, uint8_t *frames) {
-  int gw, gh;
+  int gw;
+  int gh;
 
   switch (type) {
     case 0:
@@ -141,17 +142,17 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
         uint16_t idx;
         int ret;
         /* entry offset in the index tables that start at U+00A4 */
-        uint32_t offset = (code - 0xa4) * 4;
+        uint32_t offset = (code - 0xa4U) * 4U;
 
         /*
          * main table: 18 px glyphs, glyph number in host byte order;
          * flash_read is not checked here
          */
-        if (code >= 0xa4 && code <= 0xffe5) {
+        if ((code >= 0xa4U) && (code <= 0xffe5U)) {
           uint16_t entry[2];
 
-          if (get_dashboard_state()->flash_read(get_dashboard_state(), EXT_IDX_MAIN + offset, entry, sizeof(entry)) !=
-              0) {
+          if (get_dashboard_state()->flash_read(get_dashboard_state(), (uint32_t)EXT_IDX_MAIN + offset, entry,
+                                                sizeof(entry)) != 0) {
             G1_LOG_ERR("read flash fail\n\n");
             return -1;
           }
@@ -159,7 +160,7 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
           if (idx != 0xffff) {
             memset(ext_glyph_buf, 0, sizeof(ext_glyph_buf));
             ret =
-              get_dashboard_state()->flash_read(get_dashboard_state(), EXT_GLYPH18 + idx * 0xea, ext_glyph_buf, 0xea);
+              get_dashboard_state()->flash_read(get_dashboard_state(), EXT_GLYPH18 + (idx * 0xea), ext_glyph_buf, 0xea);
             if (ret != 0) {
               G1_LOG_ERR("read flash fail: %d\n\n", ret);
               return -1;
@@ -175,46 +176,46 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
          * 24 px tables (Hangul Jamo, CJK punctuation, Hangul compatibility, ...).
          * The Hangul Jamo lookup does not check flash_read either.
          */
-        if (code >= 0x1100 && code <= 0x11f9) {
-          EXT24(0xa1be90 + offset);
+        if ((code >= 0x1100U) && (code <= 0x11f9U)) {
+          EXT24(0xa1be90U + offset);
         }
-        if (code >= 0x302e && code <= 0x302f && ext_flash_present()) {
-          EXT24(0xa145c0 + offset);
+        if ((code >= 0x302eU) && (code <= 0x302fU) && ext_flash_present()) {
+          EXT24(0xa145c0U + offset);
         }
-        if (code >= 0x3131 && code <= 0x318e && ext_flash_present()) {
-          EXT24(0xa141bc + offset);
+        if ((code >= 0x3131U) && (code <= 0x318eU) && ext_flash_present()) {
+          EXT24(0xa141bcU + offset);
         }
-        if (code >= 0x3200 && code <= 0x327f && ext_flash_present()) {
-          EXT24(0xa13ff8 + offset);
+        if ((code >= 0x3200U) && (code <= 0x327fU) && ext_flash_present()) {
+          EXT24(0xa13ff8U + offset);
         }
-        if (code >= 0xac00 && code <= 0xd7ab && ext_flash_present()) {
-          EXT24(0x9f59f8 + offset);
+        if ((code >= 0xac00U) && (code <= 0xd7abU) && ext_flash_present()) {
+          EXT24(0x9f59f8U + offset);
         }
-        if (code >= 0xff01 && code <= 0xff5e && ext_flash_present()) {
-          EXT24(0xa20000 + (code - 0xff01 + 11654) * 4);
+        if ((code >= 0xff01U) && (code <= 0xff5eU) && ext_flash_present()) {
+          EXT24(0xa20000U + ((code - 0xff01U + 11654U) * 4U));
         }
 
         /*
          * 16 px tables.  The index is one contiguous table: 0x500000 (U+2010..),
          * 0x5000bc (U+3001..), 0x5004b4 (U+3231..), ...; 0x5154fc is the U+FF01.. part.
          */
-        if (code >= 0x2010 && code <= 0x203e && ext_flash_present()) {
-          EXT16(0x500000 + (code - 0x2010) * 4);
+        if ((code >= 0x2010U) && (code <= 0x203eU) && ext_flash_present()) {
+          EXT16(0x500000U + ((code - 0x2010U) * 4U));
         }
-        if (code >= 0x3001 && code <= 0x30fe && ext_flash_present()) {
-          EXT16(0x500000 + (code - 0x3001 + 47) * 4);
+        if ((code >= 0x3001U) && (code <= 0x30feU) && ext_flash_present()) {
+          EXT16(0x500000U + ((code - 0x3001U + 47U) * 4U));
         }
-        if (code >= 0x3231 && code <= 0x33cd && ext_flash_present()) {
-          EXT16(0x500000 + (code - 0x3231 + 301) * 4);
+        if ((code >= 0x3231U) && (code <= 0x33cdU) && ext_flash_present()) {
+          EXT16(0x500000U + ((code - 0x3231U + 301U) * 4U));
         }
-        if (code >= 0x4e00 && code <= 0x9f77 && ext_flash_present()) {
-          EXT16(0x500000 + (code - 0x4e00 + 714) * 4);
+        if ((code >= 0x4e00U) && (code <= 0x9f77U) && ext_flash_present()) {
+          EXT16(0x500000U + ((code - 0x4e00U + 714U) * 4U));
         }
-        if (code >= 0xe001 && code <= 0xe0fd && ext_flash_present()) {
-          EXT16(0x500000 + (code - 0xe001 + 21570) * 4);
+        if ((code >= 0xe001U) && (code <= 0xe0fdU) && ext_flash_present()) {
+          EXT16(0x500000U + ((code - 0xe001U + 21570U) * 4U));
         }
-        if (code >= 0xff01 && code <= 0xff9f && ext_flash_present()) {
-          EXT16(0x500000 + (code - 0xff01 + 21823) * 4);
+        if ((code >= 0xff01U) && (code <= 0xff9fU) && ext_flash_present()) {
+          EXT16(0x500000U + ((code - 0xff01U + 21823U) * 4U));
         }
 
         G1_LOG_INF("*************** can't find resEncode = 0x%02x*****************\n", code);
@@ -247,7 +248,7 @@ int resource_manger_get(int type, int id, int *w, int *h, const uint8_t **data, 
       }
       break;
     case 4:
-      if (id < 0x16 || id > 0x87) {
+      if ((id < 0x16) || (id > 0x87)) {
         G1_LOG_WRN("can't find resource ,exit .....\n");
         break;
       }

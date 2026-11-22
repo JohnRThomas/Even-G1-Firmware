@@ -10,17 +10,6 @@
 #include <zephyr/drivers/regulator.h>
 #include <zephyr/kernel.h>
 
-/* Copy of the private config struct of drivers/regulator/regulator_npm1300.c */
-struct regulator_npm1300_config {
-  struct regulator_common_config common;
-  const struct device *mfd;
-  uint8_t source;
-  int32_t retention_uv;
-  struct gpio_dt_spec enable_gpios;
-  struct gpio_dt_spec retention_gpios;
-  struct gpio_dt_spec pwm_gpios;
-};
-
 extern struct GlassesState *GLOBAL_STATE;
 
 /*
@@ -50,7 +39,7 @@ struct ncs_mem {
 /* placed at 0x2007fc00 by the linker */
 extern struct ncs_mem ncs_mem;
 #define NCS_MEM       (&ncs_mem)
-#define NCS_MEM_MAGIC 0x12345678
+#define NCS_MEM_MAGIC 0x12345678U
 
 /* main.c */
 extern uint8_t slave_msg_key_pending;  /* new message flag */

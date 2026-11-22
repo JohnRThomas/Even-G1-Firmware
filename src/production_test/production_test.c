@@ -84,7 +84,7 @@ static int get_mac_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_mac_info para is NULL\n");
     return -1;
   }
@@ -108,7 +108,7 @@ static int get_mac_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp, 
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_mac_info para is NULL\n");
     return -1;
   }
@@ -133,7 +133,7 @@ static int get_keyboard_info(const uint8_t *req, uint32_t req_len, uint8_t **res
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_keyboard_info para is NULL\n");
     return -1;
   }
@@ -144,7 +144,7 @@ static int get_keyboard_info(const uint8_t *req, uint32_t req_len, uint8_t **res
   p[2] = 3;
   p[3] = 1;
   get_dashboard_state()->aw_diff = 0;
-  p[4] = get_dashboard_state()->aw_diff != 0;
+  p[4] = 0;
   *resp_len = 5;
 
   return 0;
@@ -157,7 +157,7 @@ static int set_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
   uint8_t *p;
   int16_t v;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_battery_info para is NULL\n");
     return -1;
   }
@@ -190,7 +190,7 @@ static int set_imu_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   uint8_t retry;
   uint32_t base;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_imu_base para is NULL\n");
     return -1;
   }
@@ -207,20 +207,20 @@ static int set_imu_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
 
   char buf[20] = {0};
 
-  if (imu_yaw_x100 == 0 && imu_pitch_x100 == 0 && imu_roll_x100 == 0 && get_dashboard_state()->accel[0] == 0 &&
+  if ((imu_yaw_x100 == 0U) && (imu_pitch_x100 == 0U) && (imu_roll_x100 == 0U) && get_dashboard_state()->accel[0] == 0 &&
       get_dashboard_state()->accel[1] == 0 && get_dashboard_state()->accel[2] == 0) {
     p[4] = 1;
   } else {
     get_dashboard_state()->imu.ref = (int)imu_pitch_x100;
     p[4] = 0;
   }
-  sprintf(buf, "base: %d", imu_pitch_x100);
+  sprintf(buf, "base: %d", (int)imu_pitch_x100);
   *(uint32_t *)(p + 5) = get_dashboard_state()->imu.ref;
   save_sys_settings(get_dashboard_state(), 0);
 
   base = get_dashboard_state()->imu.ref;
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 && settings.imu_base == base) {
+    if ((read_sys_settting_from_flash(&settings) == 0) && (settings.imu_base == base)) {
       break;
     }
     k_msleep(100);
@@ -238,10 +238,11 @@ static int set_charge_limit(const uint8_t *req, uint32_t req_len, uint8_t **resp
   ARG_UNUSED(arg);
   struct usr_settings settings;
   uint8_t *p;
-  uint8_t upper, lower;
+  uint8_t upper;
+  uint8_t lower;
   uint8_t retry;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_charge_limit para is NULL\n");
     return -1;
   }
@@ -267,8 +268,8 @@ static int set_charge_limit(const uint8_t *req, uint32_t req_len, uint8_t **resp
   save_usr_settings(get_dashboard_state(), 0);
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_usr_settting_from_flash(&settings) == 0 && settings.charge_limit_upper == upper &&
-        settings.charge_limit_lower == lower) {
+    if ((read_usr_settting_from_flash(&settings) == 0) && (settings.charge_limit_upper == upper) &&
+        (settings.charge_limit_lower == lower)) {
       break;
     }
     k_msleep(100);
@@ -286,7 +287,7 @@ static int get_query_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **res
   uint8_t *p;
   uint8_t retry;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_query_sn_info para is NULL\n");
     return -1;
   }
@@ -308,7 +309,7 @@ static int get_query_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **res
   *resp_len = 5;
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 && memcmp(req + 4, settings.sn, PT_SN_LEN) == 0) {
+    if ((read_sys_settting_from_flash(&settings) == 0) && (memcmp(req + 4, settings.sn, PT_SN_LEN) == 0)) {
       break;
     }
     k_msleep(100);
@@ -327,7 +328,7 @@ static int set_brightness(const uint8_t *req, uint32_t req_len, uint8_t **resp, 
   uint8_t level;
   uint8_t ret = 1;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_brightness para is NULL\n");
     return -1;
   }
@@ -354,7 +355,7 @@ static int get_keyboard_info_2(const uint8_t *req, uint32_t req_len, uint8_t **r
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_keyboard_info para is NULL\n");
     return -1;
   }
@@ -364,10 +365,10 @@ static int get_keyboard_info_2(const uint8_t *req, uint32_t req_len, uint8_t **r
   p[1] = 1;
   p[2] = 3;
   p[3] = 1;
-  if ((uint32_t)get_dashboard_state()->aw_diff > 255000) {
+  if ((uint32_t)get_dashboard_state()->aw_diff > 255000U) {
     p[4] = 0xff;
   } else {
-    p[4] = (uint32_t)get_dashboard_state()->aw_diff / 1000;
+    p[4] = (uint32_t)get_dashboard_state()->aw_diff / 1000U;
   }
   printk("before aw9320x_diff_get: %d\n", get_dashboard_state()->aw_diff);
   aw9320x_diff_get(&get_dashboard_state()->aw_diff);
@@ -383,7 +384,7 @@ static int set_restart_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_restart_mode para is NULL\n");
     return -1;
   }
@@ -405,7 +406,7 @@ static int set_restart_mode_2(const uint8_t *req, uint32_t req_len, uint8_t **re
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_restart_mode para is NULL\n");
     return -1;
   }
@@ -428,7 +429,7 @@ static int get_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_mic_info para is NULL\n");
     return -1;
   }
@@ -456,9 +457,8 @@ static int set_panel_voltage(const uint8_t *req, uint32_t req_len, uint8_t **res
   ARG_UNUSED(arg);
   uint8_t *p;
   uint8_t val;
-  uint8_t retry;
 
-  if (resp == NULL || resp_len == NULL || req == NULL || req_len < 5) {
+  if ((resp == NULL) || (resp_len == NULL) || (req == NULL) || (req_len < 5U)) {
     printk("%s para is NULL\n", __func__);
     return -1;
   }
@@ -475,11 +475,12 @@ static int set_panel_voltage(const uint8_t *req, uint32_t req_len, uint8_t **res
     p[4] = 4;
   } else {
     struct sys_settings settings;
+    uint8_t retry;
 
     get_dashboard_state()->panel.voltage = val;
     save_sys_settings(get_dashboard_state(), 0);
     for (retry = 0; retry < 5; retry++) {
-      if (read_sys_settting_from_flash(&settings) == 0 && settings.panel_voltage == val) {
+      if ((read_sys_settting_from_flash(&settings) == 0) && (settings.panel_voltage == val)) {
         break;
       }
       k_msleep(100);
@@ -498,7 +499,7 @@ static int get_flash_info_2(const uint8_t *req, uint32_t req_len, uint8_t **resp
   uint8_t *p;
   uint16_t size;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_flash_info para is NULL\n");
     return -1;
   }
@@ -526,7 +527,7 @@ static int exit_mic_mode(const uint8_t *req, uint32_t req_len, uint8_t **resp, u
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("exit_mic_mode para is NULL\n");
     return -1;
   }
@@ -551,7 +552,7 @@ static int get_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, uin
   uint8_t *p;
   size_t len;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_sn_info para is NULL\n");
     return -1;
   }
@@ -574,13 +575,10 @@ static int set_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   ARG_UNUSED(arg);
   const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
   uint8_t *p;
-  uint32_t addr;
   uint32_t sum;
-  int err;
-  int cnt;
   int i;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_mic_info para is NULL\n");
     return -1;
   }
@@ -603,11 +601,14 @@ static int set_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
     return 0;
   }
 
-  if (get_dashboard_state()->flash_read != 0) {
-    addr = mic_chunk_index * MIC_DATA_CHUNK + mic_flash_addr;
+  if (get_dashboard_state()->flash_read != NULL) {
+    uint32_t addr = (mic_chunk_index * MIC_DATA_CHUNK) + mic_flash_addr;
+    int err;
+    int cnt;
+
     printk("Flash read addr 0x%x  \n", addr);
     err = flash_read(flash_dev, (off_t)addr, mic_chunk_buf, MIC_DATA_CHUNK);
-    if (err) {
+    if (err != 0) {
       printk("Flash read failed! %d\n", err);
       p[0] = 0x1b;
       p[1] = 1;
@@ -631,7 +632,7 @@ static int set_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
       }
     }
     p[8] = 0;
-    if (cnt == 10 || mic_retransmit_count == 3 || addr > 0x410000) {
+    if ((cnt == 10) || (mic_retransmit_count == 3) || (addr > 0x410000U)) {
       p[8] = 1;
       mic_chunk_index = 0;
       mic_retransmit_count = 0;
@@ -651,7 +652,7 @@ static int set_mic_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   /* checksum over the response, skipping the checksum field p[4..7] */
   sum = 0;
   for (i = 0; i < 250; i++) {
-    if (i < 4 || i > 7) {
+    if ((i < 4) || (i > 7)) {
       sum += p[i];
     }
   }
@@ -671,7 +672,7 @@ static int get_assign_channel_info(const uint8_t *req, uint32_t req_len, uint8_t
   uint8_t *p;
   uint8_t retry;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     G1_LOG_ERR("get_assign_channel_info para is NULL\n");
     return -1;
   }
@@ -692,8 +693,8 @@ static int get_assign_channel_info(const uint8_t *req, uint32_t req_len, uint8_t
   p[4] = 0;
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 && req[4] == settings.esb_channel &&
-        req[5] == settings.esb_master_addr && req[6] == settings.esb_slave_addr) {
+    if ((read_sys_settting_from_flash(&settings) == 0) && (req[4] == settings.esb_channel) &&
+        (req[5] == settings.esb_master_addr) && (req[6] == settings.esb_slave_addr)) {
       break;
     }
     k_msleep(100);
@@ -712,7 +713,7 @@ static int resume_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("resume_panel para is NULL\n");
     return -1;
   }
@@ -735,7 +736,7 @@ static int get_imu_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_imu_info para is NULL\n");
     return -1;
   }
@@ -764,7 +765,7 @@ static int set_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   uint8_t *p;
   uint8_t retry;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_glasses_sn_info para is NULL\n");
     return -1;
   }
@@ -786,7 +787,7 @@ static int set_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   *resp_len = 5;
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 && memcmp(req + 4, settings.name, PT_GLASSES_SN_LEN) == 0) {
+    if ((read_sys_settting_from_flash(&settings) == 0) && (memcmp(req + 4, settings.name, PT_GLASSES_SN_LEN) == 0)) {
       break;
     }
     k_msleep(100);
@@ -803,9 +804,8 @@ static int get_flash_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, 
   ARG_UNUSED(arg);
   const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
   uint8_t *p;
-  int err;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_flash_info para is NULL\n");
     return -1;
   }
@@ -826,9 +826,9 @@ static int get_flash_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, 
     return 0;
   }
 
-  if (get_dashboard_state()->flash_read != 0) {
-    err = flash_read(flash_dev, 0x2612d2, flash_info_cache, sizeof(flash_info_cache));
-    if (err) {
+  if (get_dashboard_state()->flash_read != NULL) {
+    int err = flash_read(flash_dev, 0x2612d2, flash_info_cache, sizeof(flash_info_cache));
+    if (err != 0) {
       printk("Flash read failed! %d\n", err);
       p[0] = 0x1e;
       p[1] = req[1];
@@ -852,7 +852,7 @@ static int suspend_panel(const uint8_t *req, uint32_t req_len, uint8_t **resp, u
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("suspend_panel para is NULL\n");
     return -1;
   }
@@ -875,7 +875,7 @@ static int get_flash_burn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_flash_burn_info para is NULL\n");
     return -1;
   }
@@ -901,7 +901,7 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   uint8_t retry;
   uint32_t stored = 0;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_lux_base para is NULL\n");
     return -1;
   }
@@ -919,7 +919,7 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   idx = req[4];
   switch (idx) {
     case 1:
-      if (lux >= 50 && lux < 200) {
+      if ((lux >= 50) && (lux < 200)) {
         p[4] = 0;
       } else if (lux > 0) {
         p[4] = 1;
@@ -931,7 +931,7 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
       lux_calibrated_mask |= 1U;
       break;
     case 2:
-      if (lux >= 200 && lux < 1000) {
+      if ((lux >= 200) && (lux < 1000)) {
         p[4] = 0;
       } else if (lux > 0) {
         p[4] = 1;
@@ -943,7 +943,7 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
       lux_calibrated_mask |= 2U;
       break;
     case 3:
-      if (lux >= 1000 && lux < 10000) {
+      if ((lux >= 1000) && (lux < 10000)) {
         p[4] = 0;
       } else if (lux > 0) {
         p[4] = 1;
@@ -973,8 +973,8 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   if (lux_calibrated_mask > 0x8000) {
     get_dashboard_state()->lux_k_max = (float)(22156.0 / get_dashboard_state()->opt3007_context.lux_base_max);
     get_dashboard_state()->lux_k_min = (float)(4210.7 / get_dashboard_state()->lux_base[0]);
-    get_dashboard_state()->luminance_curve =
-      (int)((get_dashboard_state()->lux_k_max + get_dashboard_state()->lux_k_min) / 2 * 1000000);
+    float curve_x1000000 = (get_dashboard_state()->lux_k_max + get_dashboard_state()->lux_k_min) / 2.0f * 1000000.0f;
+    get_dashboard_state()->luminance_curve = (int)curve_x1000000;
   }
   save_sys_settings(get_dashboard_state(), 0);
 
@@ -992,7 +992,7 @@ static int set_lux_base(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
       if (idx == 4) {
         stored = settings.lux_base_max;
       }
-      if (idx >= 1 && idx <= 4 && lux == stored) {
+      if ((idx >= 1) && (idx <= 4) && ((uint32_t)lux == stored)) {
         break;
       }
     }
@@ -1018,7 +1018,7 @@ static int set_brightness_lum_base(const uint8_t *req, uint32_t req_len, uint8_t
   uint8_t idx;
   uint8_t retry;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_brightness_lum_base para is NULL\n");
     return -1;
   }
@@ -1059,9 +1059,9 @@ static int set_brightness_lum_base(const uint8_t *req, uint32_t req_len, uint8_t
   save_sys_settings(get_dashboard_state(), 0);
 
   for (retry = 0; retry < 5; retry++) {
-    if (read_sys_settting_from_flash(&settings) == 0 &&
-        ((idx == 0 && settings.lum_base[0] == val) || (idx == 1 && settings.lum_base[1] == val) ||
-         (idx == 2 && settings.lum_base[2] == val))) {
+    if ((read_sys_settting_from_flash(&settings) == 0) &&
+        (((idx == 0) && (settings.lum_base[0] == val)) || ((idx == 1) && (settings.lum_base[1] == val)) ||
+         ((idx == 2) && (settings.lum_base[2] == val)))) {
       break;
     }
     k_msleep(100);
@@ -1081,7 +1081,7 @@ static int get_esb_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_esb_info para is NULL\n");
     return -1;
   }
@@ -1106,7 +1106,7 @@ static int get_brightness_lum_info(const uint8_t *req, uint32_t req_len, uint8_t
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_brightness_lum_info para is NULL\n");
     return -1;
   }
@@ -1130,7 +1130,7 @@ static int chnange_test_image(const uint8_t *req, uint32_t req_len, uint8_t **re
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("chnange_test_image para is NULL\n");
     return -1;
   }
@@ -1153,7 +1153,7 @@ static int get_role_info_right(const uint8_t *req, uint32_t req_len, uint8_t **r
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_role_info_right para is NULL\n");
     return -1;
   }
@@ -1167,6 +1167,8 @@ static int get_role_info_right(const uint8_t *req, uint32_t req_len, uint8_t **r
     p[4] = 1;
   } else if (is_master() == 2) {
     p[4] = 0;
+  } else {
+    /* nothing to do */
   }
   *resp_len = 5;
 
@@ -1184,10 +1186,10 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
     return -1;
   }
 
-  if (req_len > 4) {
+  if (req_len > 4U) {
     pt_level_flags.raw = req[4];
     set_ncs_mem_pt_level(pt_level_flags.bits.level);
-    if (req_len != 5) {
+    if (req_len != 5U) {
       switch (req[5]) {
         case 6:
           can_enter_low_power = 1;
@@ -1217,40 +1219,40 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
    * Polls at a high field without charge current. From BATTERY_NO_CHARGE_POLLS on the count
    * holds while the case keeps any field up, so status 4 lasts through its step down.
    */
-  if (get_dashboard_state()->battery_current_ma >= 0 && battery_full_flag == 0 &&
-      (voltage > 5499 || (voltage != 0 && battery_high_v_count >= BATTERY_NO_CHARGE_POLLS))) {
-    if (battery_high_v_count < BATTERY_NO_CHARGE_POLLS) {
+  if ((get_dashboard_state()->battery_current_ma >= 0) && (!battery_full_flag) &&
+      ((voltage > 5499U) || ((voltage != 0U) && (battery_high_v_count >= (uint8_t)BATTERY_NO_CHARGE_POLLS)))) {
+    if (battery_high_v_count < (uint8_t)BATTERY_NO_CHARGE_POLLS) {
       battery_high_v_count++;
     }
   } else {
     battery_high_v_count = 0;
     battery_full_count = 0;
   }
-  if (get_dashboard_state()->battery_temp_x100 > 5999 ||
-      (get_dashboard_state()->battery_temp_x100 > 4999 && get_dashboard_state()->battery_voltage > 0xd1)) {
+  if ((get_dashboard_state()->battery_temp_x100 > 5999) ||
+      ((get_dashboard_state()->battery_temp_x100 > 4999) && (get_dashboard_state()->battery_voltage > 0xd1))) {
     p[4] = 2;
   }
 
   if (get_dashboard_state()->battery_left >= get_aging_charge_limit() - 1) {
     if (get_dashboard_state()->battery_left >= get_aging_charge_limit()) {
-      battery_full_flag = 1;
+      battery_full_flag = true;
     }
-    if (battery_full_flag != 0) {
+    if (battery_full_flag) {
       p[4] = 1;
       battery_high_v_count = 0;
     }
   } else {
-    battery_full_flag = 0;
+    battery_full_flag = false;
   }
-  if (p[4] == 0 && charger_enable_ok == 0 && battery_full_flag == 0) {
+  if ((p[4] == 0) && (!charger_enable_ok) && (!battery_full_flag)) {
     if (++battery_full_count >= 40) {
       p[4] = 4;
     }
   } else {
     battery_full_count = 0;
   }
-  if (p[4] == 0 && voltage > 0 && voltage < 7800 && battery_full_flag == 0 &&
-      battery_high_v_count >= BATTERY_NO_CHARGE_POLLS && get_dashboard_state()->battery_current_ma >= 0) {
+  if ((p[4] == 0) && (voltage > 0U) && (voltage < 7800U) && (!battery_full_flag) &&
+      (battery_high_v_count >= (uint8_t)BATTERY_NO_CHARGE_POLLS) && get_dashboard_state()->battery_current_ma >= 0) {
     p[4] = 4;
   }
 
@@ -1264,10 +1266,19 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
   } else {
     p[8] = 0;
   }
+  /*
+   * FIXME: byte 9 carries three things. It is the low byte of the current in mA here, 100 as the
+   * no-charge marker below, and 0x80 as the flag at the end of this function, which makes
+   * process_pt_data() send the reply a second time with the byte cleared. A current of 128 mA
+   * (or 384 mA, ...) is therefore the flag to process_pt_data() and to the case: the reply goes
+   * out twice, the second time with a current of 0. A current of 100 mA reads as the no-charge
+   * marker the same way. The reply has no other byte for either, so this needs a change of the
+   * protocol with the case.
+   */
   p[9] = abs(get_dashboard_state()->battery_current_ma);
   /* the no-charge marker goes with status 4 only: it never replaces status 1 (full) or 2 (too hot) */
-  if (p[4] == 4 && voltage > 0 && voltage < 5000 && get_dashboard_state()->battery_current_ma >= 0 &&
-      battery_full_flag == 0 && battery_high_v_count >= BATTERY_NO_CHARGE_POLLS) {
+  if ((p[4] == 4) && (voltage > 0U) && (voltage < 5000U) && (get_dashboard_state()->battery_current_ma >= 0) &&
+      (!battery_full_flag) && (battery_high_v_count >= (uint8_t)BATTERY_NO_CHARGE_POLLS)) {
     p[9] = 100;
   }
   *resp_len = 10;
@@ -1275,7 +1286,7 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
   if (is_box_lid_closed() != 1) {
     can_enter_low_power = 0;
   }
-  if (p[4] == 0 && battery_full_flag != 0) {
+  if ((p[4] == 0) && battery_full_flag) {
     battery_high_v_count = 0;
     battery_full_count = 0;
     p[4] = 1;
@@ -1285,8 +1296,8 @@ static int get_battery_info(const uint8_t *req, uint32_t req_len, uint8_t **resp
   } else {
     set_box_status(2, true);
   }
-  if ((battery_high_v_count | battery_full_count) > 3 && get_dashboard_state()->battery_left > 2 &&
-      get_dashboard_state()->battery_left < 100 && now - battery_info_last_ms > 10000) {
+  if (((battery_high_v_count | battery_full_count) > 3) && (get_dashboard_state()->battery_left > 2) &&
+      (get_dashboard_state()->battery_left < 100) && ((now - battery_info_last_ms) > 10000U)) {
     battery_info_last_ms = now;
     p[9] = 0x80;
   }
@@ -1300,7 +1311,7 @@ static int power_on_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **resp
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("power_on_opt3007 para is NULL\n");
     return -1;
   }
@@ -1323,7 +1334,7 @@ static int power_off_opt3007(const uint8_t *req, uint32_t req_len, uint8_t **res
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("power_off_opt3007 para is NULL\n");
     return -1;
   }
@@ -1353,16 +1364,16 @@ void enable_charger_retry(void) {
   }
 
   now = k_uptime_get();
-  if (now - charger_retry_last_ms >= 1000) {
+  if ((now - charger_retry_last_ms) >= 1000U) {
     charger_retry_last_ms = now;
     if (i != 10) {
       charger_retry_fail_count = 0;
-      charger_enable_ok = 1;
+      charger_enable_ok = true;
     } else if (++charger_retry_fail_count > 3) {
-      charger_enable_ok = 0;
+      charger_enable_ok = false;
       charger_retry_fail_count = 3;
     } else {
-      charger_enable_ok = 1;
+      charger_enable_ok = true;
     }
   }
 }
@@ -1381,7 +1392,7 @@ uint8_t set_pt_level(uint8_t level) {
 }
 
 uint8_t get_aging_charge_limit(void) {
-  if (aging_mode == 1 && aging_phase != 1) {
+  if ((aging_mode == 1) && (aging_phase != 1)) {
     return (aging_phase == 2) ? 70 : 85;
   }
 
@@ -1393,7 +1404,7 @@ static int set_comflag(const uint8_t *req, uint32_t req_len, uint8_t **resp, uin
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_comflag para is NULL\n");
     return -1;
   }
@@ -1408,7 +1419,7 @@ static int set_comflag(const uint8_t *req, uint32_t req_len, uint8_t **resp, uin
   p[2] = 3;
   p[3] = 1;
   p[4] = req[4];
-  if (get_dashboard_state()->comflag == 0 && req[4] == 1) {
+  if ((get_dashboard_state()->comflag == 0) && (req[4] == 1)) {
     serial_rx_clear();
   }
   get_dashboard_state()->comflag = req[4];
@@ -1423,7 +1434,7 @@ static int into_long_trip_mode(const uint8_t *req, uint32_t req_len, uint8_t **r
   uint8_t *p;
 
   printk("join in into_long_trip_mode\n");
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("into_long_trip_mode para is NULL\n");
     return -1;
   }
@@ -1452,7 +1463,7 @@ int pt_resp_checksum(uint8_t **resp, uint8_t *resp_len) {
   int sum = 0;
   int i;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     return -1;
   }
 
@@ -1473,31 +1484,34 @@ int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t 
   int i;
   int ret = 0;
 
-  if (req == NULL || req_len == 0 || resp == NULL || resp_len == NULL || type == PT_COMM_NONE) {
+  // cppcheck-suppress [misra-c2012-10.4] ; the transport type arrives as an int (see pt_comm.c)
+  if ((req == NULL) || (req_len == 0U) || (resp == NULL) || (resp_len == NULL) || (type == PT_COMM_NONE)) {
     printk("process_pt_protocol para is error\n");
     return -1;
   }
 
   for (i = 0; i < ARRAY_SIZE(pt_cmd_table); i++) {
-    if (pt_cmd_table[i].cmd == req[0] && pt_cmd_table[i].handler != NULL) {
+    if ((pt_cmd_table[i].cmd == req[0]) && (pt_cmd_table[i].handler != NULL)) {
       ret = pt_cmd_table[i].handler(req, req_len, resp, resp_len, arg);
       break;
     }
   }
   /* unknown command: status 2; refused by its handler: status 1 */
-  if (i == ARRAY_SIZE(pt_cmd_table) || ret != 0) {
+  if ((i == ARRAY_SIZE(pt_cmd_table)) || (ret != 0)) {
     p = *resp;
     p[0] = req[0];
     p[1] = 1;
     p[2] = 3;
     p[3] = 1;
-    p[4] = ret != 0 ? 1 : 2;
+    p[4] = (ret != 0) ? 1 : 2;
     *resp_len = 5;
     ret = 0;
   }
 
+  // cppcheck-suppress [misra-c2012-10.4] ; the transport type arrives as an int (see pt_comm.c)
   if (type == PT_COMM_NFC) {
     ret = pt_resp_checksum(resp, resp_len);
+    // cppcheck-suppress [misra-c2012-10.4] ; the transport type arrives as an int (see pt_comm.c)
   } else if (type == PT_COMM_UART) {
     uint8_t len = *resp_len;
 
@@ -1515,6 +1529,8 @@ int process_pt_protocol(int type, const uint8_t *req, uint32_t req_len, uint8_t 
     }
     *resp_len += 4;
     ret = pt_resp_checksum(resp, resp_len);
+  } else {
+    /* nothing to do */
   }
   if (ret != 0) {
     return -4;
@@ -1536,7 +1552,7 @@ static int get_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_canvas_pos_info para is NULL\n");
     return -1;
   }
@@ -1558,7 +1574,7 @@ static int get_mac_info_3(const uint8_t *req, uint32_t req_len, uint8_t **resp, 
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_mac_info para is NULL\n");
     return -1;
   }
@@ -1572,6 +1588,8 @@ static int get_mac_info_3(const uint8_t *req, uint32_t req_len, uint8_t **resp, 
     memcpy(p + 4, get_dashboard_state()->master_mac, 6);
   } else if (req[2] == 0) {
     memcpy(p + 4, get_dashboard_state()->slave_mac, 6);
+  } else {
+    /* nothing to do */
   }
   *resp_len = 10;
 
@@ -1584,7 +1602,7 @@ static int get_version(const uint8_t *req, uint32_t req_len, uint8_t **resp, uin
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_version para is NULL\n");
     return -1;
   }
@@ -1656,7 +1674,7 @@ static int enter_into_testmode(const uint8_t *req, uint32_t req_len, uint8_t **r
   uint8_t *p;
   uint8_t val;
 
-  if (resp == NULL || resp_len == NULL || req == NULL || req_len < 5) {
+  if ((resp == NULL) || (resp_len == NULL) || (req == NULL) || (req_len < 5U)) {
     printk("%s para is NULL\n", __func__);
     return -1;
   }
@@ -1690,7 +1708,7 @@ static int get_firmware_mode(const uint8_t *req, uint32_t req_len, uint8_t **res
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL || req == NULL || req_len < 4) {
+  if ((resp == NULL) || (resp_len == NULL) || (req == NULL) || (req_len < 4U)) {
     printk("%s para is NULL\n", __func__);
     return -1;
   }
@@ -1714,7 +1732,7 @@ static int set_mic_nocompress(const uint8_t *req, uint32_t req_len, uint8_t **re
   uint8_t *p;
   uint8_t val;
 
-  if (resp == NULL || resp_len == NULL || req == NULL || req_len < 5) {
+  if ((resp == NULL) || (resp_len == NULL) || (req == NULL) || (req_len < 5U)) {
     printk("%s para is NULL\n", __func__);
     return -1;
   }
@@ -1747,7 +1765,7 @@ static int get_brightness_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL || req == NULL || req_len < 4) {
+  if ((resp == NULL) || (resp_len == NULL) || (req == NULL) || (req_len < 4U)) {
     printk("%s para is NULL\n", __func__);
     return -1;
   }
@@ -1774,7 +1792,7 @@ static int get_glasses_sn_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   uint8_t *p;
   size_t len;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_glasses_sn_info para is NULL\n");
     return -1;
   }
@@ -1798,7 +1816,7 @@ static int get_charge_test_info(const uint8_t *req, uint32_t req_len, uint8_t **
   uint16_t *q;
   int i;
 
-  if (resp == NULL || resp_len == NULL || req == NULL || req_len < 4) {
+  if ((resp == NULL) || (resp_len == NULL) || (req == NULL) || (req_len < 4U)) {
     printk("%s para is NULL\n", __func__);
     return -1;
   }
@@ -1815,7 +1833,8 @@ static int get_charge_test_info(const uint8_t *req, uint32_t req_len, uint8_t **
   *(uint32_t *)(p + 14) = get_dashboard_state()->aging_discharge_time_s;
   q = (uint16_t *)(p + 18);
   for (i = 0; i < 6; i++) {
-    *q++ = get_dashboard_state()->aging_discharge_step_s[i];
+    *q = get_dashboard_state()->aging_discharge_step_s[i];
+    q++;
   }
   p[30] = get_dashboard_state()->aging_touch_count;
   p[31] = get_dashboard_state()->aging_charge_check_result;
@@ -1848,7 +1867,7 @@ static int set_aging_test_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   uint8_t *p;
   uint8_t val;
 
-  if (resp == NULL || resp_len == NULL || req == NULL || req_len < 5) {
+  if ((resp == NULL) || (resp_len == NULL) || (req == NULL) || (req_len < 5U)) {
     printk("%s para is NULL\n", __func__);
     return -1;
   }
@@ -1874,6 +1893,8 @@ static int set_aging_test_info(const uint8_t *req, uint32_t req_len, uint8_t **r
       exit_aging_mode();
     } else if (req[4] == 1) {
       enter_aging_mode();
+    } else {
+      /* nothing to do */
     }
   }
   *resp_len = 5;
@@ -1891,24 +1912,23 @@ void exit_aging_mode(void) {
 
 void aging_charge_test(int interval) {
   bool need_save;
-  int t;
-  int i;
 
   if (aging_mode != 1) {
     return;
   }
 
-  get_dashboard_state()->aging_elapsed_s = k_uptime_get() / 1000 - get_dashboard_state()->aging_start_uptime_s;
-  if (get_dashboard_state()->aging_elapsed_s <= 900) {
-    need_save = get_dashboard_state()->aging_elapsed_s % 60 < interval;
+  get_dashboard_state()->aging_elapsed_s =
+    (k_uptime_get() / 1000) - (int64_t)get_dashboard_state()->aging_start_uptime_s;
+  if (get_dashboard_state()->aging_elapsed_s <= 900U) {
+    need_save = (get_dashboard_state()->aging_elapsed_s % 60U) < (uint32_t)interval;
   } else {
-    need_save = get_dashboard_state()->aging_elapsed_s % 900 < interval;
+    need_save = (get_dashboard_state()->aging_elapsed_s % 900U) < (uint32_t)interval;
   }
 
   if (aging_phase == 1) {
-    if (get_dashboard_state()->aging_elapsed_s >= 300 &&
-        (get_dashboard_state()->panel.init_done == 1 || get_dashboard_state()->dashboard_mode == 3 ||
-         get_dashboard_state()->suspend_state == 0 || line_buf != 0)) {
+    if ((get_dashboard_state()->aging_elapsed_s >= 300U) &&
+        ((get_dashboard_state()->panel.init_done == 1U) || (get_dashboard_state()->dashboard_mode == 3) ||
+         (get_dashboard_state()->suspend_state == 0) || (line_buf != 0))) {
       enter_silent_mode();
     }
     if (get_dashboard_state()->battery_left > 96) {
@@ -1916,12 +1936,16 @@ void aging_charge_test(int interval) {
       get_dashboard_state()->panel.panel_brightness_level = 0x15;
       set_brightness_to_panel_reg_in_running(get_dashboard_state()->panel.panel_brightness_level);
       discharge_test_start_ms = k_uptime_get();
-      get_dashboard_state()->aging_charge_time_s = k_uptime_get() / 1000 - get_dashboard_state()->aging_start_uptime_s;
+      get_dashboard_state()->aging_charge_time_s =
+        (k_uptime_get() / 1000) - (int64_t)get_dashboard_state()->aging_start_uptime_s;
       need_save = true;
     }
   } else if (aging_phase == 2) {
-    if (get_dashboard_state()->panel.init_done != 1 || get_dashboard_state()->dashboard_mode != 3 ||
-        get_dashboard_state()->suspend_state == 1 || line_buf == 0) {
+    int t;
+    int i;
+
+    if ((get_dashboard_state()->panel.init_done != 1U) || (get_dashboard_state()->dashboard_mode != 3) ||
+        (get_dashboard_state()->suspend_state == 1) || (line_buf == 0)) {
       exit_silent_mode();
     }
     if (get_dashboard_state()->battery_left <= 70) {
@@ -1937,39 +1961,41 @@ void aging_charge_test(int interval) {
       }
       aging_phase = 0;
       need_save = true;
-    } else if (get_dashboard_state()->battery_left <= 75 && get_dashboard_state()->aging_discharge_step_s[4] == 0) {
+    } else if ((get_dashboard_state()->battery_left <= 75) && (get_dashboard_state()->aging_discharge_step_s[4] == 0)) {
       t = (int)((k_uptime_get() - discharge_test_start_ms) / 1000);
       for (i = 0; i < 4; i++) {
         t -= get_dashboard_state()->aging_discharge_step_s[i];
       }
       get_dashboard_state()->aging_discharge_step_s[4] = t;
       need_save = true;
-    } else if (get_dashboard_state()->battery_left <= 80 && get_dashboard_state()->aging_discharge_step_s[3] == 0) {
+    } else if ((get_dashboard_state()->battery_left <= 80) && (get_dashboard_state()->aging_discharge_step_s[3] == 0)) {
       t = (int)((k_uptime_get() - discharge_test_start_ms) / 1000);
       for (i = 0; i < 3; i++) {
         t -= get_dashboard_state()->aging_discharge_step_s[i];
       }
       get_dashboard_state()->aging_discharge_step_s[3] = t;
       need_save = true;
-    } else if (get_dashboard_state()->battery_left <= 85 && get_dashboard_state()->aging_discharge_step_s[2] == 0) {
+    } else if ((get_dashboard_state()->battery_left <= 85) && (get_dashboard_state()->aging_discharge_step_s[2] == 0)) {
       t = (int)((k_uptime_get() - discharge_test_start_ms) / 1000);
       for (i = 0; i < 2; i++) {
         t -= get_dashboard_state()->aging_discharge_step_s[i];
       }
       get_dashboard_state()->aging_discharge_step_s[2] = t;
       need_save = true;
-    } else if (get_dashboard_state()->battery_left <= 90 && get_dashboard_state()->aging_discharge_step_s[1] == 0) {
+    } else if ((get_dashboard_state()->battery_left <= 90) && (get_dashboard_state()->aging_discharge_step_s[1] == 0)) {
       t = (int)((k_uptime_get() - discharge_test_start_ms) / 1000);
       t -= get_dashboard_state()->aging_discharge_step_s[0];
       get_dashboard_state()->aging_discharge_step_s[1] = t;
       need_save = true;
-    } else if (get_dashboard_state()->battery_left <= 95 && get_dashboard_state()->aging_discharge_step_s[0] == 0) {
+    } else if ((get_dashboard_state()->battery_left <= 95) && (get_dashboard_state()->aging_discharge_step_s[0] == 0)) {
       get_dashboard_state()->aging_discharge_step_s[0] = (k_uptime_get() - discharge_test_start_ms) / 1000;
       need_save = true;
+    } else {
+      /* nothing to do */
     }
   } else {
-    if (get_dashboard_state()->panel.init_done != 1 || get_dashboard_state()->dashboard_mode != 3 ||
-        get_dashboard_state()->suspend_state == 1 || line_buf == 0) {
+    if ((get_dashboard_state()->panel.init_done != 1U) || (get_dashboard_state()->dashboard_mode != 3) ||
+        (get_dashboard_state()->suspend_state == 1) || (line_buf == 0)) {
       exit_silent_mode();
     }
   }
@@ -1996,6 +2022,8 @@ static void aging_test_thread(void *p1, void *p2, void *p3) {
     } else if (aging_mode == 2) {
       demo_image_next();
       aging_mode = 0;
+    } else {
+      /* nothing to do */
     }
     check_sw0_status();
     k_msleep(100);
@@ -2005,10 +2033,10 @@ static void aging_test_thread(void *p1, void *p2, void *p3) {
 void aging_charge_check(void) {
   bool need_save = false;
 
-  if (aging_mode != 1 || aging_phase != 1) {
+  if ((aging_mode != 1) || (aging_phase != 1)) {
     return;
   }
-  if (get_dashboard_state()->aging_elapsed_s >= 300) {
+  if (get_dashboard_state()->aging_elapsed_s >= 300U) {
     return;
   }
   if (get_box_status_by_type(0) != 1) {
@@ -2029,11 +2057,12 @@ void aging_charge_check(void) {
     }
   }
 
-  if (get_dashboard_state()->aging_charge_check_count > 60 && get_dashboard_state()->aging_charge_check_result == 0) {
+  if ((get_dashboard_state()->aging_charge_check_count > 60U) &&
+      (get_dashboard_state()->aging_charge_check_result == 0)) {
     get_dashboard_state()->aging_charge_check_result = 1;
     need_save = true;
   }
-  if (get_dashboard_state()->aging_no_charge_count > 20 && get_dashboard_state()->aging_charge_check_result != 2) {
+  if ((get_dashboard_state()->aging_no_charge_count > 20) && (get_dashboard_state()->aging_charge_check_result != 2)) {
     get_dashboard_state()->aging_charge_check_result = 2;
     need_save = true;
   }
@@ -2062,7 +2091,7 @@ static int get_lux_info(const uint8_t *req, uint32_t req_len, uint8_t **resp, ui
   uint32_t lux;
   float curve;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_lux_info para is NULL\n");
     return -1;
   }
@@ -2095,10 +2124,10 @@ static int set_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   ARG_UNUSED(req_len);
   ARG_UNUSED(arg);
   uint8_t *p;
-  uint32_t x, y;
+  uint32_t x;
   uint8_t ret;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("set_canvas_pos_info para is NULL\n");
     return -1;
   }
@@ -2114,13 +2143,13 @@ static int set_canvas_pos_info(const uint8_t *req, uint32_t req_len, uint8_t **r
   p[3] = 1;
   ret = 1;
   x = *(const uint16_t *)(req + 5);
-  if (x <= 0x40) {
-    y = *(const uint16_t *)(req + 7);
-    if (y <= 0x40) {
-      if (x % 2 == 0) {
+  if (x <= 0x40U) {
+    uint32_t y = *(const uint16_t *)(req + 7);
+    if (y <= 0x40U) {
+      if ((x % 2U) == 0U) {
         get_dashboard_state()->canvas_x = x;
       } else {
-        get_dashboard_state()->canvas_x = x - 1;
+        get_dashboard_state()->canvas_x = x - 1U;
       }
       get_dashboard_state()->canvas_y = y;
       demo_mode = 0;
@@ -2143,10 +2172,6 @@ void mic_transm_thread(void *p1, void *p2, void *p3) {
   const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r64));
   uint8_t buf[MIC_TRANSM_FRAME] = {0};
   uint8_t fail = 0;
-  uint16_t seq;
-  uint32_t addr;
-  int err;
-  int cnt;
   int i;
 
   k_sem_init(&mic_transm_sem, 0, 1);
@@ -2163,13 +2188,16 @@ void mic_transm_thread(void *p1, void *p2, void *p3) {
       buf[4] = 0;
       buf[5] = 0xca;
       get_dashboard_state()->ble_context.write(buf, 10);
-    } else if (get_dashboard_state()->flash_read != 0) {
-      seq = 0;
+    } else if (get_dashboard_state()->flash_read != NULL) {
+      uint16_t seq = 0;
       while (1) {
-        addr = mic_flash_addr + seq * MIC_TRANSM_CHUNK;
+        uint32_t addr = mic_flash_addr + (seq * MIC_TRANSM_CHUNK);
+        int err;
+        int cnt;
+
         printk("start send mic data,flash address:0x%x,seq:%d\n", addr, seq);
         err = flash_read(flash_dev, (off_t)addr, buf + 6, MIC_TRANSM_CHUNK);
-        if (err) {
+        if (err != 0) {
           printk("Flash read failed! %d\n", err);
           buf[4] = seq;
           buf[5] = 0xca;
@@ -2184,7 +2212,7 @@ void mic_transm_thread(void *p1, void *p2, void *p3) {
             cnt++;
           }
         }
-        if (cnt == 20 || addr > 0x410000) {
+        if ((cnt == 20) || (addr > 0x410000U)) {
           buf[4] = 0;
           buf[5] = 1;
           get_dashboard_state()->ble_context.write(buf, 10);
@@ -2202,6 +2230,8 @@ void mic_transm_thread(void *p1, void *p2, void *p3) {
         }
         k_msleep(20);
       }
+    } else {
+      /* nothing to do */
     }
     memset(buf, 0, sizeof(buf));
   }
@@ -2213,7 +2243,7 @@ static int get_role_info_left(const uint8_t *req, uint32_t req_len, uint8_t **re
   ARG_UNUSED(arg);
   uint8_t *p;
 
-  if (resp == NULL || resp_len == NULL) {
+  if ((resp == NULL) || (resp_len == NULL)) {
     printk("get_role_info_left para is NULL\n");
     return -1;
   }
@@ -2227,6 +2257,8 @@ static int get_role_info_left(const uint8_t *req, uint32_t req_len, uint8_t **re
     p[4] = 1;
   } else if (is_master() == 2) {
     p[4] = 0;
+  } else {
+    /* nothing to do */
   }
   *resp_len = 5;
 

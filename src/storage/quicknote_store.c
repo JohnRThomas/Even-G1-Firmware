@@ -13,7 +13,7 @@
 
 #define QUICKNOTE_FLASH_ADDR  0x403000
 #define QUICKNOTE_MAGIC       0xaa
-#define QUICKNOTE_NUM         4
+#define QUICKNOTE_NUM         4U
 #define QUICKNOTE_QUEUE_DEPTH 20
 
 enum {
@@ -57,7 +57,7 @@ int upgradeQuickNoteDataToFlash(int index) {
     .index = index,
   };
 
-  if (k_msgq_put(&quicknote_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&quicknote_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("quicknote flash store queue fill failed\r\n\n");
     return -1;
   }
@@ -73,7 +73,7 @@ int deleteQuickNoteData(int index) {
     .index = index,
   };
 
-  if (k_msgq_put(&quicknote_msgq, &msg, K_NO_WAIT)) {
+  if (k_msgq_put(&quicknote_msgq, &msg, K_NO_WAIT) != 0) {
     G1_LOG_ERR("quicknote flash store queue fill failed\r\n\n");
     return -1;
   }
@@ -94,7 +94,7 @@ int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *
   }
   memset(quicknote_cache, 0, sizeof(quicknote_cache));
   if (get_dashboard_state()->flash_read(get_dashboard_state(), QUICKNOTE_FLASH_ADDR, quicknote_cache,
-                                        sizeof(quicknote_cache))) {
+                                        sizeof(quicknote_cache)) != 0) {
     G1_LOG_ERR(" form address [%d] read data failed.\n\n", QUICKNOTE_FLASH_ADDR);
     return -1;
   }
@@ -102,14 +102,17 @@ int getQuickNoteDataFromFlash(uint32_t index, void *title, int title_len, void *
     G1_LOG_INF("quicknote data is invaild,don't export to global ram..\n");
     return -1;
   }
-  if (title_len > QUICKNOTE_TITLE_LEN) {
-    title_len = QUICKNOTE_TITLE_LEN;
+  int title_bytes = title_len;
+  int text_bytes = text_len;
+
+  if (title_bytes > QUICKNOTE_TITLE_LEN) {
+    title_bytes = QUICKNOTE_TITLE_LEN;
   }
-  memcpy(title, quicknote_cache[index].title, title_len);
-  if (text_len > QUICKNOTE_TEXT_LEN) {
-    text_len = QUICKNOTE_TEXT_LEN;
+  memcpy(title, quicknote_cache[index].title, title_bytes);
+  if (text_bytes > QUICKNOTE_TEXT_LEN) {
+    text_bytes = QUICKNOTE_TEXT_LEN;
   }
-  memcpy(text, quicknote_cache[index].text, text_len);
+  memcpy(text, quicknote_cache[index].text, text_bytes);
   G1_LOG_INF("export flash data to global ram...\n");
   return 0;
 }
@@ -122,7 +125,7 @@ static int getQuickNoteBKPQueueCacheData(struct quicknote_msg *msg) {
   int ret;
 
   ret = k_msgq_get(&quicknote_msgq, msg, K_NO_WAIT);
-  if (ret) {
+  if (ret != 0) {
     G1_LOG_ERR("quick note file queue get failed\r\n\n");
   }
   return ret;
@@ -133,11 +136,10 @@ int QuickNoteStoreHandler(void) {
   struct quicknote_flash *note;
   uint8_t *title;
   uint8_t *text;
-  int changed;
   uint8_t index;
   int ret;
 
-  if (getQuickNoteBKPQueueCacheData(&msg)) {
+  if (getQuickNoteBKPQueueCacheData(&msg) != 0) {
     G1_LOG_ERR("quick note get queue data failed\n");
     return -1;
   }
@@ -155,7 +157,7 @@ int QuickNoteStoreHandler(void) {
       }
       memset(quicknote_cache, 0, sizeof(quicknote_cache));
       if (get_dashboard_state()->flash_read(get_dashboard_state(), QUICKNOTE_FLASH_ADDR, quicknote_cache,
-                                            sizeof(quicknote_cache))) {
+                                            sizeof(quicknote_cache)) != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", QUICKNOTE_FLASH_ADDR);
         return -1;
       }
@@ -169,7 +171,8 @@ int QuickNoteStoreHandler(void) {
         memset(text, 0, QUICKNOTE_TEXT_LEN);
         memcpy(text, get_dashboard_state()->quicknote->notes[index].text, QUICKNOTE_TEXT_LEN);
       } else {
-        changed = 0;
+        int changed = 0;
+
         if (memcmp(title, get_dashboard_state()->quicknote->notes[index].title, QUICKNOTE_TITLE_LEN) != 0) {
           memset(title, 0, QUICKNOTE_TITLE_LEN);
           memcpy(title, get_dashboard_state()->quicknote->notes[index].title, QUICKNOTE_TITLE_LEN);
@@ -187,13 +190,13 @@ int QuickNoteStoreHandler(void) {
       }
       cleanNotesIndex();
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), QUICKNOTE_FLASH_ADDR, 0x1000);
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
         return ret;
       }
       ret = get_dashboard_state()->flash_write(get_dashboard_state(), QUICKNOTE_FLASH_ADDR, quicknote_cache,
                                                sizeof(quicknote_cache));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR("Flash write failed! %d\n\n", ret);
         return ret;
       }
@@ -213,19 +216,19 @@ int QuickNoteStoreHandler(void) {
       }
       memset(quicknote_cache, 0, sizeof(quicknote_cache));
       if (get_dashboard_state()->flash_read(get_dashboard_state(), QUICKNOTE_FLASH_ADDR, quicknote_cache,
-                                            sizeof(quicknote_cache))) {
+                                            sizeof(quicknote_cache)) != 0) {
         G1_LOG_ERR(" form address [%d] read data failed.\n\n", QUICKNOTE_FLASH_ADDR);
         return -1;
       }
       memset(&quicknote_cache[index], 0xff, sizeof(quicknote_cache[index]));
       ret = get_dashboard_state()->flash_erase(get_dashboard_state(), QUICKNOTE_FLASH_ADDR, 0x1000);
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_INF("Flash erase failed! %d\n\n", ret);
         return ret;
       }
       ret = get_dashboard_state()->flash_write(get_dashboard_state(), QUICKNOTE_FLASH_ADDR, quicknote_cache,
                                                sizeof(quicknote_cache));
-      if (ret) {
+      if (ret != 0) {
         G1_LOG_ERR("Flash write failed! %d\n\n", ret);
         return ret;
       }

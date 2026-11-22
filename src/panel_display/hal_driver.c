@@ -30,7 +30,7 @@ void spi_wr_buffer(uint16_t col, uint16_t row, uint8_t *buf, uint32_t len) {
   p[-2] = addr;
   p[-1] = 0xff;
   lock_lcd_mutex(K_FOREVER);
-  c->spi_callbacks->xfer_cb(c->spi_callbacks, p - 5, len + 6, rx, 1);
+  c->spi_callbacks->xfer_cb(c->spi_callbacks, p - 5, len + 6U, rx, 1);
   unlock_lcd_mutex();
   memcpy(p - sizeof(backup), backup, sizeof(backup));
 }
@@ -50,7 +50,7 @@ uint16_t spi_read_id(void) {
 }
 
 void delay_ms(uint32_t ms) {
-  k_busy_wait(ms * 1000);
+  k_busy_wait(ms * 1000U);
 }
 
 void spi_send_cmd(uint8_t cmd) {
@@ -62,7 +62,7 @@ void spi_send_cmd(uint8_t cmd) {
   unlock_lcd_mutex();
 }
 
-#define SPI_TX_CHUNK 0xf000
+#define SPI_TX_CHUNK 0xf000U
 
 int spi_tx_data(const uint8_t *buf, uint32_t len) {
   struct jbd_panel_context *c = get_jdb_panel_context();
@@ -70,14 +70,15 @@ int spi_tx_data(const uint8_t *buf, uint32_t len) {
   uint32_t whole = len / SPI_TX_CHUNK * SPI_TX_CHUNK;
   uint32_t rem = len - whole;
   const uint8_t *end = buf + whole;
+  const uint8_t *cur = buf;
 
-  for (; buf != end; buf += SPI_TX_CHUNK) {
+  for (; cur != end; cur += SPI_TX_CHUNK) {
     lock_lcd_mutex(K_FOREVER);
-    c->spi_callbacks->xfer_cb(c->spi_callbacks, buf, SPI_TX_CHUNK, rx, 1);
+    c->spi_callbacks->xfer_cb(c->spi_callbacks, cur, SPI_TX_CHUNK, rx, 1);
     unlock_lcd_mutex();
   }
   lock_lcd_mutex(K_FOREVER);
-  c->spi_callbacks->xfer_cb(c->spi_callbacks, buf, rem, rx, 1);
+  c->spi_callbacks->xfer_cb(c->spi_callbacks, cur, rem, rx, 1);
   return unlock_lcd_mutex();
 }
 
@@ -87,5 +88,5 @@ void spi_tx_frame(uint8_t cmd, const uint8_t *param, uint32_t len) {
 
   buf[0] = cmd;
   memcpy(&buf[1], param, len);
-  spi_tx_data(buf, len + 1);
+  spi_tx_data(buf, len + 1U);
 }

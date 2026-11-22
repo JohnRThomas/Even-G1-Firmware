@@ -9,7 +9,7 @@
 #include "gui_strings.h"
 
 const char *get_string_in_language(int language, uint32_t string_id) {
-  if (string_id > GUI_STRING_COUNT - 1) {
+  if (string_id > ((uint32_t)GUI_STRING_COUNT - 1U)) {
     return "ERR_STRING";
   }
 

@@ -82,30 +82,32 @@ int ui_bitmap_task(struct jbd_panel_context *panel, void *arg, int event) {
 }
 
 static int not_disturb_sync_data(const uint8_t *data, uint8_t len) {
+  uint8_t count = len;
+
   if (data == NULL) {
     return -1;
   }
   if (get_dashboard_state()->is_master == 1) {
-    uint8_t buf[4] = {5};
+    uint8_t buf[4] = {5, 0, 0, 0};
 
-    if (len > 3) {
-      len = 3;
+    if (count > 3) {
+      count = 3;
     }
-    if (len) {
-      memcpy(&buf[1], data, len);
+    if (count) {
+      memcpy(&buf[1], data, count);
     }
-    if (sync_to_slave(get_dashboard_state(), 6, buf, (uint8_t)(len + 1)) > 2999) {
+    if (sync_to_slave(get_dashboard_state(), 6, buf, (uint8_t)(count + 1)) > 2999) {
       G1_LOG_ERR("not_disturb SYNC TO Slave failed...\n");
       return -1;
     }
   } else {
-    uint8_t buf[2] = {5};
+    uint8_t buf[2] = {5, 0};
 
-    if (len) {
-      len = 1;
+    if (count) {
+      count = 1;
       buf[1] = data[0];
     }
-    if (sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
+    if (sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(count + 1)) >= 2000U) {
       G1_LOG_ERR("not_disturb SYNC TO master failed...\n");
       return -1;
     }
@@ -124,11 +126,10 @@ void show_not_disturb_bitmap(uint8_t mode) {
 }
 
 int sync_not_disturb_bitmap(uint8_t mode) {
-  int ret;
-
   if (get_dashboard_state()->bitmap_info->sync_pending) {
-    ret = not_disturb_sync_data(&mode, 1);
-    if (ret) {
+    int ret = not_disturb_sync_data(&mode, 1);
+
+    if (ret != 0) {
       return ret;
     }
     get_dashboard_state()->bitmap_info->sync_pending = ret;
@@ -141,7 +142,8 @@ int sync_not_disturb_bitmap(uint8_t mode) {
 
 /* request a new do-not-disturb bitmap mode (0..2); synced to the app later */
 void request_not_disturb_bitmap(uint8_t mode) {
-  if (mode < 3 && (get_dashboard_state()->bitmap_info->mode != mode || get_dashboard_state()->dashboard_mode != 7)) {
+  if ((mode < 3) &&
+      ((get_dashboard_state()->bitmap_info->mode != mode) || (get_dashboard_state()->dashboard_mode != 7))) {
     get_dashboard_state()->bitmap_info->mode = mode;
     get_dashboard_state()->bitmap_info->sync_pending = 1;
   }

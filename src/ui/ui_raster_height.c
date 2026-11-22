@@ -73,7 +73,7 @@ int ui_raster_height_task(struct jbd_panel_context *panel, void *arg, int event)
     CURRENT_VERTICAL_OFFSET = -1;
   } else {
     cal_panel_canvas_coord(&horizontal_offset, &vertical_offset);
-    if (horizontal_offset != CURRENT_HORIZONTAL_OFFSET || vertical_offset != CURRENT_VERTICAL_OFFSET) {
+    if ((horizontal_offset != CURRENT_HORIZONTAL_OFFSET) || (vertical_offset != CURRENT_VERTICAL_OFFSET)) {
       G1_LOG_INF("ui_raster_height_task reflash...\n");
       gui_screen_clear();
       set_screen_cleared();

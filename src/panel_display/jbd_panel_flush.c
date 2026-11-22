@@ -17,22 +17,24 @@ struct k_mutex lcd_mutex;
 int reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_start, int x_end, int y_end) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
-  int ret;
+  int x_last = x_end;
+  int y_last = y_end;
+  int y = y_start;
 
   if (!c->init_done) {
     G1_LOG_ERR("c->init_done = 0,init failed, can't write data!\n");
     return -1;
   }
-  if (y_end >= PANEL_FB_ROWS) {
-    y_end = PANEL_FB_ROWS - 1;
+  if (y_last >= PANEL_FB_ROWS) {
+    y_last = PANEL_FB_ROWS - 1;
   }
-  if (x_end >= PANEL_WIDTH) {
-    x_end = PANEL_WIDTH;
+  if (x_last >= PANEL_WIDTH) {
+    x_last = PANEL_WIDTH;
   }
-  for (; y_start <= y_end; y_start++) {
-    uint8_t *p = c->current_buffer + y_start * PANEL_FB_STRIDE + x_start / 2 - 5;
-    int len = x_end / 2 - x_start / 2 + 5;
-    uint32_t addr = (((column + y_start) << 10U) & 0x7fc00U) | ((x_start + row) & 0x3ffU);
+  for (; y <= y_last; y++) {
+    uint8_t *p = c->current_buffer + (y * PANEL_FB_STRIDE) + (x_start / 2) - 5;
+    int len = (x_last / 2) - (x_start / 2) + 5;
+    uint32_t addr = (((column + (uint32_t)y) << 10U) & 0x7fc00U) | (((uint32_t)x_start + row) & 0x3ffU);
     uint8_t backup[5];
 
     memcpy(backup, p, sizeof(backup));
@@ -44,9 +46,9 @@ int reflash_fb_data_to_lcd(uint32_t row, uint32_t column, int x_start, int y_sta
     /* the dummy clocks: the byte behind the window, as it is in the frame buffer, since the
      * panel takes in its first pixel */
     k_mutex_lock(&lcd_mutex, K_FOREVER);
-    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, p, len + 1, rx, 1);
+    int ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, p, len + 1, rx, 1);
     k_mutex_unlock(&lcd_mutex);
-    if (ret) {
+    if (ret != 0) {
       G1_LOG_ERR("spi transfer error....\n");
     }
     memcpy(p, backup, sizeof(backup));
@@ -60,22 +62,24 @@ int reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_
                               int offset) {
   uint8_t rx[1] = {0};
   struct jbd_panel_context *c = get_jdb_panel_context();
-  int ret;
+  int x_last = x_end;
+  int y_last = y_end;
+  int y = y_start;
 
   if (!c->init_done) {
     G1_LOG_ERR("c->init_done = 0,init failed, can't write data!\n");
     return -1;
   }
-  if (y_end >= PANEL_FB_ROWS) {
-    y_end = PANEL_FB_ROWS - 1;
+  if (y_last >= PANEL_FB_ROWS) {
+    y_last = PANEL_FB_ROWS - 1;
   }
-  if (x_end >= PANEL_WIDTH) {
-    x_end = PANEL_WIDTH;
+  if (x_last >= PANEL_WIDTH) {
+    x_last = PANEL_WIDTH;
   }
-  for (; y_start <= y_end; y_start++) {
-    uint8_t *p = c->current_buffer + (y_start + offset) * PANEL_FB_STRIDE + x_start / 2 - 5;
-    int len = x_end / 2 - x_start / 2 + 5;
-    uint32_t addr = (((column + y_start) << 10U) & 0x7fc00U) | ((x_start + row) & 0x3ffU);
+  for (; y <= y_last; y++) {
+    uint8_t *p = c->current_buffer + ((y + offset) * PANEL_FB_STRIDE) + (x_start / 2) - 5;
+    int len = (x_last / 2) - (x_start / 2) + 5;
+    uint32_t addr = (((column + (uint32_t)y) << 10U) & 0x7fc00U) | (((uint32_t)x_start + row) & 0x3ffU);
     uint8_t backup[5];
 
     memcpy(backup, p, sizeof(backup));
@@ -87,9 +91,9 @@ int reflash_fb_data_to_lcd_ex(uint32_t row, uint32_t column, int x_start, int y_
     /* the dummy clocks: the byte behind the window, as it is in the frame buffer, since the
      * panel takes in its first pixel */
     k_mutex_lock(&lcd_mutex, K_FOREVER);
-    ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, p, len + 1, rx, 1);
+    int ret = c->spi_callbacks->xfer_cb(c->spi_callbacks, p, len + 1, rx, 1);
     k_mutex_unlock(&lcd_mutex);
-    if (ret) {
+    if (ret != 0) {
       G1_LOG_ERR("spi transfer error....\n");
     }
     memcpy(p, backup, sizeof(backup));

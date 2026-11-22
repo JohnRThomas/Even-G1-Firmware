@@ -4,28 +4,16 @@
 #include <stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
-#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/mfd/npm1300.h>
-#include <zephyr/drivers/regulator.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util_macro.h>
 
 #include "g1_log.h"
 #include "sensors_audio.h"
+#include "vendor_drivers.h"
 
-struct regulator_npm1300_config {
-  struct regulator_common_config common;
-  const struct device *mfd;
-  uint8_t source;
-  int32_t retention_uv;
-  struct gpio_dt_spec enable_gpios;
-  struct gpio_dt_spec retention_gpios;
-  struct gpio_dt_spec pwm_gpios;
-};
-
-#define PMIC_LDO2    DEVICE_DT_GET(DT_NODELABEL(pmic_ldo2))
-#define NPM_MFD(dev) (((const struct regulator_npm1300_config *)(dev)->config)->mfd)
+#define PMIC_LDO2 DEVICE_DT_GET(DT_NODELABEL(pmic_ldo2))
 
 #define CHGR_BASE            0x03
 #define CHGR_OFFSET_EN_SET   0x04
@@ -57,7 +45,9 @@ int enable_charger(void) {
 /* returns 1 while charging, 0 when charging completed / trickle */
 int set_charger_status(void) {
   uint8_t status = 0;
-  bool trickle, cc, cv;
+  bool trickle;
+  bool cc;
+  bool cv;
 
   if (mfd_npm1300_reg_read(NPM_MFD(PMIC_LDO2), CHGR_BASE, CHGR_OFFSET_CHG_STAT, &status) < 0) {
     printk("Could not get charger status\n");
@@ -95,7 +85,7 @@ int is_in_box(void) {
   uint8_t status = nfc_box_status[0];
 
   if (in_box_last != status) {
-    if (BLE_DEBUG) {
+    if (BLE_DEBUG != 0) {
       ble_printk("[csh_debug_box]isInbox is %d \n", status);
     } else {
       printk("[csh_debug_box]isInbox is %d \n", status);

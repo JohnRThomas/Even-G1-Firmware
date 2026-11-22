@@ -28,8 +28,8 @@ struct pt_cmd {
 };
 
 /* pt_comm.c */
-int comm_write(int type, void *ctx, uint8_t *data, size_t len);
-int comm_read(int type, void *ctx, uint8_t **data, uint32_t *len);
+int comm_write(int type, const void *ctx, const uint8_t *data, size_t len);
+int comm_read(int type, const void *ctx, uint8_t **data, uint32_t *len);
 
 /* production_test.c */
 extern const struct pt_cmd pt_cmd_table[48];
@@ -70,7 +70,7 @@ int init_serial_comm(void);
 /* serial_port.c */
 void serial_rx_clear(void);
 int lpuart_async_a(const struct device *dev);
-int lpuart_async_b(const struct device *dev, uint8_t *data, size_t len);
+int lpuart_async_b(const struct device *dev, const uint8_t *data, size_t len);
 int read_serial_data(const struct device *dev, uint8_t **data, uint32_t *len);
 
 #endif /* G1_PRODUCTION_TEST_H_ */

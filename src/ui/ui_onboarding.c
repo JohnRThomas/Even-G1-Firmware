@@ -41,7 +41,7 @@ int init_onboarding_info(void) {
 
 void onboarding_request_redraw(void) {
   if ((int)last_action != (int)get_dashboard_state()->onboarding->action ||
-      (get_dashboard_state()->onboarding->action != 5 && get_dashboard_state()->onboarding->action != 0x13 &&
+      ((get_dashboard_state()->onboarding->action != 5) && (get_dashboard_state()->onboarding->action != 0x13) &&
        get_dashboard_state()->onboarding->action != 0x14 && get_dashboard_state()->onboarding->action != 0x15)) {
     anim_drawn = 0;
     step_finished = 0;
@@ -78,13 +78,13 @@ void onboarding_draw_static_page(void) {
   page_redraw = 0;
   gui_screen_clear();
 
-  if (get_dashboard_state()->onboarding->action != 0 && get_dashboard_state()->onboarding->action != 10 &&
+  if ((get_dashboard_state()->onboarding->action != 0) && (get_dashboard_state()->onboarding->action != 10) &&
       get_dashboard_state()->onboarding->action != 11 && get_dashboard_state()->onboarding->action != 5 &&
       get_dashboard_state()->onboarding->action != 6 && get_dashboard_state()->onboarding->action != 0x13 &&
       get_dashboard_state()->onboarding->action != 0x14 && get_dashboard_state()->onboarding->action != 0x15 &&
       get_dashboard_state()->onboarding->action != 0xe && get_dashboard_state()->onboarding->action != 0xf &&
       get_dashboard_state()->onboarding->action != 0x10 && get_dashboard_state()->onboarding->action != 0x11 &&
-      (get_dashboard_state()->onboarding->action != 3 || onboarding_shown_sub_step != 2)) {
+      ((get_dashboard_state()->onboarding->action != 3) || (onboarding_shown_sub_step != 2))) {
     gui_utf_draw(0, get_dashboard_state()->onboarding->step_str, 3, X0, Y0 + 0x37, X0 + 0x28, Y0 + 0x52, 4, 0, 0, NULL,
                  0);
   }
@@ -126,9 +126,11 @@ void onboarding_draw_static_page(void) {
             get_dashboard_state()->onboarding->flags |= 2U;
             get_dashboard_state()->onboarding->action = 0x17;
           }
+        } else {
+          /* nothing to do */
         }
       } else if (onboarding_shown_sub_step == 2) {
-        if (get_dashboard_state()->onboarding->action == 0x15 && !(get_dashboard_state()->onboarding->flags & 1U)) {
+        if ((get_dashboard_state()->onboarding->action == 0x15) && !(get_dashboard_state()->onboarding->flags & 1U)) {
           report_event_to_phone(0x13);
           get_dashboard_state()->onboarding->flags |= 1U;
         }
@@ -136,7 +138,7 @@ void onboarding_draw_static_page(void) {
           anim_drawn = 0;
           break;
         }
-        if (get_dashboard_state()->onboarding->action != 0x15 || onboarding_prv.imu_mode == 1) {
+        if ((get_dashboard_state()->onboarding->action != 0x15) || (onboarding_prv.imu_mode == 1)) {
           clear_showing_notification_on_gui();
         }
         for (fade_step = 0; fade_step < 8; fade_step++) {
@@ -162,19 +164,21 @@ void onboarding_draw_static_page(void) {
           gui_utf_draw(0, get_string(0x15), 0, X0, Y0 + 0x6d, X0 + 0xf2, Y0 + 0x88, 1, 0, 0, NULL, 0);
           gui_bmp_bitmap_draw(0x3b, X0 + 0x108, Y0 + 1, 0, 0, 0);
           gui_utf_draw(0, get_string(0x17), 0, X0 + 0x126, Y0, X0 + 0x202, Y0 + 0x1b, 1, 0, 0, NULL, 0);
-          gui_utf_draw(0, get_dashboard_state()->onboarding->action == 0x15 ? "2/2" : "1/2", 3, X0 + 0x210, Y0 + 1,
+          gui_utf_draw(0, (get_dashboard_state()->onboarding->action == 0x15) ? "2/2" : "1/2", 3, X0 + 0x210, Y0 + 1,
                        X0 + 0x234, Y0 + 0x1c, 1, 0, 0, NULL, 0);
-          gui_utf_draw(0, get_string(get_dashboard_state()->onboarding->action == 0x15 ? 0xe : 0x18), 0, X0 + 0x108,
+          gui_utf_draw(0, get_string((get_dashboard_state()->onboarding->action == 0x15) ? 0xe : 0x18), 0, X0 + 0x108,
                        Y0 + 0x1b, X0 + 0x232, Y0 + 0x87, 4, 0, 0, NULL, 0);
           gui_bmp_bitmap_draw(0x59, X0 + 0xfc, Y0, 0, 0, 0);
           gui_bmp_bitmap_draw(0x5a, X0 + 0x23e, Y0, 0, 0, 0);
-          if (get_dashboard_state()->onboarding->action == 0x15 && onboarding_prv.imu_mode != 1) {
+          if ((get_dashboard_state()->onboarding->action == 0x15) && (onboarding_prv.imu_mode != 1)) {
             break;
           }
           ONB_FADE_FRAME(gs);
           ONB_REFLASH_FULL();
         }
         set_showing_notification_on_gui();
+      } else {
+        /* nothing to do */
       }
       break;
     case 6:
@@ -189,6 +193,8 @@ void onboarding_draw_static_page(void) {
           }
         } else if (get_dashboard_state()->onboarding->action == 0x13) {
           gui_utf_draw(0, get_string(0x22), 0, X0 + 0xa6, Y0 + 0x6d, X0 + 0x240, Y0 + 0x88, 1, 0, 0, NULL, 0);
+        } else {
+          /* nothing to do */
         }
       } else if (onboarding_shown_sub_step == 2) {
         if (get_dashboard_state()->onboarding->action == 6) {
@@ -196,23 +202,27 @@ void onboarding_draw_static_page(void) {
             report_event_to_phone(0x15);
             get_dashboard_state()->onboarding->flags |= 4U;
           }
-        } else if (get_dashboard_state()->onboarding->action == 0x13 && step_finished) {
+        } else if ((get_dashboard_state()->onboarding->action == 0x13) && step_finished) {
           anim_drawn = 0;
           break;
+        } else {
+          /* nothing to do */
         }
         clear_showing_notification_on_gui();
         for (fade_step = 0; fade_step < 8; fade_step++) {
           gui_bmp_bitmap_draw(0x3c, X0 + 0x212, Y0 + 4, 0, 0, 0);
-          gui_utf_draw(0, get_dashboard_state()->onboarding->action == 6 ? "1" : "0", 3, X0 + 0x22e, Y0 + 3, X0 + 0x23e,
-                       Y0 + 0x1e, 1, 0, 0, NULL, 0);
+          gui_utf_draw(0, (get_dashboard_state()->onboarding->action == 6) ? "1" : "0", 3, X0 + 0x22e, Y0 + 3,
+                       X0 + 0x23e, Y0 + 0x1e, 1, 0, 0, NULL, 0);
           gui_bmp_bitmap_draw(0x38, X0, Y0 + 4, 0, 0, 0);
           gui_utf_draw(0, get_string(0x1a), 0, X0 + 0x24, Y0 + 3, X0 + 0x150, Y0 + 0x1e, 1, 0, 0, NULL, 0);
-          gui_utf_draw(0, get_string(get_dashboard_state()->onboarding->action == 6 ? 0x1c : 0xc), 0, X0, Y0 + 0x37,
+          gui_utf_draw(0, get_string((get_dashboard_state()->onboarding->action == 6) ? 0x1c : 0xc), 0, X0, Y0 + 0x37,
                        X0 + 0x240, Y0 + 0x6d, 2, 0, 0, NULL, 0);
           ONB_FADE_FRAME(gs);
           ONB_REFLASH_FULL();
         }
         set_showing_notification_on_gui();
+      } else {
+        /* nothing to do */
       }
       break;
     case 0x16:
@@ -244,13 +254,13 @@ void onboarding_draw_static_page(void) {
     case 0xe:
     case 0xf:
       gui_bmp_bitmap_draw(0x36, X0, Y0 + 0x37, 0, 0, 0);
-      if (get_dashboard_state()->onboarding->action != 0xf || onboarding_shown_sub_step != 1) {
+      if ((get_dashboard_state()->onboarding->action != 0xf) || (onboarding_shown_sub_step != 1)) {
         gui_utf_draw_middle(0, get_string(0x23), 0, X0, Y0 + 0x37, X0 + 0x240, Y0 + 0x88, 4, 0, 0, NULL, 0);
       }
       break;
     case 0x10:
     case 0x11:
-      if (get_dashboard_state()->onboarding->action != 0x11 || onboarding_shown_sub_step != 1) {
+      if ((get_dashboard_state()->onboarding->action != 0x11) || (onboarding_shown_sub_step != 1)) {
         gui_bmp_bitmap_draw(0x3c, X0 + 0x212, Y0 + 4, 0, 0, 0);
         gui_utf_draw(0, "1", 3, X0 + 0x22e, Y0 + 3, X0 + 0x23e, Y0 + 0x1e, 1, 1, 0, NULL, 0);
         gui_bmp_bitmap_draw(0x38, X0, Y0 + 4, 0, 0, 0);
@@ -271,7 +281,7 @@ void onboarding_draw_animated_page(void) {
 
   switch (get_dashboard_state()->onboarding->action) {
     case 0:
-      if (k_uptime_get() - get_dashboard_state()->onboarding->ts > 4000) {
+      if ((uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts > 4000U) {
         get_dashboard_state()->onboarding->sub_step++;
         if (get_dashboard_state()->onboarding->sub_step >= 5) {
           get_dashboard_state()->onboarding->sub_step = 0;
@@ -283,7 +293,7 @@ void onboarding_draw_animated_page(void) {
       if (headup_hint_count > 5) {
         break;
       }
-      if (headup_hint_count == 0 || k_uptime_get() - get_dashboard_state()->onboarding->ts > 1000) {
+      if ((headup_hint_count == 0) || ((uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts > 1000U)) {
         headup_hint_count++;
         report_event_to_phone(0x10);
         get_dashboard_state()->onboarding->ts = k_uptime_get();
@@ -297,8 +307,8 @@ void onboarding_draw_animated_page(void) {
     case 0x15:
       get_dashboard_state()->onboarding->sub_step = get_dashboard_state()->imu.mode;
       if (onboarding_shown_sub_step == 1) {
-        if (get_dashboard_state()->onboarding->action == 5 && !step_finished &&
-            k_uptime_get() - get_dashboard_state()->onboarding->ts < 500) {
+        if ((get_dashboard_state()->onboarding->action == 5) && !step_finished &&
+            (uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts < 500U) {
           break;
         }
         if (get_current_language() == 6) {
@@ -313,7 +323,7 @@ void onboarding_draw_animated_page(void) {
       if (onboarding_shown_sub_step != 2) {
         break;
       }
-      if (k_uptime_get() - get_dashboard_state()->onboarding->ts > 2000 || step_finished) {
+      if (((uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts > 2000U) || step_finished) {
         if (!anim_drawn) {
           anim_drawn = 1;
           gui_utf_draw(0, get_string(0x14), 3, X0, Y0, X0 + 0x76, Y0 + 0x1b, 1, strlen(get_string(0x14)), 0, NULL, 0);
@@ -342,12 +352,13 @@ void onboarding_draw_animated_page(void) {
             gui_bmp_bitmap_draw_ex(0x3b, X0 + 0x108, Y0 + 1, buf, 0x55);
             gui_utf_draw(0, get_string(0x17), 0, X0 + 0x126, Y0, X0 + 0x202, Y0 + 0x1b, 1, strlen(get_string(0x17)), 0,
                          NULL, 0);
-            gui_utf_draw(0, get_dashboard_state()->onboarding->action == 0x15 ? "2/2" : "1/2", 3, X0 + 0x210, Y0 + 1,
+            gui_utf_draw(0, (get_dashboard_state()->onboarding->action == 0x15) ? "2/2" : "1/2", 3, X0 + 0x210, Y0 + 1,
                          X0 + 0x234, Y0 + 0x1c, 1, 3, 0, NULL, 0);
           }
-          gui_utf_draw(0, get_string(get_dashboard_state()->onboarding->action == 0x15 ? 0xe : 0x18), 0, X0 + 0x108,
+          gui_utf_draw(0, get_string((get_dashboard_state()->onboarding->action == 0x15) ? 0xe : 0x18), 0, X0 + 0x108,
                        Y0 + 0x1b, X0 + 0x232, Y0 + 0x87, 4,
-                       strlen(get_string(get_dashboard_state()->onboarding->action == 0x15 ? 0xe : 0x18)), 0, NULL, 0);
+                       strlen(get_string((get_dashboard_state()->onboarding->action == 0x15) ? 0xe : 0x18)), 0, NULL,
+                       0);
           gui_bmp_bitmap_draw_ex(0x59, X0 + 0xfc, Y0, buf, 0x55);
           gui_bmp_bitmap_draw_ex(0x5a, X0 + 0x23e, Y0, buf, 0x55);
           gui_utf_draw(0, " ", 0, X0, Y0 + 0x6d, X0 + 0x240, Y0 + 0x88, 1, 0, 0, NULL, 0);
@@ -372,6 +383,8 @@ void onboarding_draw_animated_page(void) {
             } else {
               gui_utf_draw(0, get_string(0xf), 0, X0 + 0x92, Y0 + 0x6d, X0 + 0x240, Y0 + 0x88, 1, 0, 0, NULL, 0);
             }
+          } else {
+            /* nothing to do */
           }
         }
         if (get_dashboard_state()->onboarding->action == 5) {
@@ -388,6 +401,8 @@ void onboarding_draw_animated_page(void) {
           } else {
             gui_bmp_dynamic_bitmap_draw(3, X0 + 0x6e, Y0 + 0x70, 0, 0, 0, 0);
           }
+        } else {
+          /* nothing to do */
         }
       }
       if (get_dashboard_state()->onboarding->sub_step == 1) {
@@ -399,7 +414,7 @@ void onboarding_draw_animated_page(void) {
       get_dashboard_state()->onboarding->sub_step = get_dashboard_state()->imu.mode;
       if (onboarding_shown_sub_step == 1) {
         if (get_dashboard_state()->onboarding->action == 6) {
-          if (k_uptime_get() - get_dashboard_state()->onboarding->ts <= 2000) {
+          if ((uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts <= 2000U) {
             break;
           }
           if (!anim_drawn) {
@@ -423,13 +438,15 @@ void onboarding_draw_animated_page(void) {
           } else {
             gui_bmp_dynamic_bitmap_draw(2, X0 + 0x82, Y0 + 0x70, 0, 0, 0, 0);
           }
+        } else {
+          /* nothing to do */
         }
         break;
       }
       if (onboarding_shown_sub_step != 2) {
         break;
       }
-      if (k_uptime_get() - get_dashboard_state()->onboarding->ts > 2000 || step_finished) {
+      if (((uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts > 2000U) || step_finished) {
         if (!anim_drawn) {
           anim_drawn = 1;
           if (!(get_dashboard_state()->onboarding->flags & 4U)) {
@@ -442,6 +459,8 @@ void onboarding_draw_animated_page(void) {
           } else if (get_dashboard_state()->onboarding->action == 0x13) {
             gui_bmp_bitmap_draw(0x3c, X0 + 0x212, Y0 + 4, 0, 0, 0);
             gui_utf_draw(0, "0", 3, X0 + 0x22e, Y0 + 3, X0 + 0x23e, Y0 + 0x1e, 1, 0, 0, NULL, 0);
+          } else {
+            /* nothing to do */
           }
           gui_bmp_bitmap_draw_ex(0x38, X0, Y0 + 4, buf, 0x55);
           gui_utf_draw(0, get_string(0x1a), 0, X0 + 0x24, Y0 + 3, X0 + 0x150, Y0 + 0x1e, 1, strlen(get_string(0x1a)), 0,
@@ -452,6 +471,8 @@ void onboarding_draw_animated_page(void) {
           } else if (get_dashboard_state()->onboarding->action == 0x13) {
             gui_utf_draw(0, get_string(0xc), 0, X0, Y0 + 0x37, X0 + 0x240, Y0 + 0x6d, 2, strlen(get_string(0xc)), 0,
                          NULL, 0);
+          } else {
+            /* nothing to do */
           }
           if (get_dashboard_state()->onboarding->action == 6) {
             if (get_current_language() == 6) {
@@ -467,6 +488,8 @@ void onboarding_draw_animated_page(void) {
               gui_utf_draw(0, get_string(10), 0, X0 + 0x94, Y0 + 0x6d, X0 + 0x240, Y0 + 0x88, 1, 0, 0, NULL, 0);
               gui_bmp_bitmap_draw(0x85, X0 + 0xf4, Y0 + 0x87, 0, 0, 0);
             }
+          } else {
+            /* nothing to do */
           }
         }
         if (get_dashboard_state()->onboarding->action == 6) {
@@ -481,6 +504,8 @@ void onboarding_draw_animated_page(void) {
           } else {
             gui_bmp_dynamic_bitmap_draw(0xb, X0 + 0x70, Y0 + 0x70, 0, 0, 0, 0);
           }
+        } else {
+          /* nothing to do */
         }
       }
       if (get_dashboard_state()->onboarding->sub_step == 1) {
@@ -488,7 +513,7 @@ void onboarding_draw_animated_page(void) {
       }
       break;
     case 0x16:
-      if (k_uptime_get() - get_dashboard_state()->onboarding->ts > 4000) {
+      if ((uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts > 4000U) {
         get_dashboard_state()->onboarding->action = 5;
       }
       break;
@@ -496,7 +521,7 @@ void onboarding_draw_animated_page(void) {
       if (headup_hint_count > 5) {
         break;
       }
-      if (headup_hint_count == 0 || k_uptime_get() - get_dashboard_state()->onboarding->ts > 1000) {
+      if ((headup_hint_count == 0) || ((uint64_t)k_uptime_get() - get_dashboard_state()->onboarding->ts > 1000U)) {
         headup_hint_count++;
         report_event_to_phone(0x14);
         get_dashboard_state()->onboarding->ts = k_uptime_get();
@@ -519,32 +544,32 @@ void onboarding_draw_animated_page(void) {
 }
 
 void onboarding_check_step_finished(void) {
-  if ((get_dashboard_state()->onboarding->action == 5 || get_dashboard_state()->onboarding->action == 0x13 ||
+  if (((get_dashboard_state()->onboarding->action == 5) || (get_dashboard_state()->onboarding->action == 0x13) ||
        get_dashboard_state()->onboarding->action == 0x14 || get_dashboard_state()->onboarding->action == 0x15) &&
-      onboarding_shown_sub_step == 2 && get_dashboard_state()->onboarding->sub_step == 1) {
+      (onboarding_shown_sub_step == 2) && get_dashboard_state()->onboarding->sub_step == 1) {
     step_finished = 1;
   }
 }
 
 int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event) {
   ARG_UNUSED(arg);
-  struct GlassesState *gs = get_dashboard_state();
+  const struct GlassesState *gs = get_dashboard_state();
 
   set_frame_buffer(panel->panel_buffer);
   set_showing_notification_on_gui();
 
-  if (event == UI_EVT_EXIT || gs->ui.buf[2] > 0x17) {
+  if ((event == UI_EVT_EXIT) || (gs->ui.buf[2] > 0x17)) {
     get_dashboard_state()->onboarding->active = 0;
     get_dashboard_state()->panel.panel_brightness_level = get_dashboard_state()->onboarding->saved_brightness;
     gui_screen_clear();
     return 0;
   }
 
-  if (event == UI_EVT_ENTER && get_dashboard_state()->is_master == 1) {
+  if ((event == UI_EVT_ENTER) && (get_dashboard_state()->is_master == 1)) {
     send_response_data_to_ble();
   }
 
-  if (get_dashboard_state()->is_master == 1 && get_dashboard_state()->onboarding->action != 0 &&
+  if ((get_dashboard_state()->is_master == 1) && (get_dashboard_state()->onboarding->action != 0) &&
       abs_diff_u64(k_uptime_get(), onboarding_prv.ts) > 1000) {
     onboarding_prv.timeout_cnt++;
     onboarding_prv.ts = k_uptime_get();
@@ -569,10 +594,10 @@ int ui_onboarding_task(struct jbd_panel_context *panel, void *arg, int event) {
       onboarding_check_step_finished();
       onboarding_shown_sub_step = get_dashboard_state()->onboarding->sub_step;
 
-      uint8_t data[3] = {get_dashboard_state()->onboarding->action, onboarding_shown_sub_step,
-                         get_dashboard_state()->onboarding->sync_arg};
+      if ((get_dashboard_state()->onboarding->action != 10) && (get_dashboard_state()->onboarding->action != 11)) {
+        uint8_t data[3] = {get_dashboard_state()->onboarding->action, onboarding_shown_sub_step,
+                           get_dashboard_state()->onboarding->sync_arg};
 
-      if (get_dashboard_state()->onboarding->action != 10 && get_dashboard_state()->onboarding->action != 11) {
         G1_LOG_INF("SYNC onboarding action_cmd %d and sub_step %d to slave\n",
                    get_dashboard_state()->onboarding->action, get_dashboard_state()->onboarding->sub_step);
         onboarding_sync_data(data, 3);
@@ -681,7 +706,7 @@ int onboarding_ble_process(struct GlassesState *gs, const struct ble_req_hdr *hd
     rsp_len = 0;
   }
 
-  if (req[1] != 0x12 && get_dashboard_state()->task_status->task != 0xe && !is_in_box()) {
+  if ((req[1] != 0x12) && (get_dashboard_state()->task_status->task != 0xeU) && !is_in_box()) {
     update_persist_task_status(get_dashboard_state(), 0xe, 2);
     get_dashboard_state()->onboarding->saved_brightness = get_dashboard_state()->panel.panel_brightness_level;
     get_dashboard_state()->panel.panel_brightness_level = 0x2a;
@@ -690,30 +715,32 @@ int onboarding_ble_process(struct GlassesState *gs, const struct ble_req_hdr *hd
 }
 
 int onboarding_sync_data(const uint8_t *data, uint32_t len) {
+  uint32_t count = len;
+
   if (data == NULL) {
     return -1;
   }
   if (get_dashboard_state()->is_master == 1) {
-    uint8_t buf[4] = {4};
+    uint8_t buf[4] = {4, 0, 0, 0};
 
-    if (len > 3) {
-      len = 3;
+    if (count > 3U) {
+      count = 3;
     }
-    if (len) {
-      memcpy(&buf[1], data, len);
+    if (count != 0U) {
+      memcpy(&buf[1], data, count);
     }
-    if (sync_to_slave(get_dashboard_state(), 6, buf, (uint8_t)(len + 1)) >= 5000) {
+    if (sync_to_slave(get_dashboard_state(), 6, buf, (uint8_t)(count + 1U)) >= 5000) {
       G1_LOG_ERR("onboarding sync to Slave failed...\n");
       return -1;
     }
   } else {
-    uint8_t buf[2] = {4};
+    uint8_t buf[2] = {4, 0};
 
-    if (len) {
-      len = 1;
+    if (count != 0U) {
+      count = 1;
       buf[1] = data[0];
     }
-    if (sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(len + 1)) >= 2000) {
+    if (sync_to_master(get_dashboard_state(), 0xe, buf, (uint8_t)(count + 1U)) >= 2000U) {
       G1_LOG_ERR("onboarding sync to master failed...\n");
       return -1;
     }

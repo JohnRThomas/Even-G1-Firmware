@@ -42,7 +42,7 @@ enum {
   EVEN_AI_OFFLINE_KO,
 };
 
-static const char *const even_ai_strings[] = {
+static const char *const even_ai_strings[EVEN_AI_OFFLINE_KO + 1] = {
   [EVEN_AI_LISTENING_EN] = "Even AI listening...\r\rRelease to Finish Recording",
   [EVEN_AI_OFFLINE_EN] = "Even AI is unable to connect to the network",
   [EVEN_AI_LISTENING_FR] = "Even IA écoute...\r\rRelâchez pour terminer l'enregistrement",
@@ -84,11 +84,11 @@ static int even_ai_draw_status_icon(const uint8_t *status) {
     gui_bmp_dynamic_bitmap_draw(4, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0, 0);
   } else if (s <= 11) {
     EVEN_AI_ICON_SWITCH(0xff);
-  } else if (s == 12 || s == 13 || s == 15) {
-    /* nothing */
-  } else if ((s == 14 || s == 16) && even_ai_icon != 0xff) {
+  } else if (((s == 14) || (s == 16)) && (even_ai_icon != 0xff)) {
     gui_dynamic_bitmap_reset();
     even_ai_icon = 0xff;
+  } else {
+    /* the other states leave the icon as it is */
   }
   return 0;
 }
@@ -178,14 +178,14 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
             gui_bmp_bitmap_draw(0x4a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
             gui_utf_draw_middle(0, offline_str, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() + 0x36,
                                 gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x87, 3, 0, 0, NULL, 0);
-          } else if (status >= 12 && status <= 14) {
+          } else if ((status >= 12) && (status <= 14)) {
             if (status != 14) {
               return 0;
             }
             reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
                                    get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH - 1, 199);
             break;
-          } else if (status == 15 || status == 16) {
+          } else if ((status == 15) || (status == 16)) {
             if (status != 16) {
               return 0;
             }
@@ -215,21 +215,24 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
         gui_screen_clear();
         even_ai_reset();
         return 0;
+      } else {
+        /* nothing to do */
       }
       break;
 
     case 1: {
       const uint8_t *ai = &gs->ui.ai.status;
-      uint8_t sub;
-      uint8_t status;
 
       if (event == UI_EVT_ENTER) {
+        uint8_t sub;
+        uint8_t status;
+
         memset(even_ai_text, 0, sizeof(even_ai_text));
         k_mutex_lock(&screen_payload_mutex, K_FOREVER);
         sub = gs->ui.ai.sub_status;
         k_mutex_unlock(&screen_payload_mutex);
         status = gs->ui.ai.status;
-        if (status == 7 && even_ai_page == -1 && sub == 3) {
+        if ((status == 7) && (even_ai_page == -1) && (sub == 3)) {
           even_ai_page = gs->ui.ai.page;
           clear_showing_notification_on_gui();
           for (int i = 0; i < 8; i++) {
@@ -290,13 +293,13 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
             gui_bmp_bitmap_draw(0x4a, gui_screen_x_offset(), gui_screen_y_offset() + 0x36, 0, 0, 0);
             gui_utf_draw_middle(0, offline_str, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() + 0x36,
                                 gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x87, 3, 0, 0, NULL, 0);
-          } else if (status >= 12 && status <= 14) {
+          } else if ((status >= 12) && (status <= 14)) {
             if (status != 14) {
               return 0;
             }
             reflash_fb_data_to_lcd(get_dashboard_state()->panel.current_row,
                                    get_dashboard_state()->panel.current_column, 0, 0, GUI_SCREEN_WIDTH - 1, 199);
-          } else if (status == 15 || status == 16) {
+          } else if ((status == 15) || (status == 16)) {
             if (status != 16) {
               return 0;
             }
@@ -322,7 +325,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
             int xh = x0 / 2;
             uint8_t **fbl = g->panel.panel_buffer + y0;
 
-            for (int row = 0; row < y1 - y0; row++) {
+            for (int row = 0; row < (y1 - y0); row++) {
               for (int col = 0; col < (x1 - x0) / 2; col++) {
                 const uint8_t steps[8] = {1, 2, 3, 4, 5, 6, 7, 7};
                 uint8_t *line = fbl[row];
@@ -342,7 +345,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
           break;
         }
         if (status <= 4) {
-          if (even_ai_answer_shown) {
+          if (even_ai_answer_shown != 0) {
             even_ai_answer_shown = 0;
             gui_screen_clear();
           }
@@ -351,7 +354,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
           break;
         }
         if (status == 11) {
-          if (even_ai_answer_shown) {
+          if (even_ai_answer_shown != 0) {
             even_ai_answer_shown = 0;
             gui_screen_clear();
           }
@@ -360,7 +363,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
                               gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x87, 3, 0, 0, NULL, 0);
           break;
         }
-        if (status >= 12 && status <= 14) {
+        if ((status >= 12) && (status <= 14)) {
           if (status != 14) {
             return 0;
           }
@@ -368,7 +371,7 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
                                  0, 0, GUI_SCREEN_WIDTH - 1, 199);
           break;
         }
-        if (status == 15 || status == 16) {
+        if ((status == 15) || (status == 16)) {
           if (status != 16) {
             return 0;
           }
@@ -386,13 +389,15 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
         }
         memset(even_ai_text, 0, sizeof(even_ai_text));
         memcpy(even_ai_text, gs->ui.ai.text, gs->ui.ai.text_len);
-        if (gs->ui.ai.status == 8 || gs->ui.ai.status == 9 || even_ai_text_drawn == 0) {
+        if ((gs->ui.ai.status == 8) || (gs->ui.ai.status == 9) || (even_ai_text_drawn == 0)) {
           if (gui_screen_y_offset() <= 32) {
             clean_fb_data(fb, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() + 0x88,
                           gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0xa3);
           } else if (gui_screen_y_offset() > 32) {
             clean_fb_data(fb, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset() - 0x1a,
                           gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 1);
+          } else {
+            /* nothing to do */
           }
           gui_utf_draw(0, even_ai_text, 0, gui_screen_x_offset() + 0x58, gui_screen_y_offset(),
                        gui_screen_x_offset() + 0x230, gui_screen_y_offset() + 0x88, 5, 0, 0, NULL, 0);
@@ -418,6 +423,8 @@ int ui_even_ai_task(struct jbd_panel_context *panel, void *arg, int event) {
         gui_screen_fade_out();
         even_ai_reset();
         return 0;
+      } else {
+        /* nothing to do */
       }
       break;
     }

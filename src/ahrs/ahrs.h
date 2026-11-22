@@ -13,8 +13,13 @@ struct ahrs {
   float beta;   /* 0.1 (unused by the Mahony update) */
   float twoKp;    /* 2 * proportional gain (Kp) */
   float twoKi;    /* 2 * integral gain (Ki) */
-  float q0, q1, q2, q3; /* quaternion of sensor frame relative to auxiliary frame */
-  float integralFBx, integralFBy, integralFBz;  /* integral error terms scaled by Ki */
+  float q0; /* quaternion of sensor frame relative to auxiliary frame */
+  float q1;
+  float q2;
+  float q3;
+  float integralFBx;  /* integral error terms scaled by Ki */
+  float integralFBy;
+  float integralFBz;
   char anglesComputed;
   float roll;   /* rad */
   float pitch;

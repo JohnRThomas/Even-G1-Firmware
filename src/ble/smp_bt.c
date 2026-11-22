@@ -25,7 +25,7 @@ static void smp_connected(struct bt_conn *conn, uint8_t err) {
 static void smp_disconnected(struct bt_conn *conn, uint8_t reason) {
   ARG_UNUSED(conn);
   G1_LOG_ERR("(reason 0x%02x)\n", reason);
-  if (smp_adv_work.handler) {
+  if (smp_adv_work.handler != NULL) {
     k_work_submit(&smp_adv_work);
   }
   smp_busy = 0;

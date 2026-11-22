@@ -26,7 +26,7 @@ int st25dv_write_it_pulse(const struct device *dev, uint8_t it_time) {
   int ret;
 
   ret = eeprom_st25dv_read_sys(dev, ST25DV_ITTIME_REG, &reg, 1);
-  if (ret) {
+  if (ret != 0) {
     return ret;
   }
 
@@ -68,7 +68,7 @@ int st25dv_read_mem_size(const struct device *dev, struct st25dv_mem_size *size)
   }
 
   ret = eeprom_st25dv_read_sys(dev, ST25DV_MEM_SIZE_REG, reg, 2);
-  if (ret) {
+  if (ret != 0) {
     return ret;
   }
   memcpy(&size->mem_size, reg, 2);
@@ -85,8 +85,8 @@ int st25dv_present_i2c_password(const struct device *dev, const struct st25dv_pa
   /* password, validation code 0x09, password */
   msg[8] = 0x09;
   for (i = 0; i < 4; i++) {
-    msg[i] = msb >> ((3U - i) * 8U);
-    msg[i + 4] = lsb >> ((3U - i) * 8U);
+    msg[i] = msb >> ((3U - (uint32_t)i) * 8U);
+    msg[i + 4] = lsb >> ((3U - (uint32_t)i) * 8U);
     msg[i + 9] = msg[i];
     msg[i + 13] = msg[i + 4];
   }

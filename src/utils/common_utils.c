@@ -19,7 +19,7 @@
 #include "g1_log.h"
 #include "glasses_state.h"
 
-#define IS_LEAP_YEAR(y) (((y) % 4 == 0 && (y) % 100 != 0) || (y) % 400 == 0)
+#define IS_LEAP_YEAR(y) (((((y) % 4) == 0) && (((y) % 100) != 0)) || (((y) % 400) == 0))
 
 #define SECONDS_PER_DAY 86400
 
@@ -33,8 +33,8 @@ static int64_t time_base_uptime;
 static int64_t time_base;
 
 int timestamp_to_date(uint32_t timestamp, struct g1_date *date) {
-  uint32_t days = timestamp / SECONDS_PER_DAY;
-  uint32_t secs = timestamp % SECONDS_PER_DAY;
+  uint32_t days = timestamp / (uint32_t)SECONDS_PER_DAY;
+  uint32_t secs = timestamp % (uint32_t)SECONDS_PER_DAY;
   uint16_t year = 1970;
   uint16_t month;
   uint16_t n;
@@ -51,7 +51,7 @@ int timestamp_to_date(uint32_t timestamp, struct g1_date *date) {
 
   for (month = 0; month < 12; month++) {
     n = days_of_month[month];
-    if (month == 1 && IS_LEAP_YEAR(year)) {
+    if ((month == 1) && IS_LEAP_YEAR(year)) {
       n = 29;
     }
     if (days < n) {
@@ -61,11 +61,11 @@ int timestamp_to_date(uint32_t timestamp, struct g1_date *date) {
   }
 
   date->month = month + 1;
-  date->day = days + 1;
-  date->hour = secs / 3600;
-  secs %= 3600;
-  date->minute = secs / 60;
-  date->second = secs % 60;
+  date->day = days + 1U;
+  date->hour = secs / 3600U;
+  secs %= 3600U;
+  date->minute = secs / 60U;
+  date->second = secs % 60U;
 
   return 0;
 }
@@ -83,7 +83,7 @@ const char *get_weekday_name(uint32_t ts) {
 
 /* formats val with two decimals and a sign ("+1.23", "-0.05"); returns the length */
 int format_float_2dp(float val, char *buf) {
-  int v = lrintf(val * 100);
+  int v = lrintf(val * 100.0f);
   uint32_t a = abs(v);
   char tmp[12] = {0};
   char *p = buf;
@@ -91,9 +91,9 @@ int format_float_2dp(float val, char *buf) {
   int n = 0;
   int i;
 
-  if (a < 10) {
+  if (a < 10U) {
     mode = 2;
-  } else if (a < 100) {
+  } else if (a < 100U) {
     mode = 1;
   } else {
     mode = 0;
@@ -101,16 +101,20 @@ int format_float_2dp(float val, char *buf) {
 
   /* at least one digit, for 0 */
   do {
-    if (n == 2 && mode == 0) {
+    if ((n == 2) && (mode == 0)) {
       tmp[2] = '.';
       n = 3;
     }
-    tmp[n++] = a % 10 + '0';
+    uint32_t ch = (a % 10U) + (uint32_t)'0';
+
+    tmp[n] = (char)ch;
+    n++;
     a /= 10;
-  } while (a);
+  } while (a != 0U);
 
   if (mode == 2) {
-    tmp[n++] = '0';
+    tmp[n] = '0';
+    n++;
   }
   *p = (v < 0) ? '-' : '+';
 
@@ -119,7 +123,8 @@ int format_float_2dp(float val, char *buf) {
     p[2] = '.';
     p += 2;
     for (i = n - 1; i >= 0; i--) {
-      *++p = tmp[i];
+      p++;
+      *p = tmp[i];
     }
     return n + 3;
   }
@@ -141,7 +146,7 @@ void dump_ancs(const char *tag, struct notif_msg *n) {
 void dump_hex(const char *tag, const uint8_t *data, int len) {
   printk("dump_hex(%s):", tag);
   for (int i = 0; i < len; i++) {
-    if (((uint32_t)i & 7U) == 0) {
+    if (((uint32_t)i & 7U) == 0U) {
       printk("\n");
     }
     printk("0x%02x,", data[i]);
@@ -151,20 +156,20 @@ void dump_hex(const char *tag, const uint8_t *data, int len) {
 
 /* accumulates whole seconds elapsed since the last call into *total_s */
 void accumulate_elapsed_seconds(uint32_t *total_s, int idx, int restart) {
-  uint32_t now, d;
-
-  if (restart) {
+  if (restart != 0) {
     duration_ref_ms[idx] = k_uptime_get();
   } else {
-    now = k_uptime_get();
-    if (duration_ref_ms[idx] == 0) {
+    uint32_t now = k_uptime_get();
+
+    if (duration_ref_ms[idx] == 0U) {
       duration_ref_ms[idx] = now;
     } else {
-      d = now - duration_ref_ms[idx];
-      if (d >= 1000) {
-        d /= 1000;
+      uint32_t d = now - duration_ref_ms[idx];
+
+      if (d >= 1000U) {
+        d /= 1000U;
         *total_s += d;
-        duration_ref_ms[idx] += d * 1000;
+        duration_ref_ms[idx] += d * 1000U;
       }
     }
   }
@@ -186,7 +191,7 @@ void init_boot_seconds(void) {
 }
 
 int get_boot_seconds(void) {
-  int s = (int)(k_uptime_get() / 1000 - boot_uptime_s);
+  int s = (int)((k_uptime_get() / 1000) - (int64_t)boot_uptime_s);
 
   G1_LOG_INF("[csh_debug] bootSeconds is %d\n", s);
 
@@ -210,9 +215,9 @@ int uint32_to_little_endian(uint8_t *buf, uint32_t val) {
 /* generic CRC-16 (init, poly, xorout, reflect in / out) */
 uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, bool refout, const uint8_t *data,
                        int len) {
-  uint16_t out;
-  uint8_t b, r;
-  int i, j;
+  uint16_t reg = crc;
+  int i;
+  int j;
 
   if (data == NULL) {
     return 0;
@@ -222,9 +227,11 @@ uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, 
   }
 
   for (i = 0; i < len; i++) {
-    b = data[i];
-    if (refin) {
-      r = 0;
+    uint8_t b = data[i];
+
+    if (refin != 0) {
+      uint8_t r = 0;
+
       for (j = 7; j >= 0; j--) {
         if (b & 1U) {
           r |= 1U << (uint32_t)j;
@@ -233,32 +240,33 @@ uint16_t crc16_generic(uint16_t crc, uint16_t poly, uint16_t xorout, int refin, 
       }
       b = r;
     }
-    crc ^= (uint32_t)b << 8U;
+    reg ^= (uint32_t)b << 8U;
     for (j = 0; j < 8; j++) {
-      if (crc & 0x8000U) {
-        crc = (uint32_t)(crc << 1U) ^ poly;
+      if (reg & 0x8000U) {
+        reg = (uint32_t)(reg << 1U) ^ poly;
       } else {
-        crc <<= 1U;
+        reg <<= 1U;
       }
     }
   }
 
   if (refout) {
-    out = 0;
+    uint16_t out = 0;
+
     for (j = 15; j >= 0; j--) {
-      if (crc & 1U) {
+      if (reg & 1U) {
         out |= 1U << (uint32_t)j;
       }
-      crc >>= 1U;
+      reg >>= 1U;
     }
-    crc = out;
+    reg = out;
   }
 
-  return xorout ^ crc;
+  return xorout ^ reg;
 }
 
 uint16_t crc16_usb(uint16_t crc, const uint8_t *buf, int len) {
-  if (buf == NULL || len <= 0) {
+  if ((buf == NULL) || (len <= 0)) {
     return 0;
   }
 
@@ -270,10 +278,10 @@ int rle_decode(const uint8_t *src, uint32_t len, uint8_t *dst) {
   int out = 0;
 
   /* a trailing count without its value is ignored */
-  for (uint32_t i = 0; i + 1 < len; i += 2) {
+  for (uint32_t i = 0; (i + 1U) < len; i += 2U) {
     uint8_t cnt = src[i];
 
-    memset(dst + out, src[i + 1], cnt);
+    memset(dst + out, src[i + 1U], cnt);
     out += cnt;
   }
 
