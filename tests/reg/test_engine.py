@@ -89,10 +89,12 @@ class Sim:
 def play(lines, events=(), suite=G1, seed=1, step=0.05, **kw):
     """Run the statements and asserts against a scripted session: (Outcome, the Sim)."""
     sim = Sim(events, **kw)
+    real, statements.STEP = statements.STEP, step
     try:
         live = trace.LiveTrace(sim.out, suite.proto.item)
-        return statements.run(list(lines), sim, live, suite.proto, suite.frames(), seed, step), sim
+        return statements.run(list(lines), sim, live, suite.proto, suite.frames(), seed), sim
     finally:
+        statements.STEP = real
         shutil.rmtree(sim.out, ignore_errors=True)
 
 
@@ -748,7 +750,7 @@ class Jobs(unittest.TestCase):
         real, out = driver.Session, tempfile.mkdtemp(prefix="reg-unit-")
         driver.Session = Broken
         try:
-            options = argparse.Namespace(out=out, firmware="fw.zip", renode="renode", step=0.05, skip_at=False)
+            options = argparse.Namespace(out=out, firmware="fw.zip", renode="renode", step=0.05)
             job = runner.Job(G1, "boot/init", 7, options)
             job.thread.join(timeout=30)
             return job, job.finish()

@@ -6,7 +6,7 @@ action(B, gesture("don"),
        display(B, same_on_both),
        within=6)
 # 20 s with the dashboard up: nothing closes it (no phone, the head is not lowered)
-wait(20)
+expect(quiet(B, "frame "), within=20)
 
 # over the whole run
 never("fatal")

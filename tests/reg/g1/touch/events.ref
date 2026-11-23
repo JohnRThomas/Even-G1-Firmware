@@ -3,15 +3,18 @@
 # and the link state at the end.
 
 # Worn before the phone: the dashboard opens on both lenses.
-at(5)
 # dashboard, unpaired
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
-# whole run below).
-action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+# The phone connects: the MTU accepted, then the link, worn and the charging state reported (8 s on a clean
+# link, 11 with one stalled sync to the slave), the dashboard redrawn with the app's clock and the mic streaming.
+# The connection's own events are over before the next input.
+action(B, phone_on(),
+       recv(B, "4D C9"), recv(B, "F5 11"), recv(B, "F5 06"), recv(B, "F5 09"),
+       # dashboard
+       display(B, settles_to("dashboard")), audio(M, 5),
+       within=11, label="phone_on")
 
 # A tap on the master with the dashboard up: the status report; a tap on the slave: nothing to the phone.
-at(20)
 action(M, TAP, recv(M, "22 08 00 00 02"))
 action(S, TAP, quiet(B, "F5"), quiet(M, "22 08"))
 # Double tap on the master: reported, the dashboard closes on both lenses.

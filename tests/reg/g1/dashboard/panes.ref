@@ -2,7 +2,6 @@
 # Both lenses must acknowledge each request and redraw, and the tap makes the master report its status except on the
 # map pane.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),

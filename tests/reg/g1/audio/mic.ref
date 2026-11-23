@@ -2,27 +2,27 @@
 # silence as the input. Each request must be acknowledged and the audio stream runs only while the mic is on.
 
 action(B, PDM + "ConfigureSine 8000 1000")
-at(12)
 action(B, phone_on(), recv(B, "4D C9"), recv(B, "F5 11"), within=8, label="phone_on")
-# Master mic on at 16: acknowledged, the audio stream starts and runs until the mic off at 23 (through the
-# silence from 20 s): the stream's length and its end are asserted over the whole run below, where the
-# trace shows where a stream ended.
+# Master mic on: acknowledged, the audio stream starts. It runs on while the mic is on: through 2 s of the sine
+# and then through the silence, 6 s in all.
 action(M, send('0E 01'), recv(M, "0E C9 01"), audio(M), within=1, label="mic_on")
+expect(audio(M, 2, during=True), within=3)
 action(M, PDM + "ConfigureSilence")
-at(23)
-action(M, send('0E 00'), recv(M, "0E C9 00"), within=1)
-# Master mic on again at 26, off at 29.
-at(26)
+expect(audio(M, 6, during=True), within=5)
+# Mic off: acknowledged, and the stream ends with it: its last packet comes at most 0.5 s after the request, and
+# none in the 2 s after that.
+action(M, send('0E 00'), recv(M, "0E C9 00"), within=1, label="mic_off")
+expect(no_audio(M, after=(("mic_off", 1), 0.5)), within=2.5)
+# Master mic on again: a second stream, 2.5 s of it; off again (its end is asserted over the whole run below).
 action(M, send('0E 01'), recv(M, "0E C9 01"), audio(M), within=1, label="mic_on")
-at(29)
-action(M, send('0E 00'), recv(M, "0E C9 00"), within=1)
-# Slave mic on at 31: acknowledged, its own stream starts. The slave acknowledges the mic off at 34 but keeps
-# streaming to the end of the run: dmic_stream_stop() only acts on the master (the app drives the right
-# lens's mic only).
+expect(audio(M, 2.5, during=True), within=3.5)
+action(M, send('0E 00'), recv(M, "0E C9 00"), within=1, label="mic_off")
+# Slave mic on: acknowledged, its own stream starts. The slave acknowledges the mic off but keeps streaming:
+# dmic_stream_stop() only acts on the master (the app drives the right lens's mic only). Its stream is still
+# running when it has lasted 6 s, most of them after the mic off.
 action(S, send('0E 01'), recv(S, "0E C9 01"), audio(S), within=1, label="mic_on")
-at(34)
 action(S, send('0E 00'), recv(S, "0E C9 00"), within=1)
-wait(2)
+expect(audio(S, 6, during=True), within=7)
 
 # over the whole run
 never("fatal")
@@ -34,11 +34,10 @@ display(B, blank)
 recv(B, "F5 06")
 # the charging state, once per lens
 recv(B, "F5 09")
-# the first stream runs from 16 to the mic off at 23
+# the first stream runs from the mic on to the mic off (it ends there: in line above)
 after(("mic_on", 1), audio(M, 6), within=1)
-# the stream's last packet is just before the mic off
-after(22.5, event(M, "audio end"), within=1)
+# the second stream, and its end: the last packet at most 0.5 s after the mic off, none in the 2 s after that
 after(("mic_on", 2), audio(M, 2.5), within=1)
-after(28.5, event(M, "audio end"), within=1)
+after(("mic_off", 2), no_audio(M, after=(("mic_off", 2), 0.5)), within=2.5)
 # the slave's stream, to the end of the run
 after(("mic_on", 3), audio(S, 6), within=1)

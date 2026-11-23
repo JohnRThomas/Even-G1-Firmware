@@ -1,7 +1,6 @@
 # The master's phone writes the heartbeat every 10 s and the slave's phone sends the keep-alive command every 10 s
 # instead. Both links must stay up for the 70 s after they are paired.
 
-at(12)
 mark("phone_on")
 # the master's phone keeps the app's 10 s heartbeat ...
 action(M, phone_on())
@@ -18,22 +17,17 @@ expect(event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "F5 09"),
        within=8)
 
-# the slave's phone's 0x2C every 10 s, in place of a heartbeat: each one answered
-wait(10)
-action(S, send('2C 01'), recv(S, "2C 66"))
-wait(10)
-action(S, send('2C 01'), recv(S, "2C 66"))
-wait(10)
-action(S, send('2C 01'), recv(S, "2C 66"))
-wait(10)
-action(S, send('2C 01'), recv(S, "2C 66"))
-wait(10)
-action(S, send('2C 01'), recv(S, "2C 66"))
-wait(10)
-action(S, send('2C 01'), recv(S, "2C 66"))
+# the slave's phone's 0x2C every 10 s, in place of a heartbeat: each one is answered, and no link drops in the
+# 10 s before the first nor in the 10 s after each
+expect(quiet(B, "disconnected"), within=10)
+action(S, send('2C 01'), recv(S, "2C 66"), quiet(B, "disconnected"), within=10)
+action(S, send('2C 01'), recv(S, "2C 66"), quiet(B, "disconnected"), within=10)
+action(S, send('2C 01'), recv(S, "2C 66"), quiet(B, "disconnected"), within=10)
+action(S, send('2C 01'), recv(S, "2C 66"), quiet(B, "disconnected"), within=10)
+action(S, send('2C 01'), recv(S, "2C 66"), quiet(B, "disconnected"), within=10)
+action(S, send('2C 01'), recv(S, "2C 66"), quiet(B, "disconnected"), within=10)
 
 # 10 s after the last one both links are still there
-wait(10)
 check(B, "sysbus.vcentral Connected", equals="True")
 check(B, "sysbus.vcentral Encrypted", equals="True")
 check(B, "sysbus.vcentral Bonded", equals="True")

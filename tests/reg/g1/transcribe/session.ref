@@ -3,11 +3,10 @@
 # close with errors.
 
 # the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
-# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# level and no dashboard is up when the phone connects with the app's heartbeat off; the app's 0x2C
 # keep-alive is sent by the lines below
 action(B, gesture("don"))
 action(B, gesture("head_down"))
-at(12)
 action(B, phone_on(hb=0),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -34,13 +33,12 @@ action(B, send('2C 01'), recv(B, "2C 66"))
 # transcript chunk 1 of 2: "The first chunk of a longer transcription carries this sentence, "
 action(B, send('52 4D 00 43 02 02 00 01 00 00 00 00 54 68 65 20 66 69 72 73 74 20 63 68 75 6E 6B 20 6F 66 20 61 20 6C 6F 6E 67 65 72 20 74 72 61 6E 73 63 72 69 70 74 69 6F 6E 20 63 61 72 72 69 65 73 20 74 68 69 73 20 73 65 6E 74 65 6E 63 65 2C 20'),
        recv(B, "52 0A 00 43 02 02 00 01 00 C9"), within=0.5)
-wait(7.7)
 # transcript chunk 2 of 2: "and the second chunk finishes it."
 action(B, send('52 2D 00 44 02 02 00 02 00 00 00 00 61 6E 64 20 74 68 65 20 73 65 63 6F 6E 64 20 63 68 75 6E 6B 20 66 69 6E 69 73 68 65 73 20 69 74 2E'),
        recv(B, "52 0A 00 44 02 02 00 02 00 C9"),
-       # transcript, both chunks
+       # transcript, both chunks (the text is typed out: about 1.5 s for both when the second follows at once)
        display(B, shows("transcribe_chunks")),
-       within=1.5)
+       within=3)
 action(B, send('53 06 00 45 03 02'), recv(B, "53 07 00 45 03 C9 02"), within=1)
 action(B, send('52 06 00 46 03 2A'), recv(B, "52 07 00 46 03 C9 2A"), within=1)
 
@@ -50,8 +48,9 @@ action(B, send('52 06 00 47 01 03'),
        # transcript, both chunks: it may have been up already, and it is what stays
        display(B, settles_to("transcribe_chunks")),
        within=2)
+# the mic is off by now: no stream for 1.5 s (the trace takes a pause of 1 s as the end of a stream)
+expect(no_audio(M), within=1.5)
 # state 4: acknowledged, the master streams the mic again briefly
-wait(2.5)
 action(B, send('52 06 00 48 01 04'), recv(B, "52 07 00 48 01 C9 04"), audio(M, 1), within=2)
 # state 0: acknowledged, both lenses blank
 action(B, send('52 06 00 49 01 00'), recv(B, "52 07 00 49 01 C9 00"), display(B, blank), within=1)
@@ -65,15 +64,15 @@ action(B, send('52 06 00 4B 03 2B'), recv(B, "52 07 00 4B 03 CA 2B"), within=1)
 never("fatal")
 never("boot", after=1)
 link_up()
-# worn (donned at 5 s), reported once
+# worn (donned before the phone), reported once
 recv(B, "F5 06")
-# the charging state, reported once
-recv(B, "F5 09")
+# the charging state, reported once (the run goes on until it has come)
+after("phone_on", recv(B, "F5 09"), within=8)
 # no head up ...
 quiet(B, "F5 02")
 # ... head down ...
 quiet(B, "F5 03")
 # ... dashboard close
 quiet(B, "F5 1F")
-# the first stream lasts to the mic off
-after("mic_on", audio(M, 8), within=1)
+# the first stream lasts from the mic on through the transcripts until the mic goes off: 1.5 s or more
+after("mic_on", audio(M, 1.5), within=1)

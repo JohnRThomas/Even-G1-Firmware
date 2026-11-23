@@ -4,9 +4,12 @@
 # from power-up
 action(S, NPM + "BatteryVoltageMilliVolts 3400")
 
-# the slave's reboot lands at about 150 s: the PMIC power-cycles it once its watchdog goes unfed (Renode prints
-# the virtual time in ks past 100 s, so the boot is timed to 10 s)
-at(120)
+# power-on: both lenses boot
+expect(event(B, "boot app"), event(B, "boot net"), within=1)
+# the slave runs on for the 120 s its gauge must have stood still ...
+expect(quiet(S, "boot"), within=120)
+# ... and reboots about 30 s later: the PMIC power-cycles it once its watchdog goes unfed (Renode prints the
+# virtual time in ks past 100 s, so the boot is timed to 10 s)
 expect(event(S, "boot app"), event(S, "boot net"), within=54)
 check(S, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000001")
 check(M, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")

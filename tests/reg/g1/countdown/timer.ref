@@ -2,11 +2,10 @@
 # run-out and both must go blank after the cancel.
 
 # the session: the head down follows the don at once and takes its place, so the head is level and no dashboard
-# is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C keep-alive (every 10 s in
+# is up when the phone connects with the app's heartbeat off; the app's 0x2C keep-alive (every 10 s in
 # the app) is sent twice below
 action(B, gesture("don"))
 action(B, gesture("head_down"))
-at(12)
 action(B, phone_on(hb=0),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -20,17 +19,18 @@ action(B, send('07 05 00 00 00 01'),
        # countdown hourglass, 00:05
        display(B, settles_to("countdown_0005")),
        within=1)
-wait(4.8)
-# the app's keep-alive, about 5 s after the timer's start, is answered with the status
+# the app's keep-alive, while the timer runs, is answered with the status
 action(B, send('2C 01'), recv(B, "2C 66"))
-# when it runs out the bell shows: the slave keeps it for 3.6 s; the master shows it between 60 ms and 1 s
-# (the recording held it for 1 s) and blanks: the master's bell is asserted as seen (shows), not as staying
+# when it runs out, 5 s after its start, the bell shows: the slave keeps it for 3.6 s; the master shows it
+# between 60 ms and 1 s (the recording held it for 1 s) and blanks: the master's bell is asserted as seen
+# (shows), not as staying
 # countdown over (bell)
 expect(display(S, settles_to("countdown_bell")),
        display(M, shows("countdown_bell")),
-       within=3)
+       within=8)
 
 # 90 s timer: acknowledged, the hourglass again, with 01:30
+# kept: a timer that starts within about 1 s of the bell going is drawn late or not at all on the master
 wait(1.7)
 action(B, send('07 5A 00 00 00 01'),
        recv(B, "07 C9"),

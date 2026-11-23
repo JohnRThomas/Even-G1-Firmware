@@ -309,9 +309,7 @@ static void check_work_mode(int in_box, int lid_closed, uint8_t report) {
     }
     return;
   }
-  if (k_uptime_get() < 10000) {
-    return;
-  }
+
   if ((get_dashboard_state()->battery_voltage <= 0x82) && (get_dashboard_state()->battery_voltage > 0x50) &&
       (get_dashboard_state()->battery_current_ma > 0) && (get_dashboard_state()->battery_info[0] < 2) && !in_box) {
     if (get_dashboard_state()->is_master == 1) {

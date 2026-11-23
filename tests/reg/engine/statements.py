@@ -222,13 +222,7 @@ class Wait(Statement):
         self.until = until
         self.text = "wait(%g)" % seconds if until is None else "at(%g)" % until
 
-    def skipped(self, skip_at):
-        """Under run.py --skip-at a test's own at() does not wait (an include's does)."""
-        return self.until is not None and skip_at and not self.included
-
     def execute(self, run):
-        if self.skipped(run.skip_at):
-            return []
         if self.until is None:
             run.until(run.now + self.seconds)
         elif self.until < run.now - 1e-6:
@@ -355,7 +349,7 @@ NAMES.update((n, getattr(inputs, n)) for n in (
     "IMU", "TOUCH", "NPM", "OPT", "NFC", "JBD", "PDM", "case", "LEVEL", "UP45", "UP70", "UP81", "FLAT"))
 
 
-def timeline(loaded, skip_at=False):
+def timeline(loaded):
     """When each statement begins, without running: [(statement, earliest, latest)] in emulated seconds. The
     earliest takes every line as going on the moment it can (an assert about a whole window still takes the
     window, the state of a panel HOLD), the latest takes every line as using all of its within."""
@@ -367,7 +361,7 @@ def timeline(loaded, skip_at=False):
         if isinstance(st, Wait):
             if st.until is None:
                 early, late = early + st.seconds, late + st.seconds
-            elif not st.skipped(skip_at):
+            else:
                 early, late = max(early, st.until), max(late, st.until)
         elif isinstance(st, Action):
             sent = sum(x for x in st.input if isinstance(x, (int, float)))
@@ -388,14 +382,13 @@ def needs_phone(loaded, proto):
 class Runner:
     """One run: the session, the live trace, and what the statements have done so far."""
 
-    def __init__(self, session, live, proto, frames=None, seed=None, step=STEP, skip_at=False):
+    def __init__(self, session, live, proto, frames=None, seed=None, step=STEP):
         self.session = session
         self.live = live
         self.proto = proto
         self.frames = frames or {}
         self.seed = seed
         self.step_size = step
-        self.skip_at = skip_at
         self.anchors = {}                       # {label: [(first, last, lens, since)]}
         self.lines = []                         # the lines with asserts that have run
         self.notes = []
@@ -542,13 +535,13 @@ def also_violated(alone, ctx, end):
     return [r for r in out if r is not None]
 
 
-def run(loaded, session, live, proto, frames=None, seed=None, step=STEP, skip_at=False):
+def run(loaded, session, live, proto, frames=None, seed=None):
     """Execute the statements in order, stopping at the first one whose asserts fail. If none did: let the run
     go on until the stand-alone windows have closed (last_close()), then evaluate on the complete trace every
     line again over its whole window, the power-on boot, the stand-alone asserts and the accounting, stopping
     at the first failure too. Returns the Outcome. proto: the suite's protocol (protocol.py). seed: of the
     run, for the known failures that name seeds."""
-    r = proto.RUNNER(session, live, proto, frames, seed, step, skip_at)
+    r = proto.RUNNER(session, live, proto, frames, seed, STEP)
     alone = [st for st in loaded if isinstance(st, Assert)]
     for st in loaded:
         if not isinstance(st, Statement):

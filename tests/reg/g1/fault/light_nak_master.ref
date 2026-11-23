@@ -6,11 +6,10 @@ action(M, OPT + "FaultNak true")
 # dashboard (no phone yet: Mon 01/01 00:00)
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=7)
 mark("dashboard")
-# a tap on each lens
-action(B, TAP)
-wait(11.1)
-action(B, TAP)
-wait(0.3)
+# a tap on each lens and a second one 1.5 s later (two single clicks, not a double click): with no phone a
+# click changes nothing on the panels
+action(B, TAP, quiet(B, "frame "), within=1.5)
+action(B, TAP, quiet(B, "frame "), within=1.5)
 include("common/fault")
 include("common/fault_touch")
 check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")

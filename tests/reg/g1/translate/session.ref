@@ -2,11 +2,10 @@
 # mic off and exits. The glasses must show the matching screen at each step.
 
 # the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
-# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# level and no dashboard is up when the phone connects with the app's heartbeat off; the app's 0x2C
 # keep-alive is sent by the lines below
 action(B, gesture("don"))
 action(B, gesture("head_down"))
-at(12)
 action(B, phone_on(hb=0),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -22,7 +21,6 @@ action(M, send('0E 01'), recv(M, "0E C9 01"), audio(M), within=0.5, label="mic_o
 
 # the text packets are acknowledged with their sequence and the slave's confirmation (the master waits for
 # it); the clear shows the language header, the translated text shows under it
-wait(2.9)
 # translator source text, empty (tests/unit/vectors: 0x0f_translate_src_clear)
 action(B, send('0F 00 01 00 00 00 00 0D'),
        recv(B, "0F C9 00 01"),
@@ -31,7 +29,6 @@ action(B, send('0F 00 01 00 00 00 00 0D'),
        within=1)
 # translated text, empty (tests/unit/vectors: 0x0d_translate_dst_clear)
 action(B, send('0D 00 01 00 00 00 00 0D'), recv(B, "0D C9 00 01"), within=1)
-wait(1.6)
 # translator source text: Korean "Hello." (tests/unit/vectors: 0x0f_translate_src_text)
 action(B, send('0F 01 01 00 00 00 00 20 0D 20 0D EC 95 88 EB 85 95 ED 95 98 EC 84 B8 EC 9A 94 2E'), recv(B, "0F C9 01 01"), within=1)
 # translated text: "Hello." (tests/unit/vectors: 0x0d_translate_dst_text)
@@ -44,7 +41,6 @@ action(B, send('0D 01 01 00 02 00 00 20 0D 20 0D 48 65 6C 6C 6F 2E'),
 action(B, send('2C 01'), recv(B, "2C 66"))
 
 # mic off: acknowledged with the state (any further stream would fail the accounting)
-wait(3)
 # mic off (tests/unit/vectors: 0x0e_mic_off)
 action(M, send('0E 00'), recv(M, "0E C9 00"), within=1)
 # exit: acknowledged, both lenses blank
@@ -56,15 +52,15 @@ action(B, send('2C 01'), recv(B, "2C 66"))
 never("fatal")
 never("boot", after=1)
 link_up()
-# worn (donned at 5 s), reported once
+# worn (donned before the phone), reported once
 recv(B, "F5 06")
-# the charging state, reported once
-recv(B, "F5 09")
+# the charging state, reported once (the run goes on until it has come)
+after("phone_on", recv(B, "F5 09"), within=8)
 # no head up ...
 quiet(B, "F5 02")
 # ... head down ...
 quiet(B, "F5 03")
 # ... dashboard close
 quiet(B, "F5 1F")
-# one stream, from the mic on to the mic off
-after("mic_on", audio(M, 8), within=1)
+# one stream, from the mic on to the mic off: as long as the lines between take, 0.5 s or more
+after("mic_on", audio(M, 0.5), within=1)

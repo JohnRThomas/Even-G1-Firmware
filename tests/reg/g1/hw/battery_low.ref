@@ -9,8 +9,8 @@ action(B, gesture("don"),
        display(B, settles_to("dashboard_unpaired_lowbatt")),
        display(B, same_on_both),
        within=6)
-# still up 10 s later
-wait(10)
+# it stays up as it is for 10 s
+expect(display(B, unchanged), within=10)
 holds(display(B, settles_to("dashboard_unpaired_lowbatt")))
 
 # over the whole run

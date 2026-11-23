@@ -4,21 +4,23 @@
 # Worn before the phone: the dashboard opens on both lenses.
 # dashboard, unpaired
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
-# whole run below).
-wait(6.7)
-action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+# The phone connects: the MTU accepted, then the link, worn and the charging state reported (8 s on a clean
+# link, 11 with one stalled sync to the slave) and the dashboard redrawn with the app's clock, the mic streaming. The
+# connection's own events are over before the next input.
+action(B, phone_on(),
+       recv(B, "4D C9"), recv(B, "F5 11"), recv(B, "F5 06"), recv(B, "F5 09"),
+       # dashboard
+       display(B, settles_to("dashboard")), audio(M, 2),
+       within=11, label="phone_on")
 
 # Wear detection is off at first.
 action(B, send('3A'), recv(B, "3A C9 00"))
 # Flat: head down, the dashboard closes.
-wait(3.6)
 action(B, pose(FLAT), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
 # Wear detection on, read back as on.
 action(B, send('27 01'), recv(B, "27 C9"))
 action(B, send('3A'), recv(B, "3A C9 01"))
 # 81 deg: head up, the dashboard opens with the status and the mic stream.
-wait(8.4)
 action(B, pose(UP81),
        recv(M, "F5 02"), recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
        # dashboard
@@ -30,7 +32,6 @@ action(B, send('3A'), recv(B, "3A C9 00"))
 # either a new stream starts at the head up, or the master is still draining the previous stream's packets
 # when it reopens (seen under some seeds: packets for 4 s after the STOP trigger) and the trace shows one stream
 # from the earlier 81 deg to the IMU fault; so, a stream active while the dashboard is up, whenever it started.
-wait(4.4)
 action(B, pose(LEVEL), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
 action(B, pose(UP81),
        recv(M, "F5 02"), recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)),
@@ -38,9 +39,10 @@ action(B, pose(UP81),
        # dashboard
        display(B, settles_to("dashboard")))
 # The master's IMU stops answering right after the head up: the detector reads it as head down, the dashboard closes
-# and the mic stops (no stream starts or is still sending from 1 s after the fault: asserted over the whole run).
+# and the mic stops: no stream starts or is still sending from 1 s after the fault, here for the 3 s after it and
+# over the whole run below.
 action(M, IMU + "FaultNak true", recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank), label="imu_nak")
-wait(2.6)
+expect(no_audio(M, after=("imu_nak", 1)), within=3)
 
 # over the whole run
 never("fatal")

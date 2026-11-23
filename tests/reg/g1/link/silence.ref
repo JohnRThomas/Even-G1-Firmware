@@ -1,7 +1,6 @@
 # Neither phone writes anything after the first packets. The master must drop its Android phone after 30 s of
 # silence and take its reconnection with the bond's key, while the slave never drops its iPhone for silence.
 
-at(12)
 mark("phone_on")
 # an Android phone without a heartbeat ...
 action(M, phone_on(hb=0))
@@ -18,19 +17,17 @@ expect(event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "F5 09"),
        within=8)
 
-# 30 s after the 0x2C/0x4D at ~13.2 s (checked every second) the lens closes the Android link; the phone
-# comes back at the next advertisement with the bond's key
-at(42)
-expect(event(M, "disconnected: the lens closed the link"),
-       event(M, "connected to"),
+# 30 s after the phone's last packets (the 0x4D/0x2C on connecting; checked every second) the lens closes the
+# Android link ...
+expect(event(M, "disconnected: the lens closed the link"), within=32)
+mark("dropped")
+# ... and the phone comes back at the next advertisement with the bond's key
+expect(event(M, "connected to"),
        event(M, "link encrypted with the bond's key"),
        event(M, "Nordic UART Service: write"),
        within=6)
-action(M, send('4D FB'), recv(M, "4D C9"))
-# paired again: reported when the link is back, and
-after(42, recv(M, "F5 11", count=at_least(1)), within=12)
-                                                                # again when the app writes the MTU
-at(54.8)
+# paired again: the link is reported once the phone is back and the app has written the MTU (at least once)
+action(M, send('4D FB'), recv(M, "4D C9"), recv(M, "F5 11", count=at_least(1)), within=6)
 check(B, "sysbus.vcentral Connected", equals="True")
 check(B, "sysbus.vcentral Encrypted", equals="True")
 check(B, "sysbus.vcentral Bonded", equals="True")
@@ -47,4 +44,4 @@ after("phone_on", quiet(B, "disconnected"), within=30)
 display(B, blank)
 link_up()
 # the charging state may be reported again on the master after the reconnect (seen under some seeds)
-after(42, ignore("F5 09", lens=M), within=13)
+after("dropped", ignore("F5 09", lens=M), within=13)

@@ -73,7 +73,8 @@ enum ble_cmd {
   /* POST (ble_process_post_req) */
   BLE_CMD_BT_UNPAIR = 0x47,
   BLE_CMD_POST_NOOP = 0x49,               /* acknowledged, no effect; the app never sends it */
-  BLE_CMD_SYNC_DISPLAY = 0x4a,            /* flags 2 = ESB sync packet to the slave, 1 = display refresh */
+  BLE_CMD_SYNC_DISPLAY = 0x4a,            /* flags 2 = SYNC_CMD_SHIPMODE to the slave (powers it off),
+                                           * 1 = switch_to_dfu_cb, which nothing sets; the app never sends it */
   BLE_CMD_NOTIFICATION_SEND = 0x4b,
   BLE_CMD_NOTIFICATION_CLEAR = 0x4c,
   BLE_CMD_MTU_SET = 0x4d,                 /* marks the app session as established */

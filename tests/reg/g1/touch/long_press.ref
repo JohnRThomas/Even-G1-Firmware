@@ -3,28 +3,30 @@
 # released.
 
 # Worn before the phone: the dashboard opens on both lenses.
-at(5)
 # dashboard, unpaired
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
-# whole run below).
-action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+# The phone connects: the MTU accepted, then the link, worn and the charging state reported (8 s on a clean
+# link, 11 with one stalled sync to the slave), the dashboard redrawn with the app's clock and the mic streaming.
+# The connection's own events are over before the next input.
+action(B, phone_on(),
+       recv(B, "4D C9"), recv(B, "F5 11"), recv(B, "F5 06"), recv(B, "F5 09"),
+       # dashboard
+       display(B, settles_to("dashboard")), audio(M, 5),
+       within=11, label="phone_on")
 
 # Press on the master: QuickNote starts, the dashboard closes on both lenses and the recording
-# animation runs; no F5 for the press.
-wait(8.5)
+# animation runs; no F5 for the press in the 1.5 s it is held.
 action(M, PRESS, recv(B, "F5 1F"), display(B, changes), quiet(B, "F5 17"), within=1.5)
 # Release: the note's record (0x21) goes to the phone; "New Note Saved" shows on both lenses for 4 s
 # and clears again.
-wait(0.5)
 action(M, RELEASE, recv(M, "21 0F 00 00 01 01 01"), within=2)
 # quicknote saved
 expect(display(B, settles_to("note_saved")), within=8)
-wait(0.4)
-# blank again
-expect(display(B, blank), within=4)
+# blank again, 4 s after the note came up
+expect(display(B, blank), within=5)
 # Press on the slave: Even AI, held, then released.
 action(S, PRESS, recv(S, "F5 17"), within=2)
+# the hold is the input: released less than 1.1 s after the press began it is a short press, without an F5 18
 wait(2.3)
 action(S, RELEASE, recv(S, "F5 18"), within=1)
 

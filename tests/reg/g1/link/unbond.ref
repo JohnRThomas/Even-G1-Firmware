@@ -1,7 +1,6 @@
 # Once both lenses are paired the app sends them the unpair command. Each lens must acknowledge, forget the bond and
 # close the link, and the phone reconnects and pairs afresh.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "4D C9"),

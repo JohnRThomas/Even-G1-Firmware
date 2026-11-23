@@ -3,17 +3,17 @@
 # is up again.
 
 # the first connection: both lenses report the link; worn (the IMU rests in the worn pose) and the charging
-# state follow, the latter once more on the new link (not always on both lenses)
-at(12)
+# state follow and are waited for, so that the unpair below does not cut them off (the charging state comes
+# once more on the new link, not always on both lenses)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
        recv(B, "F5 11"),
-       within=5)
+       recv(B, "F5 06"), recv(B, "F5 09"),
+       within=8)
 
 # the test notification is fed to each lens's own 0x4B handler in 0x4B chunks (message id 0), and the lens
 # answers each chunk as it does for the app's: 4B CB (more follow) until the last, then one 4B C9 (accepted)
-at(20)
 # debug string "#1@title@msg": a test notification, title "title", message "msg"
 action(B, send('23 31 40 74 69 74 6C 65 40 6D 73 67'),
        recv(B, "4B CB 00", count=at_least(1)), recv(B, "4B C9 00"),
@@ -25,7 +25,7 @@ action(B, send('36'), recv(B, "36 C9"), within=1)
 # debug string "#c": unpair
 action(B, send('23 63'), recv(B, "47 C9"), event(B, "disconnected"), within=1)
 # the phone reconnects without a key (bond forgotten), pairs again and gets the link event again; the MTU
-# request queued at 25 s goes out once the new link is up
+# request the app writes meanwhile goes out once the new link is up
 action(B, send('4D FB'),
        sequence(event(B, "connected"), event(B, "the lens has no key"), event(B, "pairing: complete")),
        recv(B, "4D C9"),

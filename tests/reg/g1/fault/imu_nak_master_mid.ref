@@ -13,6 +13,6 @@ include("common/fault_touch")
 check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
 # no taps in this test
 check(B, "sysbus.twim2.touch PressesDelivered", equals="0x00000000")
-wait(2.1)
-# and nothing is drawn again
+# and nothing is drawn again in the 2 s after
+expect(quiet(B, "frame "), within=2)
 never("frame ", after=("cleared", 0))

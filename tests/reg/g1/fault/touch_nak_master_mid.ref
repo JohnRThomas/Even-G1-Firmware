@@ -4,15 +4,13 @@
 # dashboard (no phone yet: Mon 01/01 00:00)
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=7)
 mark("dashboard")
-# a tap on each lens, the master's controller still answering
-action(B, TAP)
-wait(2.2)
+# a tap on each lens, the master's controller still answering: a single click to the firmware, which with no
+# phone changes nothing on the panels
+action(B, TAP, quiet(B, "frame "), within=1.5)
 action(M, TOUCH + "FaultNak true")
-# two more: the master's are lost
-action(B, TAP)
-wait(2.5)
-action(B, TAP)
-wait(2.5)
+# two more, 1.5 s apart (single clicks): the master's are lost
+action(B, TAP, quiet(B, "frame "), within=1.5)
+action(B, TAP, quiet(B, "frame "), within=1.5)
 include("common/fault")
 # both controllers were set up at boot
 include("common/fault_touch")

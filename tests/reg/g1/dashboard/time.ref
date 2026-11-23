@@ -1,7 +1,6 @@
 # With the dashboard up, the app sends the pane layout and then the clock with and without weather, in 24 h and 12 h
 # mode. Both lenses must acknowledge each packet and redraw the dashboard.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),

@@ -1,7 +1,6 @@
 # The app sets the clock and the calendar pane and sends calendar lists with one, five and no events, paged through
 # with taps on the master. The glasses must show each, and head down closes the dashboard and head up reopens it.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),

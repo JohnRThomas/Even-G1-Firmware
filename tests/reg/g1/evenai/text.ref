@@ -2,7 +2,6 @@
 # manual-scroll text and a no-network text. Each lens must acknowledge every chunk, and the first page of each
 # answer closes the dashboard.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -11,21 +10,18 @@ action(B, phone_on(),
        within=8, label="phone_on")
 
 # put on: both worn, the master head up, the dashboard opens on both lenses and the master streams the mic
-at(14)
 action(B, gesture("don"),
-       recv(B, "F5 06"), recv(M, "F5 02"),
+       recv(M, "F5 02"),
        # dashboard
        recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M),
        within=6)
 
 # answer 1: page 1 (style 3) is acknowledged by each lens and closes its dashboard; page 2 (style 4) draws the
 # text; 7.5 s later the master ends the text (F5 00), both lenses blank and the dashboard reopens on both
-at(22)
 # text page 1 of 2 (0x4E), style 3, Even AI receiving: "Even AI answer, page one of two."
 action(S, send('4E 02 01 00 31 00 00 01 02 45 76 65 6E 20 41 49 20 61 6E 73 77 65 72 2C 20 70 61 67 65 20 6F 6E 65 20 6F 66 20 74 77 6F 2E'), recv(S, "4E C9"), recv(S, "F5 1F"), within=1)
 # text page 1 of 2 (0x4E), style 3, Even AI receiving: "Even AI answer, page one of two."
 action(M, send('4E 02 01 00 31 00 00 01 02 45 76 65 6E 20 41 49 20 61 6E 73 77 65 72 2C 20 70 61 67 65 20 6F 6E 65 20 6F 66 20 74 77 6F 2E'), recv(M, "4E C9"), recv(M, "F5 1F"), within=1)
-at(30)
 # text page 2 of 2 (0x4E), style 4, Even AI complete: "Even AI answer, page two of two."
 action(S, send('4E 03 01 00 41 00 00 02 02 45 76 65 6E 20 41 49 20 61 6E 73 77 65 72 2C 20 70 61 67 65 20 74 77 6F 20 6F 66 20 74 77 6F 2E'), recv(S, "4E C9"))
 # text page 2 of 2 (0x4E), style 4, Even AI complete: "Even AI answer, page two of two."
@@ -38,23 +34,19 @@ expect(recv(M, "F5 00"), display(B, shows("blank")),
        recv(B, "F5 1E"), display(B, settles_to("dashboard")), within=10)
 
 # answer 2: the first page only, closing the dashboard again
-at(41)
 # text page 1 of 2 (0x4E), style 3, Even AI receiving: "Second answer, page one of two."
 action(S, send('4E 04 01 00 31 00 00 01 02 53 65 63 6F 6E 64 20 61 6E 73 77 65 72 2C 20 70 61 67 65 20 6F 6E 65 20 6F 66 20 74 77 6F 2E'), recv(S, "4E C9"), recv(S, "F5 1F"), within=1)
 # text page 1 of 2 (0x4E), style 3, Even AI receiving: "Second answer, page one of two."
 action(M, send('4E 04 01 00 31 00 00 01 02 53 65 63 6F 6E 64 20 61 6E 73 77 65 72 2C 20 70 61 67 65 20 6F 6E 65 20 6F 66 20 74 77 6F 2E'), recv(M, "4E C9"), recv(M, "F5 1F"), within=1)
 
 # the manual-scroll text: page one, a single tap on the master (reported, no page change), page two
-at(45)
 # text page 1 of 2 (0x4E), style 5, manual scroll: "Manual scroll, page one of two."
 action(S, send('4E 05 01 00 51 00 00 01 02 4D 61 6E 75 61 6C 20 73 63 72 6F 6C 6C 2C 20 70 61 67 65 20 6F 6E 65 20 6F 66 20 74 77 6F 2E'), recv(S, "4E C9"))
 # text page 1 of 2 (0x4E), style 5, manual scroll: "Manual scroll, page one of two."
 action(M, send('4E 05 01 00 51 00 00 01 02 4D 61 6E 75 61 6C 20 73 63 72 6F 6C 6C 2C 20 70 61 67 65 20 6F 6E 65 20 6F 66 20 74 77 6F 2E'), recv(M, "4E C9"),
        # "Manual scroll, page one of two."
        display(B, settles_to("evenai_manual_page1")))
-at(47.5)
 action(M, TAP, recv(M, "F5 01"), within=1)
-at(49)
 # text page 2 of 2 (0x4E), style 5, manual scroll: "Manual scroll, page two of two."
 action(S, send('4E 06 01 00 51 00 00 02 02 4D 61 6E 75 61 6C 20 73 63 72 6F 6C 6C 2C 20 70 61 67 65 20 74 77 6F 20 6F 66 20 74 77 6F 2E'), recv(S, "4E C9"))
 # text page 2 of 2 (0x4E), style 5, manual scroll: "Manual scroll, page two of two."
@@ -63,14 +55,12 @@ action(M, send('4E 06 01 00 51 00 00 02 02 4D 61 6E 75 61 6C 20 73 63 72 6F 6C 6
        display(B, settles_to("evenai_manual_page2")))
 
 # "Even AI is unable to connect to the network" (style 6)
-at(53)
 # text page (0x4E), style 6, network error: "No network."
 action(S, send('4E 07 01 00 61 00 00 01 01 4E 6F 20 6E 65 74 77 6F 72 6B 2E'), recv(S, "4E C9"))
 # text page (0x4E), style 6, network error: "No network."
 action(M, send('4E 07 01 00 61 00 00 01 01 4E 6F 20 6E 65 74 77 6F 72 6B 2E'), recv(M, "4E C9"),
        # "Even AI is unable to connect to the network"
        display(B, settles_to("evenai_nonetwork")))
-at(60)
 
 # over the whole run
 never("fatal")
@@ -78,6 +68,8 @@ never("boot", after=1)
 link_up()
 # the charging state, reported once per lens
 recv(B, "F5 09")
+# worn, reported once per lens on connecting (the rest pose counts as worn)
+recv(B, "F5 06")
 # the dashboard opened twice per lens
 recv(B, "F5 1E", count=2)
 # the master streams the mic (also through the Even AI texts, until "No network.")

@@ -2,7 +2,6 @@
 # sends a notification from a whitelisted app. The dashboard must show the bell with one message on both lenses, and
 # no message again once the app clears it.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -20,17 +19,15 @@ action(S, send('3C'), recv(S, "3C C9 01 06"))
 
 # the whitelist: the first chunk is acknowledged as partial (CB), the last as complete (C9); read back as
 # 13 chunks 2E 0D 00..0C
-wait(0.9)
 # notification whitelist (Gadgetbridge, Chat) in two chunks
 action(S, [send('04 02 00 7B 22 63 61 6C 65 6E 64 61 72 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 63 61 6C 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 6D 73 67 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 69 6F 73 5F 6D 61 69 6C 5F 65 6E 61 62 6C 65 22 3A 74 72 75 65 2C 22 61 70 70 22 3A 7B 22 6C 69 73 74 22 3A 5B 7B 22 69 64 22 3A 22 6E 6F 64 6F 6D 61 69 6E 2E 66 72 65 65 79 6F 75 72 67 61 64 67 65 74 2E 67 61 64 67 65 74 62 22 2C 22 6E 61 6D 65 22 3A 22 47 61 64 67 65 74 62 72 69 64 67 65 22 7D 2C 7B 22 69 64 22 3A 22 63 6F 6D 2E 65 78 61 6D'), send('04 02 01 70 6C 65 2E 63 68 61 74 22 2C 22 6E 61 6D 65 22 3A 22 43 68 61 74 22 7D 5D 2C 22 65 6E 61 62 6C 65 22 3A 74 72 75 65 7D 7D')],
        sequence(recv(S, "04 CB"), recv(S, "04 C9")), within=3.5)
-wait(1.2)
 action(S, send('2E'), recv(S, "2E 0D 00"), recv(S, "2E 0D", count=13), recv(S, "2E 0D 0C"))
 
 # both worn, the master head up, the dashboard opens on both lenses within 6 s of the don and the master streams
 # the mic (F1 packets) while it is up, which the app ignores
 # dashboard, no message
-expect(recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M), within=3)
+expect(recv(B, "F5 1E"), display(B, settles_to("dashboard")), audio(M), within=6)
 after("don", recv(B, "F5 06"), recv(M, "F5 02"), within=6)
 
 # the notification: partial then complete ack; the dashboard shows one message on both lenses

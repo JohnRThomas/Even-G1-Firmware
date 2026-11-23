@@ -3,18 +3,15 @@
 
 # from power-up, before the firmware boots
 action(M, NPM + "FaultNak true")
-at(5)
 # The panel's supplies are the PMIC's (BUCK2, LDSW1): a lens that cannot talk to its PMIC cannot switch them on,
 # so its panel stays dark whatever the firmware draws. The other lens shows the dashboard.
 # dashboard, battery mark empty (no PMIC to read the level from)
 action(B, gesture("don"), display(S, settles_to("dashboard_unpaired_lowbatt")), display(M, blank), within=7)
 mark("dashboard")
-at(15)
-# a tap on each lens
-action(B, TAP)
-at(16.5)
-action(B, TAP)
-at(18.5)
+# a tap on each lens and a second one 1.5 s later (two single clicks, not a double click): with no phone a
+# click changes nothing on the panels
+action(B, TAP, quiet(B, "frame "), within=1.5)
+action(B, TAP, quiet(B, "frame "), within=1.5)
 include("common/fault")
 check(M, "sysbus.twim2.lsm6dso AccelerometerEnabled", equals="True")
 # The slave's touch bar works as usual.
@@ -22,7 +19,7 @@ check(S, "sysbus.twim2.touch ConfigWriteCount", equals="0x0000002D")
 check(S, "sysbus.twim2.touch CommitWritten", equals="True")
 check(S, "sysbus.twim2.touch MagicWritten", equals="True")
 check(S, "sysbus.twim2.touch EventsArmed", equals="True")
-# the taps at 15 s and 16.5 s
+# the two taps
 check(S, "sysbus.twim2.touch PressesDelivered", equals="0x00000002")
 # The master's: queried here, asserted at the end (the known failure there).
 check(M, "sysbus.twim2.touch ConfigWriteCount")
@@ -30,10 +27,9 @@ check(M, "sysbus.twim2.touch CommitWritten")
 check(M, "sysbus.twim2.touch MagicWritten")
 check(M, "sysbus.twim2.touch EventsArmed")
 check(M, "sysbus.twim2.touch PressesDelivered")
-at(19)
 # nothing redrawn once the dashboard is up: it stays up, a tap without a phone changes nothing
 never("frame ", after=("dashboard", 0))
-# The master's touch bar should work as the slave's does, the two taps at 15 s and 16.5 s delivered.
+# The master's touch bar should work as the slave's does, the two taps delivered.
 known_failure("component_init() gives up before aw93203_init() when the PMIC does not answer (src/main.c)",
               together(state("sysbus.twim2.touch ConfigWriteCount", equals="0x0000002D", lens=M),
                        state("sysbus.twim2.touch CommitWritten", equals="True", lens=M),

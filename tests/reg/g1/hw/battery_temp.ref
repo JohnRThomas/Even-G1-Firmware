@@ -2,19 +2,28 @@
 # report the abnormal temperature, close the dashboard on both lenses and report no head gestures until the app sets
 # the display mode again.
 
-# unpaired dashboard
-action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-
-wait(6.7)
 action(B, phone_on(),
        recv(B, "4D C9"),
-       recv(M, "2C 66 .. .. F9 80 19 01 06 07 01 06 07"),
+       # the master's own version: this soon after power-on it has not got the slave's yet (hw/battery_sweep
+       # asserts both)
+       recv(M, "2C 66 .. .. F9 80 19 01 06 07"),
        recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 07"),
        # BLE paired
        recv(B, "F5 11"),
+       within=8)
+
+# Turn off the mic on head up.
+action(B, send('26 06 00 00 08 01'), recv(B, "26 06 00 .. 08 C9"))
+
+# put on: head up, the dashboard opens on both lenses
+action(B, gesture("don"),
+       recv(M, "F5 02"),
+       recv(B, "F5 1E"),
+       recv(B, "F5 06"),
+       recv(B, "F5 09 00"),
        # dashboard
        display(B, settles_to("dashboard")),
-       within=8, label="phone_on")
+       within=6)
 
 # 65 C: abnormal temperature
 action(M, NPM + "BatteryTemperatureCelsius 65",
@@ -55,9 +64,3 @@ action(B, send('2B'), recv(B, "2B 69 0A 06"))
 # over the whole run
 never("fatal")
 never("boot", after=1)
-link_up()
-# worn, charging state: within 7 s on a clean link
-after("phone_on", recv(B, "F5 06"), recv(B, "F5 09 00"), within=15)
-# the master streams mic audio (0xF1) whenever its dashboard is up; the audio path is checked by audio/mic and the
-# dashboard scenarios, not here
-ignore("audio", lens=M)

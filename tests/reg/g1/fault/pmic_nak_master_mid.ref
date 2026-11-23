@@ -1,9 +1,10 @@
 # The master's PMIC starts NAKing every I2C transaction at 4 s, after it was set up. The PMIC watchdog power-cycles
 # the master about 30 s later and the slave clears its panel, and nothing else may go wrong.
 
+# kept: the moment of the fault is the stimulus, after the PMIC's set-up at boot (its watchdog armed) and before
+# the glasses are put on; nothing in the trace says when that set-up is over
 at(4)
 action(M, NPM + "FaultNak true")
-at(5)
 # The panel's supplies are the PMIC's (BUCK2, LDSW1): a lens that cannot talk to its PMIC cannot switch them on,
 # so its panel stays dark whatever the firmware draws. The other lens shows the dashboard.
 # dashboard (no phone yet: Mon 01/01 00:00)
@@ -15,7 +16,6 @@ expect(event(M, "boot app"), event(M, "boot net"), within=30)
 # the reboot.
 # the slave, left without a master, clears its panel (~36.5 s)
 expect(display(S, settles_to("blank")), within=4)
-at(39.5)
 # that one reset
 check(M, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000001")
 check(S, "sysbus.twim1.npm1300 WatchdogResetCount", equals="0x00000000")
@@ -29,7 +29,6 @@ include("common/fault_touch")
 check(B, "sysbus.twim2.touch PressesDelivered", equals="0x00000000")
 # queried here, asserted at the end (the known failure)
 check(M, "spim_a.jbd FrameCounter")
-at(40)
 never("fatal")
 never("boot", after=1, lens=S)
 # no phone: no event leaves the glasses

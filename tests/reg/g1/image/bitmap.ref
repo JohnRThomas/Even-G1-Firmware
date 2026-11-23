@@ -3,7 +3,6 @@
 
 # the dashboard without a phone (clock, Bluetooth icon), closed again by the head down gesture
 # dashboard, no phone
-at(5)
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
 action(B, gesture("head_down"), display(B, blank), within=1.5)
 
@@ -23,7 +22,6 @@ action(B, paced(buf('bitmap', 1, 51), 0.1))
 # the keep-alive
 action(B, send('2C 01'), recv(B, "2C 66"))
 action(B, send('20 0D 0E'), recv(B, "20 C9"))
-wait(0.7)
 # the uploaded bitmap
 action(B, send('16 48 DD 59 D3'), recv(B, "16 48 DD 59 D3 C9"), display(B, settles_to("bitmap_576x136")))
 

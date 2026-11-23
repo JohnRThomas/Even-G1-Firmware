@@ -3,13 +3,12 @@
 
 # from power-up, before the firmware boots
 action(M, IMU + "FaultNak true")
-wait(1.3)
-# no wear detection: no dashboard
-action(B, gesture("don"), quiet(B, "frame "), within=7)
-# a tap on each lens
+# no wear detection: no dashboard in the 7 s after the glasses are put on (the frame of the first second is
+# the power-on clear)
+action(B, gesture("don"), never("frame ", after=1), within=7)
+# two taps on each lens, one right after the other (a double click to the firmware): the panels stay off
 action(B, TAP)
-action(B, TAP)
-wait(3.3)
+action(B, TAP, quiet(B, "frame "), within=2)
 include("common/fault")
 include("common/fault_touch")
 # the IMU could not be set up

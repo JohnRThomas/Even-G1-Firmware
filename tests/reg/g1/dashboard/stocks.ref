@@ -1,7 +1,6 @@
 # The app sends two stocks and two news items to the dashboard's stocks and news panes in both modes, and taps on
 # the master page between them. Both lenses must acknowledge every chunk and redraw at each step.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),

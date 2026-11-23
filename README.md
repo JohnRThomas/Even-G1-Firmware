@@ -66,7 +66,7 @@ Regression tests are under tests/reg and they utilize the renode simulator. The 
 
 To run the regression tests, first setup the simulator and build the firmware, then name the update package to test:
 ```sh
-python3 tests/reg/run.py --firmware dfu_application_<version>.zip
+python3 tests/reg/run.py dfu_application_<version>.zip
 ```
 In a suite the tests are grouped by feature, one directory each: tests/reg/g1/dashboard/calendar.ref is the test `dashboard/calendar`. `-k dashboard/` runs one feature, `-k =dashboard/calendar` one test.
 A run ends as PASS, FAIL, KNOWN (the only asserts that failed are marked `known_failure(...)` in the test file) or XPASS (an assert marked as a known failure held: the mark is to be removed); FAIL and XPASS fail the suite. `--out DIR` keeps the log, trace and panel pictures of every run that did not pass under DIR. `python3 tests/reg/run.py --help` and the top of tests/reg/run.py say the rest.

@@ -3,7 +3,6 @@
 
 action(M, [OPT + "Lux 300", OPT + "FaultConversionDelay 15000"])
 # Worn before the phone: the dashboard opens on both lenses.
-at(5)
 # dashboard, unpaired
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
 # The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
@@ -17,12 +16,9 @@ action(M, send('23 69'), recv(M, "'base: 0'"))
 # Brightness 12: acknowledged.
 action(M, send('01 0C 00'), recv(M, "01 C9"))
 check(M, "sysbus.twim1.opt3001 ResultRegister", equals="0x0000")
-# The conversion lands at about 26 s: the register reads either value then (recorded here, judged by the
-# any_of below), 0x3EA6 (300 lux) at 29.5; the panel level is reported once (F5 12, level 0x0C) between 24
-# and 29 s and #i answers base 3840.
-at(26)
-check(M, "sysbus.twim1.opt3001 ResultRegister")
-at(29.5)
+# The conversion lands 15 s after the sensor was started (with the panels, at the don gesture): the panel level is
+# reported once (F5 12, level 0x0C); the register reads 0x3EA6 (300 lux) by then and #i answers base 3840.
+expect(recv(M, "F5 12 0C"), within=18)
 check(M, "sysbus.twim1.opt3001 ResultRegister", equals="0x3EA6")
 # debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
 action(M, send('23 69'), recv(M, "'base: 3840'"))
@@ -31,9 +27,6 @@ action(M, send('23 69'), recv(M, "'base: 3840'"))
 never("fatal")
 never("boot", after=1)
 link_up()
-after(26, any_of(state("sysbus.twim1.opt3001 ResultRegister", equals="0x0000", lens=M),
-                 state("sysbus.twim1.opt3001 ResultRegister", equals="0x3EA6", lens=M)), within=1)
-after(24, recv(M, "F5 12 0C"), within=5)
 # The dashboard is up (the don gesture) when the phone connects: redrawn with the app's clock, and the
 # master streams the mic while it is up.
 # dashboard

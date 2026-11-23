@@ -7,7 +7,6 @@ action(B, PDM + "ConfigureSine 8000 1000")
 # the dashboard before the phone, then with it; the mic streams from the connection
 # dashboard, no phone
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -17,11 +16,14 @@ action(B, phone_on(),
        display(B, settles_to("dashboard")), audio(M),
        within=5, label="phone_on")
 
-# the long press: held, the dashboard closes on both lenses, released
-at(15)
-action(S, PRESS, recv(S, "F5 17"), recv(B, "F5 1F"), within=2)
-at(17.2)
-action(S, RELEASE, recv(S, "F5 18"), within=1, label="release")
+# the long press, held for 2.2 s (the hold is part of the stimulus: the firmware counts the session's time-out
+# from the press, the lines below count from the release): the lens reports it, the dashboard closes on both
+# lenses and "Even AI listening... Release to Finish Recording" comes up on both (its level bar is animated, so
+# the screen never settles) with the mic stream of the connection still running; then the release is reported
+action(S, [PRESS, 2.2, RELEASE],
+       sequence(recv(S, "F5 17"), recv(S, "F5 18")), recv(B, "F5 1F"),
+       display(B, shows("evenai_recording")), audio(M, during=True),
+       within=1, label="release")
 
 # no answer from the app: the session times out about 18 s after the release, both lenses blank and the
 # dashboard reopens on both
@@ -31,7 +33,6 @@ expect(display(B, shows("blank")),
        recv(B, "F5 1E"), display(B, settles_to("dashboard")), within=20)
 # and not before its time: no dashboard is reported open in the first 16 s after the release
 after("release", quiet(B, "F5 1E"), within=16)
-wait(2.2)
 
 # over the whole run
 never("fatal")
@@ -44,5 +45,6 @@ recv(B, "F5 06")
 recv(B, "F5 09")
 # the dashboard reported open once per lens (after the timeout)
 recv(B, "F5 1E")
-# the mic streams from the connection to the end of the run
-after("phone_on", audio(M, 25), within=5)
+# the mic streams from the connection through the press and the 18 s without an answer until the dashboard is
+# back: one stream of 20 s or more
+after("phone_on", audio(M, 20), within=5)

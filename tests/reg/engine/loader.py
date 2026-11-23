@@ -126,7 +126,7 @@ class Suite:
                 inner = self.read(target, seen + (path,))
                 for x in inner:
                     if isinstance(x, statements.Statement):
-                        x.included = True       # an include's at() keeps its time under --skip-at
+                        x.included = True       # not the file's own line (unused_labels())
                 out += inner
             elif isinstance(value, (asserts.Assert, statements.Statement)):
                 inherit(value)

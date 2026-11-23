@@ -1,7 +1,6 @@
 # The app changes the settings, reads them back, reboots both lenses with five taps, reconnects and reads them
 # again. What the user set must still be there after the reboot, except silent mode, which a boot leaves off.
 
-at(5)
 action(B, gesture("don"),
        # dashboard before any phone: clock unsynced, Bluetooth mark
        display(B, settles_to("dashboard_unpaired")),
@@ -85,9 +84,10 @@ action(B, send('3F 07'), recv(B, "3F 07 C9 01"))
 # set on the master only
 action(B, send('3F 08'), recv(M, "3F 08 C9 01"), recv(S, "3F 08 C9 00"))
 
+# the firmware writes the settings to flash once 5 s have passed without a change and nothing tells the phone when
+wait(3.7)
 # the reboot: five taps, the links drop and come back with the bond's key (the boot's clear leaves the
 # already blank panels as they are)
-wait(3.7)
 action(B, taps(5),
        event(B, "link dropped: the lens was reset"),
        event(B, "boot app"),

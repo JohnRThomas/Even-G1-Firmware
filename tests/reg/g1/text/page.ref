@@ -1,7 +1,6 @@
 # With the phone connected and the dashboard open, the app sends one page of text to each lens. It must show on both
 # lenses until the app closes it and the dashboard comes back.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -31,7 +30,6 @@ action(M, send('4E 00 01 00 71 00 00 01 01 48 65 6C 6C 6F 20 66 72 6F 6D 20 74 6
        display(B, settles_to("text_style7")))
 
 # 0x18 closes the text on each lens; the master reports the task ended (F5 00) and the dashboard reopens on both
-wait(9.2)
 action(S, send('18'), recv(S, "18 C9"))
 action(M, send('18'),
        recv(M, "18 C9"), recv(M, "F5 00"),

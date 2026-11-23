@@ -3,26 +3,25 @@
 # mode back.
 
 # Worn before the phone: the dashboard opens on both lenses (Mon 01/01 00:00, the Bluetooth mark).
-at(5)
 # dashboard, unpaired
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-# The phone connects (the MTU accepted here; the link, the dashboard redrawn with the app's clock and the
-# mic stream are asserted over the whole run below, with the slack a slow link needs).
-at(12)
-action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+# The phone connects: the MTU accepted, then the link, worn and the charging state reported (8 s on a clean
+# link, 11 with one stalled sync to the slave), the dashboard redrawn with the app's clock and the mic streaming.
+# The connection's own events are over before the next input.
+action(B, phone_on(),
+       recv(B, "4D C9"), recv(B, "F5 11"), recv(B, "F5 06"), recv(B, "F5 09"),
+       # dashboard
+       display(B, settles_to("dashboard")), audio(M, 5),
+       within=11, label="phone_on")
 
 # A single tap on the open dashboard: the status report, no F5 event.
-at(18)
 action(M, TAP, recv(M, "22 08 00 00 02"))
 # Double tap, dashboard open: the master reports it and closes the dashboard on both lenses.
-at(21)
 action(M, taps(2), recv(M, "F5 00"), recv(B, "F5 1F"), display(B, blank))
 # Double tap action = 4 (open the dashboard).
-at(23)
 action(M, send('26 06 00 00 05 04'), recv(M, "26 06 00 00 05 C9"))
 # Double tap on the slave, dashboard closed: it opens on both lenses, the master sends the head-up status
 # and streams the mic; the slave does not report the tap itself.
-at(25)
 action(S, taps(2),
        recv(B, "F5 1E"), recv(M, "22 0A 00 00 01", count=at_least(1)), audio(M),
        # dashboard
@@ -30,11 +29,9 @@ action(S, taps(2),
        quiet(S, "F5 00"),
        within=2.5)
 # Double tap on the master, dashboard open: closed again.
-at(28)
 action(M, taps(2), recv(M, "F5 00"), recv(B, "F5 1F"), display(B, blank))
 
 # Triple tap: silent mode on, its animation on both lenses, then blank; 0x2B reads display mode 0x0C back.
-at(31)
 action(M, taps(3),
        recv(M, "F5 04"),
        # silent mode on
@@ -44,7 +41,6 @@ action(M, taps(3),
 action(B, send('2B'), recv(B, "2B 69 0C"))
 # Triple tap again: silent mode off, its animation, and the IMU reports head up again once it is re-armed;
 # 0x2B reads display mode 0x0A back.
-at(36)
 action(M, taps(3),
        recv(M, "F5 05"),
        # silent mode off
@@ -54,10 +50,10 @@ action(M, taps(3),
        within=4)
 action(B, send('2B'), recv(B, "2B 69 0A"))
 
-# Long press on the left lens: Even AI, the mic streams from the master from the press on.
-at(40)
-action(S, PRESS, recv(S, "F5 17"), audio(M), within=3)
-at(43)
+# Long press on the left lens: Even AI, the mic streams from the master from the press on; held until "Even AI
+# listening... Release to Finish Recording" is up on both lenses and the stream has run for 1 s, then released.
+action(S, PRESS, recv(S, "F5 17"), audio(M), display(B, shows("evenai_recording")), within=3)
+expect(audio(M, 1, during=True), within=2)
 action(S, RELEASE, recv(S, "F5 18"), within=1)
 
 # over the whole run
@@ -65,10 +61,10 @@ never("fatal")
 never("boot", after=1)
 link_up()
 # The dashboard is redrawn with the app's clock when the phone connects, and, being up, the master streams
-# the mic (mic on head up is the default) until the double tap closes it at 21 s.
+# the mic (mic on head up is the default) until the double tap closes it.
 # dashboard
 after("phone_on", display(B, shows("dashboard")), audio(M, 5), within=8)
 # Worn (the don gesture before the phone) and the charging state, reported once per lens after the phone
-# connects (the charging state up to 6 s later, past the next input).
+# connects.
 recv(B, "F5 06")
 recv(B, "F5 09")

@@ -7,7 +7,6 @@ action(B, gesture("don"),
        display(B, settles_to("dashboard_unpaired")),
        within=6)
 
-at(8.7)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "4D C9"),

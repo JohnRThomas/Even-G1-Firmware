@@ -8,7 +8,6 @@ action(B, PDM + "ConfigureSine 8000 1000")
 # the dashboard before the phone, then with it; the mic streams from the connection
 # dashboard, no phone
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -19,9 +18,11 @@ action(B, phone_on(),
        within=5, label="phone_on")
 
 # the long press on the left lens: held, the dashboard closes on both lenses, released
-at(17)
 action(S, PRESS, recv(S, "F5 17"), recv(B, "F5 1F"), within=2)
-action(S, RELEASE, recv(S, "F5 18"), within=1)
+# held: "Even AI listening... Release to Finish Recording" on both lenses (its level bar is animated, so the
+# screen never settles), the mic stream of the connection still running
+expect(display(B, shows("evenai_recording")), audio(M, during=True), within=5)
+action(S, RELEASE, recv(S, "F5 18"), within=2)
 
 # the answer, the status and the exit are acknowledged by both lenses, echoing the header
 # Even AI answer (0x54 sub 3): "Paris is the capital of France."
@@ -34,7 +35,6 @@ action(S, send('56 06 00 12 08 00'), recv(S, "56 07 00 12 08 00 00"))
 action(M, send('56 06 00 12 08 00'), recv(M, "56 07 00 12 08 00 00"))
 
 # 0x54 sub 1 mode 2: acknowledged, both lenses blank, then the dashboard reopens on both with the mic again
-at(30)
 action(S, send('54 08 00 13 01 02 00 00'), recv(S, "54 07 00 13 01 C9 02"))
 # blank
 action(M, send('54 08 00 13 01 02 00 00'), recv(M, "54 07 00 13 01 C9 02"), display(B, blank), within=1)
@@ -52,6 +52,6 @@ recv(B, "F5 06")
 recv(B, "F5 09")
 # the dashboard reported open once per lens (after the exit)
 recv(B, "F5 1E")
-# the mic streams from the connection through the long press and the Even AI session until the 0x54 exit at
-# 30 s: one stream of 15-16 s (it never pauses for a second), asserted over the whole run
-after("phone_on", audio(M, 14), within=5)
+# the master's mic streams from the connection through the long press and the Even AI session until the 0x54
+# exit: one stream of 3 s or more that does not stop at the press (the slave never streams)
+after("phone_on", audio(M, 2.5), within=5)

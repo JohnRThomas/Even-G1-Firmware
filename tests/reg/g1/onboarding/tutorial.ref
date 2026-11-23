@@ -1,11 +1,10 @@
 # The app starts the onboarding tutorial and steps through the pages. The glasses must show each page.
 
 # the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
-# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# level and no dashboard is up when the phone connects with the app's heartbeat off; the app's 0x2C
 # keep-alive is sent by the lines below
 action(B, gesture("don"))
 action(B, gesture("head_down"))
-at(12)
 action(B, phone_on(hb=0),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -49,16 +48,15 @@ action(B, send('1F 02 05'),
 # finish: acknowledged, both lenses blank
 action(B, send('2C 01'), recv(B, "2C 66"))
 action(B, send('1F 0A 06'), recv(B, "1F 0A C9 06"), display(B, blank), within=3)
-wait(2.9)
 
 # over the whole run
 never("fatal")
 never("boot", after=1)
 link_up()
-# worn (donned at 5 s), reported once
+# worn (donned before the phone), reported once
 recv(B, "F5 06")
-# the charging state, reported once
-recv(B, "F5 09")
+# the charging state, reported once (the run goes on until it has come)
+after("phone_on", recv(B, "F5 09"), within=8)
 # no head up ...
 quiet(B, "F5 02")
 # ... head down ...

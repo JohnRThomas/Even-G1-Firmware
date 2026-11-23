@@ -2,21 +2,29 @@
 # with the bond's key and bind to the master over ESB again, while the master keeps its link and dashboard
 # throughout.
 
-# unpaired dashboard
-action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-
-at(12)
 action(B, phone_on(hb=0),
        recv(B, "4D C9"),
-       recv(M, "2C 66 .. .. F9 80 19 01 06 07 01 06 07"),
+       # the master's own version: this soon after power-on it has not got the slave's yet (hw/battery_sweep
+       # asserts both)
+       recv(M, "2C 66 .. .. F9 80 19 01 06 07"),
        recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 07"),
        # BLE paired
        recv(B, "F5 11"),
+       within=8, label="phone_on")
+
+# Turn off the mic on head up.
+action(B, send('26 06 00 00 08 01'), recv(B, "26 06 00 .. 08 C9"))
+
+# put on: head up, the dashboard opens on both lenses; worn and the charging state, reported before the slave's
+# reboot
+action(B, gesture("don"),
+       recv(M, "F5 02"),
+       recv(B, "F5 1E"),
+       recv(B, "F5 06"),
+       recv(B, "F5 09 00"),
        # dashboard
        display(B, settles_to("dashboard")),
-       # worn, reported before the slave's reboot
-       recv(B, "F5 06"),
-       within=6, label="phone_on")
+       within=6)
 
 # the reboot: the link drops, both cores boot, the panel is cleared
 # debug string "#r": reboot the lens
@@ -32,7 +40,9 @@ action(S, [send('4D FB'), send('2C 01')],
        recv(S, "2C 66 .. .. F9 80 19 00 00 00 01 06 07"))
 # the master's keep-alives
 action(M, send('2C 01'), recv(M, "2C 66 .. .. F9 80 19"))
-wait(10.5)
+# the ESB link again: the slave reports the link once it is bound to the master, within 12 s of its reboot
+# (counted from the reboot: the report may have come while the lines above ran)
+expect(after("reboot", recv(S, "F5 11"), within=12), within=12)
 # worn again: the wear state went with the reboot
 action(S, gesture("don"))
 # the slave's keep-alives
@@ -47,15 +57,7 @@ never("boot", after=1, lens=M)
 # one reboot of the slave, no more
 never("boot", after=("reboot", 1), lens=S)
 link_up()
-# the master's bring-up: worn, charging state
-after("phone_on", recv(M, "F5 06"), recv(M, "F5 09 00"), within=15)
-# whether the slave also gets to its charging-state report before the reboot depends on the schedule
-after("phone_on", ignore("F5 09 00", lens=S), within=6)
-# the ESB link again: the slave binds about 11 s after the reboot (the firmware's 10 s start-up hold), then its
-# events follow (worn after 2 s, the charging state after 4 s on a clean link; up to 21 s when the master's sync
-# retries slow the slave's loop)
-after("reboot", recv(S, "F5 11"), within=12)
+# once the slave is bound again (about 3.5 s after the reboot) its events follow: worn about 1.3 s later, the
+# charging state about 3.7 s later on a clean link; up to 21 s after the reboot when the master's sync retries
+# slow the slave's loop
 after("reboot", recv(S, "F5 06"), recv(S, "F5 09 00"), within=22)
-# the slave's panel stays blank after its reboot (the master does not redraw it); the master streams mic audio
-# (0xF1) while its dashboard is up, not what this scenario tests
-ignore("audio", lens=M)

@@ -6,10 +6,14 @@ action(M, OPT + "Lux 0")
 # Worn before the phone: the dashboard opens on both lenses.
 # dashboard, unpaired
 action(B, gesture("don"), display(B, settles_to("dashboard_unpaired")), within=6)
-# The phone connects (the MTU accepted here; the link, the dashboard and the mic stream are asserted over the
-# whole run below).
-wait(6.7)
-action(B, phone_on(), recv(B, "4D C9"), within=3, label="phone_on")
+# The phone connects: the MTU accepted, then the link, worn and the charging state reported (8 s on a clean
+# link, 11 with one stalled sync to the slave) and the dashboard redrawn with the app's clock, the mic streaming. The
+# connection's own events are over before the next input.
+action(B, phone_on(),
+       recv(B, "4D C9"), recv(B, "F5 11"), recv(B, "F5 06"), recv(B, "F5 09"),
+       # dashboard
+       display(B, settles_to("dashboard")), audio(M, 5),
+       within=11, label="phone_on")
 
 # Dark: #i answers base 0; brightness 30, auto off: acknowledged and read back.
 # debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
@@ -17,7 +21,6 @@ action(M, send('23 69'), recv(M, "'base: 0'"))
 action(M, send('01 1E 00'), recv(M, "01 C9"))
 action(M, send('29'), recv(M, "29 65 1E 00"))
 # 300 lux: the panel level is reported (F5 12, level 0x1E) within 1..2 s; #i answers base 3840.
-wait(9.5)
 action(M, OPT + "Lux 300", recv(M, "F5 12 1E"), within=3)
 # debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
 action(M, send('23 69'), recv(M, "'base: 3840'"))
@@ -26,9 +29,7 @@ action(M, send('01 04 00'), recv(M, "01 C9"), recv(M, "F5 12 04"), within=2)
 action(M, send('29'), recv(M, "29 65 04 00"))
 # Level: head down, the dashboard closes; #i then answers base 80000 (the sensor has settled);
 # 81 deg right after: head up, the dashboard opens.
-wait(1.4)
 action(B, pose(LEVEL), recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank))
-wait(1.1)
 # debug string "#i": the light sensor's maximum lux, answered as text ("base: N")
 action(M, send('23 69'), recv(M, "'base: 80000'"))
 action(B, pose(UP81),

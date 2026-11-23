@@ -2,11 +2,10 @@
 # dashboard must open with the note, and the task's prompt shows for 4 s.
 
 # the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
-# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# level and no dashboard is up when the phone connects with the app's heartbeat off; the app's 0x2C
 # keep-alive is sent by the lines below
 action(B, gesture("don"))
 action(B, gesture("head_down"))
-at(12)
 action(B, phone_on(hb=0),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -31,7 +30,6 @@ action(B, gesture("head_up"),
 action(B, send('2C 01'), recv(B, "2C 66"))
 
 # head down: the master reports it, the dashboard closes on both lenses
-wait(3.4)
 action(B, gesture("head_down"),
        recv(M, "F5 03"), recv(B, "F5 1F"), display(B, blank),
        within=2)
@@ -49,7 +47,7 @@ action(B, send('2C 01'), recv(B, "2C 66"))
 never("fatal")
 never("boot", after=1)
 link_up()
-# worn (donned at 5 s), reported once
+# worn (donned before the phone), reported once
 recv(B, "F5 06")
 # the charging state, reported once
 recv(B, "F5 09")
@@ -59,5 +57,5 @@ recv(M, "F5 02")
 recv(M, "F5 03")
 # dashboard closed, once
 recv(B, "F5 1F")
-# the mic streams while the dashboard is up (4 s)
-after("head_up", audio(M, 4), within=3)
+# the mic streams while the dashboard is up, from the head up to the head down (1 s or more)
+after("head_up", audio(M, 1), within=3)

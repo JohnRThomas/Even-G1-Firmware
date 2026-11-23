@@ -28,9 +28,7 @@ dashboard_mode1_pane_empty  9a5d098b57ae   # mode 1, pane 5: empty
 dashboard_mode2_clock_only  24f8fad795d7   # mode 2: the clock alone, centred
 
 # dashboard: clock sync between the lenses (ESB)
-dashboard_clock_master      a8b5c8fb599c   # master: app clock Wed 11/12 12:35, weather 20 C
-dashboard_clock_slave       4686b2f399fa   # slave: app clock Wed 11/12 12:35, synced over ESB
-clock_only_slave            735b14cbcb74   # slave: the clock alone during a 0x4A sync
+dashboard_clock             4686b2f399fa   # app clock Wed 11/12 12:35
 
 # calendar pane of the dashboard, at 14:35 (mode 1, the wide pane, unless the name says mode0)
 calendar_loading            b4c894e6bbee   # calendar "Loading": no list sent yet
@@ -74,12 +72,13 @@ silent_on                   e831e498d89f   # moon mark + "Silent", about 1 s on 
 silent_off                  84258d9dcb50   # "Activated" after silent mode off (03 0A 00)
 
 # text and image
-text_master_only            a6224d196114   # "Text sent to the master lens only."
+text_master_only            c42fa9dad70f   # "Text"
 text_style7                 5bbcdb116beb   # 0x4E text page, style 7
 bitmap_576x136              1ec2d1fd176a   # the uploaded test bitmap
 
 # evenai
 evenai_listening            ac8552b11f3e   # "Even AI listening... Ask me anything"
+evenai_recording            2ae69fa07176   # "Even AI listening... Release to Finish Recording" (long press held), no level bar
 evenai_answer_page2         ba0ee46b2221   # "Even AI answer, page two of two." with the scroll bar (0x4E style 4)
 evenai_manual_page1         32c7949406a6   # "Manual scroll, page one of two." (0x4E style 5, manual scroll)
 evenai_manual_page2         a9a1f0f8b2c5   # "Manual scroll, page two of two." (0x4E style 5, manual scroll)

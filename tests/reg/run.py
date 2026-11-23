@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Regression tests: run each on the simulator and check what the glasses do against what the app expects.
 
-    python3 tests/reg/run.py --firmware ZIP [--suite g1] [-k KEY,...] [-j N] [--seed N | --seeds N,M,...]
-                             [--out DIR] [--keep] [--trace] [--skip-at]
+    python3 tests/reg/run.py ZIP [--suite g1] [-k KEY,...] [-j N] [--seed N | --seeds N,M,...]
+                    [--out DIR] [--keep] [--trace]
     python3 tests/reg/run.py --parse [--times] [--suite g1] [-k KEY,...]
 
 --suite names the directory of tests to run, tests/reg/g1 (the default). A test is a .ref file in a
@@ -15,8 +15,9 @@ what it asserts of the answers. A copy of a suite elsewhere runs too (--suite /p
 -k selects tests: link/ is every test of that directory, =link/pair that test, anything else every test whose
 name contains it. A key that selects nothing is an error.
 
---firmware names the update package under test (a dfu_application_*.zip); there is no default, so every result
-says which build it is about. Only --parse, which does not start the simulator, runs without it.
+ZIP, the positional argument (before or after the options), names the update package under test (a
+dfu_application_*.zip); there is no default, so every result says which build it is about. Only --parse, which
+does not start the simulator, runs without it.
 
 A test file (engine/loader.py) is statements that drive the simulator line by line (send an input to a lens, run
 until the asserts about what comes back hold; engine/statements.py, engine/driver.py), and asserts over the whole
@@ -45,8 +46,6 @@ PNG of each panel content the failing assert looked at; --keep keeps the directo
 --parse only loads the test files and reports their errors and the labels no assert uses, without the simulator;
 --times adds when each line of each file begins at the earliest and at the latest, to hold a file's comments
 against its statements.
---skip-at runs each test with its own at() lines not waiting (an include's at() still waits), so the statements
-keep only their order: a test that passes so does not need its time anchors.
 """
 import argparse
 import os
@@ -67,20 +66,20 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LIMIT = 1800                                # seconds of real time a run may take
 
 
-def length(loaded, skip_at):
+def length(loaded):
     """Simulated seconds a test runs at least, for the progress estimate."""
-    return max(statements.timeline(loaded, skip_at)[-1][1], 10.0)
+    return max(statements.timeline(loaded)[-1][1], 10.0)
 
 
 class Job:
     """A run of a test under a seed, in a thread: the statements drive a driver.Session."""
 
-    def __init__(self, suite, name, seed, options):
+    def __init__(self, suite, name, options):
         self.suite = suite
         self.name = name
-        self.seed = seed
+        self.seed = options.seed
         self.options = options
-        stem = "reg-%s-%s-%d" % (suite.name, name.replace("/", "-"), seed)
+        stem = "reg-%s-%s-%d" % (suite.name, name.replace("/", "-"), self.seed)
         if options.out:
             self.out = os.path.join(options.out, stem)
             shutil.rmtree(self.out, ignore_errors=True)
@@ -104,8 +103,7 @@ class Job:
                                           statements.needs_phone(loaded, proto), proto.SETUP)
             self.session.start()
             self.live = trace.LiveTrace(self.out, proto.item)
-            self.outcome = statements.run(loaded, self.session, self.live, proto, self.suite.frames(), self.seed,
-                                          self.options.step, self.options.skip_at)
+            self.outcome = statements.run(loaded, self.session, self.live, proto, self.suite.frames(), self.seed)
             self.items = self.outcome.items
         except driver.Stalled as e:
             self.error, self.stalled = str(e), True
@@ -154,6 +152,7 @@ class Job:
                 lines += result.detail
                 looked += result.matched
             return "KNOWN", lines + notes, looked or self.items
+
         return "PASS", notes, self.items
 
     def pictures(self, failed):
@@ -286,11 +285,9 @@ def arguments():
                         help="the directory of tests to run, tests/reg/SUITE (default g1), or a path to a copy of one")
     parser.add_argument("-k", metavar="KEY,...", help="only the tests whose name contains one of these (=NAME: "
                                                       "exactly that test, DIR/: the tests of that directory)")
-    parser.add_argument("-j", type=int, default=2, metavar="N", help="simulators at once (default 2)")
-    parser.add_argument("--firmware", metavar="ZIP", help="update package to test (required, except with --parse)")
-    parser.add_argument("--seed", type=int, metavar="N",
-                        help="Renode's PRNG seed for every run (default: random per run)")
-    parser.add_argument("--seeds", metavar="N,M,...", help="run each test under each of these seeds")
+    parser.add_argument("-j", type=int, default=1, metavar="N", help="simulators at once (default 1)")
+    parser.add_argument("firmware", nargs="?", metavar="ZIP", help="update package to test (required, except with --parse)")
+    parser.add_argument("--seed", type=int, metavar="N", help="Renode's PRNG seed for every run (default: random per run)")
     parser.add_argument("--out", metavar="DIR", help="put the runs' directories under DIR (default: the temporary "
                                                      "directory), named reg-SUITE-TEST-SEED")
     parser.add_argument("--keep", action="store_true", help="keep the directories of passed runs too")
@@ -299,9 +296,6 @@ def arguments():
                         help="only load the test files and report their errors (no simulator)")
     parser.add_argument("--times", action="store_true", help="with --parse: when each line begins, at the earliest "
                                                              "and at the latest")
-    parser.add_argument("--skip-at", action="store_true",
-                        help="a test's own at() lines do not wait (an include's still do): the statements keep their "
-                             "order only, to find the tests whose time anchors matter")
     args = parser.parse_args()
     try:
         suite = loader.Suite(os.path.normpath(os.path.join(HERE, args.suite)))
@@ -316,21 +310,22 @@ def arguments():
     if args.times:
         parser.error("--times goes with --parse")
     if not args.firmware or not os.path.isfile(args.firmware):
-        parser.error("--firmware ZIP is required: the update package to test%s" % (
+        parser.error("ZIP is required: the update package to test%s" % (
             " (no file %s)" % args.firmware if args.firmware else ""))
     local = os.path.join(driver.SIM, ".renode", "renode.exe" if os.name == "nt" else "renode")
     args.renode = os.environ.get("RENODE") or (local if os.path.isfile(local) else shutil.which("renode"))
+
     if not args.renode:
         parser.error("no Renode: run tools/simulator/setup.sh or setup.bat, or set $RENODE")
-    try:
-        seeds = [int(s) for s in args.seeds.split(",")] if args.seeds else [args.seed] if args.seed is not None else []
-        args.step = float(os.environ.get("REG_STEP", statements.STEP))
-    except ValueError as e:
-        parser.error("--seeds and $REG_STEP are numbers: %s" % e)
-    if args.j < 1 or args.step <= 0:
-        parser.error("-j and $REG_STEP are more than 0")
-    args.seed_list = list(dict.fromkeys(seeds))             # a seed named twice is one run
+
+    if not args.seed:
+        args.seed = secrets.randbelow(2 ** 31 - 1) + 1
+
+    if args.j < 1:
+        parser.error("-j must be more than 0")
+
     args.firmware = os.path.abspath(args.firmware)
+
     if args.out:
         args.out = os.path.abspath(args.out)
         os.makedirs(args.out, exist_ok=True)
@@ -339,49 +334,48 @@ def arguments():
 
 def repeat(args, name, seed):
     """The command line that runs one run again, from where this one was started."""
-    return "python3 %s --suite %s --firmware %s -k =%s --seed %d%s%s" % (
-        os.path.relpath(os.path.abspath(sys.argv[0])), args.suite, os.path.relpath(args.firmware), name, seed,
-        " --skip-at" if args.skip_at else "", " --out %s" % os.path.relpath(args.out) if args.out else "")
+    return "python3 %s %s --suite %s -k =%s --seed %d%s" % (
+        os.path.relpath(os.path.abspath(sys.argv[0])), os.path.relpath(args.firmware), args.suite, name, seed,
+        " --out %s" % os.path.relpath(args.out) if args.out else "")
 
 
 def main():
-    args, suite, names = arguments()
+    args, suite, tests = arguments()
+
+    print(f"Testing {os.path.basename(args.firmware)} against suite {suite.name}, {len(tests)} test(s), {args.j} worker(s)", flush=True)
+
     if args.parse:
-        return parse(suite, names, args.times)
-    queue = [(n, seed) for n in names for seed in (args.seed_list or [secrets.randbelow(2 ** 31 - 1) + 1])]
-    print("%s: %s, %d test(s), %d run(s), -j %d%s%s" % (
-        suite.name, args.firmware, len(names), len(queue), args.j, ", at() skipped" if args.skip_at else "",
-        ", step %g s" % args.step if args.step != statements.STEP else ""), flush=True)
+        return parse(suite, tests, args.times)
+
     seconds = {}
-    for key in queue:
+    for test in tests:
         try:
-            seconds[key] = length(suite.load(key[0]), args.skip_at)
+            seconds[test] = length(suite.load(test))
         except (loader.LoadError, RefError):
-            seconds[key] = 40.0                  # the run reports the error
-    progress, width = Progress(seconds, args.j), max(map(len, names))
-    running = {}                                # {(name, seed): Job}
+            seconds[test] = 40.0                  # the run reports the error
+    progress, width = Progress(seconds, args.j), max(map(len, tests))
+    running = {}                                # {(test, seed): Job}
     count = {"PASS": 0, "KNOWN": 0, "XPASS": 0, "FAIL": 0}
-    failed = []                                 # the (name, seed) that fail the suite
+    failed = []                                 # the (test, seed) that fail the suite
     retried = set()
     try:
-        while queue or running:
-            while queue and len(running) < args.j:
-                key = queue.pop(0)
-                running[key] = Job(suite, *key, args)
+        while tests or running:
+            while tests and len(running) < args.j:
+                test = tests.pop(0)
+                running[test] = Job(suite, test, args)
             time.sleep(0.5)
-            for key, job in list(running.items()):
-                name, seed = key
+            for test, job in list(running.items()):
                 if not job.done() and time.time() < job.began + LIMIT:
                     continue
                 if not job.done():
                     job.kill()
                     job.error = "the run did not finish within %d minutes" % (LIMIT // 60)
-                del running[key]
-                if job.stalled and key not in retried:      # Renode stalled (rare): the run once more
-                    retried.add(key)
-                    queue.insert(0, key)
+                del running[test]
+                if job.stalled and test not in retried:      # Renode stalled (rare): the run once more
+                    retried.add(test)
+                    tests.insert(0, test)
                     progress.clear()
-                    print("RETRY %-*s seed %-10d %s: the run is started again" % (width, name, seed, job.error),
+                    print("RETRY %-*s seed %-10d %s: the run is started again" % (width, test, args.seed, job.error),
                           flush=True)
                     shutil.rmtree(job.out, ignore_errors=True)
                     continue
@@ -389,8 +383,8 @@ def main():
                 count[status] += 1
                 keep = status != "PASS" or args.keep or args.trace
                 progress.clear()
-                print("%-5s %-*s seed %-10d %4.0f s%s" % (
-                    status, width, name, seed, time.time() - job.began, "   " + job.out if keep else ""))
+                print("  %-*s %-5s %4.0fs %s" % (
+                    width+4, test, status, time.time() - job.began, "   " + job.out if keep else ""))
                 for line in lines:
                     print(line)
                 if args.trace:
@@ -403,9 +397,9 @@ def main():
                 else:
                     shutil.rmtree(job.out, ignore_errors=True)
                 if status in ("FAIL", "XPASS"):
-                    failed.append(key)
-                progress.finish(key, job.began, status in ("FAIL", "XPASS"))
-            progress.draw(queue, running)
+                    failed.append(test)
+                progress.finish(test, job.began, status in ("FAIL", "XPASS"))
+            progress.draw(tests, running)
     except KeyboardInterrupt:
         progress.clear()
         print(suite.name + ": interrupted")
@@ -416,10 +410,11 @@ def main():
             if not args.keep:
                 shutil.rmtree(job.out, ignore_errors=True)
     progress.clear()
-    print("%s: %d run(s): %d passed, %d known failure(s), %d unexpected pass(es), %d failed" % (
-        suite.name, sum(count.values()), count["PASS"], count["KNOWN"], count["XPASS"], count["FAIL"]))
-    for name, seed in sorted(failed):
-        print("       " + repeat(args, name, seed))
+    print("%d run(s) in %s: %d passed, %d known failure(s), %d unexpected pass(es), %d failed, seed: %-10d" % (
+        sum(count.values()), clock(time.time() - progress.began), count["PASS"], count["KNOWN"], count["XPASS"],
+        count["FAIL"], args.seed))
+    for test in sorted(failed):
+        print("       " + repeat(args, test, args.seed))
     return 1 if failed else 0
 
 

@@ -2,7 +2,6 @@
 # sends the slave a notification whitelist and a notification, reads the unread count, clears the notification and
 # reads the count again.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "4D C9"),
@@ -61,6 +60,7 @@ action(S, send('4B 00 02 01 2C 22 74 69 6D 65 5F 73 22 3A 31 37 36 32 38 39 39 3
 action(B, send('36'), recv(B, "36 C9 01"))
 # the notification cleared
 action(S, send('4C 00 00 01 9D'), recv(S, "4C C9"))
+# the lenses take it off about half a second after the acknowledgement and nothing tells the phone when
 wait(1.6)
 # none unread (tests/unit/vectors: 0x36_notification_count_get)
 action(B, send('36'), recv(B, "36 C9 00"))

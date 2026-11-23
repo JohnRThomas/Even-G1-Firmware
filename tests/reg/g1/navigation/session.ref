@@ -2,11 +2,10 @@
 # the panoramic map to both lenses, arrival and exit. The glasses must show the matching screen at each step.
 
 # the session: the head down follows the don at once and takes its place, so the glasses are worn with the head
-# level and no dashboard is up when the phone connects at 12 s with the app's heartbeat off; the app's 0x2C
+# level and no dashboard is up when the phone connects with the app's heartbeat off; the app's 0x2C
 # keep-alive is sent by the lines below
 action(B, gesture("don"))
 action(B, gesture("head_down"))
-at(12)
 action(B, phone_on(hb=0),
        event(B, "pairing: complete, link encrypted, bonded"),
        recv(B, "2C 66"), recv(B, "4D C9"),
@@ -73,8 +72,7 @@ action(M, send('0A 06 00 2E 04 1D'), recv(M, "0A 06 00 2E 04"), within=0.5)
 action(B, send('2C 01'), recv(B, "2C 66"))
 action(M, send('0A 06 00 2F 04 1F'), recv(M, "0A 06 00 2F 04"), within=0.5)
 action(M, send('0A 06 00 30 04 21'), recv(M, "0A 06 00 30 04"), within=0.5)
-wait(6.8)
-expect(display(B, blank), within=1)
+expect(display(B, blank), within=7.8)
 action(M, send('0A 06 00 31 04 23'), recv(M, "0A 06 00 31 04"), within=0.5)
 action(M, send('0A 06 00 32 04 25'), recv(M, "0A 06 00 32 04"), within=0.5)
 action(M, send('0A 06 00 33 04 27'), recv(M, "0A 06 00 33 04"), within=0.5)

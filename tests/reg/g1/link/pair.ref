@@ -1,6 +1,5 @@
-# The phone switches on at 12 s, pairs with both lenses and sends the app's first two packets, with the glasses not
+# The phone switches on at power-on, pairs with both lenses and sends the app's first two packets, with the glasses not
 # worn. Both lenses must bond and answer, and the panels stay blank.
-at(12)
 action(B, phone_on(),
        event(B, "connected to"),
        event(B, "pairing: complete, link encrypted, bonded"),

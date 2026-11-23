@@ -5,15 +5,17 @@
 # from power-up
 action(B, NPM + "BatteryVoltageMilliVolts 3900")
 
-at(12)
 action(B, phone_on(),
        recv(B, "4D C9"),
-       # 3.9 V, 0 mA, 25 C
-       recv(M, "2C 66 .. .. BD 80 19 01 06 07 01 06 07"),
+       # 3.9 V, 0 mA, 25 C, the master's own version: this soon after power-on it has not got the slave's yet
+       # (hw/battery_sweep asserts both)
+       recv(M, "2C 66 .. .. BD 80 19 01 06 07"),
        recv(S, "2C 66 .. .. BD 80 19 00 00 00 01 06 07"),
        # BLE paired
        recv(B, "F5 11"),
-       within=8, label="phone_on")
+       # worn, charging state: within 7 s on a clean link
+       recv(B, "F5 06"), recv(B, "F5 09 00"),
+       within=15, label="phone_on")
 
 # before the case: the PMIC charger is enabled and idle
 check(M, "sysbus.twim1.npm1300 ChargingEnabled", equals="True")
@@ -24,16 +26,17 @@ action(M, [NFC + "RfEnableMailbox", "sysbus.saadc SetAnalogInput 3 600000", NFC 
          NPM + "VbusConnected true", NPM + "BatteryCurrentMilliAmps -40"])
 
 # the case says lid open, 55 % and charging: the firmware reports "in the case" on its next sensor-loop pass and
-# answers the case with its own battery info (pt 0x13 reply: 53 % at 3.9 V, charging at 49 mA); the other three
-# events follow one per pass (about a second each)
+# answers the case with its own battery info (pt 0x13 reply: 53 % at 3.9 V, charging at 49 mA)
+# the gauge samples on its own clock and no event says that it has read the charge current the reply carries
 wait(6)
 action(M, case(0xB7, 7), recv(M, "F5 08"), within=2, label="case_open")
 check(M, "sysbus.twim1.st25dv RfReadMailboxMessage", equals="13-01-02-06-00-17-70-35-01-31-0A")
-wait(0.7)
-action(M, case(0xB7, 7))
-action(M, case(0xB7, 7))
-wait(3)
-action(M, case(0xB7, 7))
+# the case goes on repeating its message (after 3 s without one the firmware takes the glasses for out of the
+# case) and the other three events follow, one per pass (about a second each): charging, the case's charging
+# flag, the case's level 55 %
+action(M, case(0xB7, 7), recv(M, "F5 09 01"), within=3)
+action(M, case(0xB7, 7), recv(M, "F5 0E 01"), within=3)
+action(M, case(0xB7, 7), recv(M, "F5 0F 37"), within=3)
 # 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
 action(M, [send('2C 01'), send('23 76')],
        # 0x4F: -49 mA, as the nPM1300 driver of NCS 2.6.0 reads the model's -40 mA (hw/battery_sweep)
@@ -47,6 +50,7 @@ action(M, case(0xB7, 7))
 # lid closed; the case's charging flag drops (0xB7 -> 0x37) a few passes later
 action(M, case(55, 6), recv(M, "F5 0B"), within=2, label="lid_closed")
 action(M, case(55, 6))
+# the firmware reports the dropped flag once it has seen it on five sensor-loop passes, which nothing shows
 wait(4.5)
 check(M, "sysbus.twim1.st25dv RfReadMailboxMessage", equals="13-01-02-06-00-17-70-35-01-31-0A")
 action(M, case(55, 6))
@@ -65,6 +69,7 @@ check(M, "sysbus.twim1.npm1300 ChargingEnabled", equals="True")
 check(M, "sysbus.twim1.npm1300 ChargerStatus", equals="0x01")
 # the gauge takes six zero readings (one per sensor-loop pass) before it reports 0 mA; under the ESB defect the
 # master's loop is slowed by its sync retries and has not got there 10 s after the case was removed
+# no event says that the gauge has got there: the wait is the time it is given
 wait(9.2)
 # 2C 01: the status; debug string "#v": battery level, voltage, current and temperature, as text
 action(M, [send('2C 01'), send('23 76')],
@@ -75,8 +80,6 @@ action(M, [send('2C 01'), send('23 76')],
 never("fatal")
 never("boot", after=1)
 link_up()
-# worn, charging state: within 7 s on a clean link
-after("phone_on", recv(B, "F5 06"), recv(B, "F5 09 00"), within=15)
 # charging, case charging flag, case level 55 %
 after("case_open", recv(M, "F5 09 01"), recv(M, "F5 0E 01"), recv(M, "F5 0F 37"), within=7)
 # the case's charging flag drops

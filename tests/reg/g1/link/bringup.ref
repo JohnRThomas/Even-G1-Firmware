@@ -1,7 +1,6 @@
-# The phone connects at 12 s and runs the Android app's bring-up on each lens, every request sent once the one before
-# it is answered. Every request must get its answer, and the panels stay blank: the glasses are not worn.
+# The phone connects at power-on and runs the Android app's bring-up on each lens, every request sent once the one
+# before it is answered. Every request must get its answer, and the panels stay blank: the glasses are not worn.
 
-at(12)
 action(B, phone_on(),
        event(B, "pairing: complete, link encrypted, bonded"),
        # the MTU accepted
